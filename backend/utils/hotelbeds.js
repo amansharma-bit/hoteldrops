@@ -204,7 +204,7 @@ function getDestinationCode(cityName) {
     'chennai': 'MAA', 'madras': 'MAA',
     'kolkata': 'CCU', 'calcutta': 'CCU',
     'pune': 'PNQ',
-    'goa': 'GOI',
+    'goa': 'GOA',
     'jaipur': 'JAI',
     'ahmedabad': 'AMD',
     'kochi': 'COK', 'cochin': 'COK',
