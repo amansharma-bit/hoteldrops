@@ -5,6 +5,8 @@ const path       = require('path')
 const cron       = require('node-cron')
 
 const bookingRoutes = require('./routes/bookings')
+const testRoutes   = require('./routes/test')
+
 const alertRoutes   = require('./routes/alerts')
 const adminRoutes   = require('./routes/admin')
 const { runPriceTracker } = require('./jobs/priceTracker')
@@ -19,6 +21,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 // Routes
 app.use('/api/bookings', bookingRoutes)
+app.use('/api/test',    testRoutes)
+
 app.use('/api/alerts',   alertRoutes)
 app.use('/api/admin',    adminRoutes)
 
