@@ -197,14 +197,14 @@ async function cancelBooking(reference, simulate = false) {
 
 function getDestinationCode(cityName) {
   const map = {
-    'mumbai': 'MCM', 'bombay': 'MCM',
+    'mumbai': 'BOM', 'bombay': 'BOM',
     'delhi': 'DEL', 'new delhi': 'DEL',
     'bangalore': 'BLR', 'bengaluru': 'BLR',
     'hyderabad': 'HYD',
     'chennai': 'MAA', 'madras': 'MAA',
     'kolkata': 'CCU', 'calcutta': 'CCU',
     'pune': 'PNQ',
-    'goa': 'GOX',
+    'goa': 'GOI',
     'jaipur': 'JAI',
     'ahmedabad': 'AMD',
     'kochi': 'COK', 'cochin': 'COK',
