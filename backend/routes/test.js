@@ -91,3 +91,73 @@ router.get('/mapping', async (req, res) => {
 })
 
 module.exports = router
+
+
+// GET /api/test/destinations?country=IN
+router.get('/destinations', async (req, res) => {
+  try {
+    const { country = 'IN' } = req.query
+    const https  = require('https')
+    const crypto = require('crypto')
+    const zlib   = require('zlib')
+
+    const API_KEY = process.env.HOTELBEDS_API_KEY
+    const SECRET  = process.env.HOTELBEDS_SECRET
+    const BASE    = 'https://api.test.hotelbeds.com'
+
+    const ts  = Math.floor(Date.now() / 1000).toString()
+    const sig = crypto.createHash('sha256').update(API_KEY + SECRET + ts).digest('hex')
+
+    const url = BASE + '/hotel-content-api/1.0/locations/destinations?language=ENG&countryCode=' + country + '&useSecondaryLanguage=false&from=1&to=200'
+
+    const options = {
+      method: 'GET',
+      headers: {
+        'Api-key':        API_KEY,
+        'X-Signature':    sig,
+        'Accept':         'application/json',
+        'Accept-Encoding':'gzip',
+        'Content-Type':   'application/json',
+      }
+    }
+
+    const req2 = https.request(url, options, (response) => {
+      const chunks = []
+      response.on('data', c => chunks.push(c))
+      response.on('end', () => {
+        const buffer   = Buffer.concat(chunks)
+        const encoding = response.headers['content-encoding']
+
+        const parse = (buf) => {
+          try {
+            const raw  = buf.toString('utf8')
+            const data = JSON.parse(raw)
+            if (data.error) return res.status(500).json({ error: JSON.stringify(data.error) })
+            const destinations = (data.destinations || []).map(d => ({
+              code: d.code,
+              name: d.name?.content || d.name,
+              countryCode: d.countryCode,
+            })).sort((a,b) => (a.name||'').localeCompare(b.name||''))
+            res.json({ success: true, country, total: destinations.length, destinations })
+          } catch(e) {
+            res.status(500).json({ error: e.message, raw: buf.toString('utf8').substring(0,200) })
+          }
+        }
+
+        if (encoding === 'gzip') {
+          zlib.gunzip(buffer, (err, decoded) => {
+            if (err) return res.status(500).json({ error: err.message })
+            parse(decoded)
+          })
+        } else { parse(buffer) }
+      })
+    })
+    req2.on('error', e => res.status(500).json({ error: e.message }))
+    req2.end()
+
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+module.exports = router
