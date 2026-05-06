@@ -197,6 +197,7 @@ async function cancelBooking(reference, simulate = false) {
 
 function getDestinationCode(cityName) {
   const map = {
+    // ── INDIA ──
     'mumbai': 'BOM', 'bombay': 'BOM',
     'delhi': 'DEL', 'new delhi': 'DEL',
     'bangalore': 'BLR', 'bengaluru': 'BLR',
@@ -230,6 +231,114 @@ function getDestinationCode(cityName) {
     'darjeeling': 'DAR',
     'leh': 'IXL',
     'gangtok': 'GTK',
+
+    // ── MIDDLE EAST ──
+    'dubai': 'DXB',
+    'abu dhabi': 'AUH',
+    'sharjah': 'SHJ',
+    'doha': 'DOH',
+    'riyadh': 'RUH',
+    'jeddah': 'JED',
+    'muscat': 'MCT',
+    'kuwait city': 'KWI', 'kuwait': 'KWI',
+    'bahrain': 'BAH',
+    'beirut': 'BEY',
+    'amman': 'AMM',
+
+    // ── EUROPE ──
+    'london': 'LON',
+    'paris': 'PAR',
+    'amsterdam': 'AMS',
+    'rome': 'ROM',
+    'barcelona': 'BCN',
+    'madrid': 'MAD',
+    'berlin': 'BER',
+    'frankfurt': 'FRA',
+    'munich': 'MUC',
+    'vienna': 'VIE',
+    'zurich': 'ZRH',
+    'geneva': 'GVA',
+    'milan': 'MIL',
+    'venice': 'VCE',
+    'florence': 'FLR',
+    'prague': 'PRG',
+    'budapest': 'BUD',
+    'warsaw': 'WAW',
+    'stockholm': 'STO',
+    'copenhagen': 'CPH',
+    'oslo': 'OSL',
+    'helsinki': 'HEL',
+    'brussels': 'BRU',
+    'lisbon': 'LIS',
+    'athens': 'ATH',
+    'istanbul': 'IST',
+    'dublin': 'DUB',
+    'edinburgh': 'EDI',
+    'manchester': 'MAN',
+
+    // ── SOUTHEAST ASIA ──
+    'bangkok': 'BKK',
+    'singapore': 'SIN',
+    'kuala lumpur': 'KUL', 'kl': 'KUL',
+    'bali': 'DPS',
+    'jakarta': 'JKT',
+    'ho chi minh city': 'SGN', 'saigon': 'SGN',
+    'hanoi': 'HAN',
+    'phuket': 'HKT',
+    'pattaya': 'UTP',
+    'chiang mai': 'CNX',
+    'manila': 'MNL',
+    'cebu': 'CEB',
+    'yangon': 'RGN',
+    'colombo': 'CMB',
+    'male': 'MLE', 'maldives': 'MLE',
+    'kathmandu': 'KTM',
+    'phnom penh': 'PNH',
+    'siem reap': 'REP',
+
+    // ── EAST ASIA ──
+    'tokyo': 'TYO',
+    'osaka': 'OSA',
+    'kyoto': 'UKY',
+    'beijing': 'BJS',
+    'shanghai': 'SHA',
+    'hong kong': 'HKG',
+    'seoul': 'SEL',
+    'taipei': 'TPE',
+
+    // ── USA & CANADA ──
+    'new york': 'NYC', 'new york city': 'NYC',
+    'los angeles': 'LAX',
+    'las vegas': 'LAS',
+    'miami': 'MIA',
+    'chicago': 'CHI',
+    'san francisco': 'SFO',
+    'orlando': 'ORL',
+    'toronto': 'YTO',
+    'vancouver': 'YVR',
+    'cancun': 'CUN',
+
+    // ── AUSTRALIA ──
+    'sydney': 'SYD',
+    'melbourne': 'MEL',
+    'brisbane': 'BNE',
+    'gold coast': 'OOL',
+
+    // ── AFRICA ──
+    'cape town': 'CPT',
+    'johannesburg': 'JNB',
+    'nairobi': 'NBO',
+    'cairo': 'CAI',
+    'marrakech': 'RAK',
+    'casablanca': 'CAS',
+
+    // ── POPULAR ISLANDS ──
+    'mauritius': 'MRU',
+    'seychelles': 'SEZ',
+    'zanzibar': 'ZNZ',
+    'phuket': 'HKT',
+    'mykonos': 'JMK',
+    'santorini': 'JTR',
   }
   return map[cityName?.toLowerCase()?.trim()] || null
 }
