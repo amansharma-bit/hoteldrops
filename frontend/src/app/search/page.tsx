@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -69,7 +69,6 @@ function starCount(categoryName: string): number {
 
 function hotelImage(hotel: Hotel): string | null {
   if (!hotel.images?.length) return null;
-  // Prefer exterior / general photos
   const preferred = hotel.images.find(
     (img) => img.type?.code === "GEN" || img.type?.code === "HAB"
   );
@@ -125,7 +124,6 @@ function HotelCard({
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:border-gray-200 transition-all flex flex-col md:flex-row group">
-      {/* Image */}
       <div className="md:w-64 w-full h-48 md:h-auto bg-gray-100 shrink-0 relative overflow-hidden">
         {imgSrc ? (
           <img
@@ -140,7 +138,6 @@ function HotelCard({
             </svg>
           </div>
         )}
-        {/* Category badge */}
         {hotel.categoryName && (
           <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-700 text-xs font-medium px-2 py-1 rounded-full">
             {hotel.categoryName}
@@ -148,9 +145,7 @@ function HotelCard({
         )}
       </div>
 
-      {/* Content */}
       <div className="flex-1 p-5 flex flex-col gap-2">
-        {/* Stars */}
         {stars > 0 && (
           <div className="flex gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -166,12 +161,10 @@ function HotelCard({
           </div>
         )}
 
-        {/* Name */}
         <h3 className="font-semibold text-gray-900 text-base leading-snug">
           {hotel.name}
         </h3>
 
-        {/* Location */}
         <p className="text-sm text-gray-500 flex items-center gap-1">
           <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -180,24 +173,15 @@ function HotelCard({
           {[hotel.zoneName, hotel.destinationName].filter(Boolean).join(", ")}
         </p>
 
-        {/* Board type if available */}
         {hotel.rooms?.[0]?.rates?.[0]?.boardName && (
-          <p className="text-sm text-gray-400 flex items-center gap-1">
-            <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            {hotel.rooms[0].rates[0].boardName}
-          </p>
+          <p className="text-sm text-gray-400">{hotel.rooms[0].rates[0].boardName}</p>
         )}
 
-        {/* Price + CTA */}
         <div className="mt-auto pt-3 flex items-end justify-between gap-4">
           <div>
             {pricePerNight && (
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-gray-900">
-                  {pricePerNight}
-                </span>
+                <span className="text-2xl font-bold text-gray-900">{pricePerNight}</span>
                 <span className="text-sm text-gray-400">/night</span>
               </div>
             )}
@@ -208,7 +192,6 @@ function HotelCard({
               </p>
             )}
           </div>
-
           <button className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
             View deal
           </button>
@@ -247,11 +230,8 @@ function FilterSidebar({
 
   return (
     <aside className="w-full md:w-60 shrink-0 flex flex-col gap-6">
-      {/* Sort */}
       <div>
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Sort by
-        </h3>
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Sort by</h3>
         <div className="flex flex-col gap-2">
           {[
             { value: "price_asc", label: "Price: Low to high" },
@@ -274,11 +254,8 @@ function FilterSidebar({
         </div>
       </div>
 
-      {/* Stars */}
       <div>
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-          Star rating
-        </h3>
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Star rating</h3>
         <div className="flex flex-col gap-2">
           {[5, 4, 3, 2, 1].map((s) => (
             <label key={s} className="flex items-center gap-2 cursor-pointer">
@@ -300,12 +277,9 @@ function FilterSidebar({
         </div>
       </div>
 
-      {/* Price range */}
       {maxPrice > minPrice && (
         <div>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Max total price
-          </h3>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Max total price</h3>
           <input
             type="range"
             min={minPrice}
@@ -315,12 +289,8 @@ function FilterSidebar({
             className="w-full accent-blue-600"
           />
           <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>
-              {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(minPrice)}
-            </span>
-            <span>
-              {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(priceRange[1])}
-            </span>
+            <span>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(minPrice)}</span>
+            <span>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(priceRange[1])}</span>
           </div>
         </div>
       )}
@@ -328,9 +298,9 @@ function FilterSidebar({
   );
 }
 
-// ─── Main page ─────────────────────────────────────────────────────────────────
+// ─── Inner page (uses useSearchParams) ────────────────────────────────────────
 
-export default function SearchPage() {
+function SearchPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -342,9 +312,7 @@ export default function SearchPage() {
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [total, setTotal] = useState(0);
 
-  // Filters
   const [sortBy, setSortBy] = useState("price_asc");
   const [starFilter, setStarFilter] = useState<number[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 99999]);
@@ -377,12 +345,8 @@ export default function SearchPage() {
       const data: SearchResponse = await res.json();
       const list = data?.hotels?.hotels || [];
       setHotels(list);
-      setTotal(data?.hotels?.total || list.length);
 
-      // Compute price range for filter
-      const prices = list
-        .map((h) => parseFloat(h.minRate))
-        .filter((p) => !isNaN(p));
+      const prices = list.map((h) => parseFloat(h.minRate)).filter((p) => !isNaN(p));
       if (prices.length) {
         const lo = Math.floor(Math.min(...prices));
         const hi = Math.ceil(Math.max(...prices));
@@ -401,7 +365,6 @@ export default function SearchPage() {
     fetchHotels();
   }, [fetchHotels]);
 
-  // Derived: filter + sort
   const filtered = hotels
     .filter((h) => {
       if (starFilter.length) {
@@ -413,13 +376,10 @@ export default function SearchPage() {
       return true;
     })
     .sort((a, b) => {
-      if (sortBy === "price_asc")
-        return parseFloat(a.minRate || "0") - parseFloat(b.minRate || "0");
-      if (sortBy === "price_desc")
-        return parseFloat(b.minRate || "0") - parseFloat(a.minRate || "0");
+      if (sortBy === "price_asc") return parseFloat(a.minRate || "0") - parseFloat(b.minRate || "0");
+      if (sortBy === "price_desc") return parseFloat(b.minRate || "0") - parseFloat(a.minRate || "0");
       if (sortBy === "name_asc") return a.name.localeCompare(b.name);
-      if (sortBy === "stars_desc")
-        return starCount(b.categoryName) - starCount(a.categoryName);
+      if (sortBy === "stars_desc") return starCount(b.categoryName) - starCount(a.categoryName);
       return 0;
     });
 
@@ -427,19 +387,10 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
       <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <a href="/" className="flex items-center">
-          <Image
-            src="/rebuq-logo.svg"
-            alt="Rebuq"
-            width={100}
-            height={30}
-            priority
-          />
+          <Image src="/rebuq-logo.svg" alt="Rebuq" width={100} height={30} priority />
         </a>
-
-        {/* Compact search summary */}
         <button
           onClick={() => router.push("/")}
           className="hidden md:flex items-center gap-3 text-sm text-gray-600 border border-gray-200 rounded-full px-4 py-2 hover:shadow-sm transition-shadow"
@@ -449,36 +400,23 @@ export default function SearchPage() {
           <span>{checkIn} – {checkOut}</span>
           <span className="text-gray-300">|</span>
           <span>{guests} {guests === 1 ? "guest" : "guests"}</span>
-          <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
         </button>
-
-        <div className="flex items-center gap-4">
-          <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Sign in</a>
-        </div>
+        <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Sign in</a>
       </nav>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">
-            {loading
-              ? "Searching hotels…"
-              : error
-              ? "Search error"
-              : `${filtered.length} hotel${filtered.length !== 1 ? "s" : ""} in ${destination}`}
+            {loading ? "Searching hotels…" : error ? "Search error" : `${filtered.length} hotel${filtered.length !== 1 ? "s" : ""} in ${destination}`}
           </h1>
           {!loading && !error && (
             <p className="text-sm text-gray-500 mt-1">
-              {checkIn} → {checkOut} · {numNights} night{numNights !== 1 ? "s" : ""} · {guests}{" "}
-              {guests === 1 ? "guest" : "guests"}
+              {checkIn} → {checkOut} · {numNights} night{numNights !== 1 ? "s" : ""} · {guests} {guests === 1 ? "guest" : "guests"}
             </p>
           )}
         </div>
 
         <div className="flex flex-col md:flex-row gap-8 items-start">
-          {/* Sidebar */}
           {!loading && !error && hotels.length > 0 && (
             <FilterSidebar
               minPrice={minPrice}
@@ -492,51 +430,42 @@ export default function SearchPage() {
             />
           )}
 
-          {/* Results */}
           <div className="flex-1 flex flex-col gap-4">
             {loading ? (
-              <>
-                <SkeletonCard />
-                <SkeletonCard />
-                <SkeletonCard />
-                <SkeletonCard />
-              </>
+              <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
             ) : error ? (
               <div className="bg-red-50 border border-red-100 rounded-2xl p-6 text-center">
                 <p className="text-red-600 font-medium mb-2">Couldn't load results</p>
                 <p className="text-red-400 text-sm mb-4">{error}</p>
-                <button
-                  onClick={fetchHotels}
-                  className="bg-red-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-red-700 transition-colors"
-                >
-                  Try again
-                </button>
+                <button onClick={fetchHotels} className="bg-red-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-red-700 transition-colors">Try again</button>
               </div>
             ) : filtered.length === 0 ? (
               <div className="bg-white border border-gray-100 rounded-2xl p-10 text-center">
                 <p className="text-gray-500 text-lg font-medium">No hotels match your filters</p>
-                <p className="text-gray-400 text-sm mt-1">Try adjusting your filters or search a different destination.</p>
-                <button
-                  onClick={() => { setStarFilter([]); setPriceRange([minPrice, maxPrice]); }}
-                  className="mt-4 text-blue-600 text-sm font-medium hover:underline"
-                >
-                  Clear filters
-                </button>
+                <button onClick={() => { setStarFilter([]); setPriceRange([minPrice, maxPrice]); }} className="mt-4 text-blue-600 text-sm font-medium hover:underline">Clear filters</button>
               </div>
             ) : (
               filtered.map((hotel) => (
-                <HotelCard
-                  key={hotel.code}
-                  hotel={hotel}
-                  checkIn={checkIn}
-                  checkOut={checkOut}
-                  guests={guests}
-                />
+                <HotelCard key={hotel.code} hotel={hotel} checkIn={checkIn} checkOut={checkOut} guests={guests} />
               ))
             )}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Main export with Suspense wrapper ────────────────────────────────────────
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400">
+        Loading...
+      </div>
+    }>
+      <SearchPageInner />
+    </Suspense>
   );
 }
