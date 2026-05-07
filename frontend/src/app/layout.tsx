@@ -1,16 +1,10 @@
 import type { Metadata } from 'next'
-import { Toaster } from 'react-hot-toast'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'rebuq.com — Your hotel got cheaper. We\'ll tell you first.',
-  description: 'Upload your hotel booking voucher. rebuq monitors the price 24/7 and alerts you via WhatsApp the moment it drops — you keep the savings.',
+  title: "rebuq — Your hotel got cheaper. We'll tell you first.",
+  description: 'Upload your hotel booking voucher. rebuq monitors the price 24/7 and alerts you via WhatsApp the moment it drops.',
   keywords: 'hotel price drop, hotel refund, cheaper hotel, hotel price tracker India, rebuq',
-  openGraph: {
-    title: 'rebuq.com — Your hotel got cheaper. We\'ll tell you first.',
-    description: 'Upload your hotel voucher. We monitor 24/7 and alert you when price drops.',
-    type: 'website',
-  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -24,23 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body>
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#111827',
-              color: '#fff',
-              borderRadius: '12px',
-              fontSize: '13px',
-              fontFamily: 'Plus Jakarta Sans, sans-serif',
-              fontWeight: '500',
-            },
-            success: { style: { background: '#166534' } },
-            error:   { style: { background: '#991b1b' } },
-          }}
-        />
+      <body style={{ margin: 0, padding: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
         {children}
       </body>
     </html>
