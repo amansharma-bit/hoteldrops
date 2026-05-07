@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import { Toaster } from 'react-hot-toast'
-import '../styles/globals.css'
+import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'HotelDrops — Get Paid When Your Hotel Price Drops',
-  description: 'Upload your hotel voucher. We monitor the price 24/7 and alert you via WhatsApp the moment it drops. You keep the savings.',
-  keywords: 'hotel price drop, hotel refund, cheaper hotel, hotel price tracker India',
+  title: 'rebuq.com — Your hotel got cheaper. We\'ll tell you first.',
+  description: 'Upload your hotel booking voucher. rebuq monitors the price 24/7 and alerts you via WhatsApp the moment it drops — you keep the savings.',
+  keywords: 'hotel price drop, hotel refund, cheaper hotel, hotel price tracker India, rebuq',
   openGraph: {
-    title: 'HotelDrops — Get Paid When Your Hotel Price Drops',
+    title: 'rebuq.com — Your hotel got cheaper. We\'ll tell you first.',
     description: 'Upload your hotel voucher. We monitor 24/7 and alert you when price drops.',
     type: 'website',
   },
