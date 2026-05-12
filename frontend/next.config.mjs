@@ -6,6 +6,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'photos.hotelbeds.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
     ],
   },
 }
