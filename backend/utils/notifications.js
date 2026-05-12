@@ -1,10 +1,13 @@
 const twilio     = require('twilio')
 const nodemailer = require('nodemailer')
 
-const twilioClient = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-)
+function getTwilioClient() {
+  const sid = process.env.TWILIO_ACCOUNT_SID
+  const token = process.env.TWILIO_AUTH_TOKEN
+  if (!sid || !token || sid === 'placeholder' || token === 'placeholder') return null
+  try { return twilio(sid, token) } catch(e) { return null }
+}
+const twilioClient = getTwilioClient()
 
 // ==============================
 // WHATSAPP ALERT
