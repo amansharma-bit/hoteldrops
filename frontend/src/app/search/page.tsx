@@ -1,261 +1,374 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 
-const DESTINATIONS = [
-  { flag: "🇦🇪", city: "Dubai", desc: "UAE", photo: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&q=80&auto=format&fit=crop" },
-  { flag: "🇹🇭", city: "Bangkok", desc: "Thailand", photo: "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=400&q=80&auto=format&fit=crop" },
-  { flag: "🇮🇩", city: "Bali", desc: "Indonesia", photo: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&q=80&auto=format&fit=crop" },
-  { flag: "🇲🇻", city: "Maldives", desc: "South Asia", photo: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=400&q=80&auto=format&fit=crop" },
-  { flag: "🇸🇬", city: "Singapore", desc: "Southeast Asia", photo: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=400&q=80&auto=format&fit=crop" },
-  { flag: "🇫🇷", city: "Paris", desc: "France", photo: "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=400&q=80&auto=format&fit=crop" },
-  { flag: "🇬🇧", city: "London", desc: "United Kingdom", photo: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=400&q=80&auto=format&fit=crop" },
-  { flag: "🇯🇵", city: "Tokyo", desc: "Japan", photo: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&q=80&auto=format&fit=crop" },
-];
+const API_BASE = "https://hoteldrops-production.up.railway.app";
 
-const TRENDING = [
-  { flag: "🇦🇪", city: "Dubai, UAE", hotel: "Atlantis The Palm", price: "₹28,400/night", tag: "Trending", photo: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80&auto=format&fit=crop" },
-  { flag: "🇹🇭", city: "Bangkok, Thailand", hotel: "Capella Bangkok", price: "₹18,200/night", tag: "Best value", photo: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=80&auto=format&fit=crop" },
-  { flag: "🇲🇻", city: "Maldives", hotel: "Soneva Fushi", price: "₹1,24,000/night", tag: "Luxury", photo: "https://images.unsplash.com/photo-1573843981267-be1999ff37cd?w=600&q=80&auto=format&fit=crop" },
-];
+interface HotelRate {
+  rateKey: string;
+  net: string;
+  currency: string;
+  boardName: string;
+  rooms: number;
+  adults: number;
+  children: number;
+}
 
-export default function SearchHotels() {
-  const router = useRouter();
-  const [destination, setDestination] = useState("");
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [guests, setGuests] = useState(2);
-  const [focused, setFocused] = useState(false);
-  const [dateError, setDateError] = useState("");
+interface Hotel {
+  code: number;
+  name: string;
+  categoryName: string;
+  destinationName: string;
+  zoneName: string;
+  latitude: string;
+  longitude: string;
+  minRate: string;
+  maxRate: string;
+  currency: string;
+  rooms?: { rates: HotelRate[] }[];
+  images?: { path: string; type: { code: string } }[];
+}
 
-  const today = new Date().toISOString().split("T")[0];
+interface SearchResponse {
+  hotels: { hotels: Hotel[]; total: number; checkIn: string; checkOut: string };
+}
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setDateError("");
-    if (!destination) { alert("Please enter a destination"); return; }
-    if (!checkIn) { alert("Please select a check-in date"); return; }
-    if (!checkOut) { alert("Please select a check-out date"); return; }
-    if (checkOut <= checkIn) { setDateError("Check-out must be after check-in"); return; }
-    const params = new URLSearchParams({ destination, checkIn, checkOut, guests: String(guests) });
-    router.push(`/search?${params.toString()}`);
-  };
+function nights(checkIn: string, checkOut: string): number {
+  const a = new Date(checkIn);
+  const b = new Date(checkOut);
+  return Math.max(1, Math.round((b.getTime() - a.getTime()) / 86400000));
+}
 
-  const handleCheckIn = (val: string) => {
-    setCheckIn(val);
-    setDateError("");
-    // Auto-set checkout to next day if not set or before new checkin
-    if (!checkOut || checkOut <= val) {
-      const next = new Date(val);
-      next.setDate(next.getDate() + 1);
-      setCheckOut(next.toISOString().split("T")[0]);
-    }
-  };
+function formatINR(price: string, currency: string): string {
+  const num = parseFloat(price);
+  if (isNaN(num)) return "—";
+  const rates: Record<string, number> = { EUR: 90, USD: 83, GBP: 105, AED: 22.6, THB: 2.3, IDR: 0.0052 };
+  const inr = currency === "INR" ? num : num * (rates[currency] || 83);
+  return "₹" + Math.round(inr).toLocaleString("en-IN");
+}
 
-  const handleCheckOut = (val: string) => {
-    setDateError("");
-    if (checkIn && val <= checkIn) {
-      setDateError("Check-out must be after check-in");
-      return;
-    }
-    setCheckOut(val);
-  };
+function starCount(categoryName: string): number {
+  const match = categoryName?.match(/(\d)/);
+  return match ? parseInt(match[1]) : 0;
+}
 
-  const pickDestination = (city: string) => {
-    setDestination(city);
-    setFocused(false);
-  };
+function hotelImage(hotel: Hotel, destination: string): string {
+  if (hotel.images?.length) {
+    const preferred = hotel.images.find(img => img.type?.code === "GEN" || img.type?.code === "HAB");
+    const img = preferred || hotel.images[0];
+    if (img?.path) return `https://photos.hotelbeds.com/giata/bigger/${img.path}`;
+  }
+  const query = encodeURIComponent(`${destination} hotel luxury`);
+  const seed = hotel.code % 1000;
+  return `https://source.unsplash.com/400x300/?${query}&sig=${seed}`;
+}
+
+function SkeletonCard() {
+  return (
+    <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #eaeef2", overflow: "hidden", display: "grid", gridTemplateColumns: "220px 1fr", height: 180 }}>
+      <div style={{ background: "linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
+      <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ height: 16, background: "#f0f0f0", borderRadius: 6, width: "60%" }} />
+        <div style={{ height: 12, background: "#f0f0f0", borderRadius: 6, width: "40%" }} />
+        <div style={{ height: 12, background: "#f0f0f0", borderRadius: 6, width: "50%" }} />
+        <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ height: 24, background: "#f0f0f0", borderRadius: 6, width: 100 }} />
+          <div style={{ height: 36, background: "#f0f0f0", borderRadius: 9, width: 110 }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HotelCard({ hotel, checkIn, checkOut, guests, destination, onViewDeal }: {
+  hotel: Hotel; checkIn: string; checkOut: string; guests: number; destination: string; onViewDeal: (code: number) => void;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const numNights = nights(checkIn, checkOut);
+  const stars = starCount(hotel.categoryName);
+  const pricePerNight = hotel.minRate ? formatINR(String(parseFloat(hotel.minRate) / numNights), hotel.currency) : null;
+  const totalPrice = hotel.minRate ? formatINR(hotel.minRate, hotel.currency) : null;
+  const imgSrc = imgError
+    ? `https://source.unsplash.com/400x300/?${encodeURIComponent(destination + " hotel")}&sig=${hotel.code}`
+    : hotelImage(hotel, destination);
+  const boardName = hotel.rooms?.[0]?.rates?.[0]?.boardName;
 
   return (
-    <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#fff", color: "#0a0a0f", minHeight: "100vh" }}>
+    <div style={{ background: "#fff", borderRadius: 16, border: "1.5px solid #eaeef2", overflow: "hidden", display: "grid", gridTemplateColumns: "220px 1fr", transition: "box-shadow 0.2s, border-color 0.2s", cursor: "pointer" }}
+      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 32px rgba(0,0,0,0.08)"; (e.currentTarget as HTMLDivElement).style.borderColor = "#d0d8e4"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; (e.currentTarget as HTMLDivElement).style.borderColor = "#eaeef2"; }}>
+      <div style={{ position: "relative", overflow: "hidden", background: "#f4f6f9" }}>
+        <img src={imgSrc} alt={hotel.name} onError={() => setImgError(true)}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s" }}
+          onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.05)")}
+          onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")} />
+        {hotel.categoryName && (
+          <div style={{ position: "absolute", top: 10, left: 10, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(4px)", padding: "3px 10px", borderRadius: 20, fontSize: 10, fontWeight: 700, color: "#374151" }}>
+            {hotel.categoryName}
+          </div>
+        )}
+      </div>
+      <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 6 }}>
+        {stars > 0 && (
+          <div style={{ display: "flex", gap: 2 }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <svg key={i} width="13" height="13" viewBox="0 0 20 20" fill={i < stars ? "#f59e0b" : "#e5e7eb"}>
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            ))}
+          </div>
+        )}
+        <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1.3 }}>{hotel.name}</div>
+        <div style={{ fontSize: 12, color: "#9ca3af", display: "flex", alignItems: "center", gap: 4 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          {[hotel.zoneName, hotel.destinationName].filter(Boolean).join(", ")}
+        </div>
+        {boardName && (
+          <div style={{ display: "inline-block", background: "#f4f6f9", color: "#6b7280", fontSize: 11, padding: "2px 10px", borderRadius: 20, width: "fit-content" }}>{boardName}</div>
+        )}
+        <div style={{ marginTop: "auto", paddingTop: 12, borderTop: "1px solid #f4f6f9", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            {pricePerNight && (
+              <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+                <span style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 22, fontWeight: 700, color: "#111827" }}>{pricePerNight}</span>
+                <span style={{ fontSize: 12, color: "#9ca3af" }}>/night</span>
+              </div>
+            )}
+            {totalPrice && numNights > 1 && (
+              <div style={{ fontSize: 11, color: "#b0bec8", marginTop: 2 }}>{totalPrice} total · {numNights} nights</div>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={() => {}} style={{ background: "#eff6ff", color: "#1447b8", border: "1px solid #bfdbfe", padding: "8px 12px", borderRadius: 9, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+              🔔 Track
+            </button>
+            <button onClick={() => onViewDeal(hotel.code)} style={{ background: "#1447b8", color: "#fff", border: "none", padding: "9px 18px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+              View deal →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-      {/* Navbar */}
-      <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 40px", height: 62, borderBottom: "1px solid #f0f0f5", background: "#fff", position: "sticky", top: 0, zIndex: 50 }}>
+function FilterSidebar({ minPrice, maxPrice, priceRange, onPriceRange, starFilter, onStarFilter, sortBy, onSortBy, hotelName, onHotelName }: {
+  minPrice: number; maxPrice: number; priceRange: [number, number]; onPriceRange: (v: [number, number]) => void;
+  starFilter: number[]; onStarFilter: (v: number[]) => void; sortBy: string; onSortBy: (v: string) => void;
+  hotelName: string; onHotelName: (v: string) => void;
+}) {
+  const toggleStar = (s: number) => onStarFilter(starFilter.includes(s) ? starFilter.filter(x => x !== s) : [...starFilter, s]);
+  const sStyle: React.CSSProperties = { background: "#fff", border: "1px solid #eaeef2", borderRadius: 14, padding: "18px 16px" };
+  const titleStyle: React.CSSProperties = { fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", color: "#9ca3af", marginBottom: 12 };
+
+  return (
+    <aside style={{ width: 220, flexShrink: 0, display: "flex", flexDirection: "column", gap: 12, position: "sticky", top: 80 }}>
+      <div style={sStyle}>
+        <div style={titleStyle}>Search by name</div>
+        <div style={{ position: "relative" }}>
+          <svg style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="e.g. Hyatt, Marriott…" value={hotelName} onChange={e => onHotelName(e.target.value)}
+            style={{ width: "100%", paddingLeft: 30, paddingRight: hotelName ? 28 : 10, paddingTop: 8, paddingBottom: 8, border: "1px solid #eaeef2", borderRadius: 8, fontSize: 12, fontFamily: "inherit", outline: "none", background: "#f9fafb", color: "#111827" }} />
+          {hotelName && (
+            <button onClick={() => onHotelName("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#9ca3af" }}>✕</button>
+          )}
+        </div>
+      </div>
+      <div style={sStyle}>
+        <div style={titleStyle}>Sort by</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {[{ v: "price_asc", l: "Price: Low to high" }, { v: "price_desc", l: "Price: High to low" }, { v: "name_asc", l: "Name A–Z" }, { v: "stars_desc", l: "Stars: High to low" }].map(opt => (
+            <label key={opt.v} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12, color: "#374151" }}>
+              <input type="radio" name="sort" value={opt.v} checked={sortBy === opt.v} onChange={() => onSortBy(opt.v)} style={{ accentColor: "#1447b8" }} />
+              {opt.l}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div style={sStyle}>
+        <div style={titleStyle}>Star rating</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {[5, 4, 3, 2, 1].map(s => (
+            <label key={s} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input type="checkbox" checked={starFilter.includes(s)} onChange={() => toggleStar(s)} style={{ accentColor: "#1447b8" }} />
+              <span style={{ display: "flex", gap: 2 }}>
+                {Array.from({ length: s }).map((_, i) => (
+                  <svg key={i} width="12" height="12" viewBox="0 0 20 20" fill="#f59e0b">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+      {maxPrice > minPrice && (
+        <div style={sStyle}>
+          <div style={titleStyle}>Max price/night</div>
+          <input type="range" min={minPrice} max={maxPrice} value={priceRange[1]}
+            onChange={e => onPriceRange([priceRange[0], Number(e.target.value)])}
+            style={{ width: "100%", accentColor: "#1447b8" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
+            <span>₹{Math.round(minPrice).toLocaleString("en-IN")}</span>
+            <span>₹{Math.round(priceRange[1]).toLocaleString("en-IN")}</span>
+          </div>
+        </div>
+      )}
+      <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 14, padding: "16px" }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "#1447b8", marginBottom: 6 }}>💡 Already booked?</div>
+        <div style={{ fontSize: 11, color: "#4a6278", lineHeight: 1.6, marginBottom: 10 }}>Upload your voucher and our AI watches for a lower price.</div>
+        <button onClick={() => window.location.href = "/upload"} style={{ width: "100%", background: "#1447b8", color: "#fff", border: "none", padding: "8px", borderRadius: 8, fontSize: 11, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>
+          Track my price →
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function SearchPageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const destination = searchParams.get("destination") || "";
+  const checkIn = searchParams.get("checkIn") || "";
+  const checkOut = searchParams.get("checkOut") || "";
+  const guests = Number(searchParams.get("guests") || 2);
+
+  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState("price_asc");
+  const [starFilter, setStarFilter] = useState<number[]>([]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 9999999]);
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(9999999);
+  const [hotelName, setHotelName] = useState("");
+
+  const fetchHotels = useCallback(async () => {
+    if (!destination || !checkIn || !checkOut) { setError("Missing search parameters."); setLoading(false); return; }
+    setLoading(true); setError(null);
+    try {
+      const url = new URL(`${API_BASE}/api/hotels/search`);
+      url.searchParams.set("destination", destination);
+      url.searchParams.set("checkIn", checkIn);
+      url.searchParams.set("checkOut", checkOut);
+      url.searchParams.set("adults", String(guests));
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data: SearchResponse = await res.json();
+      const list = data?.hotels?.hotels || [];
+      setHotels(list);
+      const INR_RATES: Record<string, number> = { EUR: 90, USD: 83, GBP: 105, AED: 22.6 };
+      const prices = list.map(h => {
+        const p = parseFloat(h.minRate);
+        const rate = INR_RATES[h.currency] || 1;
+        return isNaN(p) ? 0 : p * rate;
+      }).filter(p => p > 0);
+      if (prices.length) {
+        const lo = Math.floor(Math.min(...prices));
+        const hi = Math.ceil(Math.max(...prices));
+        setMinPrice(lo); setMaxPrice(hi); setPriceRange([lo, hi]);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally { setLoading(false); }
+  }, [destination, checkIn, checkOut, guests]);
+
+  useEffect(() => { fetchHotels(); }, [fetchHotels]);
+
+  const INR_RATES: Record<string, number> = { EUR: 90, USD: 83, GBP: 105, AED: 22.6, THB: 2.3, IDR: 0.0052 };
+  const numNights = nights(checkIn, checkOut);
+
+  const filtered = hotels.filter(h => {
+    if (hotelName && !h.name.toLowerCase().includes(hotelName.toLowerCase())) return false;
+    if (starFilter.length && !starFilter.includes(starCount(h.categoryName))) return false;
+    const priceINR = parseFloat(h.minRate) * (INR_RATES[h.currency] || 1);
+    if (!isNaN(priceINR) && priceINR > priceRange[1]) return false;
+    return true;
+  }).sort((a, b) => {
+    const aINR = parseFloat(a.minRate) * (INR_RATES[a.currency] || 1);
+    const bINR = parseFloat(b.minRate) * (INR_RATES[b.currency] || 1);
+    if (sortBy === "price_asc") return aINR - bINR;
+    if (sortBy === "price_desc") return bINR - aINR;
+    if (sortBy === "name_asc") return a.name.localeCompare(b.name);
+    if (sortBy === "stars_desc") return starCount(b.categoryName) - starCount(a.categoryName);
+    return 0;
+  });
+
+  return (
+    <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#f4f6f9", minHeight: "100vh" }}>
+      <style>{`@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }`}</style>
+      <nav style={{ background: "#fff", borderBottom: "1px solid #eaeef2", padding: "0 32px", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10 }}>
         <a href="/" style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 20, fontWeight: 700, color: "#0a0a0f", textDecoration: "none" }}>
           rebuq<span style={{ color: "#1447b8" }}>.</span>
         </a>
-        <div style={{ display: "flex", alignItems: "center", gap: 28, fontSize: 13 }}>
-          <a href="/#how" style={{ color: "#6b7280", textDecoration: "none" }}>How it works</a>
-          <a href="/search-hotels" style={{ color: "#1447b8", fontWeight: 600, textDecoration: "none" }}>Search hotels</a>
-          <a href="#" style={{ color: "#1447b8", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
-            Join free
-            <span style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1447b8", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, textTransform: "uppercase" }}>Limited time</span>
-          </a>
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button style={{ fontSize: 13, color: "#374151", background: "none", border: "1px solid #e5e7eb", padding: "8px 18px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>Sign in</button>
-          <button onClick={() => router.push("/")} style={{ fontSize: 13, color: "#fff", background: "#1447b8", border: "none", padding: "9px 20px", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>
-            Check my booking →
+        <div style={{ display: "flex", alignItems: "center", background: "#f4f6f9", border: "1px solid #eaeef2", borderRadius: 100, overflow: "hidden", fontSize: 13 }}>
+          <div style={{ padding: "8px 16px", borderRight: "1px solid #eaeef2", fontWeight: 500, color: "#111827" }}>{destination}</div>
+          <div style={{ padding: "8px 16px", borderRight: "1px solid #eaeef2", color: "#6b7280" }}>{checkIn} – {checkOut}</div>
+          <div style={{ padding: "8px 16px", borderRight: "1px solid #eaeef2", color: "#6b7280" }}>{guests} {guests === 1 ? "guest" : "guests"}</div>
+          <button onClick={() => router.push("/search-hotels")} style={{ background: "#1447b8", color: "#fff", border: "none", padding: "8px 18px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            Search
           </button>
         </div>
+        <a href="#" style={{ fontSize: 13, color: "#6b7280", textDecoration: "none" }}>Sign in</a>
       </nav>
-
-      {/* Hero search band */}
-      <section style={{ background: "#1447b8", padding: "56px 40px 72px" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
-          <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 44, fontWeight: 700, color: "#fff", letterSpacing: "-1.5px", marginBottom: 8, lineHeight: 1.1 }}>
-            Where are you <span style={{ color: "#FCD34D" }}>headed?</span>
-          </div>
-          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.6)", marginBottom: 32 }}>
-            Live rates from global suppliers — no markup, no middleman.
-          </p>
-
-          {/* Search bar */}
-          <form onSubmit={handleSearch} style={{ background: "#fff", borderRadius: 14, overflow: "visible", display: "flex", boxShadow: "0 8px 40px rgba(0,0,0,0.15)", position: "relative" }}>
-            {/* Destination */}
-            <div style={{ flex: 2, position: "relative" }}>
-              <div style={{ padding: "14px 20px", borderRight: "1px solid #f0f0f5", cursor: "text" }}>
-                <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: "#9ca3af", marginBottom: 4 }}>Destination</div>
-                <input type="text" placeholder="City or hotel name" value={destination}
-                  onChange={e => { setDestination(e.target.value); setFocused(true); }}
-                  onFocus={() => { if (destination) setFocused(true); }}
-                  onBlur={() => setTimeout(() => setFocused(false), 200)}
-                  style={{ fontSize: 15, color: "#111827", background: "none", border: "none", outline: "none", fontFamily: "inherit", width: "100%", fontWeight: 500 }} />
-              </div>
-              {focused && destination.length > 0 && (
-                <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e5e7eb", borderRadius: "0 0 12px 12px", boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 100, overflow: "hidden" }}>
-                  <div style={{ padding: "10px 16px 6px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: "#9ca3af" }}>Popular destinations</div>
-                  {DESTINATIONS.filter(d => d.city.toLowerCase().includes(destination.toLowerCase())).map((d, i) => (
-                    <button key={i} onMouseDown={() => pickDestination(d.city)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
-                        <img src={d.photo} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{d.city}</div>
-                        <div style={{ fontSize: 11, color: "#9ca3af" }}>{d.desc}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Check-in */}
-            <div style={{ flex: 1, padding: "14px 20px", borderRight: "1px solid #f0f0f5", cursor: "pointer" }}
-              onClick={e => { const inp = (e.currentTarget as HTMLDivElement).querySelector('input'); inp?.showPicker?.(); }}>
-              <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: "#9ca3af", marginBottom: 4 }}>Check-in</div>
-              <input type="date" value={checkIn} min={today} onChange={e => handleCheckIn(e.target.value)} required
-                style={{ fontSize: 14, color: checkIn ? "#111827" : "#9ca3af", background: "none", border: "none", outline: "none", fontFamily: "inherit", width: "100%", fontWeight: 500, cursor: "pointer" }} />
-            </div>
-
-            {/* Check-out */}
-            <div style={{ flex: 1, padding: "14px 20px", borderRight: "1px solid #f0f0f5", cursor: "pointer" }}
-              onClick={e => { const inp = (e.currentTarget as HTMLDivElement).querySelector('input'); inp?.showPicker?.(); }}>
-              <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: "#9ca3af", marginBottom: 4 }}>Check-out</div>
-              <input type="date" value={checkOut} min={checkIn || today} onChange={e => handleCheckOut(e.target.value)} required
-                style={{ fontSize: 14, color: checkOut ? "#111827" : "#9ca3af", background: "none", border: "none", outline: "none", fontFamily: "inherit", width: "100%", fontWeight: 500, cursor: "pointer" }} />
-            </div>
-
-            {/* Guests */}
-            <div style={{ padding: "14px 20px", borderRight: "1px solid #f0f0f5", minWidth: 110 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: "#9ca3af", marginBottom: 4 }}>Guests</div>
-              <select value={guests} onChange={e => setGuests(Number(e.target.value))}
-                style={{ fontSize: 14, color: "#111827", background: "none", border: "none", outline: "none", fontFamily: "inherit", fontWeight: 500, cursor: "pointer", width: "100%" }}>
-                {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n} {n === 1 ? "guest" : "guests"}</option>)}
-              </select>
-            </div>
-
-            {/* Search btn */}
-            <button type="submit" style={{ background: "#1447b8", color: "#fff", border: "none", padding: "0 32px", fontSize: 15, fontWeight: 700, fontFamily: "'Clash Display', sans-serif", cursor: "pointer", borderRadius: "0 14px 14px 0", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              Search
-            </button>
-          </form>
-
-          {/* Date error */}
-          {dateError && (
-            <div style={{ marginTop: 10, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "8px 14px", fontSize: 12, color: "#fca5a5", display: "inline-block" }}>
-              ⚠ {dateError}
-            </div>
+      <div style={{ maxWidth: 1140, margin: "0 auto", padding: "28px 32px" }}>
+        <div style={{ marginBottom: 20 }}>
+          <h1 style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 26, fontWeight: 700, color: "#0a0a0f", letterSpacing: "-0.5px" }}>
+            {loading ? "Searching hotels…" : error ? "Search error" : `${filtered.length} hotels in ${destination}`}
+          </h1>
+          {!loading && !error && (
+            <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>
+              {checkIn} → {checkOut} · {numNights} night{numNights !== 1 ? "s" : ""} · {guests} {guests === 1 ? "guest" : "guests"} · Prices in ₹INR
+            </p>
           )}
-
-          {/* Quick pick chips */}
-          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 20, flexWrap: "wrap" }}>
-            {DESTINATIONS.map((d, i) => (
-              <button key={i} onClick={() => setDestination(d.city)}
-                style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.85)", padding: "6px 16px", borderRadius: 100, fontSize: 12, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}>
-                {d.flag} {d.city}
-              </button>
-            ))}
-          </div>
         </div>
-      </section>
-
-      {/* Popular destinations grid */}
-      <section style={{ padding: "56px 40px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#1447b8", marginBottom: 10 }}>Popular with Indians</div>
-          <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 36, fontWeight: 700, letterSpacing: "-1px", marginBottom: 28 }}>Top destinations right now</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14 }}>
-            {DESTINATIONS.map((d, i) => (
-              <button key={i} onClick={() => { setDestination(d.city); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                style={{ position: "relative", height: 180, borderRadius: 16, overflow: "hidden", cursor: "pointer", border: "none", padding: 0, transition: "transform 0.2s, box-shadow 0.2s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 12px 32px rgba(0,0,0,0.15)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "none"; }}
-              >
-                <img src={d.photo} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
-                <div style={{ position: "absolute", top: 10, left: 10, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(4px)", borderRadius: 20, padding: "3px 10px", fontSize: 16 }}>{d.flag}</div>
-                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%)", padding: "16px 14px 14px" }}>
-                  <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 18, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{d.city}</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>{d.desc}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Trending hotels */}
-      <section style={{ padding: "0 40px 64px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#1447b8", marginBottom: 10 }}>Trending now</div>
-          <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 36, fontWeight: 700, letterSpacing: "-1px", marginBottom: 28 }}>Hotels travelers love right now</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
-            {TRENDING.map((t, i) => (
-              <div key={i} style={{ border: "1.5px solid #f0f0f5", borderRadius: 16, overflow: "hidden", cursor: "pointer" }}
-                onClick={() => { setDestination(t.city.split(",")[0]); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-                <div style={{ height: 200, position: "relative", overflow: "hidden" }}>
-                  <img src={t.photo} alt={t.hotel} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s" }} loading="lazy" />
-                  <span style={{ position: "absolute", top: 12, left: 12, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#1447b8", background: "rgba(255,255,255,0.95)", backdropFilter: "blur(4px)", padding: "3px 10px", borderRadius: 20 }}>{t.tag}</span>
-                </div>
-                <div style={{ padding: "16px 18px" }}>
-                  <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 3 }}>{t.hotel}</div>
-                  <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 10 }}>{t.city}</div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 15, fontWeight: 700, color: "#111827" }}>from {t.price}</div>
-                    <button style={{ background: "#1447b8", color: "#fff", border: "none", padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>View →</button>
-                  </div>
-                </div>
+        <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+          {!loading && !error && hotels.length > 0 && (
+            <FilterSidebar minPrice={minPrice} maxPrice={maxPrice} priceRange={priceRange} onPriceRange={setPriceRange}
+              starFilter={starFilter} onStarFilter={setStarFilter} sortBy={sortBy} onSortBy={setSortBy}
+              hotelName={hotelName} onHotelName={setHotelName} />
+          )}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+            {loading ? (
+              <><SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard /></>
+            ) : error ? (
+              <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #fee2e2", padding: "32px", textAlign: "center" }}>
+                <p style={{ color: "#dc2626", fontWeight: 600, marginBottom: 8 }}>Couldn&apos;t load results</p>
+                <p style={{ color: "#f87171", fontSize: 13, marginBottom: 16 }}>{error}</p>
+                <button onClick={fetchHotels} style={{ background: "#1447b8", color: "#fff", border: "none", padding: "10px 24px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Try again</button>
               </div>
-            ))}
+            ) : filtered.length === 0 ? (
+              <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #eaeef2", padding: "48px", textAlign: "center" }}>
+                <p style={{ fontSize: 16, fontWeight: 600, color: "#6b7280", marginBottom: 8 }}>No hotels match your filters</p>
+                <button onClick={() => { setStarFilter([]); setPriceRange([minPrice, maxPrice]); setHotelName(""); }} style={{ color: "#1447b8", fontSize: 13, fontWeight: 600, background: "none", border: "none", cursor: "pointer" }}>Clear filters</button>
+              </div>
+            ) : (
+              filtered.map(hotel => (
+                <HotelCard key={hotel.code} hotel={hotel} checkIn={checkIn} checkOut={checkOut} guests={guests} destination={destination}
+                  onViewDeal={code => {
+                    const params = new URLSearchParams({ destination, checkIn, checkOut, guests: String(guests) });
+                    router.push(`/hotel/${code}?${params.toString()}`);
+                  }} />
+              ))
+            )}
           </div>
         </div>
-      </section>
-
-      {/* Price tracking upsell */}
-      <section style={{ background: "#f7f9fc", borderTop: "1px solid #eaeef2", padding: "48px 40px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center", gap: 40 }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#1447b8", marginBottom: 10 }}>Already booked elsewhere?</div>
-            <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 28, fontWeight: 700, letterSpacing: "-0.5px", marginBottom: 10 }}>Don&apos;t overpay. Let our AI watch the price.</div>
-            <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.7, maxWidth: 480 }}>Upload your existing booking voucher. We&apos;ll monitor the rate 24/7 and WhatsApp you the moment it drops — before your cancellation deadline.</p>
-          </div>
-          <button onClick={() => router.push("/")} style={{ background: "#1447b8", color: "#fff", border: "none", padding: "14px 32px", borderRadius: 10, fontSize: 14, fontWeight: 700, fontFamily: "'Clash Display', sans-serif", cursor: "pointer", whiteSpace: "nowrap" }}>
-            Upload my voucher →
-          </button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer style={{ borderTop: "1px solid #f0f0f5", padding: "20px 40px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20 }}>
-        <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 18, fontWeight: 700 }}>rebuq<span style={{ color: "#1447b8" }}>.</span></div>
-        <div style={{ display: "flex", gap: 20, fontSize: 12, color: "#9ca3af" }}>
-          {["About", "How it works", "Privacy", "Terms", "Contact"].map(l => <a key={l} href="#" style={{ color: "inherit", textDecoration: "none" }}>{l}</a>)}
-        </div>
-        <div style={{ fontSize: 11, color: "#d1d5db" }}>© 2026 rebuq · Price protection for smart travelers</div>
-      </footer>
-
+      </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Loading…</div>}>
+      <SearchPageInner />
+    </Suspense>
   );
 }
