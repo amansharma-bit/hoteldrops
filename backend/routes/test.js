@@ -90,8 +90,28 @@ router.get('/mapping', async (req, res) => {
   }
 })
 
-module.exports = router
-
+// GET /api/test/whatsapp?phone=9876543210
+router.get('/whatsapp', async (req, res) => {
+  try {
+    const { sendWhatsAppAlert } = require('../utils/notifications')
+    const phone = req.query.phone || '9999999999'
+    await sendWhatsAppAlert(phone, {
+      customerName: 'Aman',
+      hotelName: 'Taj Jumeirah Lakes Towers',
+      city: 'Dubai',
+      checkIn: '2026-12-14',
+      checkOut: '2026-12-18',
+      nights: 4,
+      originalPrice: 112000,
+      offerPrice: 89600,
+      customerSaving: 22400,
+      offerId: 'test-offer-123',
+    })
+    res.json({ success: true, message: `✅ WhatsApp sent to ${phone}!` })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
 
 // GET /api/test/destinations?country=IN
 router.get('/destinations', async (req, res) => {
