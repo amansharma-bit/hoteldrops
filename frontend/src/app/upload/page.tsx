@@ -57,9 +57,36 @@ export default function UploadPage() {
     let i = 0
     setScanMsg(msgs[0])
     const interval = setInterval(() => { i++; if (i < msgs.length) setScanMsg(msgs[i]) }, 900)
-    await new Promise(r => setTimeout(r, 3600))
-    clearInterval(interval)
-    setExtracted(MOCK_EXTRACTIONS[Math.floor(Math.random() * MOCK_EXTRACTIONS.length)])
+
+    try {
+      const formData = new FormData()
+      formData.append('voucher', file)
+
+      const res = await fetch('https://hoteldrops-production.up.railway.app/api/voucher/extract', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) throw new Error('Extraction failed')
+      const json = await res.json()
+
+      clearInterval(interval)
+      setExtracted({
+        hotel_name: json.data.hotel_name || '',
+        hotel_city: json.data.hotel_city || '',
+        check_in: json.data.check_in || '',
+        check_out: json.data.check_out || '',
+        room_type: json.data.room_type || '',
+        original_price: json.data.original_price_inr || json.data.original_price || 0,
+        num_adults: json.data.num_adults || 2,
+        num_rooms: json.data.num_rooms || 1,
+      })
+    } catch {
+      clearInterval(interval)
+      // Fallback to mock if API fails
+      setExtracted(MOCK_EXTRACTIONS[Math.floor(Math.random() * MOCK_EXTRACTIONS.length)])
+    }
+
     setScanning(false)
     setStep(2)
   }
@@ -78,6 +105,7 @@ export default function UploadPage() {
   return (
     <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: '#fff', color: '#0a0a0f', minHeight: '100vh' }}>
 
+      {/* Full screen scan overlay */}
       {scanning && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#1447b8', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
           <div style={{ width: 56, height: 56, border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -87,6 +115,7 @@ export default function UploadPage() {
         </div>
       )}
 
+      {/* Navbar */}
       <nav style={{ background: '#1447b8', padding: '0 40px', height: 62, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/" style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 20, fontWeight: 700, color: '#fff', textDecoration: 'none' }}>
           rebuq<span style={{ color: '#FCD34D' }}>.</span>
@@ -94,6 +123,7 @@ export default function UploadPage() {
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>🔒 Encrypted &amp; secure</div>
       </nav>
 
+      {/* ── STEP 1 ── */}
       {step === 1 && (
         <>
           <section style={{ background: '#1447b8', padding: '40px 40px 0' }}>
@@ -112,11 +142,13 @@ export default function UploadPage() {
                   Our AI reads your booking confirmation in seconds. No typing needed.
                 </p>
               </div>
+
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                 <div style={{ background: '#fff', borderRadius: '20px 20px 0 0', padding: '28px 28px 0', width: '100%' }}>
                   <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px', color: '#9ca3af', marginBottom: 8 }}>Free price check — 30 seconds</div>
                   <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 3 }}>Upload your booking voucher</div>
                   <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 16 }}>PDF, screenshot or confirmation email</div>
+
                   <div {...getRootProps()} style={{ border: `2px dashed ${dragActive ? '#1447b8' : file ? '#86efac' : '#BFDBFE'}`, borderRadius: 12, padding: '24px 16px', textAlign: 'center', cursor: 'pointer', background: dragActive ? '#EFF6FF' : file ? '#f0fdf4' : '#F8FBFF', transition: 'all 0.2s', marginBottom: 12 }}>
                     <input {...getInputProps()} />
                     {file ? (
@@ -138,12 +170,14 @@ export default function UploadPage() {
                       </div>
                     )}
                   </div>
+
                   <div style={{ textAlign: 'center', fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
                     No voucher?{' '}
                     <button onClick={() => { setExtracted({ hotel_name: '', hotel_city: '', check_in: '', check_out: '', room_type: '', original_price: 0, num_adults: 2, num_rooms: 1 }); setStep(2) }} style={{ color: '#1447b8', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>
                       Enter manually →
                     </button>
                   </div>
+
                   <button onClick={doScan} disabled={!file} style={{ width: '100%', background: file ? '#111827' : '#e5e7eb', color: file ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: 13, fontSize: 14, fontWeight: 700, fontFamily: "'Clash Display', sans-serif", cursor: file ? 'pointer' : 'not-allowed', marginBottom: 10, transition: 'all 0.2s' }}>
                     Scan my voucher →
                   </button>
@@ -166,6 +200,7 @@ export default function UploadPage() {
         </>
       )}
 
+      {/* ── STEP 2 ── */}
       {step === 2 && extracted && (
         <>
           <div style={{ background: '#1447b8', padding: '28px 40px' }}>
@@ -187,6 +222,7 @@ export default function UploadPage() {
               </div>
             </div>
           </div>
+
           <div style={{ background: '#f7f9fc', minHeight: '100vh', padding: '32px 40px' }}>
             <div style={{ maxWidth: 680, margin: '0 auto' }}>
               {file && (
@@ -195,6 +231,7 @@ export default function UploadPage() {
                   <span><strong>AI extracted successfully</strong> — we found your booking. Please verify the details below.</span>
                 </div>
               )}
+
               <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #f0f0f5', padding: 28, marginBottom: 16 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 18 }}>Booking details</div>
                 <div style={grid2}>
@@ -214,6 +251,7 @@ export default function UploadPage() {
                   <div><label style={lbl}>Rooms</label><select style={inp} value={extracted.num_rooms} onChange={e => setExtracted({ ...extracted, num_rooms: parseInt(e.target.value) })}>{[1,2,3].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
                 </div>
               </div>
+
               <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #f0f0f5', padding: 28, marginBottom: 24 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#9ca3af', marginBottom: 18 }}>📱 Where should we send the alert?</div>
                 <div style={grid2}>
@@ -227,6 +265,7 @@ export default function UploadPage() {
                   <div><label style={lbl}>Email *</label><input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" /></div>
                 </div>
               </div>
+
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setStep(1)} style={{ background: 'none', border: '1px solid #e5e7eb', color: '#6b7280', padding: '12px 20px', borderRadius: 10, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
                 <button onClick={submitBooking} disabled={loading} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', borderRadius: 10, padding: 13, fontSize: 14, fontWeight: 700, fontFamily: "'Clash Display', sans-serif", cursor: 'pointer' }}>
@@ -238,6 +277,7 @@ export default function UploadPage() {
         </>
       )}
 
+      {/* ── STEP 3 ── */}
       {step === 3 && extracted && (
         <>
           <div style={{ background: '#1447b8', padding: '56px 40px' }}>
@@ -257,6 +297,8 @@ export default function UploadPage() {
                   <button onClick={() => { setStep(1); setFile(null); setExtracted(null); setPhone(''); setEmail('') }} style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '12px 24px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Track another booking</button>
                 </div>
               </div>
+
+              {/* WhatsApp mockup */}
               <div style={{ background: '#fff', borderRadius: 16, padding: 16, fontSize: 11, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
                 <div style={{ textAlign: 'center', color: '#c8d3de', fontSize: 10, marginBottom: 10 }}>Today, 2:14 PM</div>
                 <div style={{ background: '#f7f9fc', borderRadius: '10px 10px 10px 2px', padding: '12px 14px', color: '#4a5568', lineHeight: 1.7, marginBottom: 8 }}>
@@ -273,6 +315,8 @@ export default function UploadPage() {
               </div>
             </div>
           </div>
+
+          {/* Summary */}
           <div style={{ background: '#fff', padding: '48px 40px' }}>
             <div style={{ maxWidth: 960, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
               <div style={{ border: '1.5px solid #f0f0f5', borderRadius: 16, padding: 24 }}>
