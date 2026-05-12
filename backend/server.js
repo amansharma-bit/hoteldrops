@@ -8,6 +8,7 @@ const testRoutes    = require('./routes/test')
 const alertRoutes   = require('./routes/alerts')
 const adminRoutes   = require('./routes/admin')
 const hotelRoutes   = require('./routes/hotels')
+const voucherRoutes = require('./routes/voucher')
 const { runPriceTracker } = require('./jobs/priceTracker')
 
 const app = express()
@@ -22,6 +23,7 @@ app.use('/api/test',     testRoutes)
 app.use('/api/alerts',   alertRoutes)
 app.use('/api/admin',    adminRoutes)
 app.use('/api/hotels',   hotelRoutes)
+app.use('/api/voucher',  voucherRoutes)
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }))
 
