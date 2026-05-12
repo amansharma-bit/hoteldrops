@@ -59,27 +59,60 @@ export default function UploadPage() {
     const interval = setInterval(() => { i++; if (i < msgs.length) setScanMsg(msgs[i]) }, 900)
 
     try {
-      const formData = new FormData()
-      formData.append('voucher', file)
-
-      const res = await fetch('https://hoteldrops-production.up.railway.app/api/voucher/extract', {
-        method: 'POST',
-        body: formData,
+      // Convert file to base64 in browser
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve((reader.result as string).split(',')[1])
+        reader.readAsDataURL(file)
       })
 
-      if (!res.ok) throw new Error('Extraction failed')
-      const json = await res.json()
+      const isImage = file.type.startsWith('image/')
+      const contentBlock = isImage
+        ? { type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } }
+        : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || '',
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          messages: [{
+            role: 'user',
+            content: [
+              contentBlock,
+              { type: 'text', text: 'Extract hotel booking details from this voucher. Return ONLY a JSON object, no markdown, no explanation:\n{"hotel_name":"","hotel_city":"","check_in":"YYYY-MM-DD","check_out":"YYYY-MM-DD","room_type":"","original_price":0,"currency":"INR","num_adults":2,"num_rooms":1}' }
+            ]
+          }]
+        })
+      })
+
+      if (!res.ok) throw new Error('API error')
+      const data = await res.json()
+      const text = data.content[0].text.trim().replace(/```json|```/g, '').trim()
+      const parsed = JSON.parse(text)
+
+      // Convert to INR if needed
+      const rates: Record<string, number> = { USD: 83, EUR: 90, GBP: 105, AED: 22.6 }
+      const priceINR = parsed.currency && parsed.currency !== 'INR'
+        ? Math.round(parsed.original_price * (rates[parsed.currency] || 83))
+        : parsed.original_price
 
       clearInterval(interval)
       setExtracted({
-        hotel_name: json.data.hotel_name || '',
-        hotel_city: json.data.hotel_city || '',
-        check_in: json.data.check_in || '',
-        check_out: json.data.check_out || '',
-        room_type: json.data.room_type || '',
-        original_price: json.data.original_price_inr || json.data.original_price || 0,
-        num_adults: json.data.num_adults || 2,
-        num_rooms: json.data.num_rooms || 1,
+        hotel_name: parsed.hotel_name || '',
+        hotel_city: parsed.hotel_city || '',
+        check_in: parsed.check_in || '',
+        check_out: parsed.check_out || '',
+        room_type: parsed.room_type || '',
+        original_price: priceINR || 0,
+        num_adults: parsed.num_adults || 2,
+        num_rooms: parsed.num_rooms || 1,
       })
     } catch {
       clearInterval(interval)
