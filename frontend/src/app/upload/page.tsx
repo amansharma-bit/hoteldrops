@@ -98,7 +98,7 @@ export default function UploadPage() {
       const parsed = JSON.parse(text)
 
       // Convert to INR if needed
-      const rates: Record<string, number> = { USD: 83, EUR: 90, GBP: 105, AED: 22.6 }
+      const rates: Record<string, number> = { USD: 84, EUR: 112, GBP: 131, AED: 22.9 }
       const priceINR = parsed.currency && parsed.currency !== 'INR'
         ? Math.round(parsed.original_price * (rates[parsed.currency] || 83))
         : parsed.original_price
