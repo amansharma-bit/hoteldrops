@@ -53,15 +53,27 @@ function starCount(categoryName: string): number {
   return match ? parseInt(match[1]) : 0;
 }
 
+const CITY_PHOTOS: Record<string, string[]> = {
+  dubai: ["photo-1512453979798-5ea266f8880c", "photo-1518684079-3c830dcef090", "photo-1547458718-b47a2b38e09a"],
+  bangkok: ["photo-1508009603885-50cf7c579365", "photo-1563492065599-3520f775eeed", "photo-1555217851-6141535bd771"],
+  bali: ["photo-1537996194471-e657df975ab4", "photo-1573790387438-4da905039392", "photo-1555400038-63f5ba517a47"],
+  maldives: ["photo-1514282401047-d79a71a590e8", "photo-1573843981267-be1999ff37cd", "photo-1540202404-1b927e27fa8b"],
+  singapore: ["photo-1525625293386-3f8f99389edd", "photo-1506965257827-39bbd0af3e8f", "photo-1508964942454-1a56651d54ac"],
+  paris: ["photo-1499856871958-5b9627545d1a", "photo-1502602898657-3e91760cbb34", "photo-1543349689-9a4d426bee8e"],
+  london: ["photo-1513635269975-59663e0ac1ad", "photo-1526129318478-62ed807ebdf9", "photo-1488747279002-2e4c0f68a4ac"],
+  tokyo: ["photo-1540959733332-eab4deabeeaf", "photo-1536098561742-ca998e48cbcc", "photo-1490806843957-31f4c9a91c65"],
+};
+
 function hotelImage(hotel: Hotel, destination: string): string {
   if (hotel.images?.length) {
     const preferred = hotel.images.find(img => img.type?.code === "GEN" || img.type?.code === "HAB");
     const img = preferred || hotel.images[0];
     if (img?.path) return `https://photos.hotelbeds.com/giata/bigger/${img.path}`;
   }
-  const query = encodeURIComponent(`${destination} hotel luxury`);
-  const seed = hotel.code % 1000;
-  return `https://source.unsplash.com/400x300/?${query}&sig=${seed}`;
+  const key = destination.toLowerCase();
+  const photos = CITY_PHOTOS[key] || CITY_PHOTOS["dubai"];
+  const photoId = photos[hotel.code % photos.length];
+  return `https://images.unsplash.com/${photoId}?w=400&h=300&q=80&auto=format&fit=crop`;
 }
 
 function SkeletonCard() {
@@ -90,7 +102,7 @@ function HotelCard({ hotel, checkIn, checkOut, guests, destination, onViewDeal }
   const pricePerNight = hotel.minRate ? formatINR(String(parseFloat(hotel.minRate) / numNights), hotel.currency) : null;
   const totalPrice = hotel.minRate ? formatINR(hotel.minRate, hotel.currency) : null;
   const imgSrc = imgError
-    ? `https://source.unsplash.com/400x300/?${encodeURIComponent(destination + " hotel")}&sig=${hotel.code}`
+    ? `https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&h=300&q=80&auto=format&fit=crop`
     : hotelImage(hotel, destination);
   const boardName = hotel.rooms?.[0]?.rates?.[0]?.boardName;
 
@@ -320,13 +332,30 @@ function SearchPageInner() {
       </nav>
       <div style={{ maxWidth: 1140, margin: "0 auto", padding: "28px 32px" }}>
         <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 26, fontWeight: 700, color: "#0a0a0f", letterSpacing: "-0.5px" }}>
+          <h1 style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 26, fontWeight: 700, color: "#0a0a0f", letterSpacing: "-0.5px", marginBottom: 12 }}>
             {loading ? "Searching hotels…" : error ? "Search error" : `${filtered.length} hotels in ${destination}`}
           </h1>
           {!loading && !error && (
-            <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4 }}>
-              {checkIn} → {checkOut} · {numNights} night{numNights !== 1 ? "s" : ""} · {guests} {guests === 1 ? "guest" : "guests"} · Prices in ₹INR
-            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid #eaeef2", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#374151" }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1447b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Check-in: <span style={{ color: "#1447b8" }}>{checkIn}</span>
+              </div>
+              <div style={{ color: "#9ca3af", fontSize: 12 }}>→</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid #eaeef2", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#374151" }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1447b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Check-out: <span style={{ color: "#1447b8" }}>{checkOut}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid #eaeef2", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#374151" }}>
+                🌙 {numNights} night{numNights !== 1 ? "s" : ""}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", border: "1px solid #eaeef2", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#374151" }}>
+                👥 {guests} {guests === 1 ? "guest" : "guests"}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#1447b8" }}>
+                ₹ Prices in INR
+              </div>
+            </div>
           )}
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
