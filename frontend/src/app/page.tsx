@@ -1,143 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { useDropzone } from "react-dropzone";
 
-export default function Home() {
-  const router = useRouter();
-  const [destination, setDestination] = useState("");
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [guests, setGuests] = useState(2);
+const WINS = [
+  { flag: "🇦🇪", hotel: "Taj Jumeirah Lakes Towers", loc: "Dubai · 4 nights · Dec 14–18", old: "₹1,12,000", new: "₹89,600", saved: "₹22,400", time: "Found in 18 hrs · refundable booking" },
+  { flag: "🇹🇭", hotel: "Park Hyatt Bangkok", loc: "Bangkok · 4 nights · Jan 3–7", old: "₹1,58,000", new: "₹1,26,400", saved: "₹31,600", time: "Found in 6 hrs · refundable booking" },
+  { flag: "🇮🇩", hotel: "W Bali Seminyak", loc: "Bali · 4 nights · Feb 8–12", old: "₹91,000", new: "₹72,800", saved: "₹18,200", time: "Found in 31 hrs · refundable booking" },
+];
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!destination || !checkIn || !checkOut) return;
-
-    const params = new URLSearchParams({
-      destination,
-      checkIn,
-      checkOut,
-      guests: String(guests),
-    });
-    router.push(`/search?${params.toString()}`);
-  };
-
-  return (
-    <div className="min-h-screen bg-white">
-      {/* Navbar */}
-      <nav className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-        <a href="/" className="flex items-center">
-          <Image
-            src="/rebuq-logo.svg"
-            alt="Rebuq"
-            width={120}
-            height={36}
-            priority
-          />
-        </a>
-        <div className="flex items-center gap-4">
-          <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-            Sign in
-          </a>
-          <a
-            href="#"
-            className="text-sm bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-colors"
-          >
-            Register
-          </a>
-        </div>
-      </nav>
-
-      {/* Hero + Search */}
-      <main className="flex flex-col items-center justify-center px-4 pt-20 pb-32">
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 text-center mb-3">
-          Find your perfect stay
-        </h1>
-        <p className="text-gray-500 text-lg text-center mb-10">
-          Unlock exclusive hotel deals worldwide
-        </p>
-
-        <form
-          onSubmit={handleSearch}
-          className="w-full max-w-3xl bg-white border border-gray-200 rounded-2xl shadow-lg p-4 flex flex-col md:flex-row gap-3"
-        >
-          {/* Destination */}
-          <div className="flex-1 flex flex-col gap-1 px-2">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Destination
-            </label>
-            <input
-              type="text"
-              placeholder="City or hotel name"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              className="text-sm text-gray-900 placeholder-gray-400 outline-none bg-transparent"
-              required
-            />
-          </div>
-
-          <div className="hidden md:block w-px bg-gray-200 self-stretch" />
-
-          {/* Check-in */}
-          <div className="flex flex-col gap-1 px-2">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Check-in
-            </label>
-            <input
-              type="date"
-              value={checkIn}
-              onChange={(e) => setCheckIn(e.target.value)}
-              className="text-sm text-gray-900 outline-none bg-transparent"
-              required
-            />
-          </div>
-
-          <div className="hidden md:block w-px bg-gray-200 self-stretch" />
-
-          {/* Check-out */}
-          <div className="flex flex-col gap-1 px-2">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Check-out
-            </label>
-            <input
-              type="date"
-              value={checkOut}
-              onChange={(e) => setCheckOut(e.target.value)}
-              className="text-sm text-gray-900 outline-none bg-transparent"
-              required
-            />
-          </div>
-
-          <div className="hidden md:block w-px bg-gray-200 self-stretch" />
-
-          {/* Guests */}
-          <div className="flex flex-col gap-1 px-2">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Guests
-            </label>
-            <select
-              value={guests}
-              onChange={(e) => setGuests(Number(e.target.value))}
-              className="text-sm text-gray-900 outline-none bg-transparent"
-            >
-              {[1, 2, 3, 4, 5, 6].map((n) => (
-                <option key={n} value={n}>
-                  {n} {n === 1 ? "guest" : "guests"}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-6 py-3 rounded-xl transition-colors whitespace-nowrap"
-          >
-            Search hotels
-          </button>
-        </form>
-      </main>
-    </div>
-  );
-}
+const STATS = [
+  { color: "#1447b8", bg: "#EFF6FF", num: "₹18Cr", label: "Saved for Indian travelers", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1447b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
+  { color: "#16a34a", bg: "#F0FDF4", num: "28%", label: "Avg. price drop found", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg> },
+  { color: "#7c3aed", bg: "#F5F3FF", num: "2.4L+", label: "Bookings monitored", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+  { color: "#ca8a04", bg: "#FEFCE8", num: "4.9/5", label: "Customer satisfaction", icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" strokeWidth="2" strokeLinecap="round"
