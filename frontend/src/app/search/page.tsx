@@ -43,7 +43,7 @@ function nights(checkIn: string, checkOut: string): number {
 function formatINR(price: string, currency: string): string {
   const num = parseFloat(price);
   if (isNaN(num)) return "—";
-  const rates: Record<string, number> = { EUR: 90, USD: 83, GBP: 105, AED: 22.6, THB: 2.3, IDR: 0.0052 };
+  const rates: Record<string, number> = { EUR: 112, USD: 84, GBP: 131, AED: 22.9, THB: 2.4, IDR: 0.0052 };
   const inr = currency === "INR" ? num : num * (rates[currency] || 83);
   return "₹" + Math.round(inr).toLocaleString("en-IN");
 }
@@ -275,7 +275,7 @@ function SearchPageInner() {
       const data: SearchResponse = await res.json();
       const list = data?.hotels?.hotels || [];
       setHotels(list);
-      const INR_RATES: Record<string, number> = { EUR: 90, USD: 83, GBP: 105, AED: 22.6 };
+      const INR_RATES: Record<string, number> = { EUR: 112, USD: 84, GBP: 131, AED: 22.9 };
       const prices = list.map(h => {
         const p = parseFloat(h.minRate);
         const rate = INR_RATES[h.currency] || 1;
@@ -293,7 +293,7 @@ function SearchPageInner() {
 
   useEffect(() => { fetchHotels(); }, [fetchHotels]);
 
-  const INR_RATES: Record<string, number> = { EUR: 90, USD: 83, GBP: 105, AED: 22.6, THB: 2.3, IDR: 0.0052 };
+  const INR_RATES: Record<string, number> = { EUR: 112, USD: 84, GBP: 131, AED: 22.9, THB: 2.4, IDR: 0.0052 };
   const numNights = nights(checkIn, checkOut);
 
   const filtered = hotels.filter(h => {
