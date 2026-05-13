@@ -1,7 +1,18 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useRouter } from 'next/navigation'
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+  return isMobile
+}
 
 interface ExtractedData {
   hotel_name: string
@@ -26,6 +37,7 @@ const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 
 
 export default function UploadPage() {
   const router = useRouter()
+  const isMobile = useIsMobile()
   const [file, setFile] = useState<File | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const [step, setStep] = useState<1 | 2 | 3>(1)
@@ -193,19 +205,19 @@ export default function UploadPage() {
       {/* ── STEP 1 ── */}
       {step === 1 && (
         <>
-          <section style={{ background: '#1447b8', padding: '40px 40px 0' }}>
-            <div style={{ maxWidth: 960, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'flex-end' }}>
+          <section style={{ background: '#1447b8', padding: isMobile ? '32px 16px 0' : '40px 40px 0' }}>
+            <div style={{ maxWidth: 960, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 24 : 48, alignItems: 'flex-end' }}>
               <div style={{ paddingBottom: 48 }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', padding: '5px 14px', borderRadius: 100, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.75)', marginBottom: 20, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} />
                   Step 1 of 3 — Upload your voucher
                 </div>
-                <h1 style={{ fontFamily: "'Clash Display', sans-serif", fontWeight: 700, lineHeight: 1.08, letterSpacing: '-2px', marginBottom: 16 }}>
-                  <span style={{ fontSize: 38, display: 'block', color: 'rgba(255,255,255,0.35)' }}>Let&apos;s find you</span>
-                  <span style={{ fontSize: 38, display: 'block', color: 'rgba(255,255,255,0.35)' }}>a lower price.</span>
-                  <span style={{ fontSize: 42, display: 'block', color: '#FCD34D' }}>Upload &amp; we&apos;ll scan.</span>
+                <h1 style={{ fontFamily: "'Clash Display', sans-serif", fontWeight: 700, lineHeight: 1.08, letterSpacing: isMobile ? '-1px' : '-2px', marginBottom: 16 }}>
+                  <span style={{ fontSize: isMobile ? 26 : 38, display: 'block', color: 'rgba(255,255,255,0.35)' }}>Let&apos;s find you</span>
+                  <span style={{ fontSize: isMobile ? 26 : 38, display: 'block', color: 'rgba(255,255,255,0.35)' }}>a lower price.</span>
+                  <span style={{ fontSize: isMobile ? 30 : 42, display: 'block', color: '#FCD34D' }}>Upload &amp; we&apos;ll scan.</span>
                 </h1>
-                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.8, maxWidth: 340 }}>
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.8, maxWidth: 340 }}>
                   Our AI reads your booking confirmation in seconds. No typing needed.
                 </p>
               </div>
@@ -290,7 +302,7 @@ export default function UploadPage() {
             </div>
           </div>
 
-          <div style={{ background: '#f7f9fc', minHeight: '100vh', padding: '32px 40px' }}>
+          <div style={{ background: '#f7f9fc', minHeight: '100vh', padding: isMobile ? '20px 16px' : '32px 40px' }}>
             <div style={{ maxWidth: 680, margin: '0 auto' }}>
               {file && (
                 <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: '#166534' }}>
