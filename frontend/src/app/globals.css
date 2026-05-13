@@ -2,28 +2,152 @@
 @tailwind components;
 @tailwind utilities;
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   font-family: 'Plus Jakarta Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
   color: #0a0a0f;
+  overflow-x: hidden;
 }
 
-.font-clash {
-  font-family: 'Clash Display', sans-serif;
-}
+.font-clash { font-family: 'Clash Display', sans-serif; }
 
 .pulse-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #4ade80;
-  display: inline-block;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #4ade80; display: inline-block;
   animation: pulseAnim 2s infinite;
 }
 
 @keyframes pulseAnim {
   0%,100% { opacity:1; transform:scale(1); }
   50% { opacity:0.4; transform:scale(0.8); }
+}
+
+html { scroll-behavior: smooth; }
+
+/* =====================
+   RESPONSIVE UTILITIES
+   ===================== */
+
+/* 2-col grid that stacks on mobile */
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+}
+
+/* 3-col grid */
+.grid-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* 4-col grid */
+.grid-4col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+/* Section padding */
+.section-x {
+  padding-left: 40px;
+  padding-right: 40px;
+}
+
+/* Nav links */
+.nav-links { display: flex; align-items: center; gap: 28px; }
+.nav-actions { display: flex; gap: 10px; }
+
+/* Hero heading sizes */
+.hero-h1-lg { font-size: 46px; }
+.hero-h1-xl { font-size: 50px; }
+
+/* Mobile hamburger */
+.mobile-menu { display: none; }
+.mobile-nav { display: none; }
+
+/* =====================
+   MOBILE (max 768px)
+   ===================== */
+@media (max-width: 768px) {
+  /* Nav */
+  .nav-links { display: none !important; }
+  .nav-actions { display: none !important; }
+  .mobile-menu { display: flex !important; align-items: center; gap: 10px; }
+
+  /* Grids → single column */
+  .grid-2col { grid-template-columns: 1fr !important; gap: 0 !important; }
+  .grid-3col { grid-template-columns: 1fr !important; }
+  .grid-4col { grid-template-columns: 1fr 1fr !important; }
+
+  /* Padding */
+  .section-x { padding-left: 16px !important; padding-right: 16px !important; }
+
+  /* Hero headings */
+  .hero-h1-lg { font-size: 28px !important; letter-spacing: -0.5px !important; }
+  .hero-h1-xl { font-size: 32px !important; letter-spacing: -0.5px !important; }
+
+  /* Upload hero card */
+  .upload-hero-card {
+    border-radius: 16px !important;
+    margin: 16px !important;
+    width: calc(100% - 32px) !important;
+  }
+
+  /* Search bar */
+  .search-bar {
+    flex-direction: column !important;
+    border-radius: 14px !important;
+  }
+  .search-bar > div {
+    border-right: none !important;
+    border-bottom: 1px solid #f0f0f5 !important;
+  }
+  .search-bar-submit {
+    border-radius: 0 0 14px 14px !important;
+    padding: 14px 32px !important;
+    justify-content: center !important;
+  }
+
+  /* Hotel cards */
+  .hotel-card {
+    grid-template-columns: 1fr !important;
+  }
+  .hotel-card-img { height: 200px !important; }
+
+  /* Sidebar hidden */
+  .search-sidebar { display: none !important; }
+
+  /* Offer hero */
+  .offer-hero-right { display: none !important; }
+  .offer-below-grid { grid-template-columns: 1fr !important; }
+
+  /* CTA band */
+  .cta-band { grid-template-columns: 1fr !important; }
+  .cta-band-right { display: none !important; }
+
+  /* Better tap targets */
+  button { min-height: 44px; }
+
+  /* Chips scroll */
+  .chips-scroll {
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    padding-bottom: 8px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chips-scroll::-webkit-scrollbar { display: none; }
+
+  /* Font adjustments */
+  .sec-title { font-size: 28px !important; }
+  .card-title-lg { font-size: 20px !important; }
+}
+
+/* Tablet (768-1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .grid-4col { grid-template-columns: repeat(2, 1fr) !important; }
+  .section-x { padding-left: 24px !important; padding-right: 24px !important; }
 }
