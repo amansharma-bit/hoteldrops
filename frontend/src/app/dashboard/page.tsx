@@ -1,255 +1,321 @@
-'use client'
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { Bell, Upload, TrendingDown, Clock, CheckCircle, RefreshCw, IndianRupee, Hotel, ArrowRight } from 'lucide-react'
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Building2, Eye, TrendingDown, IndianRupee, Calendar, Moon, Clock, RefreshCw, Check, ArrowRight, Plus } from "lucide-react";
+
+const SUPABASE_URL = "https://wifspvhmvaavgzkepjqz.supabase.co";
+const SUPABASE_KEY = "sb_publishable_3HpgXVmSAdGA7ZPypqCdQQ_D00QN0Nh";
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
 
 interface Booking {
-  id: string
-  hotel_name: string
-  hotel_city: string
-  check_in: string
-  check_out: string
-  original_price: number
-  status: string
-  last_checked_at: string
-  nights: number
-  room_type: string
-  offers?: { offer_price: number; customer_saving: number; status: string }[]
+  id: string;
+  hotel_name: string;
+  hotel_city: string;
+  check_in: string;
+  check_out: string;
+  original_price: number;
+  status: string;
+  last_checked_at: string;
+  nights: number;
+  room_type: string;
+  created_at: string;
+  offers?: { offer_price: number; customer_saving: number; status: string; id: string }[];
 }
 
-const statusConfig: Record<string, { label: string; class: string; icon: any }> = {
-  pending:   { label: 'Setting up',    class: 'badge-pending',   icon: Clock },
-  tracking:  { label: 'Tracking',      class: 'badge-tracking',  icon: RefreshCw },
-  drop_found:{ label: 'Drop Found!',   class: 'badge-drop',      icon: TrendingDown },
-  offer_sent:{ label: 'Offer Sent',    class: 'badge-drop',      icon: Bell },
-  accepted:  { label: 'Accepted',      class: 'badge-rebooked',  icon: CheckCircle },
-  rebooked:  { label: 'Rebooked ✓',   class: 'badge-rebooked',  icon: CheckCircle },
-  expired:   { label: 'Expired',       class: 'badge-expired',   icon: Clock },
-  no_drop:   { label: 'No drop yet',   class: 'badge-expired',   icon: Clock },
+const STATUS: Record<string, { label: string; bg: string; color: string; icon: string }> = {
+  pending:    { label: "Setting up",   bg: "#fef3c7", color: "#d97706", icon: "⏳" },
+  tracking:   { label: "Watching",     bg: "#dbeafe", color: "#1447b8", icon: "🔍" },
+  drop_found: { label: "Drop Found!",  bg: "#dbeafe", color: "#1447b8", icon: "📉" },
+  offer_sent: { label: "Offer Sent",   bg: "#dbeafe", color: "#1447b8", icon: "📱" },
+  accepted:   { label: "Accepted",     bg: "#dbeafe", color: "#059669", icon: "✅" },
+  rebooked:   { label: "Rebooked ✓",  bg: "#dbeafe", color: "#059669", icon: "🎉" },
+  expired:    { label: "Expired",      bg: "#f4f6f9", color: "#9ca3af", icon: "⏰" },
+  no_drop:    { label: "No drop yet",  bg: "#f4f6f9", color: "#9ca3af", icon: "📊" },
+};
+
+function formatINR(n: number) {
+  return "₹" + Math.round(n).toLocaleString("en-IN");
 }
 
-// Mock data — replace with real API call
-const MOCK_BOOKINGS: Booking[] = [
-  {
-    id: '1', hotel_name: 'Taj Mahal Palace', hotel_city: 'Mumbai',
-    check_in: '2026-06-15', check_out: '2026-06-18', original_price: 55500,
-    status: 'drop_found', last_checked_at: '2026-05-06T10:30:00Z', nights: 3, room_type: 'Deluxe Room',
-    offers: [{ offer_price: 49500, customer_saving: 6000, status: 'sent' }],
-  },
-  {
-    id: '2', hotel_name: 'ITC Grand Chola', hotel_city: 'Chennai',
-    check_in: '2026-07-01', check_out: '2026-07-03', original_price: 28000,
-    status: 'tracking', last_checked_at: '2026-05-06T08:00:00Z', nights: 2, room_type: 'Superior Room',
-  },
-  {
-    id: '3', hotel_name: 'The Leela Palace', hotel_city: 'New Delhi',
-    check_in: '2026-08-10', check_out: '2026-08-12', original_price: 42000,
-    status: 'tracking', last_checked_at: '2026-05-06T06:00:00Z', nights: 2, room_type: 'Grand Room',
-  },
-  {
-    id: '4', hotel_name: 'Oberoi Udaivilas', hotel_city: 'Udaipur',
-    check_in: '2026-05-20', check_out: '2026-05-23', original_price: 90000,
-    status: 'rebooked', last_checked_at: '2026-05-01T12:00:00Z', nights: 3, room_type: 'Premier Lake View',
-    offers: [{ offer_price: 81000, customer_saving: 9000, status: 'completed' }],
-  },
-]
+function nights(checkIn: string, checkOut: string) {
+  return Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
+}
 
-export default function DashboardPage() {
-  const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS)
-  const [activeTab, setActiveTab] = useState<'all'|'tracking'|'drops'|'completed'>('all')
+// Mock bookings for demo — shown when no real bookings exist
+const DEMO_BOOKINGS: Booking[] = [
+  {
+    id: "demo-1", hotel_name: "Atlantis The Palm", hotel_city: "Dubai",
+    check_in: "2026-12-14", check_out: "2026-12-18", original_price: 112000,
+    status: "drop_found", last_checked_at: new Date(Date.now() - 3600000).toISOString(),
+    nights: 4, room_type: "Deluxe Room", created_at: new Date().toISOString(),
+    offers: [{ id: "offer-1", offer_price: 89600, customer_saving: 22400, status: "sent" }],
+  },
+  {
+    id: "demo-2", hotel_name: "Park Hyatt Bangkok", hotel_city: "Bangkok",
+    check_in: "2027-01-03", check_out: "2027-01-07", original_price: 158000,
+    status: "tracking", last_checked_at: new Date(Date.now() - 7200000).toISOString(),
+    nights: 4, room_type: "Park King Room", created_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-3", hotel_name: "W Bali Seminyak", hotel_city: "Bali",
+    check_in: "2027-02-08", check_out: "2027-02-12", original_price: 91000,
+    status: "rebooked", last_checked_at: new Date(Date.now() - 86400000).toISOString(),
+    nights: 4, room_type: "Wonderful Room", created_at: new Date().toISOString(),
+    offers: [{ id: "offer-3", offer_price: 72800, customer_saving: 18200, status: "completed" }],
+  },
+];
+
+export default function Dashboard() {
+  const router = useRouter();
+  const isMobile = useIsMobile();
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"all" | "tracking" | "drops" | "completed">("all");
+  const [isDemo, setIsDemo] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/bookings?select=*,offers(id,offer_price,customer_saving,status)&order=created_at.desc`,
+          { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } }
+        );
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setBookings(data);
+        } else {
+          setBookings(DEMO_BOOKINGS);
+          setIsDemo(true);
+        }
+      } catch {
+        setBookings(DEMO_BOOKINGS);
+        setIsDemo(true);
+      }
+      setLoading(false);
+    }
+    load();
+  }, []);
 
   const filtered = bookings.filter(b => {
-    if (activeTab === 'tracking')  return b.status === 'tracking' || b.status === 'pending'
-    if (activeTab === 'drops')     return b.status === 'drop_found' || b.status === 'offer_sent'
-    if (activeTab === 'completed') return b.status === 'rebooked'
-    return true
-  })
+    if (tab === "tracking")  return ["tracking", "pending"].includes(b.status);
+    if (tab === "drops")     return ["drop_found", "offer_sent"].includes(b.status);
+    if (tab === "completed") return b.status === "rebooked";
+    return true;
+  });
 
   const totalSaved = bookings
-    .filter(b => b.status === 'rebooked')
-    .reduce((sum, b) => sum + (b.offers?.[0]?.customer_saving || 0), 0)
+    .filter(b => b.status === "rebooked")
+    .reduce((sum, b) => sum + (b.offers?.[0]?.customer_saving || 0), 0);
 
-  const activeTracking = bookings.filter(b => b.status === 'tracking').length
-  const dropsFound     = bookings.filter(b => ['drop_found','offer_sent','rebooked'].includes(b.status)).length
+  const activeTracking = bookings.filter(b => ["tracking", "pending"].includes(b.status)).length;
+  const dropsFound = bookings.filter(b => ["drop_found", "offer_sent", "rebooked"].includes(b.status)).length;
+  const hasAlert = bookings.some(b => ["drop_found", "offer_sent"].includes(b.status));
+
+  const px = isMobile ? "16px" : "32px";
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f7f9fc", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 20, fontWeight: 700, marginBottom: 8 }}>rebuq<span style={{ color: "#1447b8" }}>.</span></div>
+          <div style={{ fontSize: 13, color: "#9ca3af" }}>Loading your bookings…</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#f7f9fc", minHeight: "100vh" }}>
 
       {/* Nav */}
-      <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">HD</span>
-          </div>
-          <span className="font-extrabold text-xl text-gray-900">HotelDrops</span>
-        </Link>
-        <div className="flex items-center gap-3">
-          <Link href="/upload" className="btn-primary flex items-center gap-2 text-sm px-5 py-2.5">
-            <Upload className="w-4 h-4" />
-            Track New Booking
-          </Link>
+      <nav style={{ background: "#fff", borderBottom: "1px solid #eaeef2", padding: `0 ${px}`, height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
+        <a href="/" style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 20, fontWeight: 700, color: "#0a0a0f", textDecoration: "none" }}>
+          rebuq<span style={{ color: "#1447b8" }}>.</span>
+        </a>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {hasAlert && (
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#1447b8", boxShadow: "0 0 0 3px rgba(22,163,74,0.2)" }} />
+          )}
+          <button onClick={() => router.push("/upload")} style={{ background: "#1447b8", color: "#fff", border: "none", padding: isMobile ? "8px 14px" : "9px 20px", borderRadius: 8, fontSize: isMobile ? 12 : 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+            <Plus size={14} /> Track booking
+          </button>
         </div>
       </nav>
 
-      <div className="max-w-screen-lg mx-auto px-6 py-8">
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "20px 16px" : "32px 32px" }}>
+
+        {/* Demo banner */}
+        {isDemo && (
+          <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 12, color: "#92400e", display: "flex", alignItems: "center", gap: 8 }}>
+            <span>👀</span>
+            <span><strong>Demo mode</strong> — Upload a real voucher to start tracking your bookings.</span>
+            <button onClick={() => router.push("/upload")} style={{ marginLeft: "auto", background: "#d97706", color: "#fff", border: "none", padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+              Upload now →
+            </button>
+          </div>
+        )}
 
         {/* Welcome */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-800 text-gray-900">My Bookings Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">We're monitoring your hotel prices 24/7. Sit back and relax.</p>
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{ fontFamily: "'Clash Display', sans-serif", fontSize: isMobile ? 24 : 28, fontWeight: 700, color: "#111827", letterSpacing: "-0.5px", marginBottom: 4 }}>
+            My tracked bookings
+          </h1>
+          <p style={{ fontSize: 13, color: "#9ca3af" }}>We&apos;re monitoring your hotel prices 24/7. Sit back and relax.</p>
         </div>
 
-        {/* Stats row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
           {[
-            { label: 'Bookings tracked',  value: bookings.length,   icon: Hotel,       color: 'bg-blue-50 text-blue-600' },
-            { label: 'Actively tracking', value: activeTracking,     icon: RefreshCw,   color: 'bg-purple-50 text-purple-600' },
-            { label: 'Price drops found', value: dropsFound,         icon: TrendingDown,color: 'bg-green-50 text-green-600' },
-            { label: 'Total saved',       value: `₹${totalSaved.toLocaleString('en-IN')}`, icon: IndianRupee, color: 'bg-yellow-50 text-yellow-600' },
+            { label: "Bookings tracked", value: bookings.length, icon: <Building2 size={18} />, color: "#1447b8", bg: "#eff6ff" },
+            { label: "Actively watching", value: activeTracking, icon: <Eye size={18} />, color: "#7c3aed", bg: "#f5f3ff" },
+            { label: "Price drops found", value: dropsFound, icon: <TrendingDown size={18} />, color: "#1447b8", bg: "#eff6ff" },
+            { label: "Total saved", value: formatINR(totalSaved), icon: <IndianRupee size={18} />, color: "#d97706", bg: "#fef3c7" },
           ].map((s, i) => (
-            <div key={i} className="card flex items-center gap-4">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.color}`}>
-                <s.icon className="w-5 h-5" />
-              </div>
+            <div key={i} style={{ background: "#fff", borderRadius: 14, padding: "16px 18px", border: "1px solid #eaeef2", display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: s.color }}>{s.icon}</div>
               <div>
-                <p className="text-xl font-800 text-gray-900">{s.value}</p>
-                <p className="text-xs text-gray-500">{s.label}</p>
+                <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: isMobile ? 20 : 24, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{s.label}</div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Drop found alert banner */}
-        {bookings.some(b => b.status === 'drop_found' || b.status === 'offer_sent') && (
-          <div className="bg-green-600 rounded-2xl p-5 mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                <TrendingDown className="w-5 h-5 text-white" />
-              </div>
+        {/* Alert banner */}
+        {hasAlert && (
+          <div style={{ background: "#1447b8", borderRadius: 14, padding: "16px 20px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 40, height: 40, background: "rgba(255,255,255,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><TrendingDown size={20} color="#fff" /></div>
               <div>
-                <p className="text-white font-700">Price drop found on your booking!</p>
-                <p className="text-green-100 text-sm">Taj Mahal Palace — Save ₹6,000 on your stay</p>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Price drop found on your booking!</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+                  {bookings.find(b => b.status === "drop_found")?.hotel_name} — Save {formatINR(bookings.find(b => b.status === "drop_found")?.offers?.[0]?.customer_saving || 0)}
+                </div>
               </div>
             </div>
-            <button className="bg-white text-green-700 font-700 text-sm px-5 py-2.5 rounded-xl hover:shadow-md transition-shadow whitespace-nowrap">
-              View Offer →
+            <button onClick={() => router.push(`/offer/${bookings.find(b => b.status === "drop_found")?.offers?.[0]?.id || ""}`)}
+              style={{ background: "#fff", color: "#1447b8", border: "none", padding: "9px 18px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+              View offer →
             </button>
           </div>
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
+        <div style={{ display: "flex", gap: 4, background: "#f0f0f5", borderRadius: 12, padding: 4, marginBottom: 20, width: "fit-content" }}>
           {([
-            { key: 'all',       label: `All (${bookings.length})` },
-            { key: 'tracking',  label: `Tracking (${activeTracking})` },
-            { key: 'drops',     label: `Drops Found (${dropsFound})` },
-            { key: 'completed', label: 'Completed' },
-          ] as const).map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-600 transition-all ${activeTab === tab.key ? 'bg-white text-gray-900 shadow-card' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              {tab.label}
+            { key: "all", label: `All (${bookings.length})` },
+            { key: "tracking", label: `Watching (${activeTracking})` },
+            { key: "drops", label: `Drops (${dropsFound})` },
+            { key: "completed", label: "Completed" },
+          ] as const).map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              style={{ background: tab === t.key ? "#fff" : "none", border: "none", padding: isMobile ? "7px 12px" : "8px 16px", borderRadius: 9, fontSize: isMobile ? 11 : 12, fontWeight: tab === t.key ? 700 : 500, color: tab === t.key ? "#111827" : "#6b7280", cursor: "pointer", fontFamily: "inherit", boxShadow: tab === t.key ? "0 1px 4px rgba(0,0,0,0.08)" : "none", whiteSpace: "nowrap" }}>
+              {t.label}
             </button>
           ))}
         </div>
 
         {/* Bookings list */}
         {filtered.length === 0 ? (
-          <div className="card text-center py-16">
-            <Hotel className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="font-600 text-gray-500 mb-4">No bookings in this category</p>
-            <Link href="/upload" className="btn-primary inline-flex items-center gap-2">
-              <Upload className="w-4 h-4" /> Track a Booking
-            </Link>
+          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #eaeef2", padding: 48, textAlign: "center" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🏨</div>
+            <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 6 }}>No bookings here yet</div>
+            <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 20 }}>Upload a hotel voucher to start tracking</p>
+            <button onClick={() => router.push("/upload")} style={{ background: "#1447b8", color: "#fff", border: "none", padding: "11px 24px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              Upload voucher →
+            </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filtered.map(booking => {
-              const sc = statusConfig[booking.status] || statusConfig.tracking
-              const offer = booking.offers?.[0]
-              const nights = booking.nights || Math.ceil((new Date(booking.check_out).getTime() - new Date(booking.check_in).getTime()) / 86400000)
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {filtered.map(b => {
+              const st = STATUS[b.status] || STATUS.tracking;
+              const offer = b.offers?.[0];
+              const numNights = b.nights || nights(b.check_in, b.check_out);
+              const isAlert = ["drop_found", "offer_sent"].includes(b.status);
 
               return (
-                <div key={booking.id} className={`card hover:shadow-md transition-shadow ${booking.status === 'drop_found' ? 'border-green-200 bg-green-50/30' : ''}`}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4 flex-1 min-w-0">
-                      {/* Hotel icon */}
-                      <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Hotel className="w-6 h-6 text-primary-600" />
-                      </div>
-
-                      {/* Details */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="font-700 text-gray-900">{booking.hotel_name}</h3>
-                          <span className={`badge ${sc.class}`}>
-                            <sc.icon className="w-3 h-3" />
-                            {sc.label}
-                          </span>
+                <div key={b.id} style={{ background: "#fff", borderRadius: 16, border: `1.5px solid ${isAlert ? "#bfdbfe" : "#eaeef2"}`, padding: "20px", background: isAlert ? "#f0f7ff" : "#fff" } as React.CSSProperties}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flex: 1, minWidth: 0 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 12, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Building2 size={20} color="#1447b8" /></div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 3 }}>
+                          <span style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 16, fontWeight: 700, color: "#111827" }}>{b.hotel_name}</span>
+                          <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 20, whiteSpace: "nowrap" }}>{st.icon} {st.label}</span>
                         </div>
-                        <p className="text-sm text-gray-500">{booking.hotel_city} · {booking.room_type}</p>
-                        <div className="flex items-center gap-4 mt-2 flex-wrap">
-                          <span className="text-xs text-gray-400">📅 {new Date(booking.check_in).toLocaleDateString('en-IN', { day:'numeric', month:'short' })} → {new Date(booking.check_out).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}</span>
-                          <span className="text-xs text-gray-400">🌙 {nights} nights</span>
-                          {booking.last_checked_at && (
-                            <span className="text-xs text-gray-400">
-                              🔍 Last checked: {new Date(booking.last_checked_at).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}
-                            </span>
-                          )}
+                        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>{b.hotel_city}{b.room_type ? ` · ${b.room_type}` : ""}</div>
+                        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 11, color: "#9ca3af" }}>📅 {b.check_in} → {b.check_out}</span>
+                          <span style={{ fontSize: 11, color: "#9ca3af" }}>🌙 {numNights} nights</span>
+                          {b.last_checked_at && <span style={{ fontSize: 11, color: "#9ca3af" }}>🔍 {new Date(b.last_checked_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>}
                         </div>
                       </div>
                     </div>
-
-                    {/* Price section */}
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs text-gray-400 mb-0.5">Original price</p>
-                      <p className={`text-lg font-800 ${offer ? 'line-through text-gray-400' : 'text-gray-900'}`}>
-                        ₹{booking.original_price.toLocaleString('en-IN')}
-                      </p>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 2 }}>You paid</div>
+                      <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, color: offer ? "#9ca3af" : "#111827", textDecoration: offer ? "line-through" : "none" }}>
+                        {formatINR(b.original_price)}
+                      </div>
                       {offer && (
                         <>
-                          <p className="text-lg font-800 text-green-600">₹{offer.offer_price.toLocaleString('en-IN')}</p>
-                          <p className="text-xs text-green-600 font-600">Save ₹{offer.customer_saving.toLocaleString('en-IN')} 🎉</p>
+                          <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, color: "#1447b8" }}>{formatINR(offer.offer_price)}</div>
+                          <div style={{ fontSize: 11, color: "#1447b8", fontWeight: 700 }}>Save {formatINR(offer.customer_saving)} 🎉</div>
                         </>
                       )}
                     </div>
                   </div>
 
                   {/* Drop found CTA */}
-                  {(booking.status === 'drop_found' || booking.status === 'offer_sent') && offer && (
-                    <div className="mt-4 pt-4 border-t border-green-100 flex items-center justify-between gap-4">
-                      <p className="text-sm text-green-700 font-500">
-                        🎉 We found a lower price! Save <strong>₹{offer.customer_saving.toLocaleString('en-IN')}</strong> on your stay.
-                      </p>
-                      <button className="bg-green-600 text-white text-sm font-600 px-5 py-2 rounded-xl hover:bg-green-700 transition-colors flex items-center gap-1.5 whitespace-nowrap">
-                        View Offer <ArrowRight className="w-3.5 h-3.5" />
+                  {isAlert && offer && (
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #dcfce7", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                      <div style={{ fontSize: 13, color: "#1447b8" }}>
+                        🎉 We found a lower price! Save <strong>{formatINR(offer.customer_saving)}</strong> on your stay.
+                      </div>
+                      <button onClick={() => router.push(`/offer/${offer.id}`)}
+                        style={{ background: "#1447b8", color: "#fff", border: "none", padding: "9px 18px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>
+                        View offer <ArrowRight size={14} />
                       </button>
                     </div>
                   )}
+
+                  {/* Tracking status bar */}
+                  {b.status === "tracking" && (
+                    <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #f4f6f9", display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ flex: 1, background: "#f4f6f9", borderRadius: 4, height: 4, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: "60%", background: "#1447b8", borderRadius: 4, animation: "pulse 2s infinite" }} />
+                      </div>
+                      <span style={{ fontSize: 11, color: "#9ca3af", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}><RefreshCw size={11} /> Checking every 6 hours</span>
+                    </div>
+                  )}
                 </div>
-              )
+              );
             })}
           </div>
         )}
 
-        {/* Empty state */}
-        {bookings.length === 0 && (
-          <div className="card text-center py-20">
-            <div className="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Upload className="w-10 h-10 text-primary-400" />
-            </div>
-            <h3 className="text-xl font-700 text-gray-900 mb-2">No bookings tracked yet</h3>
-            <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto">Upload your first hotel voucher and we'll start monitoring the price for you instantly.</p>
-            <Link href="/upload" className="btn-primary inline-flex items-center gap-2">
-              <Upload className="w-4 h-4" />
-              Upload Your First Voucher
-            </Link>
+        {/* Upload CTA at bottom */}
+        <div style={{ marginTop: 24, background: "#1447b8", borderRadius: 16, padding: isMobile ? "24px 20px" : "32px 36px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: isMobile ? 20 : 24, fontWeight: 700, color: "#fff", marginBottom: 4 }}>Got another booking?</div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>Upload your voucher — we&apos;ll watch it 24/7.</div>
           </div>
-        )}
+          <button onClick={() => router.push("/upload")} style={{ background: "#fff", color: "#1447b8", border: "none", padding: "12px 24px", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Clash Display', sans-serif", whiteSpace: "nowrap" }}>
+            Track new booking →
+          </button>
+        </div>
 
       </div>
     </div>
-  )
+  );
 }
