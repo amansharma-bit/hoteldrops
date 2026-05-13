@@ -180,4 +180,15 @@ router.get('/destinations', async (req, res) => {
   }
 })
 
+// GET /api/test/run-tracker
+router.get('/run-tracker', async (req, res) => {
+  try {
+    const { runPriceTracker } = require('../jobs/priceTracker')
+    const result = await runPriceTracker()
+    res.json({ success: true, result })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
 module.exports = router
