@@ -18,12 +18,11 @@ async function sendWhatsAppAlert(phoneNumber, data) {
     nights, originalPrice, offerPrice, customerSaving, offerId
   } = data
 
-  // Format Indian numbers
   const to = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`
 
-  const message = `🏨 *HotelDrops Price Alert!*
+  const message = `🎉 *rebuq Price Drop Alert!*
 
-Hi ${customerName}! Great news — we found a lower price for your booking.
+Hi ${customerName}! We found a lower price for your hotel.
 
 *${hotelName}*, ${city}
 📅 ${checkIn} → ${checkOut} (${nights} nights)
@@ -35,7 +34,7 @@ Reply *YES* to rebook at the lower price, or visit:
 ${process.env.FRONTEND_URL}/offer/${offerId}
 
 ⏰ Offer valid for 24 hours only.
-_HotelDrops — We save, you save._`
+_rebuq — Booked a hotel? We watch the price._`
 
   const msg = await twilioClient.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM,
@@ -66,7 +65,7 @@ async function sendEmailAlert(email, data) {
   <style>
     body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; background: #f9fafb; margin: 0; padding: 0; }
     .wrap { max-width: 560px; margin: 32px auto; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .header { background: linear-gradient(135deg, #0f172a, #1d4ed8); padding: 32px 28px; text-align: center; }
+    .header { background: #1447b8; padding: 32px 28px; text-align: center; }
     .header h1 { color: #fff; font-size: 22px; margin: 0 0 4px; }
     .header p { color: rgba(255,255,255,0.7); font-size: 13px; margin: 0; }
     .body { padding: 28px; }
@@ -80,10 +79,10 @@ async function sendEmailAlert(email, data) {
     .price-box .amount { font-size: 22px; font-weight: 800; }
     .price-box.old .amount { color: #ef4444; text-decoration: line-through; }
     .price-box.new .amount { color: #16a34a; }
-    .offer-box { background: #2563eb; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 20px; }
+    .offer-box { background: #1447b8; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 20px; }
     .offer-box .label { color: rgba(255,255,255,0.7); font-size: 12px; margin-bottom: 4px; }
     .offer-box .amount { color: #fff; font-size: 28px; font-weight: 800; }
-    .offer-box .saving { color: #93c5fd; font-size: 13px; margin-top: 4px; }
+    .offer-box .saving { color: #FCD34D; font-size: 13px; margin-top: 4px; }
     .cta { display: block; background: #16a34a; color: #fff; text-decoration: none; text-align: center; padding: 14px; border-radius: 12px; font-weight: 700; font-size: 15px; margin-bottom: 12px; }
     .note { font-size: 11px; color: #9ca3af; text-align: center; }
     .footer { background: #f9fafb; padding: 16px 28px; text-align: center; font-size: 11px; color: #9ca3af; border-top: 1px solid #f0f0f5; }
@@ -92,7 +91,7 @@ async function sendEmailAlert(email, data) {
 <body>
   <div class="wrap">
     <div class="header">
-      <h1>🏨 Price Drop Alert!</h1>
+      <h1>🎉 Price Drop Alert!</h1>
       <p>Hi ${customerName}, we found a lower price for your hotel.</p>
     </div>
     <div class="body">
@@ -111,18 +110,18 @@ async function sendEmailAlert(email, data) {
       </div>
 
       <div class="offer-box">
-        <div class="label">Our offer to you</div>
-        <div class="amount">₹${Number(offerPrice).toLocaleString('en-IN')}</div>
-        <div class="saving">You save ₹${Number(customerSaving).toLocaleString('en-IN')} 🎉</div>
+        <div class="label">Your saving</div>
+        <div class="amount">₹${Number(customerSaving).toLocaleString('en-IN')}</div>
+        <div class="saving">Same hotel · Same room · Same dates 🎉</div>
       </div>
 
       <a href="${process.env.FRONTEND_URL}/offer/${offerId}" class="cta">
         ✅ Yes, rebook at lower price →
       </a>
-      <p class="note">⏰ Offer valid for 24 hours · Same hotel · Same room · Same dates</p>
+      <p class="note">⏰ Offer valid for 24 hours · Free cancellation confirmed</p>
     </div>
     <div class="footer">
-      © 2026 HotelDrops · Made with ❤️ in India<br/>
+      © 2026 rebuq · Booked a hotel? We watch the price.<br/>
       <a href="${process.env.FRONTEND_URL}/unsubscribe" style="color:#9ca3af;">Unsubscribe</a>
     </div>
   </div>
@@ -130,9 +129,9 @@ async function sendEmailAlert(email, data) {
 </html>`
 
   await transporter.sendMail({
-    from:    `"HotelDrops" <${process.env.EMAIL_FROM}>`,
+    from:    `"rebuq" <${process.env.EMAIL_FROM}>`,
     to:      email,
-    subject: `🏨 Price Drop! Save ₹${Number(customerSaving).toLocaleString('en-IN')} on ${hotelName}`,
+    subject: `🎉 Price Drop! Save ₹${Number(customerSaving).toLocaleString('en-IN')} on ${hotelName}`,
     html,
   })
 }
@@ -145,7 +144,7 @@ async function sendBookingConfirmation(email, data) {
   const transporter = getMailTransporter()
 
   await transporter.sendMail({
-    from:    `"HotelDrops" <${process.env.EMAIL_FROM}>`,
+    from:    `"rebuq" <${process.env.EMAIL_FROM}>`,
     to:      email,
     subject: `✅ Booking Confirmed — ${hotelName}`,
     html: `
@@ -160,43 +159,44 @@ async function sendBookingConfirmation(email, data) {
           <li>You saved: <strong style="color:#16a34a;">₹${Number(customerSaving).toLocaleString('en-IN')}</strong> 🎉</li>
           <li>Booking ref: ${bookingRef}</li>
         </ul>
-        <p>Your original booking has been cancelled. Your new confirmation will follow shortly.</p>
-        <p>Thank you for using HotelDrops! 🏨</p>
+        <p>Please cancel your original booking. Your new confirmation will follow shortly.</p>
+        <p>Thank you for using rebuq! 🎉</p>
       </div>
     `,
   })
 }
 
 // ==============================
-// WELCOME EMAIL (on signup)
+// WELCOME EMAIL
 // ==============================
 async function sendWelcomeEmail(email, name) {
   const transporter = getMailTransporter()
   await transporter.sendMail({
-    from:    `"HotelDrops" <${process.env.EMAIL_FROM}>`,
+    from:    `"rebuq" <${process.env.EMAIL_FROM}>`,
     to:      email,
-    subject: `Welcome to HotelDrops 🏨`,
+    subject: `Welcome to rebuq 🎉`,
     html: `
       <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;">
-        <h2>Welcome, ${name}! 👋</h2>
-        <p>You're all set. Here's how HotelDrops works:</p>
+        <h2>Welcome to rebuq, ${name}! 👋</h2>
+        <p>You're all set. Here's how rebuq works:</p>
         <ol>
           <li>Upload your hotel voucher</li>
-          <li>We monitor the price 24/7</li>
-          <li>Price drops → WhatsApp + email alert</li>
+          <li>Our AI monitors the price 24/7</li>
+          <li>Price drops → instant WhatsApp alert</li>
           <li>You save money, we earn a small commission</li>
         </ol>
         <a href="${process.env.FRONTEND_URL}/upload" 
-           style="display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:700;">
+           style="display:inline-block;background:#1447b8;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:700;">
           Upload Your First Voucher →
         </a>
+        <p style="font-size:12px;color:#9ca3af;margin-top:24px;">rebuq — Booked a hotel? We watch the price.</p>
       </div>
     `,
   })
 }
 
 // ==============================
-// MAIL TRANSPORTER (SendGrid or Gmail)
+// MAIL TRANSPORTER
 // ==============================
 function getMailTransporter() {
   if (process.env.SENDGRID_API_KEY) {
@@ -206,7 +206,6 @@ function getMailTransporter() {
       auth: { user: 'apikey', pass: process.env.SENDGRID_API_KEY },
     })
   }
-  // Fallback to Gmail
   return nodemailer.createTransport({
     service: 'gmail',
     auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
