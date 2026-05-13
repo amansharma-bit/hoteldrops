@@ -3,6 +3,17 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
 const CITY_PHOTOS: Record<string, string[]> = {
   dubai: ["photo-1582719508461-905c673771fd", "photo-1518684079-3c830dcef090", "photo-1547458718-b47a2b38e09a"],
   bangkok: ["photo-1508009603885-50cf7c579365", "photo-1563492065599-3520f775eeed", "photo-1555217851-6141535bd771"],
@@ -70,6 +81,7 @@ function formatINR(n: number) {
 export default function OfferPage() {
   const params = useParams();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [confirmed, setConfirmed] = useState(false);
   const [seconds, setSeconds] = useState(MOCK_OFFER.expiresIn);
   const offer = MOCK_OFFER;
@@ -134,15 +146,15 @@ export default function OfferPage() {
       </nav>
 
       {/* Hero */}
-      <div style={{ background: "#1447b8", padding: "48px 32px 80px" }}>
+      <div style={{ background: "#1447b8", padding: isMobile ? "32px 16px 48px" : "48px 32px 80px" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", padding: "5px 14px", borderRadius: 100, fontSize: 11, color: "rgba(255,255,255,0.8)", marginBottom: 20 }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80", display: "inline-block" }} />
             Price drop detected — offer expires in <strong style={{ marginLeft: 4 }}>{timerDisplay()}</strong>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40, alignItems: "center" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 40, alignItems: "center" }}>
             <div>
-              <h1 style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 40, fontWeight: 700, color: "#fff", letterSpacing: "-1.5px", lineHeight: 1.08, marginBottom: 12 }}>
+              <h1 style={{ fontFamily: "'Clash Display', sans-serif", fontSize: isMobile ? 32 : 40, fontWeight: 700, color: "#fff", letterSpacing: "-1.5px", lineHeight: 1.08, marginBottom: 12 }}>
                 Great news,<br />{offer.customerName}! Save<br /><span style={{ color: "#FCD34D" }}>{formatINR(offer.saving)}</span>
               </h1>
               <p style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", lineHeight: 1.8, marginBottom: 20 }}>
@@ -161,7 +173,7 @@ export default function OfferPage() {
                 ))}
               </div>
             </div>
-            <div style={{ background: "#fff", borderRadius: 20, padding: 24, textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }}>
+            {!isMobile && <div style={{ background: "#fff", borderRadius: 20, padding: 24, textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }}>
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "2px", color: "#9ca3af", marginBottom: 6 }}>You save</div>
               <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 52, fontWeight: 700, color: "#16a34a", lineHeight: 1, marginBottom: 4 }}>{formatINR(offer.saving)}</div>
               <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 14 }}>on your {offer.city} booking</div>
@@ -173,12 +185,12 @@ export default function OfferPage() {
               <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fef3c7", border: "1px solid #fde68a", color: "#d97706", fontSize: 12, fontWeight: 600, padding: "6px 14px", borderRadius: 20 }}>
                 ⏰ Expires in {timerDisplay()}
               </div>
-            </div>
+            </div>}
           </div>
         </div>
       </div>
 
-      <div style={{ maxWidth: 720, margin: "-40px auto 0", padding: "0 20px 60px", position: "relative", zIndex: 1 }}>
+      <div style={{ maxWidth: 720, margin: isMobile ? "0 auto" : "-40px auto 0", padding: isMobile ? "0 16px 40px" : "0 20px 60px", position: "relative", zIndex: 1 }}>
 
         {/* Hotel info */}
         <div style={card}>
