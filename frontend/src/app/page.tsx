@@ -178,6 +178,19 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Mobile quick links */}
+      {isMobile && (
+        <div style={{ background: "#fff", padding: "12px 16px", borderBottom: "1px solid #f0f0f5", display: "flex", gap: 10 }}>
+          <button onClick={() => router.push("/search-hotels")} style={{ flex: 1, background: "#f4f6f9", border: "1px solid #eaeef2", borderRadius: 10, padding: "10px", fontSize: 13, fontWeight: 600, color: "#111827", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1447b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            Search hotels
+          </button>
+          <button onClick={handleCheck} style={{ flex: 1, background: "#1447b8", border: "none", borderRadius: 10, padding: "10px", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            📤 Upload voucher
+          </button>
+        </div>
+      )}
+
       {/* Stats */}
       <section style={{ padding: isMobile ? "24px 16px 0" : "36px 40px 0" }}>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 12, maxWidth: 1100, margin: "0 auto" }}>
