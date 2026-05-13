@@ -127,8 +127,42 @@ export default function UploadPage() {
   async function submitBooking() {
     if (!phone || phone.length < 10) { alert('Please enter a valid WhatsApp number'); return }
     if (!email) { alert('Please enter your email'); return }
+    if (!extracted?.hotel_name) { alert('Please enter hotel name'); return }
+    if (!extracted?.check_in) { alert('Please enter check-in date'); return }
+    if (!extracted?.check_out) { alert('Please enter check-out date'); return }
+    if (!extracted?.original_price) { alert('Please enter the price you paid'); return }
+
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1800))
+
+    try {
+      const payload = {
+        hotel_name: extracted.hotel_name,
+        hotel_city: extracted.hotel_city,
+        check_in: extracted.check_in,
+        check_out: extracted.check_out,
+        room_type: extracted.room_type,
+        original_price: extracted.original_price,
+        num_adults: extracted.num_adults,
+        num_rooms: extracted.num_rooms,
+        phone,
+        email,
+      }
+
+      const res = await fetch('https://hoteldrops-production.up.railway.app/api/bookings/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: JSON.stringify(payload) }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to save booking')
+      }
+    } catch (err) {
+      console.error('Save booking error:', err)
+      // Continue to step 3 even if save fails — don't block the user
+    }
+
     setLoading(false)
     setStep(3)
   }
