@@ -2,7 +2,7 @@ const express = require('express')
 const router  = express.Router()
 const { searchHotels, getDestinationCode, getHotelContent, checkHotelPrice } = require('../utils/hotelbeds')
 
-const PHOTO_BASE = 'https://photos.hotelbeds.com/giata/bigger'
+const PHOTO_BASE = 'https://photos.hotelbeds.com/giata/xl'
 
 // GET /api/hotels/search
 router.get('/search', async (req, res) => {
