@@ -355,8 +355,20 @@ function stringSimilarity(a, b) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
+async function getHotelRooms({ hotelCode, checkIn, checkOut, adults = 2, children = 0, rooms = 1 }) {
+  const payload = {
+    stay:        { checkIn, checkOut },
+    occupancies: [{ rooms, adults, children }],
+    hotels:      { hotel: [parseInt(hotelCode)] },
+    filter:      { maxHotels: 1 },
+  }
+  const data = await apiRequest('/hotel-api/1.0/hotels', 'POST', payload)
+  const hotel = (data.hotels?.hotels || [])[0]
+  return hotel?.rooms || []
+}
+
 module.exports = {
-  searchHotels, checkHotelPrice, getHotelContent,
+  searchHotels, checkHotelPrice, getHotelContent, getHotelRooms,
   findHotelCode, recheckRate, createBooking,
   cancelBooking, getDestinationCode, sleep,
 }
