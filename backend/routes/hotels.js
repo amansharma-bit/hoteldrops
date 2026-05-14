@@ -65,13 +65,8 @@ router.get('/:code', async (req, res) => {
     console.log(`🏨 Hotel detail: ${code} | ${checkIn} → ${checkOut}`)
 
     // Run both API calls in parallel
-    const [content, priceData] = await Promise.all([
+    const [content] = await Promise.all([
       getHotelContent(code),
-      checkHotelPrice({
-        hotelCode: parseInt(code), checkIn, checkOut,
-        adults: parseInt(adults), children: parseInt(children),
-        rooms: parseInt(rooms),
-      }).catch(() => null),
     ])
 
     if (!content) {
@@ -108,32 +103,62 @@ router.get('/:code', async (req, res) => {
       }
     })
 
-    // Parse rooms — show top 10 most interesting
     const EUR_TO_INR = 112
     const nights = Math.max(1, Math.round(
       (new Date(checkOut) - new Date(checkIn)) / 86400000
     ))
 
-    // Get price data from search API — map by room code
+    // Fetch ALL room prices using searchHotels with specific hotel code
     const roomPrices = {}
-    // priceData comes from checkHotelPrice which only returns lowest — need full room data
-    // We'll fetch full room breakdown separately
-    let searchRooms = []
+    let lowestPrice = null
+    let lowestTotal = null
+
     try {
-      const { searchHotels: sh } = require('../utils/hotelbeds')
-      // We already have priceData which has rateKey, roomCode, etc.
-      if (priceData) {
-        roomPrices[priceData.rate.roomCode] = {
-          price: priceData.price,
-          rateKey: priceData.rate.rateKey,
-          boardCode: priceData.rate.boardCode,
-          boardName: priceData.rate.boardName,
-          cancellationPolicies: priceData.rate.cancellationPolicies,
-          rateType: priceData.rate.rateType,
-          paymentType: priceData.rate.paymentType,
+      const searchData = await searchHotels({
+        checkIn, checkOut,
+        adults: parseInt(adults),
+        children: 0,
+        rooms: 1,
+        hotelCodes: [parseInt(code)],
+        maxHotels: 1,
+      })
+
+      const hotelData = searchData[0]
+      if (hotelData) {
+        let minPrice = Infinity
+        for (const room of (hotelData.rooms || [])) {
+          // Get the best rate per room
+          let bestRate = null
+          let bestPrice = Infinity
+          for (const rate of (room.rates || [])) {
+            const price = parseFloat(rate.net || 0)
+            if (price > 0 && price < bestPrice) {
+              bestPrice = price
+              bestRate = rate
+            }
+          }
+          if (bestRate) {
+            roomPrices[room.code] = {
+              price: bestPrice,
+              rateKey: bestRate.rateKey,
+              boardCode: bestRate.boardCode,
+              boardName: bestRate.boardName,
+              cancellationPolicies: bestRate.cancellationPolicies,
+              rateType: bestRate.rateType,
+              paymentType: bestRate.paymentType,
+              allotment: bestRate.allotment,
+            }
+            if (bestPrice < minPrice) {
+              minPrice = bestPrice
+              lowestPrice = Math.round(bestPrice * EUR_TO_INR / nights)
+              lowestTotal = Math.round(bestPrice * EUR_TO_INR)
+            }
+          }
         }
       }
-    } catch {}
+    } catch (e) {
+      console.error('Price fetch error:', e.message)
+    }
 
     // Build room list from content + overlay prices
     const roomList = (content.rooms || []).slice(0, 15).map(room => {
@@ -178,7 +203,9 @@ router.get('/:code', async (req, res) => {
         hasBalcony: balconyFacility?.indLogic === true,
         bedType,
         amenities,
-        images: roomImages[room.roomCode] || [],
+        images: roomImages[room.roomCode] || 
+                roomImages[`${room.type?.code}.${room.characteristic?.code}`] ||
+                Object.values(roomImages)[0] || [],
         pricePerNight,
         totalPrice,
         boardCode: priceInfo?.boardCode || null,
@@ -234,8 +261,8 @@ router.get('/:code', async (req, res) => {
         boards,
         distances,
         interestPoints,
-        lowestPriceINR,
-        lowestTotalINR,
+        lowestPriceINR: lowestPrice,
+        lowestTotalINR: lowestTotal,
         nights,
         checkIn,
         checkOut,
