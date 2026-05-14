@@ -180,6 +180,18 @@ router.get('/destinations', async (req, res) => {
   }
 })
 
+// GET /api/test/hotel-content?code=372446
+router.get('/hotel-content', async (req, res) => {
+  try {
+    const { getHotelContent } = require('../utils/hotelbeds')
+    const code = req.query.code || '372446'
+    const data = await getHotelContent(code)
+    res.json({ success: true, hotel: data })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
 // GET /api/test/run-tracker
 router.get('/run-tracker', async (req, res) => {
   try {
