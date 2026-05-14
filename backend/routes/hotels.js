@@ -136,7 +136,7 @@ router.get('/:code', async (req, res) => {
     } catch {}
 
     // Build room list from content + overlay prices
-    const rooms = (content.rooms || []).slice(0, 15).map(room => {
+    const roomList = (content.rooms || []).slice(0, 15).map(room => {
       const priceInfo = roomPrices[room.roomCode]
       const sizeFacility = (room.roomFacilities || []).find(f => f.facilityCode === 295)
       const bedroomsFacility = (room.roomFacilities || []).find(f => f.facilityCode === 298)
@@ -229,7 +229,7 @@ router.get('/:code', async (req, res) => {
         totalRooms: (content.facilities || []).find(f => f.facilityCode === 70 && f.facilityGroupCode === 10)?.number,
         floors: (content.facilities || []).find(f => f.facilityCode === 50 && f.facilityGroupCode === 10)?.number,
         images: generalImages,
-        rooms,
+        rooms: roomList,
         facilityGroups,
         boards,
         distances,
