@@ -144,14 +144,13 @@ router.get('/:code', async (req, res) => {
 
     console.log(`🏨 Hotel detail: ${code} | ${checkIn} → ${checkOut}`)
 
-    // Fetch content — with fallback if rate limited
+    // Fetch content — with fallback cache if API fails
     let content
     try {
       content = await getHotelContent(code)
     } catch (e) {
       console.error('Content fetch error:', e.message)
-      // If rate limited, return cached data for known hotels
-      if (e.message.includes('403') && HOTEL_CACHE[code]) {
+      if (HOTEL_CACHE[code]) {
         console.log('Using cached data for hotel', code)
         content = HOTEL_CACHE[code]
       } else {
