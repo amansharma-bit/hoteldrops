@@ -1,6 +1,6 @@
 const express = require('express')
 const router  = express.Router()
-const { searchHotels, getDestinationCode, getHotelContent, checkHotelPrice } = require('../utils/hotelbeds')
+const { searchHotels, getDestinationCode, getHotelContent, getHotelRooms } = require('../utils/hotelbeds')
 
 const PHOTO_BASE = 'https://photos.hotelbeds.com/giata/xl'
 
@@ -108,51 +108,43 @@ router.get('/:code', async (req, res) => {
       (new Date(checkOut) - new Date(checkIn)) / 86400000
     ))
 
-    // Fetch ALL room prices using searchHotels with specific hotel code
+    // Fetch ALL room prices using direct hotel search (same as checkHotelPrice but return all rooms)
     const roomPrices = {}
     let lowestPrice = null
     let lowestTotal = null
 
     try {
-      const searchData = await searchHotels({
-        checkIn, checkOut,
-        adults: parseInt(adults),
-        children: 0,
-        rooms: 1,
-        hotelCodes: [parseInt(code)],
-        maxHotels: 1,
+      const hotelRooms = await getHotelRooms({
+        hotelCode: code, checkIn, checkOut,
+        adults: parseInt(adults), children: 0, rooms: 1,
       })
 
-      const hotelData = searchData[0]
-      if (hotelData) {
-        let minPrice = Infinity
-        for (const room of (hotelData.rooms || [])) {
-          // Get the best rate per room
-          let bestRate = null
-          let bestPrice = Infinity
-          for (const rate of (room.rates || [])) {
-            const price = parseFloat(rate.net || 0)
-            if (price > 0 && price < bestPrice) {
-              bestPrice = price
-              bestRate = rate
-            }
+      let minPrice = Infinity
+      for (const room of hotelRooms) {
+        let bestRate = null
+        let bestPrice = Infinity
+        for (const rate of (room.rates || [])) {
+          const price = parseFloat(rate.net || 0)
+          if (price > 0 && price < bestPrice) {
+            bestPrice = price
+            bestRate = rate
           }
-          if (bestRate) {
-            roomPrices[room.code] = {
-              price: bestPrice,
-              rateKey: bestRate.rateKey,
-              boardCode: bestRate.boardCode,
-              boardName: bestRate.boardName,
-              cancellationPolicies: bestRate.cancellationPolicies,
-              rateType: bestRate.rateType,
-              paymentType: bestRate.paymentType,
-              allotment: bestRate.allotment,
-            }
-            if (bestPrice < minPrice) {
-              minPrice = bestPrice
-              lowestPrice = Math.round(bestPrice * EUR_TO_INR / nights)
-              lowestTotal = Math.round(bestPrice * EUR_TO_INR)
-            }
+        }
+        if (bestRate) {
+          roomPrices[room.code] = {
+            price: bestPrice,
+            rateKey: bestRate.rateKey,
+            boardCode: bestRate.boardCode,
+            boardName: bestRate.boardName,
+            cancellationPolicies: bestRate.cancellationPolicies,
+            rateType: bestRate.rateType,
+            paymentType: bestRate.paymentType,
+            allotment: bestRate.allotment,
+          }
+          if (bestPrice < minPrice) {
+            minPrice = bestPrice
+            lowestPrice = Math.round(bestPrice * EUR_TO_INR / nights)
+            lowestTotal = Math.round(bestPrice * EUR_TO_INR)
           }
         }
       }
