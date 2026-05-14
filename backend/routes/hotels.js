@@ -320,8 +320,8 @@ router.get('/:code', async (req, res) => {
     }))
 
     // Lowest price for sticky card
-    const lowestPriceINR = priceData ? Math.round(priceData.price * EUR_TO_INR / nights) : null
-    const lowestTotalINR = priceData ? Math.round(priceData.price * EUR_TO_INR) : null
+    const lowestPriceINR = lowestPrice
+    const lowestTotalINR = lowestTotal
 
     res.json({
       success: true,
