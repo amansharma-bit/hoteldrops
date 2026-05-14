@@ -64,10 +64,8 @@ router.get('/:code', async (req, res) => {
 
     console.log(`🏨 Hotel detail: ${code} | ${checkIn} → ${checkOut}`)
 
-    // Run both API calls in parallel
-    const [content] = await Promise.all([
-      getHotelContent(code),
-    ])
+    // Fetch content first, then prices sequentially to avoid rate limiting
+    const content = await getHotelContent(code)
 
     if (!content) {
       return res.status(404).json({ error: 'Hotel not found' })
@@ -112,6 +110,9 @@ router.get('/:code', async (req, res) => {
     const roomPrices = {}
     let lowestPrice = null
     let lowestTotal = null
+
+    // Small delay to avoid Hotelbeds rate limiting
+    await new Promise(r => setTimeout(r, 500))
 
     try {
       const hotelRooms = await getHotelRooms({
