@@ -245,7 +245,7 @@ export default function Dashboard() {
               const isAlert = ["drop_found", "offer_sent"].includes(b.status);
 
               return (
-                <div key={b.id} style={{ background: "#fff", borderRadius: 16, border: `1.5px solid ${isAlert ? "#bfdbfe" : "#eaeef2"}`, padding: "20px", background: isAlert ? "#f0f7ff" : "#fff" } as React.CSSProperties}>
+                <div key={b.id} style={{ background: isAlert ? "#f0f7ff" : "#fff", borderRadius: 16, border: `1.5px solid ${isAlert ? "#bfdbfe" : "#eaeef2"}`, padding: "20px" } as React.CSSProperties}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flex: 1, minWidth: 0 }}>
                       <div style={{ width: 44, height: 44, borderRadius: 12, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Building2 size={20} color="#1447b8" /></div>
