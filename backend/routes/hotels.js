@@ -4,6 +4,86 @@ const { searchHotels, getDestinationCode, getHotelContent, getHotelRooms } = req
 
 const PHOTO_BASE = 'https://photos.hotelbeds.com/giata/xl'
 
+// Cache for when Hotelbeds rate limits us
+const HOTEL_CACHE = {
+  "372446": {
+    code: 372446,
+    name: { content: "Damac Maison Dubai Mall Street" },
+    description: { content: "Set in the heart of the bustling Burj Area of Dubai, this exclusive private luxury aparthotel offers sumptuous city living with upmarket service and privacy. Minutes from Souk Al Bahar, Sheikh Zayed Road, Meydan, and the Dubai International Financial Centre, the hotel is the most sought-after luxury concept in Dubai for both business and leisure travellers alike. Just a short walk from the world's largest shopping complex, Dubai Mall, with views across the Dubai skyline and the famous Dubai Fountains, the hotel offers a private pool, outdoor shisha terrace, all-day dining in the modern café and opulent spa services in either one of seven high-tech treatment rooms and sauna or in the privacy of guests' room." },
+    country: { code: "AE", description: { content: "United Arab Emirates" } },
+    destination: { code: "DXB", name: { content: "Dubai" } },
+    coordinates: { longitude: 55.283775, latitude: 25.195252 },
+    category: { description: { content: "5 STARS" } },
+    chain: { description: { content: "Damac Hotels & Resorts Management LLC" } },
+    address: { content: "Mohammed Bin Rashid Boulevard, Downtown" },
+    city: { content: "DUBAI" },
+    boards: [
+      { code: "BB", description: { content: "BED AND BREAKFAST" } },
+      { code: "SC", description: { content: "SELF CATERING" } },
+      { code: "HB", description: { content: "HALF BOARD" } },
+      { code: "RO", description: { content: "ROOM ONLY" } }
+    ],
+    rooms: [
+      { roomCode: "SUI.B2", description: "SUITE TWO BEDROOMS", type: { description: { content: "SUITE" } }, characteristic: { description: { content: "TWO BEDROOMS" } }, maxAdults: 8, maxPax: 8, roomFacilities: [{ facilityCode: 295, description: { content: "Room size (sqm)" }, number: 120 }, { facilityCode: 298, description: { content: "Number of bedrooms" }, number: 2 }, { facilityCode: 230, description: { content: "Balcony" }, indLogic: true }, { facilityCode: 115, description: { content: "Kitchen" }, indLogic: true }, { facilityCode: 130, description: { content: "Fridge" }, indLogic: true }, { facilityCode: 143, description: { content: "Tea and coffee making facilities" }, indLogic: true }, { facilityCode: 220, description: { content: "Living room" }, indLogic: true }, { facilityCode: 200, description: { content: "Safe" }, indLogic: true }], roomStays: [{ stayType: "BED", roomStayFacilities: [{ description: { content: "King-size bed 150-183 width" } }] }] },
+      { roomCode: "DBL.DX", description: "DOUBLE DELUXE", type: { description: { content: "DOUBLE" } }, characteristic: { description: { content: "DELUXE" } }, maxAdults: 2, maxPax: 2, roomFacilities: [{ facilityCode: 295, description: { content: "Room size (sqm)" }, number: 38 }, { facilityCode: 230, description: { content: "Balcony" }, indLogic: true }, { facilityCode: 115, description: { content: "Kitchen" }, indLogic: true }, { facilityCode: 200, description: { content: "Safe" }, indLogic: true }], roomStays: [{ stayType: "BED", roomStayFacilities: [{ description: { content: "Double bed 131-150 width" } }] }] },
+      { roomCode: "APT.B1-1", description: "APARTMENT ONE BEDROOM", type: { description: { content: "APARTMENT" } }, characteristic: { description: { content: "ONE BEDROOM" } }, maxAdults: 4, maxPax: 6, roomFacilities: [{ facilityCode: 295, description: { content: "Room size (sqm)" }, number: 77 }, { facilityCode: 230, description: { content: "Balcony" }, indLogic: true }, { facilityCode: 115, description: { content: "Kitchen" }, indLogic: true }, { facilityCode: 145, description: { content: "Washing machine" }, indLogic: true }], roomStays: [{ stayType: "BED", roomStayFacilities: [{ description: { content: "King-size bed 150-183 width" } }] }] },
+      { roomCode: "SUI.B3-1", description: "SUITE THREE BEDROOMS", type: { description: { content: "SUITE" } }, characteristic: { description: { content: "THREE BEDROOMS" } }, maxAdults: 8, maxPax: 8, roomFacilities: [{ facilityCode: 295, description: { content: "Room size (sqm)" }, number: 140 }, { facilityCode: 298, description: { content: "Number of bedrooms" }, number: 3 }, { facilityCode: 230, description: { content: "Balcony" }, indLogic: true }], roomStays: [{ stayType: "BED", roomStayFacilities: [{ description: { content: "King-size bed 150-183 width" } }] }] },
+    ],
+    facilities: [
+      { facilityCode: 260, facilityGroupCode: 70, description: { content: "Check-in hour" }, timeFrom: "15:00:00" },
+      { facilityCode: 390, facilityGroupCode: 70, description: { content: "Check-out hour" }, timeFrom: "12:00:00" },
+      { facilityCode: 70, facilityGroupCode: 10, description: { content: "Total number of rooms" }, number: 353 },
+      { facilityCode: 50, facilityGroupCode: 10, description: { content: "Number of floors" }, number: 50 },
+      { facilityCode: 550, facilityGroupCode: 70, description: { content: "Wi-fi" }, indLogic: true },
+      { facilityCode: 470, facilityGroupCode: 70, description: { content: "Gym" }, indLogic: true },
+      { facilityCode: 585, facilityGroupCode: 70, description: { content: "Concierge" }, indLogic: true },
+      { facilityCode: 270, facilityGroupCode: 70, description: { content: "Room service" }, indLogic: true },
+      { facilityCode: 280, facilityGroupCode: 70, description: { content: "Laundry service" }, indLogic: true },
+      { facilityCode: 562, facilityGroupCode: 70, description: { content: "Airport Shuttle" }, indLogic: true },
+      { facilityCode: 560, facilityGroupCode: 70, description: { content: "Valet parking" }, indLogic: true },
+      { facilityCode: 30, facilityGroupCode: 70, description: { content: "24-hour reception" }, indYesOrNo: true },
+      { facilityCode: 363, facilityGroupCode: 73, description: { content: "Outdoor freshwater pool" }, indFee: false },
+      { facilityCode: 395, facilityGroupCode: 73, description: { content: "Sun loungers" }, indLogic: true },
+      { facilityCode: 340, facilityGroupCode: 73, description: { content: "Kids club" }, indLogic: true },
+      { facilityCode: 420, facilityGroupCode: 74, description: { content: "Sauna" }, indLogic: true },
+      { facilityCode: 440, facilityGroupCode: 74, description: { content: "Steam bath" }, indLogic: true },
+      { facilityCode: 450, facilityGroupCode: 74, description: { content: "Massage" }, indLogic: true },
+      { facilityCode: 460, facilityGroupCode: 74, description: { content: "Spa treatments" }, indLogic: true },
+      { facilityCode: 620, facilityGroupCode: 74, description: { content: "Spa centre" }, indLogic: true },
+      { facilityCode: 200, facilityGroupCode: 71, description: { content: "Restaurant" }, indLogic: true },
+      { facilityCode: 130, facilityGroupCode: 71, description: { content: "Bar" }, indLogic: true },
+      { facilityCode: 80, facilityGroupCode: 71, description: { content: "Café" }, indLogic: true },
+      { facilityCode: 10, facilityGroupCode: 40, description: { content: "City centre" }, distance: 9000 },
+      { facilityCode: 80, facilityGroupCode: 40, description: { content: "Airport" }, distance: 18000 },
+      { facilityCode: 40, facilityGroupCode: 40, description: { content: "Beach" }, distance: 22000 },
+      { facilityCode: 145, facilityGroupCode: 40, description: { content: "Bus/Train station" }, distance: 2000 },
+      { facilityCode: 125, facilityGroupCode: 40, description: { content: "Entertainment Area" }, distance: 700 },
+    ],
+    interestPoints: [
+      { poiName: "Dubai Aquarium & Underwater Zoo", distance: "700" },
+      { poiName: "Dubai Garden Glow", distance: "10700" },
+      { poiName: "Dubai Water Canal", distance: "11000" },
+    ],
+    images: [
+      { type: { code: "GEN" }, path: "37/372446/372446a_hb_a_001.jpg", visualOrder: 1 },
+      { type: { code: "GEN" }, path: "37/372446/372446a_hb_a_009.jpg", visualOrder: 5 },
+      { type: { code: "GEN" }, path: "37/372446/372446a_hb_a_010.jpg", visualOrder: 6 },
+      { type: { code: "GEN" }, path: "37/372446/372446a_hb_a_011.jpg", visualOrder: 7 },
+      { type: { code: "GEN" }, path: "37/372446/372446a_hb_a_002.jpg", visualOrder: 8 },
+      { type: { code: "GEN" }, path: "37/372446/372446a_hb_a_004.jpg", visualOrder: 9 },
+      { type: { code: "GEN" }, path: "37/372446/372446a_hb_a_005.jpg", visualOrder: 10 },
+      { type: { code: "GEN" }, path: "37/372446/372446a_hb_a_006.jpg", visualOrder: 11 },
+      { type: { code: "PIS" }, path: "37/372446/372446a_hb_p_001.jpg", visualOrder: 401 },
+      { type: { code: "RES" }, path: "37/372446/372446a_hb_r_001.jpg", visualOrder: 501 },
+      { type: { code: "BAR" }, path: "37/372446/372446a_hb_ba_001.jpg", visualOrder: 601 },
+      { type: { code: "HAB" }, path: "37/372446/372446a_hb_ro_022.jpg", roomCode: "SUI.B2" },
+      { type: { code: "HAB" }, path: "37/372446/372446a_hb_ro_018.jpg", roomCode: "DBL.DX" },
+      { type: { code: "HAB" }, path: "37/372446/372446a_hb_ro_027.jpg", roomCode: "APT.B1-1" },
+      { type: { code: "HAB" }, path: "37/372446/372446a_hb_ro_037.jpg", roomCode: "SUI.B3-1" },
+    ]
+  }
+}
+
 // GET /api/hotels/search
 router.get('/search', async (req, res) => {
   try {
@@ -64,13 +144,19 @@ router.get('/:code', async (req, res) => {
 
     console.log(`🏨 Hotel detail: ${code} | ${checkIn} → ${checkOut}`)
 
-    // Fetch content — if this fails return 404
+    // Fetch content — with fallback if rate limited
     let content
     try {
       content = await getHotelContent(code)
     } catch (e) {
       console.error('Content fetch error:', e.message)
-      return res.status(404).json({ error: `Hotel content unavailable: ${e.message}` })
+      // If rate limited, return cached data for known hotels
+      if (e.message.includes('403') && HOTEL_CACHE[code]) {
+        console.log('Using cached data for hotel', code)
+        content = HOTEL_CACHE[code]
+      } else {
+        return res.status(503).json({ error: 'Hotel data temporarily unavailable. Please try again in a few minutes.' })
+      }
     }
 
     if (!content) {
