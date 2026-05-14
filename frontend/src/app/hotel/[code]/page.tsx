@@ -515,4 +515,3 @@ export default function HotelDetailPage() {
     </div>
   );
 }
-​image.png​
