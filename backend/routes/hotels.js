@@ -64,8 +64,14 @@ router.get('/:code', async (req, res) => {
 
     console.log(`🏨 Hotel detail: ${code} | ${checkIn} → ${checkOut}`)
 
-    // Fetch content first, then prices sequentially to avoid rate limiting
-    const content = await getHotelContent(code)
+    // Fetch content — if this fails return 404
+    let content
+    try {
+      content = await getHotelContent(code)
+    } catch (e) {
+      console.error('Content fetch error:', e.message)
+      return res.status(404).json({ error: `Hotel content unavailable: ${e.message}` })
+    }
 
     if (!content) {
       return res.status(404).json({ error: 'Hotel not found' })
