@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 const API = "https://hoteldrops-production.up.railway.app/api/hotels";
@@ -38,6 +38,14 @@ const FALLBACK_IMGS = [
 ];
 
 export default function SearchPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "sans-serif", color: "#64748b" }}>Loading search…</div>}>
+      <SearchResults />
+    </Suspense>
+  );
+}
+
+function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const isMobile = useIsMobile();
