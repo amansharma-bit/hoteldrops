@@ -17,23 +17,23 @@ function useIsMobile() {
 }
 
 const DESTINATIONS = [
-  { flag: "🇦🇪", city: "Dubai", country: "UAE", code: "DXB", bg: "linear-gradient(160deg,#1a3a8f,#2563eb,#0ea5e9)", large: true },
-  { flag: "🇲🇻", city: "Maldives", country: "South Asia", code: "MLE", bg: "linear-gradient(160deg,#0891b2,#06b6d4,#67e8f9)", featured: true, badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
-  { flag: "🇹🇭", city: "Bangkok", country: "Thailand", code: "BKK", bg: "linear-gradient(160deg,#92400e,#d97706,#fbbf24)", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
-  { flag: "🇮🇩", city: "Bali", country: "Indonesia", code: "DPS", bg: "linear-gradient(160deg,#065f46,#059669,#34d399)" },
-  { flag: "🇸🇬", city: "Singapore", country: "Southeast Asia", code: "SIN", bg: "linear-gradient(160deg,#4c1d95,#7c3aed,#a78bfa)" },
-  { flag: "🇫🇷", city: "Paris", country: "France", code: "CDG", bg: "linear-gradient(160deg,#831843,#be185d,#f472b6)", badge: "Cheap Flights", badgeColor: B, badgeText: "#fff" },
-  { flag: "🇬🇧", city: "London", country: "UK", code: "LHR", bg: "linear-gradient(160deg,#1e293b,#334155,#64748b)" },
-  { flag: "🇯🇵", city: "Tokyo", country: "Japan", code: "TYO", bg: "linear-gradient(160deg,#7f1d1d,#dc2626,#fca5a5)" },
+  { flag: "🇦🇪", city: "Dubai", country: "UAE", code: "DXB", img: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&q=85&fit=crop", large: true },
+  { flag: "🇲🇻", city: "Maldives", country: "South Asia", code: "MLE", img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800&q=85&fit=crop", featured: true, badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
+  { flag: "🇹🇭", city: "Bangkok", country: "Thailand", code: "BKK", img: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=85&fit=crop", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
+  { flag: "🇮🇩", city: "Bali", country: "Indonesia", code: "DPS", img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=85&fit=crop" },
+  { flag: "🇸🇬", city: "Singapore", country: "Southeast Asia", code: "SIN", img: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600&q=85&fit=crop" },
+  { flag: "🇫🇷", city: "Paris", country: "France", code: "CDG", img: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=85&fit=crop", badge: "Great Value", badgeColor: B, badgeText: "#fff" },
+  { flag: "🇬🇧", city: "London", country: "UK", code: "LHR", img: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=600&q=85&fit=crop" },
+  { flag: "🇯🇵", city: "Tokyo", country: "Japan", code: "TYO", img: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&q=85&fit=crop" },
 ];
 
 const HOTEL_IMAGES = [
-  "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&q=80",
-  "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&q=80",
-  "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=80",
-  "https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=400&q=80",
-  "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=400&q=80",
-  "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=400&q=80",
+  "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=85&fit=crop", // Maldives overwater
+  "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=85&fit=crop", // Paris Eiffel
+  "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600&q=85&fit=crop", // Singapore MBS
+  "https://images.unsplash.com/photo-1496417263034-38ec4f0b665a?w=600&q=85&fit=crop", // Dubai Atlantis
+  "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=85&fit=crop", // Bali temple
+  "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=85&fit=crop", // Bangkok luxury
 ];
 
 const HOTELS = [
@@ -224,7 +224,9 @@ export default function SearchHotelsPage() {
             <div key={i} onClick={() => setDestination(d.city)}
               style={{ borderRadius: 14, overflow: "hidden", position: "relative", cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", transition: "transform .25s", gridColumn: !isMobile && d.large ? "1" : !isMobile && d.featured ? "2" : "auto", gridRow: !isMobile && (d.large || d.featured) ? "1/3" : "auto" }}
               onMouseOver={e => (e.currentTarget.style.transform = "translateY(-4px)")} onMouseOut={e => (e.currentTarget.style.transform = "none")}>
-              <div style={{ background: d.bg, width: "100%", height: "100%", minHeight: !isMobile && (d.large || d.featured) ? 340 : 160 }} />
+              <div style={{ background: "#1a3a8f", width: "100%", height: "100%", minHeight: !isMobile && (d.large || d.featured) ? 340 : 160, position: "relative" }}>
+                <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", minHeight: !isMobile && (d.large || d.featured) ? 340 : 160 }} />
+              </div>
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 55%)" }} />
               {d.badge && (
                 <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, padding: "3px 9px", borderRadius: 6, background: d.badgeColor, color: d.badgeText }}>{d.badge}</span>
