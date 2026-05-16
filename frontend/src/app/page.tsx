@@ -22,10 +22,10 @@ const HOTEL_IMAGES = [
 ];
 
 const CARDS = [
-  { img: HOTEL_IMAGES[0], price: "₹22,400", name: "Atlantis The Palm, Dubai", pct: "↓19%" },
-  { img: HOTEL_IMAGES[1], price: "₹31,600", name: "Park Hyatt Bangkok", pct: "↓20%" },
-  { img: HOTEL_IMAGES[2], price: "₹18,200", name: "W Bali Seminyak", pct: "↓20%" },
-  { img: HOTEL_IMAGES[3], price: "₹17,400", name: "Damac Maison Dubai", pct: "↓28%" },
+  { img: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&q=85&fit=crop", price: "₹22,400", name: "Atlantis The Palm, Dubai", pct: "↓19%" },
+  { img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=400&q=85&fit=crop", price: "₹31,600", name: "Park Hyatt Maldives", pct: "↓20%" },
+  { img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&q=85&fit=crop", price: "₹18,200", name: "Four Seasons Bali", pct: "↓22%" },
+  { img: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=400&q=85&fit=crop", price: "₹17,400", name: "Capella Bangkok", pct: "↓28%" },
 ];
 
 const STATS = [
