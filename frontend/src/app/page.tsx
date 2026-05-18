@@ -329,6 +329,7 @@ export default function Home() {
   const [activeStep, setActiveStep] = useState(0);
   const [carouselPos, setCarouselPos] = useState(0);
   const [showModal, setShowModal] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [statValues, setStatValues] = useState(STATS.map(s => ({ prefix: s.prefix, suffix: s.suffix, val: s.target })));
   const statsRef = useRef<HTMLDivElement>(null);
   const statsAnimated = useRef(false);
@@ -390,16 +391,32 @@ export default function Home() {
         {!isMobile && (
           <ul style={{ display: "flex", gap: 32, listStyle: "none" }}>
             <li><button onClick={() => scrollTo("how")} style={{ fontSize: 14, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>How it works</button></li>
-            <li><button style={{ fontSize: 14, color: B, background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Exclusive Member Deals</button></li>
+            <li><button onClick={() => window.location.href = "/search-hotels"} style={{ fontSize: 14, color: B, background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Exclusive Member Deals</button></li>
           </ul>
         )}
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           {!isMobile && <button style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: "8px 12px", borderRadius: 8 }}>Sign in</button>}
-          <button onClick={() => setShowModal(true)} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: isMobile ? "8px 14px" : "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-            {isMobile ? "Check booking" : "Check my booking"}
-          </button>
+          {!isMobile && <button onClick={() => setShowModal(true)} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>Check my booking</button>}
+          {isMobile && (
+            <button onClick={() => setShowMenu(!showMenu)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+              <span style={{ display: "block", width: 22, height: 2, background: showMenu ? "transparent" : NAVY, transition: "all 0.2s" }} />
+              <span style={{ display: "block", width: 22, height: 2, background: NAVY, transition: "all 0.2s", transform: showMenu ? "rotate(45deg) translate(5px, 5px)" : "none" }} />
+              <span style={{ display: "block", width: 22, height: 2, background: NAVY, transition: "all 0.2s", transform: showMenu ? "rotate(-45deg) translate(5px, -5px)" : "none" }} />
+            </button>
+          )}
         </div>
       </nav>
+
+      {/* MOBILE MENU */}
+      {isMobile && showMenu && (
+        <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 99, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <button onClick={() => { scrollTo("how"); setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>How it works</button>
+          <button onClick={() => { window.location.href = "/search-hotels"; }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
+          <button onClick={() => { setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Sign in</button>
+          <button onClick={() => { setShowModal(true); setShowMenu(false); }} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12, textAlign: "center" }}>Check my booking — it&apos;s free</button>
+          <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 8 }}>Free to check · Pay only if we save you money</p>
+        </div>
+      )}
 
       {/* HERO */}
       <section style={{ textAlign: "center", padding: isMobile ? "60px 20px 50px" : "90px 24px 70px", background: "linear-gradient(180deg, #f0f6ff 0%, #ffffff 100%)" }}>
@@ -412,12 +429,11 @@ export default function Home() {
         </p>
         <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
           <button onClick={() => setShowModal(true)} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
-          <button onClick={() => scrollTo("how")} style={{ background: "transparent", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>▶ See how it works</button>
         </div>
       </section>
 
       {/* CAROUSEL */}
-      <div style={{ padding: isMobile ? "40px 0" : "20px 0 60px" }}>
+      <div id="deals" style={{ padding: isMobile ? "40px 0" : "20px 0 60px" }}>
         <div style={{ textAlign: "center", padding: isMobile ? "0 20px 20px" : "0 40px 28px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 12 }}>Real savings · Verified drops</p>
           <h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>rebuq members saved on these hotels</h2>
