@@ -15,16 +15,16 @@ function useIsMobile() {
 }
 
 const CARDS = [
-  { img: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&q=85&fit=crop", price: "₹22,400", name: "Atlantis The Palm, Dubai", pct: "↓19%" },
-  { img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=85&fit=crop", price: "₹31,600", name: "Park Hyatt, Maldives", pct: "↓20%" },
+  { img: "https://images.unsplash.com/photo-1697000815901-b9a7d9a1de9a?w=600&q=85&fit=crop", price: "₹22,400", name: "Atlantis The Palm, Dubai", pct: "↓19%" },
+  { img: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=600&q=85&fit=crop", price: "₹31,600", name: "Park Hyatt, Maldives", pct: "↓20%" },
   { img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=85&fit=crop", price: "₹18,200", name: "Four Seasons, Bali", pct: "↓22%" },
   { img: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=85&fit=crop", price: "₹17,400", name: "Capella, Bangkok", pct: "↓28%" },
-  { img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop", price: "₹14,800", name: "Taj Palace, New Delhi", pct: "↓16%" },
+  { img: "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=600&q=85&fit=crop", price: "₹14,800", name: "Taj Palace, New Delhi", pct: "↓16%" },
   { img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop", price: "₹21,000", name: "W Hotel, Bali Seminyak", pct: "↓18%" },
-  { img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop", price: "₹48,000", name: "Burj Al Arab, Dubai", pct: "↓12%" },
-  { img: "https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop", price: "₹19,500", name: "Shangri-La, Singapore", pct: "↓23%" },
+  { img: "https://images.unsplash.com/photo-1512632578888-169bbbc64f33?w=600&q=85&fit=crop", price: "₹48,000", name: "Burj Al Arab, Dubai", pct: "↓12%" },
+  { img: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600&q=85&fit=crop", price: "₹19,500", name: "Shangri-La, Singapore", pct: "↓23%" },
   { img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=85&fit=crop", price: "₹26,200", name: "Ritz-Carlton, Langkawi", pct: "↓21%" },
-  { img: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=600&q=85&fit=crop", price: "₹16,900", name: "Anantara Villas, Phuket", pct: "↓25%" },
+  { img: "https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?w=600&q=85&fit=crop", price: "₹16,900", name: "Anantara Villas, Phuket", pct: "↓25%" },
 ];
 
 const STATS = [
