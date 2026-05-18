@@ -15,16 +15,16 @@ function useIsMobile() {
 }
 
 const CARDS = [
-  { img: "https://images.unsplash.com/photo-1697000815901-b9a7d9a1de9a?w=600&q=85&fit=crop", price: "₹22,400", name: "Atlantis The Palm, Dubai", pct: "↓19%" },
-  { img: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=600&q=85&fit=crop", price: "₹31,600", name: "Park Hyatt, Maldives", pct: "↓20%" },
-  { img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=85&fit=crop", price: "₹18,200", name: "Four Seasons, Bali", pct: "↓22%" },
-  { img: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=85&fit=crop", price: "₹17,400", name: "Capella, Bangkok", pct: "↓28%" },
-  { img: "https://images.unsplash.com/photo-1596436889106-be35e843f974?w=600&q=85&fit=crop", price: "₹14,800", name: "Taj Palace, New Delhi", pct: "↓16%" },
-  { img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop", price: "₹21,000", name: "W Hotel, Bali Seminyak", pct: "↓18%" },
-  { img: "https://images.unsplash.com/photo-1512632578888-169bbbc64f33?w=600&q=85&fit=crop", price: "₹48,000", name: "Burj Al Arab, Dubai", pct: "↓12%" },
-  { img: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600&q=85&fit=crop", price: "₹19,500", name: "Shangri-La, Singapore", pct: "↓23%" },
-  { img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=85&fit=crop", price: "₹26,200", name: "Ritz-Carlton, Langkawi", pct: "↓21%" },
-  { img: "https://images.unsplash.com/photo-1506665531195-3566af2b4dfa?w=600&q=85&fit=crop", price: "₹16,900", name: "Anantara Villas, Phuket", pct: "↓25%" },
+  { img: "https://images.pexels.com/photos/33720952/pexels-photo-33720952.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400", price: "₹22,400", name: "Atlantis The Palm, Dubai", pct: "↓19%" },
+  { img: "https://images.pexels.com/photos/1287460/pexels-photo-1287460.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400", price: "₹31,600", name: "The Westin, Maldives", pct: "↓20%" },
+  { img: "https://images.pexels.com/photos/28843967/pexels-photo-28843967.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400", price: "₹18,200", name: "Le Meridien, Bali", pct: "↓22%" },
+  { img: "https://images.pexels.com/photos/261102/pexels-photo-261102.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400", price: "₹17,400", name: "Hyatt Regency, Bangkok", pct: "↓28%" },
+  { img: "https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400", price: "₹14,800", name: "The Roseate, New Delhi", pct: "↓16%" },
+  { img: "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400", price: "₹21,000", name: "W Goa", pct: "↓18%" },
+  { img: "https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400", price: "₹19,500", name: "Andaz, Singapore", pct: "↓23%" },
+  { img: "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400", price: "₹26,200", name: "The Langham, London", pct: "↓21%" },
+  { img: "https://images.pexels.com/photos/2034335/pexels-photo-2034335.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400", price: "₹16,900", name: "Four Seasons, Mumbai", pct: "↓25%" },
+  { img: "https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400", price: "₹48,000", name: "Crowne Plaza, Yas Island", pct: "↓12%" },
 ];
 
 const STATS = [
