@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(true);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -198,7 +198,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
                   <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>Drag &amp; drop your voucher here</div>
                   <div style={{ fontSize: 12, color: "#9ca3af" }}>Any hotel confirmation — all major booking platforms</div>
                   <div style={{ fontSize: 12, color: "#d1d5db", margin: "4px 0" }}>— or —</div>
-                  <button onClick={(e) => e.stopPropagation()} style={{ background: B, color: "#fff", fontSize: 13, fontWeight: 600, padding: "9px 22px", borderRadius: 8, cursor: "pointer", border: "none", fontFamily: "inherit" }}>Browse file</button>
+                  <button onClick={(e) => { e.stopPropagation(); (document.querySelector('input[type="file"]') as HTMLInputElement)?.click(); }} style={{ background: B, color: "#fff", fontSize: 13, fontWeight: 600, padding: "9px 22px", borderRadius: 8, cursor: "pointer", border: "none", fontFamily: "inherit" }}>Browse file</button>
                 </div>
               )}
             </div>
@@ -371,7 +371,7 @@ export default function Home() {
   const scrollCarousel = (dir: number) => setCarouselPos(prev => Math.max(0, Math.min(MAX_POS, prev + dir)));
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 16, lineHeight: 1.6, WebkitFontSmoothing: "antialiased" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 16, lineHeight: 1.6, WebkitFontSmoothing: "antialiased", overflowX: "hidden", maxWidth: "100vw" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
