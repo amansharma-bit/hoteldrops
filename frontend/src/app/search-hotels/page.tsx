@@ -339,7 +339,7 @@ export default function SearchHotelsPage() {
         {/* DEST PILLS */}
         <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 20, flexWrap: "wrap" as const, position: "relative" }}>
           {PILLS.map((p, i) => (
-            <button key={i} onClick={() => { setActivePill(i); setDestination(p.replace(/^[\u{1F1E0}-\u{1F1FF}]{2}\s*/u, '')); }}
+            <button key={i} onClick={() => { setActivePill(i); setDestination(p.split(' ').slice(1).join(' ')); }}
               style={{ background: activePill === i ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.85)", fontSize: 12.5, fontWeight: 500, padding: "5px 14px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit" }}>
               {p}
             </button>
