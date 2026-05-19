@@ -176,8 +176,7 @@ export default function Dashboard() {
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#f8fafc", minHeight: "100vh", color: "#1e293b" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+                * { box-sizing: border-box; margin: 0; padding: 0; }
         .sora { font-family: 'Sora', sans-serif; }
         @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.5} }
         @keyframes spin { to{transform:rotate(360deg)} }
@@ -379,7 +378,7 @@ export default function Dashboard() {
 
               {loading ? (
                 <div style={{ textAlign: "center", padding: "60px 0" }}>
-                  <div style={{ width: 32, height: 32, border: `3px solid #bfdbfe`, borderTop: `3px solid ${B}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto" }} />
+                  <div style={{ width: 32, height: 32, border: `3px solid #bfdbfe`, borderTop: "3px solid " + B, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto" }} />
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
