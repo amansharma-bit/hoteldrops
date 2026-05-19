@@ -13,16 +13,20 @@ export default function AuthCallback() {
   const router = useRouter();
 
   useEffect(() => {
+    // Get redirect param from URL
+    const params = new URLSearchParams(window.location.search);
+    const redirectTo = params.get("redirect") || "/dashboard";
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
         subscription.unsubscribe();
-        router.push("/dashboard");
+        router.push(redirectTo);
       }
     });
 
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
-        router.push("/dashboard");
+        router.push(redirectTo);
       }
     });
 
