@@ -22,20 +22,27 @@ export default function SignInPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const [redirectTo, setRedirectTo] = useState("/dashboard");
+
   useEffect(() => {
-    // Check if already signed in
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect");
+    if (redirect) setRedirectTo(redirect);
+
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.push("/dashboard");
+      if (data.session) router.push(redirect || "/dashboard");
     });
   }, []);
 
   const handleGoogle = async () => {
     setLoading(true);
     setError("");
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect") || "/dashboard";
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
       },
     });
     if (error) { setError(error.message); setLoading(false); }
@@ -46,7 +53,7 @@ export default function SignInPage() {
     setError("");
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) { setError(error.message); setLoading(false); return; }
-    router.push("/dashboard");
+    router.push(redirectTo);
   };
 
   const handleEmailSignUp = async () => {
