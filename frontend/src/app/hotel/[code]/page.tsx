@@ -261,31 +261,28 @@ function HotelDetailContent() {
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#f8fafc", color: "#1e293b", fontSize: 15, lineHeight: 1.6, WebkitFontSmoothing: "antialiased" }}>
-      <style>{`
+      <style>{String.raw`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         .sora { font-family: 'Sora', sans-serif; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .tab-btn { flex: 1; padding: 14px 8px; text-align: center; font-size: 13.5px; font-weight: 500; color: #64748b; cursor: pointer; border: none; background: none; font-family: inherit; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn { flex: 1; padding: 14px 8px; text-align: center; font-size: 13.5px; font-weight: 500; color: #64748b; cursor: pointer; border: none; background: none; font-family: inherit; border-bottom: 2px solid transparent; transition: all .15s; }
         .tab-btn.active { color: #1447b8; font-weight: 600; border-bottom: 2px solid #1447b8; background: #eff6ff; }
         .tab-btn:hover:not(.active) { color: #0f172a; background: #f8fafc; }
-        .card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 28px; margin-bottom: 20px; }
-        .rooms-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .rooms-table th { padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; text-align: left; border-bottom: 1.5px solid #e2e8f0; background: #f8fafc; }
-        .rooms-table td { padding: 16px; font-size: 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
-        .rooms-table tbody tr:hover td { background: #fafbff; }
-        .rooms-table tbody tr:last-child td { border-bottom: none; }
-        .select-btn { background: #1447b8; color: #fff; border: none; border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
-        .select-btn.sel { background: #16a34a; }
-        .review-filter { border: 1.5px solid #e2e8f0; border-radius: 100px; padding: 6px 16px; font-size: 13px; font-weight: 500; cursor: pointer; background: #fff; color: #1e293b; font-family: inherit; }
-        .review-filter.active { background: #1447b8; color: #fff; border-color: #1447b8; }
-        .sim-card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
-        .sim-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
-        .ph-main-img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; }
-        .ph-main-wrap:hover .ph-main-img { transform: scale(1.03); }
-        .ph-sm-img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; }
-        .ph-sm-wrap:hover .ph-sm-img { transform: scale(1.03); }
-        .fac-item::before { content: "✓"; color: #1447b8; font-weight: 700; margin-right: 7px; }
+        .card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 24px; margin-bottom: 20px; }
+        .fac-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; padding: 6px 0; }
+        .rooms-table { width: 100%; border-collapse: collapse; }
+        .rooms-table th { padding: 11px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; text-align: left; border-bottom: 1.5px solid #e2e8f0; background: #f8fafc; }
+        .rooms-table td { padding: 14px; font-size: 13.5px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .select-btn { border: 1.5px solid #1447b8; color: #1447b8; background: #fff; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; }
+        .select-btn.sel { background: #1447b8; color: #fff; }
+        .sim-card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; overflow: hidden; cursor: pointer; transition: all .2s; }
+        .sim-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.1); transform: translateY(-2px); }
+        .ph-main-wrap { position: relative; border-radius: 12px; overflow: hidden; }
+        .ph-main-img { width: 100%; height: 420px; object-fit: cover; display: block; }
+        .ph-sm-wrap { display: flex; flex-direction: column; gap: 8px; }
+        .ph-sm-img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; cursor: pointer; transition: opacity .2s; }
       `}</style>
+
 
       {/* LIGHTBOX */}
       {lightboxOpen && (
