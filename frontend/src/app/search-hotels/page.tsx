@@ -25,12 +25,12 @@ const TICKER_ITEMS = [
 ];
 
 const DESTINATIONS = [
-  { flag: "🇦🇪", city: "Dubai", country: "UAE", img: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&q=85&fit=crop", large: true },
-  { flag: "🇲🇻", city: "Maldives", country: "South Asia", img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800&q=85&fit=crop", featured: true, badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
-  { flag: "🇹🇭", city: "Bangkok", country: "Thailand", img: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=85&fit=crop", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
-  { flag: "🇮🇩", city: "Bali", country: "Indonesia", img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=85&fit=crop" },
-  { flag: "🇸🇬", city: "Singapore", country: "Southeast Asia", img: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600&q=85&fit=crop" },
-  { flag: "🇫🇷", city: "Paris", country: "France", img: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=85&fit=crop", badge: "Great Value", badgeColor: B, badgeText: "#fff" },
+  { flag: "🇦🇪", city: "Dubai", country: "UAE", img: "https://images.pexels.com/photos/33720952/pexels-photo-33720952.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop&h=500", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
+  { flag: "🇮🇳", city: "New Delhi", country: "India", img: "https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop&h=500", badge: "Member Deal", badgeColor: "#1447b8", badgeText: "#fff" },
+  { flag: "🇸🇬", city: "Singapore", country: "Southeast Asia", img: "https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop&h=500" },
+  { flag: "🇮🇳", city: "Goa", country: "India", img: "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop&h=500", badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
+  { flag: "🇮🇩", city: "Bali", country: "Indonesia", img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=85&fit=crop" },
+  { flag: "🇮🇳", city: "Mumbai", country: "India", img: "https://images.pexels.com/photos/2034335/pexels-photo-2034335.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop&h=500" },
 ];
 
 const HOTELS_BY_CITY: Record<string, Array<{name:string;loc:string;stars:number;rating:string;tags:string[];was:string;now:string;save:string;badges:[string,string][];img:string}>> = {
@@ -82,13 +82,29 @@ const HOTELS_BY_CITY: Record<string, Array<{name:string;loc:string;stars:number;
     { name: "Raffles Singapore", loc: "Singapore", stars: 5, rating: "4.8 (6.1k)", tags: ["Colonial", "Heritage", "Butler"], was: "₹72,000", now: "₹50,400", save: "Save ₹21,600", badges: [["Luxury", "luxury"], ["↓ 7% Off", "off"]], img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop" },
     { name: "Andaz Singapore", loc: "Singapore", stars: 5, rating: "4.6 (4.2k)", tags: ["Rooftop", "Modern", "City view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/2034335/pexels-photo-2034335.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
   ],
-  "Paris": [
-    { name: "The Ritz Paris", loc: "Paris, France", stars: 5, rating: "4.8 (4.2k)", tags: ["Fine dining", "Spa", "Concierge"], was: "₹74,000", now: "₹52,000", save: "Save ₹22,000", badges: [["Best Value", "best"], ["↓ 15% Off", "off"]], img: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=85&fit=crop" },
-    { name: "Le Bristol Paris", loc: "Paris, France", stars: 5, rating: "4.9 (3.8k)", tags: ["Palace hotel", "Spa", "Michelin dining"], was: "₹88,000", now: "₹61,600", save: "Save ₹26,400", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Four Seasons George V", loc: "Paris, France", stars: 5, rating: "4.9 (5.2k)", tags: ["Eiffel view", "Palace", "Spa"], was: "₹1,00,000", now: "₹72,000", save: "Save ₹28,000", badges: [["Luxury", "luxury"], ["↓ 8% Off", "off"]], img: "https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Hotel de Crillon", loc: "Paris, France", stars: 5, rating: "4.8 (2.9k)", tags: ["Place de la Concorde", "Palace", "Historic"], was: "₹92,000", now: "₹64,400", save: "Save ₹27,600", badges: [["Trending", "trending"], ["↓ 9% Off", "off"]], img: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=600&q=85&fit=crop" },
-    { name: "Mandarin Oriental Paris", loc: "Paris, France", stars: 5, rating: "4.8 (4.1k)", tags: ["Spa", "Garden", "Rue Saint-Honoré"], was: "₹78,000", now: "₹54,600", save: "Save ₹23,400", badges: [["Best Value", "best"], ["↓ 6% Off", "off"]], img: "https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Hôtel Plaza Athénée", loc: "Paris, France", stars: 5, rating: "4.7 (6.8k)", tags: ["Avenue Montaigne", "Spa", "Dior view"], was: "₹82,000", now: "₹57,400", save: "Save ₹24,600", badges: [["⚡ AI Watching", "watching"], ["↓ 7% Off", "off"]], img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=85&fit=crop" },
+  "New Delhi": [
+    { name: "The Leela Palace", loc: "New Delhi, India", stars: 5, rating: "4.9 (8.2k)", tags: ["Pool", "Spa", "Fine dining"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "The Oberoi New Delhi", loc: "New Delhi, India", stars: 5, rating: "4.8 (6.4k)", tags: ["Golf course view", "Spa", "Pool"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "ITC Maurya", loc: "New Delhi, India", stars: 5, rating: "4.7 (11.2k)", tags: ["Bukhara", "Pool", "Heritage"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Trending", "trending"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Taj Mahal Hotel", loc: "New Delhi, India", stars: 5, rating: "4.8 (14.1k)", tags: ["Heritage", "Pool", "Spa"], was: "₹26,000", now: "₹18,200", save: "Save ₹7,800", badges: [["Luxury", "luxury"], ["↓ 6% Off", "off"]], img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop" },
+    { name: "The Imperial", loc: "New Delhi, India", stars: 5, rating: "4.7 (9.8k)", tags: ["Colonial", "Pool", "Art collection"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.pexels.com/photos/2034335/pexels-photo-2034335.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Hyatt Regency Delhi", loc: "New Delhi, India", stars: 5, rating: "4.6 (18.4k)", tags: ["Pool", "Spa", "Multiple dining"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/261102/pexels-photo-261102.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+  ],
+  "Goa": [
+    { name: "The Leela Goa", loc: "Goa, India", stars: 5, rating: "4.8 (12.1k)", tags: ["Beach", "Lagoon", "Golf"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Taj Exotica Goa", loc: "Goa, India", stars: 5, rating: "4.7 (9.4k)", tags: ["Beach", "Spa", "Pool"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop" },
+    { name: "W Goa", loc: "Goa, India", stars: 5, rating: "4.6 (7.2k)", tags: ["Vagator", "Beach", "Nightlife"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Trending", "trending"], ["↓ 6% Off", "off"]], img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop" },
+    { name: "Park Hyatt Goa", loc: "Goa, India", stars: 5, rating: "4.7 (8.6k)", tags: ["Beach", "Pool", "Spa"], was: "₹16,000", now: "₹11,200", save: "Save ₹4,800", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=85&fit=crop" },
+    { name: "Alila Diwa Goa", loc: "Goa, India", stars: 5, rating: "4.6 (5.1k)", tags: ["Paddy field view", "Pool", "Spa"], was: "₹14,000", now: "₹9,800", save: "Save ₹4,200", badges: [["⚡ AI Watching", "watching"], ["↓ 3% Off", "off"]], img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop" },
+    { name: "Taj Fort Aguada", loc: "Goa, India", stars: 5, rating: "4.5 (14.2k)", tags: ["Heritage fort", "Beach", "Pool"], was: "₹15,000", now: "₹10,500", save: "Save ₹4,500", badges: [["Trending", "trending"], ["↓ 5% Off", "off"]], img: "https://images.pexels.com/photos/1287460/pexels-photo-1287460.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+  ],
+  "Mumbai": [
+    { name: "Taj Mahal Palace", loc: "Mumbai, India", stars: 5, rating: "4.9 (22.4k)", tags: ["Gateway of India", "Heritage", "Sea view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/2034335/pexels-photo-2034335.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "The Oberoi Mumbai", loc: "Mumbai, India", stars: 5, rating: "4.8 (8.2k)", tags: ["Sea view", "Spa", "Pool"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Four Seasons Mumbai", loc: "Mumbai, India", stars: 5, rating: "4.7 (6.8k)", tags: ["Worli sea link view", "Spa", "Pool"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Trending", "trending"], ["↓ 6% Off", "off"]], img: "https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop" },
+    { name: "St Regis Mumbai", loc: "Mumbai, India", stars: 5, rating: "4.8 (9.1k)", tags: ["Sky high pool", "City view", "Butler"], was: "₹26,000", now: "₹18,200", save: "Save ₹7,800", badges: [["Luxury", "luxury"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "ITC Grand Central", loc: "Mumbai, India", stars: 5, rating: "4.6 (7.4k)", tags: ["Parel", "Pool", "Spa"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "JW Marriott Mumbai", loc: "Mumbai, India", stars: 5, rating: "4.7 (16.2k)", tags: ["Juhu beach", "Pool", "Spa"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
   ],
 };
 
@@ -100,8 +116,8 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
   off: { bg: "#ef4444", color: "#fff" },
 };
 
-const CITY_FILTERS = ["All Hotels", "Dubai", "Maldives", "Bangkok", "Bali", "Singapore", "Paris"];
-const PILLS = ["🇦🇪 Dubai","🇹🇭 Bangkok","🇮🇩 Bali","🇲🇻 Maldives","🇸🇬 Singapore","🇫🇷 Paris"];
+const CITY_FILTERS = ["All Hotels", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai"];
+const PILLS = ["🇦🇪 Dubai","🇮🇳 New Delhi","🇸🇬 Singapore","🇮🇳 Goa","🇮🇩 Bali","🇮🇳 Mumbai"];
 const SORTS = ["↓ Savings","★ Rating","₹ Price"];
 
 const STATS = [
@@ -339,13 +355,13 @@ export default function SearchHotelsPage() {
           </span>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gridTemplateRows: isMobile ? "auto" : "170px 170px", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 14 }}>
           {DESTINATIONS.map((d, i) => (
             <div key={i}
               onClick={() => { setActiveCity(d.city); document.getElementById("hotels-section")?.scrollIntoView({ behavior: "smooth" }); }}
-              style={{ borderRadius: 14, overflow: "hidden", position: "relative", cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", transition: "transform .25s", gridColumn: !isMobile && d.large ? "1" : !isMobile && d.featured ? "2" : "auto", gridRow: !isMobile && (d.large || d.featured) ? "1/3" : "auto" }}
+              style={{ borderRadius: 14, overflow: "hidden", position: "relative", cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", transition: "transform .25s", height: isMobile ? 140 : 200 }}
               onMouseOver={e => (e.currentTarget.style.transform = "translateY(-4px)")} onMouseOut={e => (e.currentTarget.style.transform = "none")}>
-              <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", minHeight: !isMobile && (d.large || d.featured) ? 340 : 160 }} />
+              <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 55%)" }} />
               {d.badge && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, padding: "3px 9px", borderRadius: 6, background: d.badgeColor, color: d.badgeText }}>{d.badge}</span>}
               <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
