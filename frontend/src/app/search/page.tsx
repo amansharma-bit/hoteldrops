@@ -50,13 +50,13 @@ function SearchResults() {
   const router = useRouter();
   const isMobile = useIsMobile();
 
-  const destination = searchParams.get("destination") || "Dubai";
+  const destination = (searchParams.get("destination") || "Dubai").split(",")[0].trim();
   const checkIn = searchParams.get("checkIn") || "";
   const checkOut = searchParams.get("checkOut") || "";
   const adults = searchParams.get("adults") || "2";
 
   const [hotels, setHotels] = useState<Hotel[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!(checkIn && checkOut));
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [favorites, setFavorites] = useState<Set<number>>(new Set());
@@ -66,6 +66,7 @@ function SearchResults() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const fetchHotels = useCallback(async () => {
+    if (!checkIn || !checkOut) { setLoading(false); setError("Please select check-in and check-out dates to search."); return; }
     setLoading(true); setError(null);
     try {
       const res = await fetch(`${API}/search?destination=${encodeURIComponent(destination)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`);
