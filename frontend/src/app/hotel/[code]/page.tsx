@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@supabase/supabase-js";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 
 const supabase = createClient(
@@ -121,7 +121,7 @@ const POLICIES = [
   { label: "📋 Property Info", value: "104 rooms · 18 floors · Airport: 40 min · Free WiFi · Valet parking: AED 50/day · Breakfast (if not included): AED 110" },
 ];
 
-export default function HotelDetailPage() {
+function HotelDetailContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -244,7 +244,7 @@ export default function HotelDetailPage() {
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter',sans-serif" }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <div style={{ textAlign: "center" }}>
-        <div style={{ width: 36, height: 36, border: `3px solid #bfdbfe`, borderTop: `3px solid ${B}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
+        <div style={{ width: 36, height: 36, border: "3px solid #bfdbfe", borderTop: "3px solid " + B, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
         <div style={{ fontSize: 13, color: "#64748b" }}>Loading hotel…</div>
       </div>
     </div>
@@ -784,5 +784,13 @@ export default function HotelDetailPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function HotelDetailPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ fontSize: 14, color: "#64748b" }}>Loading…</div></div>}>
+      <HotelDetailContent />
+    </Suspense>
   );
 }
