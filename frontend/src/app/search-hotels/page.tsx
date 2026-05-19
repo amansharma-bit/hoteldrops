@@ -190,6 +190,7 @@ export default function SearchHotelsPage() {
 
   const handleCheckInChange = (val: string) => {
     setCheckIn(val);
+    setTimeout(() => { try { (document.getElementById("checkout-input") as HTMLInputElement)?.showPicker(); } catch(e) {} }, 100);
     if (checkOut && checkOut <= val) {
       const next = new Date(val);
       next.setDate(next.getDate() + 1);
@@ -311,22 +312,22 @@ export default function SearchHotelsPage() {
         {/* SEARCH BOX */}
         <div style={{ background: "#fff", borderRadius: 16, padding: isMobile ? "16px" : "20px 24px", maxWidth: 900, margin: "0 auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1.2fr 1.2fr 0.8fr auto", gap: 0, position: "relative" }}>
           <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>📍 Destination or Hotel</label>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Destination or Hotel</label>
             <input type="text" placeholder="Where to?" value={destination} onChange={e => setDestination(e.target.value)}
               style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent" }} />
           </div>
           <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>📅 Check-in</label>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-in</label>
             <input type="date" value={checkIn} onChange={e => handleCheckInChange(e.target.value)}
               style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent" }} />
           </div>
           <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>📅 Check-out</label>
-            <input type="date" value={checkOut} min={checkIn || undefined} onChange={e => handleCheckOutChange(e.target.value)}
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-out</label>
+            <input id="checkout-input" type="date" value={checkOut} min={checkIn || undefined} onChange={e => handleCheckOutChange(e.target.value)}
               style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent" }} />
           </div>
           <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>👤 Guests</label>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Guests</label>
             <select value={guests} onChange={e => setGuests(e.target.value)} style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent", cursor: "pointer" }}>
               {["1 Adult", "2 Adults", "3 Adults", "4 Adults"].map(o => <option key={o}>{o}</option>)}
             </select>
@@ -339,7 +340,7 @@ export default function SearchHotelsPage() {
         {/* DEST PILLS */}
         <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 20, flexWrap: "wrap" as const, position: "relative" }}>
           {PILLS.map((p, i) => (
-            <button key={i} onClick={() => { setActivePill(i); setDestination(p.split(' ').slice(1).join(' ')); }}
+            <button key={i} onClick={() => { setActivePill(i); setDestination(Array.from(p).slice(3).join('').trim()); }}
               style={{ background: activePill === i ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.85)", fontSize: 12.5, fontWeight: 500, padding: "5px 14px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit" }}>
               {p}
             </button>
@@ -438,7 +439,7 @@ export default function SearchHotelsPage() {
                 <div style={{ padding: "16px 18px 18px" }}>
                   <div style={{ color: "#f59e0b", fontSize: 12, marginBottom: 4 }}>{"★".repeat(h.stars)}</div>
                   <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{h.name}</div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>📍 {h.loc} · {h.rating}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{h.loc} · {h.rating}</div>
                   <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5, marginBottom: 14 }}>
                     {h.tags.map(t => <span key={t} style={{ background: "#f8fafc", color: "#64748b", fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 500 }}>{t}</span>)}
                   </div>
