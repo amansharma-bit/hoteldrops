@@ -1,14 +1,13 @@
 "use client";
 
 import { createClient } from "@supabase/supabase-js";
+import { useState, useEffect, useRef } from "react";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
-
-import { useState, useEffect, useRef } from "react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
 
 const API = "https://hoteldrops-production.up.railway.app/api/hotels";
 const B = "#1447b8";
