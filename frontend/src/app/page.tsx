@@ -5,6 +5,8 @@ import { useDropzone } from "react-dropzone";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
+const B = "#1447b8";
+const NAVY = "#0f172a";
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
@@ -77,8 +79,6 @@ function UploadModal({ onClose }: { onClose: () => void }) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
 
-  const B = "#1447b8";
-  const NAVY = "#0f172a";
   const inp: React.CSSProperties = { width: "100%", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", fontSize: 13, fontFamily: "inherit", outline: "none", color: "#111827" };
   const lbl: React.CSSProperties = { fontSize: 10, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "1px", color: "#9ca3af", display: "block", marginBottom: 6 };
 
