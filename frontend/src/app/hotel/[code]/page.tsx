@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 
 const API = "https://hoteldrops-production.up.railway.app/api/hotels";
@@ -136,13 +136,19 @@ export default function HotelDetailPage() {
   const [reviewFilter, setReviewFilter] = useState("All");
   const [similarHotels, setSimilarHotels] = useState<SimilarHotel[]>([]);
 
+  const refOverview = useRef<HTMLDivElement>(null);
+  const refRooms = useRef<HTMLDivElement>(null);
+  const refReviews = useRef<HTMLDivElement>(null);
+  const refFacilities = useRef<HTMLDivElement>(null);
+  const refLocation = useRef<HTMLDivElement>(null);
+  const refPolicies = useRef<HTMLDivElement>(null);
   const sectionRefs: Record<string, React.RefObject<HTMLDivElement>> = {
-    overview: useRef<HTMLDivElement>(null),
-    rooms: useRef<HTMLDivElement>(null),
-    reviews: useRef<HTMLDivElement>(null),
-    facilities: useRef<HTMLDivElement>(null),
-    location: useRef<HTMLDivElement>(null),
-    policies: useRef<HTMLDivElement>(null),
+    overview: refOverview,
+    rooms: refRooms,
+    reviews: refReviews,
+    facilities: refFacilities,
+    location: refLocation,
+    policies: refPolicies,
   };
 
   useEffect(() => {
@@ -169,14 +175,18 @@ export default function HotelDetailPage() {
       .finally(() => setLoading(false));
   }, [code, checkIn, checkOut, adults]);
 
-  const goToSection = useCallback((tab: string) => {
+  const goToSection = (tab: string) => {
     setActiveTab(tab);
-    const ref = sectionRefs[tab];
+    const refMap: Record<string, React.RefObject<HTMLDivElement>> = {
+      overview: refOverview, rooms: refRooms, reviews: refReviews,
+      facilities: refFacilities, location: refLocation, policies: refPolicies,
+    };
+    const ref = refMap[tab];
     if (ref?.current) {
       const top = ref.current.getBoundingClientRect().top + window.pageYOffset - 130;
       window.scrollTo({ top, behavior: "smooth" });
     }
-  }, []);
+  };
 
   const openLightbox = (idx: number) => {
     setLightboxIdx(idx);
@@ -406,7 +416,7 @@ export default function HotelDetailPage() {
         </div>
 
         {/* OVERVIEW */}
-        <div className="card" ref={sectionRefs.overview}>
+        <div className="card" ref={refOverview}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 18 }}>
             <div style={{ background: B, color: "#fff", borderRadius: 12, width: 64, height: 64, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 24, fontWeight: 800, lineHeight: 1 }}>9.1</div>
@@ -444,7 +454,7 @@ export default function HotelDetailPage() {
         </div>
 
         {/* ROOMS */}
-        <div className="card" ref={sectionRefs.rooms}>
+        <div className="card" ref={refRooms}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Select your room</div>
           <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
             {hotel.rooms.some(r => !r.cancellation || r.cancellation.type === "free") && (
@@ -559,7 +569,7 @@ export default function HotelDetailPage() {
         </div>
 
         {/* REVIEWS */}
-        <div className="card" ref={sectionRefs.reviews}>
+        <div className="card" ref={refReviews}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Guest Reviews</div>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
             <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 48, fontWeight: 800, color: NAVY, lineHeight: 1 }}>9.1</div>
@@ -587,7 +597,7 @@ export default function HotelDetailPage() {
         </div>
 
         {/* FACILITIES */}
-        <div className="card" ref={sectionRefs.facilities}>
+        <div className="card" ref={refFacilities}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 20 }}>Hotel Facilities</div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: "24px 32px" }}>
             {(hotel.facilityGroups && Object.keys(hotel.facilityGroups).length > 0
@@ -605,7 +615,7 @@ export default function HotelDetailPage() {
         </div>
 
         {/* LOCATION */}
-        <div className="card" ref={sectionRefs.location}>
+        <div className="card" ref={refLocation}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Location</div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <span style={{ fontSize: 13.5, color: "#64748b" }}>📍 {hotel.address}, {hotel.city}</span>
@@ -641,7 +651,7 @@ export default function HotelDetailPage() {
         </div>
 
         {/* POLICIES */}
-        <div className="card" ref={sectionRefs.policies}>
+        <div className="card" ref={refPolicies}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 4 }}>Hotel Policies</div>
           <div style={{ marginTop: 16 }}>
             {[
