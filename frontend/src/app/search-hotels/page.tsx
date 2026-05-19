@@ -132,6 +132,24 @@ const PILL_VALUES: Record<string, string> = {
   "🇮🇩 Bali, Indonesia": "Bali, Indonesia",
   "🇮🇳 Mumbai, India": "Mumbai, India",
 };
+
+const DESTINATIONS = [
+  { label: "Dubai, UAE", flag: "🇦🇪" },
+  { label: "New Delhi, India", flag: "🇮🇳" },
+  { label: "Mumbai, India", flag: "🇮🇳" },
+  { label: "Goa, India", flag: "🇮🇳" },
+  { label: "Bali, Indonesia", flag: "🇮🇩" },
+  { label: "Singapore", flag: "🇸🇬" },
+  { label: "Bangkok, Thailand", flag: "🇹🇭" },
+  { label: "Maldives", flag: "🇲🇻" },
+  { label: "Paris, France", flag: "🇫🇷" },
+  { label: "London, UK", flag: "🇬🇧" },
+  { label: "New York, USA", flag: "🇺🇸" },
+  { label: "Tokyo, Japan", flag: "🇯🇵" },
+  { label: "Phuket, Thailand", flag: "🇹🇭" },
+  { label: "Colombo, Sri Lanka", flag: "🇱🇰" },
+  { label: "Kathmandu, Nepal", flag: "🇳🇵" },
+];
 const SORTS = ["↓ Savings","★ Rating","₹ Price"];
 
 const STATS = [
@@ -148,6 +166,7 @@ export default function SearchHotelsPage() {
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState("2 Adults");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeCity, setActiveCity] = useState("All Hotels");
   const [activeSort, setActiveSort] = useState(0);
   const [activePill, setActivePill] = useState(-1);
@@ -321,8 +340,26 @@ export default function SearchHotelsPage() {
         <div style={{ background: "#fff", borderRadius: 16, padding: isMobile ? "16px" : "20px 24px", maxWidth: 900, margin: "0 auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1.2fr 1.2fr 0.8fr auto", gap: 0, position: "relative" }}>
           <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
             <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Destination or Hotel</label>
-            <input type="text" placeholder="Where to?" value={destination} onChange={e => setDestination(e.target.value)}
+            <input type="text" placeholder="Where to? e.g. Dubai, UAE" value={destination}
+              onChange={e => { setDestination(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
               style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent" }} />
+            {showSuggestions && destination.length > 0 && (
+              <div style={{ position: "absolute", top: "100%", left: 0, width: 320, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 200, maxHeight: 240, overflowY: "auto" as const, marginTop: 4 }}>
+                {DESTINATIONS.filter(d => d.label.toLowerCase().includes(destination.toLowerCase())).map((d, i) => (
+                  <div key={i} onMouseDown={() => { setDestination(d.label); setShowSuggestions(false); }}
+                    style={{ padding: "11px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: NAVY, borderBottom: "1px solid #f8fafc" }}
+                    onMouseOver={e => (e.currentTarget.style.background = "#f0f7ff")}
+                    onMouseOut={e => (e.currentTarget.style.background = "#fff")}>
+                    <span style={{ fontSize: 18 }}>{d.flag}</span>{d.label}
+                  </div>
+                ))}
+                {DESTINATIONS.filter(d => d.label.toLowerCase().includes(destination.toLowerCase())).length === 0 && (
+                  <div style={{ padding: "12px 16px", fontSize: 13, color: "#94a3b8" }}>No destinations found</div>
+                )}
+              </div>
+            )}
           </div>
           <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
             <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-in</label>
