@@ -1,14 +1,15 @@
 "use client";
 
 import { createClient } from "@supabase/supabase-js";
+import { useState, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-import { useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
 
 const B = "#1447b8";
 const NAVY = "#0f172a";
