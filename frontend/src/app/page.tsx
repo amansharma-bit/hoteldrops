@@ -385,8 +385,6 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  const B = "#1447b8";
-  const NAVY = "#0f172a";
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   const scrollCarousel = (dir: number) => setCarouselPos(prev => Math.max(0, Math.min(MAX_POS, prev + dir)));
 
