@@ -63,6 +63,7 @@ function SearchResults() {
   const [checkedFilters, setCheckedFilters] = useState<Set<number>>(new Set());
   const [sortBy, setSortBy] = useState("popularity");
   const [page, setPage] = useState(1);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const fetchHotels = useCallback(async () => {
     setLoading(true); setError(null);
@@ -92,25 +93,11 @@ function SearchResults() {
   const paginatedHotels = sortedHotels.slice((page - 1) * perPage, page * perPage);
   const totalPages = Math.ceil(sortedHotels.length / perPage);
 
-  const getRating = (code: number) => {
-    const ratings = [9.1, 8.9, 9.4, 9.3, 8.7, 9.0, 8.8, 9.2];
-    return ratings[code % ratings.length];
-  };
-
+  const getRating = (code: number) => { const ratings = [9.1, 8.9, 9.4, 9.3, 8.7, 9.0, 8.8, 9.2]; return ratings[code % ratings.length]; };
   const getRatingLabel = (r: number) => r >= 9 ? "Exceptional" : r >= 8.5 ? "Excellent" : "Very Good";
-
-  const getDiscount = (code: number) => {
-    const discounts = [15, 12, 10, 8, 20, 18, 14, 22];
-    return discounts[code % discounts.length];
-  };
-
-  const getAmenities = (code: number) => {
-    const start = code % AMENITIES_MAP.length;
-    return AMENITIES_MAP.slice(start, start + 4).concat(AMENITIES_MAP.slice(0, Math.max(0, 4 - (AMENITIES_MAP.length - start))));
-  };
-
+  const getDiscount = (code: number) => { const discounts = [15, 12, 10, 8, 20, 18, 14, 22]; return discounts[code % discounts.length]; };
+  const getAmenities = (code: number) => { const start = code % AMENITIES_MAP.length; return AMENITIES_MAP.slice(start, start + 4).concat(AMENITIES_MAP.slice(0, Math.max(0, 4 - (AMENITIES_MAP.length - start)))); };
   const getImg = (hotel: Hotel, idx: number) => hotel.imageUrl || FALLBACK_IMGS[idx % FALLBACK_IMGS.length];
-
   const priceINR = (hotel: Hotel) => hotel.lowestPriceINR || Math.round((hotel.minRate || 0) * EUR_TO_INR / NIGHTS);
 
   return (
@@ -133,25 +120,37 @@ function SearchResults() {
         @media(max-width:768px) { .hotel-card { grid-template-columns: 1fr; } }
       `}</style>
 
-      {/* NAV */}
-      <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: isMobile ? "0 16px" : "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 300 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
-          <a href="/" style={{ background: B, color: "#fff", fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 17, padding: "7px 16px", borderRadius: 8, textDecoration: "none" }}>rebuq</a>
-          {!isMobile && (
-            <div style={{ display: "flex", gap: 2 }}>
-              {[["🏨 Hotels", true], ["How it works", false], ["Results", false]].map(([l, active]) => (
-                <button key={l as string} style={{ padding: "8px 14px", borderRadius: 8, fontSize: 13.5, fontWeight: active ? 600 : 500, color: active ? B : "#64748b", cursor: "pointer", border: "none", background: "none", fontFamily: "inherit", borderBottom: active ? `2px solid ${B}` : "2px solid transparent" }}>{l as string}</button>
-              ))}
-            </div>
+      {/* NAV — matches homepage */}
+      <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: isMobile ? "0 20px" : "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 300 }}>
+        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
+        {!isMobile && (
+          <ul style={{ display: "flex", gap: 32, listStyle: "none" }}>
+            <li><a href="/#how" style={{ fontSize: 14, color: "#64748b", textDecoration: "none", fontWeight: 500 }}>How it works</a></li>
+            <li><a href="/search-hotels" style={{ fontSize: 14, color: B, textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a></li>
+          </ul>
+        )}
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {!isMobile && <button style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>Sign in</button>}
+          {!isMobile && <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Check my booking</button>}
+          {isMobile && (
+            <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+              <span style={{ display: "block", width: 22, height: 2, background: NAVY, transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px, 5px)" : "none" }} />
+              <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : NAVY, transition: "all 0.2s" }} />
+              <span style={{ display: "block", width: 22, height: 2, background: NAVY, transition: "all 0.2s", transform: menuOpen ? "rotate(-45deg) translate(5px, -5px)" : "none" }} />
+            </button>
           )}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => router.push("/upload")} style={{ display: "flex", alignItems: "center", gap: 6, background: B, color: "#fff", border: "none", borderRadius: 20, padding: "8px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-            ✦ Price Watch
-          </button>
-          {!isMobile && <button style={{ fontSize: 13.5, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>👤 Sign in</button>}
-        </div>
       </nav>
+
+      {/* MOBILE MENU */}
+      {isMobile && menuOpen && (
+        <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 199, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <button onClick={() => setMenuOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>How it works</button>
+          <button onClick={() => { router.push("/search-hotels"); setMenuOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
+          <button style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Sign in</button>
+          <button onClick={() => { router.push("/upload"); setMenuOpen(false); }} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12 }}>Check my booking — it's free</button>
+        </div>
+      )}
 
       {/* SEARCH BAR */}
       <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: isMobile ? "12px 16px" : "12px 32px", display: "flex", alignItems: "center", gap: 0, flexWrap: isMobile ? "wrap" as const : "nowrap" as const }}>
@@ -191,7 +190,6 @@ function SearchResults() {
         {/* SIDEBAR */}
         {!isMobile && (
           <div>
-            {/* Map card */}
             <div style={{ background: "#eff6ff", borderRadius: 12, overflow: "hidden", marginBottom: 16, border: "1.5px solid #e2e8f0", cursor: "pointer" }}>
               <div style={{ height: 160, background: `linear-gradient(135deg, #1e3a8a, ${B}, #60a5fa)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
                 <div style={{ position: "absolute", inset: 0, opacity: 0.3, backgroundImage: "linear-gradient(rgba(255,255,255,0.15) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.15) 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
@@ -199,27 +197,16 @@ function SearchResults() {
               </div>
               <div style={{ padding: "10px 14px", background: "#fff", textAlign: "center" as const, color: B, fontSize: 13.5, fontWeight: 600 }}>🗺 Explore on Map</div>
             </div>
-
-            {/* Filters */}
             <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #e2e8f0", padding: 20 }}>
               <div className="sora" style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Filters</div>
-
               <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", marginBottom: 20 }}>
                 <span style={{ color: "#64748b" }}>🔍</span>
                 <input type="text" placeholder="Enter area, locality or hotel" style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 13.5, color: NAVY, background: "transparent", width: "100%" }} />
               </div>
-
-              {/* Most Popular */}
               <div style={{ marginBottom: 22 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12 }}>Most Popular</div>
                 {FILTERS.map((f, i) => (
-                  <div key={i} className="filter-row" onClick={() => {
-                    setCheckedFilters(prev => {
-                      const next = new Set(prev);
-                      next.has(i) ? next.delete(i) : next.add(i);
-                      return next;
-                    });
-                  }}>
+                  <div key={i} className="filter-row" onClick={() => { setCheckedFilters(prev => { const next = new Set(prev); next.has(i) ? next.delete(i) : next.add(i); return next; }); }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, color: "#1e293b" }}>
                       <div className={`checkbox${checkedFilters.has(i) ? " checked" : ""}`}>{checkedFilters.has(i) ? "✓" : ""}</div>
                       {f}
@@ -228,21 +215,15 @@ function SearchResults() {
                   </div>
                 ))}
               </div>
-
-              {/* Price Range */}
               <div style={{ marginBottom: 22 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12 }}>Price per night</div>
                 <div style={{ position: "relative", height: 5, background: "#e2e8f0", borderRadius: 100, margin: "14px 0 6px" }}>
                   <div style={{ position: "absolute", left: "5%", right: "25%", height: "100%", background: B, borderRadius: 100 }} />
-                  <div style={{ position: "absolute", width: 16, height: 16, background: "#fff", border: `2.5px solid ${B}`, borderRadius: "50%", top: "50%", transform: "translateY(-50%)", left: "5%", cursor: "grab", boxShadow: "0 2px 6px rgba(20,71,184,0.3)" }} />
-                  <div style={{ position: "absolute", width: 16, height: 16, background: "#fff", border: `2.5px solid ${B}`, borderRadius: "50%", top: "50%", transform: "translateY(-50%)", right: "25%", cursor: "grab", boxShadow: "0 2px 6px rgba(20,71,184,0.3)" }} />
+                  <div style={{ position: "absolute", width: 16, height: 16, background: "#fff", border: `2.5px solid ${B}`, borderRadius: "50%", top: "50%", transform: "translateY(-50%)", left: "5%", cursor: "grab" }} />
+                  <div style={{ position: "absolute", width: 16, height: 16, background: "#fff", border: `2.5px solid ${B}`, borderRadius: "50%", top: "50%", transform: "translateY(-50%)", right: "25%", cursor: "grab" }} />
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#64748b" }}>
-                  <span>₹2,500</span><span>₹50,000+</span>
-                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#64748b" }}><span>₹2,500</span><span>₹50,000+</span></div>
               </div>
-
-              {/* Star Rating */}
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12 }}>Star Rating</div>
                 {[5, 4, 3].map(s => (
@@ -301,12 +282,9 @@ function SearchResults() {
 
             return (
               <div key={hotel.code} className="hotel-card"
-                onClick={() => router.push(`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`)}>
-
-                {/* Image */}
+                onClick={() => router.push(`/hotel/372446?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`)}>
                 <div style={{ position: "relative", minHeight: 220 }}>
-                  <img src={getImg(hotel, globalIdx)} alt={hotel.name}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", minHeight: 220 }} />
+                  <img src={getImg(hotel, globalIdx)} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", minHeight: 220 }} />
                   <div style={{ position: "absolute", top: 12, left: 12, background: "#fff", color: NAVY, fontSize: 11.5, fontWeight: 700, padding: "4px 10px", borderRadius: 6, display: "flex", alignItems: "center", gap: 5, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
                     <span>↗</span> Trending
                   </div>
@@ -315,8 +293,6 @@ function SearchResults() {
                     {isFav ? "♥" : "♡"}
                   </button>
                 </div>
-
-                {/* Body */}
                 <div style={{ padding: "20px 20px 20px 24px", display: "flex", flexDirection: "column" as const, justifyContent: "space-between" }}>
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: isMobile ? "wrap" as const : "nowrap" as const, gap: 12 }}>
@@ -334,8 +310,6 @@ function SearchResults() {
                           <span style={{ fontSize: 12.5, color: "#64748b" }}>· {(1000 + hotel.code % 3000).toLocaleString()} Ratings</span>
                         </div>
                       </div>
-
-                      {/* Price */}
                       <div style={{ textAlign: "right" as const, flexShrink: 0 }}>
                         {price > 0 ? (
                           <>
@@ -349,21 +323,15 @@ function SearchResults() {
                         )}
                       </div>
                     </div>
-
-                    {/* Amenities */}
                     <div style={{ display: "flex", flexWrap: "wrap" as const, gap: "8px 16px", marginBottom: 12 }}>
                       {amenities.slice(0, 4).map((a, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12.5, color: "#1e293b", fontWeight: 500 }}>
-                          {a}
-                        </div>
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12.5, color: "#1e293b", fontWeight: 500 }}>{a}</div>
                       ))}
                     </div>
-
                     <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6, marginBottom: 16 }}>
                       • {hotel.chain ? `Part of ${hotel.chain}` : "Highly rated by guests"} · {hotel.zone?.name || "Central location"} · Great for business & leisure
                     </div>
                   </div>
-
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <button onClick={e => { e.stopPropagation(); router.push("/upload"); }}
                       style={{ display: "flex", alignItems: "center", gap: 6, background: "#eff6ff", color: B, border: `1px solid #bfdbfe`, borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
@@ -378,7 +346,6 @@ function SearchResults() {
             );
           })}
 
-          {/* PAGINATION */}
           {!loading && totalPages > 1 && (
             <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 28 }}>
               {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
