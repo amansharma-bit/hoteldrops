@@ -123,7 +123,7 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
 };
 
 const CITY_FILTERS = ["All Hotels", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai"];
-const PILLS = ["🇦🇪 Dubai","🇮🇳 New Delhi","🇸🇬 Singapore","🇮🇳 Goa","🇮🇩 Bali","🇮🇳 Mumbai"];
+const PILLS = ["🇦🇪 Dubai, UAE","🇮🇳 New Delhi, India","🇸🇬 Singapore","🇮🇳 Goa, India","🇮🇩 Bali, Indonesia","🇮🇳 Mumbai, India"];
 const SORTS = ["↓ Savings","★ Rating","₹ Price"];
 
 const STATS = [
@@ -339,7 +339,7 @@ export default function SearchHotelsPage() {
         {/* DEST PILLS */}
         <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 20, flexWrap: "wrap" as const, position: "relative" }}>
           {PILLS.map((p, i) => (
-            <button key={i} onClick={() => { setActivePill(i); setDestination(p.split(" ").slice(1).join(" ")); }}
+            <button key={i} onClick={() => { setActivePill(i); setDestination(p.replace(/^[\u{1F1E0}-\u{1F1FF}]{2}\s*/u, '')); }}
               style={{ background: activePill === i ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.85)", fontSize: 12.5, fontWeight: 500, padding: "5px 14px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit" }}>
               {p}
             </button>
@@ -375,7 +375,7 @@ export default function SearchHotelsPage() {
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 14 }}>
           {DESTINATIONS.map((d, i) => (
             <div key={i}
-              onClick={() => { setActiveCity(d.city); document.getElementById("hotels-section")?.scrollIntoView({ behavior: "smooth" }); }}
+              onClick={() => { setActiveCity(d.city); setDestination(`${d.city}, ${d.country}`); document.getElementById("hotels-section")?.scrollIntoView({ behavior: "smooth" }); }}
               style={{ borderRadius: 14, overflow: "hidden", position: "relative", cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", transition: "transform .25s", height: isMobile ? 140 : 200 }}
               onMouseOver={e => (e.currentTarget.style.transform = "translateY(-4px)")} onMouseOut={e => (e.currentTarget.style.transform = "none")}>
               <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
