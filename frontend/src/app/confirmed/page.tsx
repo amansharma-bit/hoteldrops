@@ -55,16 +55,21 @@ function ConfirmedContent() {
         .confetti-piece { position: fixed; top: -10px; animation: confetti-fall linear forwards; pointer-events: none; z-index: 9999; }
       `}</style>
 
-      {/* Confetti */}
       {confetti.map(c => (
         <div key={c.id} className="confetti-piece" style={{ left: c.left, background: c.color, width: c.size, height: c.size, borderRadius: c.round ? "50%" : "2px", animationDuration: c.duration, animationDelay: c.delay }} />
       ))}
 
       {/* NAV */}
       <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 300 }}>
-        <a href="/" style={{ background: B, color: "#fff", fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 17, padding: "7px 16px", borderRadius: 8, textDecoration: "none" }}>rebuq</a>
-        <button onClick={() => router.push("/upload")} style={{ display: "flex", alignItems: "center", gap: 6, background: B, color: "#fff", border: "none", borderRadius: 20, padding: "8px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>✦ Price Watch</button>
-        <button onClick={() => router.push("/upload")} style={{ color: B, fontWeight: 600, fontSize: 13.5, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>👤 Sign in</button>
+        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
+        <ul style={{ display: "flex", gap: 32, listStyle: "none" }}>
+          <li><a href="/#how" style={{ fontSize: 14, color: "#64748b", textDecoration: "none", fontWeight: 500 }}>How it works</a></li>
+          <li><a href="/search-hotels" style={{ fontSize: 14, color: B, textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a></li>
+        </ul>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>Sign in</button>
+          <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Check my booking</button>
+        </div>
       </nav>
 
       {/* PROGRESS */}
@@ -90,20 +95,13 @@ function ConfirmedContent() {
 
       {/* MAIN */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 32px 60px", display: "grid", gridTemplateColumns: "1fr 360px", gap: 24 }}>
-
-        {/* LEFT */}
         <div>
-
-          {/* Confirmed banner */}
-          <div style={{ background: "linear-gradient(135deg,#16a34a 0%,#15803d 100%)", borderRadius: 12, padding: "28px 28px 28px 24px", marginBottom: 16, display: "flex", alignItems: "flex-start", gap: 20, boxShadow: "0 8px 32px rgba(22,163,74,0.25)", position: "relative", overflow: "hidden" }}>
+          <div style={{ background: "linear-gradient(135deg,#16a34a 0%,#15803d 100%)", borderRadius: 12, padding: "28px 28px 28px 24px", marginBottom: 16, display: "flex", alignItems: "flex-start", gap: 20, flexWrap: "wrap" as const, boxShadow: "0 8px 32px rgba(22,163,74,0.25)", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: -40, right: -40, width: 160, height: 160, borderRadius: "50%", background: "rgba(255,255,255,0.07)" }} />
-            <div style={{ position: "absolute", bottom: -30, right: 80, width: 100, height: 100, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
             <div style={{ width: 52, height: 52, background: "rgba(255,255,255,0.2)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0, border: "2px solid rgba(255,255,255,0.35)" }}>✓</div>
             <div style={{ position: "relative" }}>
               <h2 className="sora" style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Booking Confirmed!</h2>
-              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", lineHeight: 1.6, marginBottom: 16 }}>
-                Your reservation at <strong style={{ color: "#fff" }}>{hotelName}</strong> is confirmed. A confirmation has been sent to your email.
-              </p>
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", lineHeight: 1.6, marginBottom: 16 }}>Your reservation at <strong style={{ color: "#fff" }}>{hotelName}</strong> is confirmed. A confirmation has been sent to your email.</p>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
                 {[`📋 Booking ID: ${bookingId}`, `🌙 ${nights} Night${nights > 1 ? "s" : ""} · ${adults} Guests`].map(tag => (
                   <span key={tag} style={{ background: "rgba(255,255,255,0.18)", color: "#fff", fontSize: 13, fontWeight: 600, padding: "6px 14px", borderRadius: 20, border: "1px solid rgba(255,255,255,0.25)" }}>{tag}</span>
@@ -112,16 +110,13 @@ function ConfirmedContent() {
             </div>
           </div>
 
-          {/* Hotel summary */}
           <div className="card">
             <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 20 }}>
               <div style={{ width: 100, height: 80, borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
                 <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=200&q=80&fit=crop" alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
               <div>
-                <div className="sora" style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 4 }}>
-                  {hotelName} <span style={{ color: "#f59e0b", fontSize: 14 }}>★★★★★</span>
-                </div>
+                <div className="sora" style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{hotelName} <span style={{ color: "#f59e0b", fontSize: 14 }}>★★★★★</span></div>
                 <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>📍 Downtown Dubai</div>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 7 }}>
                   <span style={{ background: NAVY, color: "#fff", fontSize: 12, fontWeight: 700, padding: "3px 8px", borderRadius: 6 }}>9.1</span>
@@ -145,7 +140,6 @@ function ConfirmedContent() {
             </div>
           </div>
 
-          {/* Room & booking details */}
           <div className="card">
             <div className="sora" style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 18 }}>Room & Booking Details</div>
             {[
@@ -154,7 +148,7 @@ function ConfirmedContent() {
               { icon: "🕐", green: true, name: "Late Check-out Available", sub: "Request at reception based on availability" },
               { icon: "🍳", green: true, name: "Breakfast Included", sub: "International buffet for 2 guests" },
             ].map((item, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "14px 0", borderBottom: i < 3 ? "1px solid #e2e8f0" : "none", paddingTop: i === 0 ? 0 : undefined }}>
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "14px 0", borderBottom: i < 3 ? "1px solid #e2e8f0" : "none" }}>
                 <div style={{ width: 36, height: 36, background: item.green ? "#dcfce7" : "#eff6ff", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{item.icon}</div>
                 <div>
                   <div style={{ fontSize: 14.5, fontWeight: 700, color: NAVY, marginBottom: 2 }}>{item.name}</div>
@@ -164,7 +158,6 @@ function ConfirmedContent() {
             ))}
           </div>
 
-          {/* Primary guest */}
           <div className="card">
             <div className="sora" style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 4 }}>Primary Guest</div>
             <div style={{ fontSize: 13, color: "#64748b", marginBottom: 14 }}>Booking made by</div>
@@ -182,7 +175,6 @@ function ConfirmedContent() {
             </div>
           </div>
 
-          {/* What happens next */}
           <div className="card">
             <div className="sora" style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 18 }}>What happens next?</div>
             {[
@@ -190,8 +182,8 @@ function ConfirmedContent() {
               { n: "2", title: "Show voucher at check-in", sub: "Print or keep the digital voucher handy — the hotel needs it at reception." },
               { n: "3", title: "Need help?", sub: "Contact our 24/7 support team at support@rebuq.com or via WhatsApp." },
             ].map((s, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "16px 0", borderBottom: i < 2 ? "1px solid #e2e8f0" : "none", paddingTop: i === 0 ? 0 : undefined }}>
-                <div style={{ width: 30, height: 30, borderRadius: "50%", background: B, color: "#fff", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "'Sora',sans-serif" }}>{s.n}</div>
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "16px 0", borderBottom: i < 2 ? "1px solid #e2e8f0" : "none" }}>
+                <div style={{ width: 30, height: 30, borderRadius: "50%", background: B, color: "#fff", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.n}</div>
                 <div>
                   <div style={{ fontSize: 14.5, fontWeight: 700, color: NAVY, marginBottom: 3 }}>{s.title}</div>
                   <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.55 }}>{s.sub}</div>
@@ -200,22 +192,16 @@ function ConfirmedContent() {
             ))}
           </div>
 
-          {/* rebuq price watch upsell */}
           <div style={{ background: B, borderRadius: 12, padding: "24px 28px", marginBottom: 16, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" as const }}>
             <div style={{ flex: 1 }}>
               <div className="sora" style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Watch price drops on this booking 🔔</div>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", lineHeight: 1.6 }}>Your booking is confirmed — but prices can still drop. Let rebuq watch 24/7 and alert you if it gets cheaper.</p>
             </div>
-            <button onClick={() => router.push("/upload")} style={{ background: "#fff", color: B, border: "none", padding: "11px 22px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
-              Track price now →
-            </button>
+            <button onClick={() => router.push("/upload")} style={{ background: "#fff", color: B, border: "none", padding: "11px 22px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>Track price now →</button>
           </div>
         </div>
 
-        {/* SIDEBAR */}
         <div style={{ position: "sticky", top: 76, alignSelf: "flex-start" as const, display: "flex", flexDirection: "column" as const, gap: 16 }}>
-
-          {/* Price summary */}
           <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #e2e8f0", padding: 22, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
             <div className="sora" style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Price Summary</div>
             {[
@@ -240,15 +226,11 @@ function ConfirmedContent() {
               🌱 You saved <strong style={{ color: "#15803d" }}>&nbsp;{formatINR(saving)}&nbsp;</strong> with rebuq
             </div>
           </div>
-
-          {/* Need to make changes */}
           <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #e2e8f0", padding: 24, boxShadow: "0 2px 12px rgba(0,0,0,0.07)", textAlign: "center" as const }}>
             <div style={{ width: 50, height: 50, background: "#eff6ff", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, margin: "0 auto 14px" }}>✉</div>
             <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 6 }}>Need to make changes?</div>
             <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6, marginBottom: 14 }}>Free cancellation available. Manage your booking online.</div>
-            <button onClick={() => router.push("/dashboard")} style={{ display: "inline-flex", alignItems: "center", gap: 5, color: B, fontSize: 14, fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
-              My Bookings ›
-            </button>
+            <button onClick={() => router.push("/dashboard")} style={{ display: "inline-flex", alignItems: "center", gap: 5, color: B, fontSize: 14, fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>My Bookings ›</button>
           </div>
         </div>
       </div>
