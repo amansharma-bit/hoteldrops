@@ -5,11 +5,12 @@ import { useDropzone } from "react-dropzone";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
-const B = "#1447b8";
-const NAVY = "#0f172a";
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+const B = "#1447b8";
+const NAVY = "#0f172a";
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(true);
