@@ -262,8 +262,7 @@ export default function HotelDetailPage() {
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#f8fafc", color: "#1e293b", fontSize: 15, lineHeight: 1.6, WebkitFontSmoothing: "antialiased" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+                * { box-sizing: border-box; margin: 0; padding: 0; }
         .sora { font-family: 'Sora', sans-serif; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .tab-btn { flex: 1; padding: 14px 8px; text-align: center; font-size: 13.5px; font-weight: 500; color: #64748b; cursor: pointer; border: none; background: none; font-family: inherit; border-bottom: 2px solid transparent; transition: all 0.2s; }
