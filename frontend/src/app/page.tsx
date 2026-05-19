@@ -395,7 +395,7 @@ export default function Home() {
           </ul>
         )}
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          {!isMobile && <button style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: "8px 12px", borderRadius: 8 }}>Sign in</button>}
+          {!isMobile && <button style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: "8px 12px", borderRadius: 8 }} onClick={() => window.location.href="/signin"}>Sign in</button>}
           {!isMobile && <button onClick={() => setShowModal(true)} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>Check my booking</button>}
           {isMobile && (
             <button onClick={() => setShowMenu(!showMenu)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
@@ -412,7 +412,7 @@ export default function Home() {
         <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 99, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
           <button onClick={() => { scrollTo("how"); setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>How it works</button>
           <button onClick={() => { window.location.href = "/search-hotels"; }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
-          <button onClick={() => { setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Sign in</button>
+          <button onClick={() => { setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }} onClick={() => window.location.href="/signin"}>Sign in</button>
           <button onClick={() => { setShowModal(true); setShowMenu(false); }} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12, textAlign: "center" }}>Check my booking — it&apos;s free</button>
           <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 8 }}>Free to check · Pay only if we save you money</p>
         </div>
