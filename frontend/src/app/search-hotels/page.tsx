@@ -25,33 +25,72 @@ const TICKER_ITEMS = [
 ];
 
 const DESTINATIONS = [
-  { flag: "🇦🇪", city: "Dubai", country: "UAE", code: "DXB", img: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&q=85&fit=crop", large: true },
-  { flag: "🇲🇻", city: "Maldives", country: "South Asia", code: "MLE", img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800&q=85&fit=crop", featured: true, badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
-  { flag: "🇹🇭", city: "Bangkok", country: "Thailand", code: "BKK", img: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=85&fit=crop", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
-  { flag: "🇮🇩", city: "Bali", country: "Indonesia", code: "DPS", img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=85&fit=crop" },
-  { flag: "🇸🇬", city: "Singapore", country: "Southeast Asia", code: "SIN", img: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600&q=85&fit=crop" },
-  { flag: "🇫🇷", city: "Paris", country: "France", code: "CDG", img: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=85&fit=crop", badge: "Great Value", badgeColor: B, badgeText: "#fff" },
-  { flag: "🇬🇧", city: "London", country: "UK", code: "LHR", img: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=600&q=85&fit=crop" },
-  { flag: "🇯🇵", city: "Tokyo", country: "Japan", code: "TYO", img: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&q=85&fit=crop" },
+  { flag: "🇦🇪", city: "Dubai", country: "UAE", img: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&q=85&fit=crop", large: true },
+  { flag: "🇲🇻", city: "Maldives", country: "South Asia", img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800&q=85&fit=crop", featured: true, badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
+  { flag: "🇹🇭", city: "Bangkok", country: "Thailand", img: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=85&fit=crop", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
+  { flag: "🇮🇩", city: "Bali", country: "Indonesia", img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=85&fit=crop" },
+  { flag: "🇸🇬", city: "Singapore", country: "Southeast Asia", img: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600&q=85&fit=crop" },
+  { flag: "🇫🇷", city: "Paris", country: "France", img: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=85&fit=crop", badge: "Great Value", badgeColor: B, badgeText: "#fff" },
 ];
 
-const HOTEL_IMAGES = [
-  "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=85&fit=crop",
-  "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=85&fit=crop",
-  "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600&q=85&fit=crop",
-  "https://images.unsplash.com/photo-1496417263034-38ec4f0b665a?w=600&q=85&fit=crop",
-  "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=85&fit=crop",
-  "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=85&fit=crop",
-];
-
-const HOTELS = [
-  { name: "Soneva Fushi", loc: "Maldives", stars: 5, rating: "4.9 (5.1k)", tags: ["Overwater", "Private pool", "Butler"], was: "₹1,70,000", now: "₹1,24,000", save: "Save ₹46,000", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: HOTEL_IMAGES[0] },
-  { name: "The Ritz Paris", loc: "Paris, France", stars: 5, rating: "4.8 (4.2k)", tags: ["Fine dining", "Spa", "Concierge"], was: "₹74,000", now: "₹52,000", save: "Save ₹22,000", badges: [["Best Value", "best"], ["↓ 15% Off", "off"]], img: HOTEL_IMAGES[1] },
-  { name: "Marina Bay Sands", loc: "Singapore", stars: 5, rating: "4.7 (19.1k)", tags: ["Infinity pool", "SkyPark", "Casino"], was: "₹47,000", now: "₹34,600", save: "Save ₹12,400", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: HOTEL_IMAGES[2] },
-  { name: "Atlantis The Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark", "Beach", "Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending", "trending"], ["⚡ AI Watching", "watching"]], img: HOTEL_IMAGES[3] },
-  { name: "Four Seasons Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view", "Spa", "Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending", "trending"], ["↓ 3.5% Off", "off"]], img: HOTEL_IMAGES[4] },
-  { name: "Capella Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.8 (2.1k)", tags: ["River view", "Pool", "Fine dining"], was: "₹26,600", now: "₹18,200", save: "Save ₹8,400", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: HOTEL_IMAGES[5] },
-];
+const HOTELS_BY_CITY: Record<string, Array<{name:string;loc:string;stars:number;rating:string;tags:string[];was:string;now:string;save:string;badges:[string,string][];img:string}>> = {
+  "All Hotels": [
+    { name: "Atlantis The Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark", "Beach", "Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending", "trending"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/33720952/pexels-photo-33720952.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Soneva Fushi", loc: "Maldives", stars: 5, rating: "4.9 (5.1k)", tags: ["Overwater", "Private pool", "Butler"], was: "₹1,70,000", now: "₹1,24,000", save: "Save ₹46,000", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/1287460/pexels-photo-1287460.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Capella Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.8 (2.1k)", tags: ["River view", "Pool", "Fine dining"], was: "₹26,600", now: "₹18,200", save: "Save ₹8,400", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=85&fit=crop" },
+    { name: "Four Seasons Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view", "Spa", "Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending", "trending"], ["↓ 3.5% Off", "off"]], img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=85&fit=crop" },
+    { name: "Marina Bay Sands", loc: "Singapore", stars: 5, rating: "4.7 (19.1k)", tags: ["Infinity pool", "SkyPark", "Casino"], was: "₹47,000", now: "₹34,600", save: "Save ₹12,400", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600&q=85&fit=crop" },
+    { name: "The Ritz Paris", loc: "Paris, France", stars: 5, rating: "4.8 (4.2k)", tags: ["Fine dining", "Spa", "Concierge"], was: "₹74,000", now: "₹52,000", save: "Save ₹22,000", badges: [["Best Value", "best"], ["↓ 15% Off", "off"]], img: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=85&fit=crop" },
+  ],
+  "Dubai": [
+    { name: "Atlantis The Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark", "Beach", "Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending", "trending"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/33720952/pexels-photo-33720952.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Burj Al Arab", loc: "Dubai, UAE", stars: 5, rating: "4.8 (12.3k)", tags: ["Iconic", "Private beach", "Helipad"], was: "₹1,20,000", now: "₹84,000", save: "Save ₹36,000", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Four Seasons DIFC", loc: "Dubai, UAE", stars: 5, rating: "4.7 (6.2k)", tags: ["City view", "Spa", "Pool"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Best Value", "best"], ["↓ 3% Off", "off"]], img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop" },
+    { name: "Jumeirah Al Qasr", loc: "Dubai, UAE", stars: 5, rating: "4.6 (8.9k)", tags: ["Beach", "Madinat view", "Pool"], was: "₹44,000", now: "₹31,800", save: "Save ₹12,200", badges: [["Trending", "trending"], ["↓ 5% Off", "off"]], img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop" },
+    { name: "Address Downtown", loc: "Dubai, UAE", stars: 5, rating: "4.7 (14.2k)", tags: ["Burj view", "Rooftop pool", "Metro"], was: "₹52,000", now: "₹37,400", save: "Save ₹14,600", badges: [["⚡ AI Watching", "watching"], ["↓ 6% Off", "off"]], img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop" },
+    { name: "W Dubai Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (9.1k)", tags: ["Palm view", "Beach", "Nightlife"], was: "₹35,000", now: "₹24,500", save: "Save ₹10,500", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+  ],
+  "Maldives": [
+    { name: "Soneva Fushi", loc: "Maldives", stars: 5, rating: "4.9 (5.1k)", tags: ["Overwater", "Private pool", "Butler"], was: "₹1,70,000", now: "₹1,24,000", save: "Save ₹46,000", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/1287460/pexels-photo-1287460.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Gili Lankanfushi", loc: "Maldives", stars: 5, rating: "4.9 (3.2k)", tags: ["Overwater", "No shoes", "Organic"], was: "₹1,40,000", now: "₹98,000", save: "Save ₹42,000", badges: [["Luxury", "luxury"], ["↓ 12% Off", "off"]], img: "https://images.pexels.com/photos/28843967/pexels-photo-28843967.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "One&Only Reethi Rah", loc: "Maldives", stars: 5, rating: "4.8 (4.4k)", tags: ["Private island", "Water villas", "Spa"], was: "₹1,20,000", now: "₹88,000", save: "Save ₹32,000", badges: [["Best Value", "best"], ["⚡ AI Watching", "watching"]], img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=85&fit=crop" },
+    { name: "Six Senses Laamu", loc: "Maldives", stars: 5, rating: "4.9 (2.8k)", tags: ["Eco luxury", "Overwater", "Surf"], was: "₹1,10,000", now: "₹79,200", save: "Save ₹30,800", badges: [["Trending", "trending"], ["↓ 8% Off", "off"]], img: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=600&q=85&fit=crop" },
+    { name: "Cheval Blanc Randheli", loc: "Maldives", stars: 5, rating: "4.9 (1.9k)", tags: ["Private lagoon", "Butler", "Spa"], was: "₹2,00,000", now: "₹1,48,000", save: "Save ₹52,000", badges: [["Luxury", "luxury"], ["↓ 10% Off", "off"]], img: "https://images.unsplash.com/photo-1573843981267-be1999ff37cd?w=600&q=85&fit=crop" },
+    { name: "COMO Maalifushi", loc: "Maldives", stars: 5, rating: "4.7 (3.1k)", tags: ["Surf", "Wellness", "Overwater"], was: "₹95,000", now: "₹68,400", save: "Save ₹26,600", badges: [["Best Value", "best"], ["↓ 9% Off", "off"]], img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=85&fit=crop" },
+  ],
+  "Bangkok": [
+    { name: "Capella Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.8 (2.1k)", tags: ["River view", "Pool", "Fine dining"], was: "₹26,600", now: "₹18,200", save: "Save ₹8,400", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=85&fit=crop" },
+    { name: "Mandarin Oriental Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.9 (11.2k)", tags: ["Riverside", "Heritage", "Spa"], was: "₹48,000", now: "₹33,600", save: "Save ₹14,400", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/261102/pexels-photo-261102.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "The Peninsula Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.8 (8.4k)", tags: ["River view", "Pool", "Iconic"], was: "₹42,000", now: "₹29,400", save: "Save ₹12,600", badges: [["Trending", "trending"], ["↓ 5% Off", "off"]], img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop" },
+    { name: "Rosewood Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.7 (3.2k)", tags: ["Sky pool", "City view", "Modern"], was: "₹36,000", now: "₹25,200", save: "Save ₹10,800", badges: [["⚡ AI Watching", "watching"], ["↓ 6% Off", "off"]], img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop" },
+    { name: "Four Seasons Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.8 (4.6k)", tags: ["Riverside", "Spa", "Fine dining"], was: "₹44,000", now: "₹30,800", save: "Save ₹13,200", badges: [["Best Value", "best"], ["↓ 7% Off", "off"]], img: "https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop" },
+    { name: "Anantara Riverside", loc: "Bangkok, Thailand", stars: 5, rating: "4.6 (12.1k)", tags: ["Riverside", "Pool", "Spa"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Trending", "trending"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+  ],
+  "Bali": [
+    { name: "Four Seasons Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view", "Spa", "Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending", "trending"], ["↓ 3.5% Off", "off"]], img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=85&fit=crop" },
+    { name: "Viceroy Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.8 (4.2k)", tags: ["Valley view", "Private pool", "Villa"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "COMO Uma Ubud", loc: "Bali, Indonesia", stars: 5, rating: "4.7 (3.8k)", tags: ["Wellness", "Yoga", "Jungle"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop" },
+    { name: "Alila Villas Uluwatu", loc: "Bali, Indonesia", stars: 5, rating: "4.8 (5.1k)", tags: ["Clifftop", "Ocean view", "Pool"], was: "₹44,000", now: "₹30,800", save: "Save ₹13,200", badges: [["Trending", "trending"], ["↓ 6% Off", "off"]], img: "https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Bulgari Resort Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (2.4k)", tags: ["Cliffside", "Iconic", "Private beach"], was: "₹80,000", now: "₹56,000", save: "Save ₹24,000", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop" },
+    { name: "Amankila", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (1.8k)", tags: ["Terraced pools", "Ocean view", "Spa"], was: "₹68,000", now: "₹47,600", save: "Save ₹20,400", badges: [["Best Value", "best"], ["↓ 8% Off", "off"]], img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=85&fit=crop" },
+  ],
+  "Singapore": [
+    { name: "Marina Bay Sands", loc: "Singapore", stars: 5, rating: "4.7 (19.1k)", tags: ["Infinity pool", "SkyPark", "Casino"], was: "₹47,000", now: "₹34,600", save: "Save ₹12,400", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600&q=85&fit=crop" },
+    { name: "Capella Singapore", loc: "Singapore", stars: 5, rating: "4.9 (3.4k)", tags: ["Sentosa", "Heritage", "Pool"], was: "₹62,000", now: "₹43,400", save: "Save ₹18,600", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "The Fullerton Bay Hotel", loc: "Singapore", stars: 5, rating: "4.8 (7.2k)", tags: ["Marina view", "Rooftop bar", "Heritage"], was: "₹44,000", now: "₹30,800", save: "Save ₹13,200", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Mandarin Oriental Singapore", loc: "Singapore", stars: 5, rating: "4.7 (9.8k)", tags: ["Marina view", "Spa", "Pool"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Trending", "trending"], ["↓ 6% Off", "off"]], img: "https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop" },
+    { name: "Raffles Singapore", loc: "Singapore", stars: 5, rating: "4.8 (6.1k)", tags: ["Colonial", "Heritage", "Butler"], was: "₹72,000", now: "₹50,400", save: "Save ₹21,600", badges: [["Luxury", "luxury"], ["↓ 7% Off", "off"]], img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop" },
+    { name: "Andaz Singapore", loc: "Singapore", stars: 5, rating: "4.6 (4.2k)", tags: ["Rooftop", "Modern", "City view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/2034335/pexels-photo-2034335.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+  ],
+  "Paris": [
+    { name: "The Ritz Paris", loc: "Paris, France", stars: 5, rating: "4.8 (4.2k)", tags: ["Fine dining", "Spa", "Concierge"], was: "₹74,000", now: "₹52,000", save: "Save ₹22,000", badges: [["Best Value", "best"], ["↓ 15% Off", "off"]], img: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=85&fit=crop" },
+    { name: "Le Bristol Paris", loc: "Paris, France", stars: 5, rating: "4.9 (3.8k)", tags: ["Palace hotel", "Spa", "Michelin dining"], was: "₹88,000", now: "₹61,600", save: "Save ₹26,400", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Four Seasons George V", loc: "Paris, France", stars: 5, rating: "4.9 (5.2k)", tags: ["Eiffel view", "Palace", "Spa"], was: "₹1,00,000", now: "₹72,000", save: "Save ₹28,000", badges: [["Luxury", "luxury"], ["↓ 8% Off", "off"]], img: "https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Hotel de Crillon", loc: "Paris, France", stars: 5, rating: "4.8 (2.9k)", tags: ["Place de la Concorde", "Palace", "Historic"], was: "₹92,000", now: "₹64,400", save: "Save ₹27,600", badges: [["Trending", "trending"], ["↓ 9% Off", "off"]], img: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=600&q=85&fit=crop" },
+    { name: "Mandarin Oriental Paris", loc: "Paris, France", stars: 5, rating: "4.8 (4.1k)", tags: ["Spa", "Garden", "Rue Saint-Honoré"], was: "₹78,000", now: "₹54,600", save: "Save ₹23,400", badges: [["Best Value", "best"], ["↓ 6% Off", "off"]], img: "https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Hôtel Plaza Athénée", loc: "Paris, France", stars: 5, rating: "4.7 (6.8k)", tags: ["Avenue Montaigne", "Spa", "Dior view"], was: "₹82,000", now: "₹57,400", save: "Save ₹24,600", badges: [["⚡ AI Watching", "watching"], ["↓ 7% Off", "off"]], img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=85&fit=crop" },
+  ],
+};
 
 const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
   luxury: { bg: "#1e293b", color: "#fff" },
@@ -61,8 +100,8 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
   off: { bg: "#ef4444", color: "#fff" },
 };
 
-const PILLS = ["🇦🇪 Dubai","🇹🇭 Bangkok","🇮🇩 Bali","🇲🇻 Maldives","🇸🇬 Singapore","🇫🇷 Paris","🇬🇧 London","🇯🇵 Tokyo","🇺🇸 New York","🇮🇹 Rome"];
-const FILTERS = ["All Hotels","🇦🇪 Dubai","🇹🇭 Bangkok","🇮🇩 Bali","🇲🇻 Maldives","🇸🇬 Singapore","🇫🇷 Paris"];
+const CITY_FILTERS = ["All Hotels", "Dubai", "Maldives", "Bangkok", "Bali", "Singapore", "Paris"];
+const PILLS = ["🇦🇪 Dubai","🇹🇭 Bangkok","🇮🇩 Bali","🇲🇻 Maldives","🇸🇬 Singapore","🇫🇷 Paris"];
 const SORTS = ["↓ Savings","★ Rating","₹ Price"];
 
 const STATS = [
@@ -78,8 +117,8 @@ export default function SearchHotelsPage() {
   const [destination, setDestination] = useState("");
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
-  const [guests, setGuests] = useState("2");
-  const [activeFilter, setActiveFilter] = useState(0);
+  const [guests, setGuests] = useState("2 Adults");
+  const [activeCity, setActiveCity] = useState("All Hotels");
   const [activeSort, setActiveSort] = useState(0);
   const [activePill, setActivePill] = useState(-1);
   const [tickerIdx, setTickerIdx] = useState(0);
@@ -127,12 +166,27 @@ export default function SearchHotelsPage() {
     return () => observer.disconnect();
   }, []);
 
+  const handleCheckInChange = (val: string) => {
+    setCheckIn(val);
+    if (checkOut && checkOut <= val) {
+      const next = new Date(val);
+      next.setDate(next.getDate() + 1);
+      setCheckOut(next.toISOString().split("T")[0]);
+    }
+  };
+
+  const handleCheckOutChange = (val: string) => {
+    if (checkIn && val <= checkIn) return;
+    setCheckOut(val);
+  };
+
   const handleSearch = () => {
     if (!destination) return;
     router.push(`/search?destination=${encodeURIComponent(destination)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests}`);
   };
 
   const ticker = TICKER_ITEMS[tickerIdx];
+  const hotels = HOTELS_BY_CITY[activeCity] || HOTELS_BY_CITY["All Hotels"];
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, WebkitFontSmoothing: "antialiased", overflowX: "hidden" }}>
@@ -181,24 +235,24 @@ export default function SearchHotelsPage() {
 
       {/* HERO */}
       <section style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)", padding: isMobile ? "48px 20px 64px" : "72px 40px 96px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 70% 30%,rgba(255,255,255,0.05) 0%,transparent 60%),radial-gradient(ellipse at 20% 80%,rgba(37,99,235,0.3) 0%,transparent 50%)" }} />
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 70% 30%,rgba(255,255,255,0.05) 0%,transparent 60%)" }} />
 
         {/* BADGE */}
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const, position: "relative" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const, position: "relative" }}>
           ✦ Curated Member Deals
         </div>
 
         {/* HEADLINE */}
         <h1 className="sora" style={{ fontSize: isMobile ? 34 : 60, fontWeight: 800, color: "#fff", lineHeight: 1.08, marginBottom: 18, position: "relative", maxWidth: 760, margin: "0 auto 18px" }}>
-          rebuq Curated<br /><span style={{ color: "#FCD34D" }}>Member Deals</span>
+          Find your <span style={{ color: "#FCD34D" }}>perfect stay</span>
         </h1>
 
         {/* LIVE RATES LINE */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 16, position: "relative" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: isMobile ? 12 : 20, marginBottom: 16, position: "relative", flexWrap: "wrap" as const }}>
           {["Members Only", "Direct Rates", "No Middleman"].map((item, i) => (
             <span key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>
-              {i > 0 && <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 10 }}>·</span>}
-              <span style={{ width: 6, height: 6, background: "#4ade80", borderRadius: "50%", display: i === 0 ? "inline-block" : "none", animation: "pulse 1.5s infinite" }} />
+              {i > 0 && <span style={{ color: "rgba(255,255,255,0.3)" }}>·</span>}
+              {i === 0 && <span style={{ width: 6, height: 6, background: "#4ade80", borderRadius: "50%", display: "inline-block", animation: "pulse 1.5s infinite" }} />}
               {item}
             </span>
           ))}
@@ -210,9 +264,9 @@ export default function SearchHotelsPage() {
         </p>
 
         {/* LIVE TICKER */}
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: 13, padding: "8px 18px", borderRadius: 100, marginBottom: 32, position: "relative", minWidth: isMobile ? "auto" : 420 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: isMobile ? 12 : 13, padding: "8px 18px", borderRadius: 100, marginBottom: 32, position: "relative" }}>
           <span style={{ width: 8, height: 8, background: "#4ade80", borderRadius: "50%", flexShrink: 0, animation: "pulse 1.5s infinite" }} />
-          <span className={tickerVisible ? "ticker-visible" : "ticker-hidden"} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const, justifyContent: "center" }}>
+          <span className={tickerVisible ? "ticker-visible" : "ticker-hidden"} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const, justifyContent: "center" }}>
             <span style={{ fontWeight: 600, color: "#FCD34D" }}>{ticker.name}</span>
             <span style={{ color: "rgba(255,255,255,0.7)" }}>accessed a member rate on</span>
             <span style={{ fontWeight: 600 }}>{ticker.hotel}</span>
@@ -223,24 +277,27 @@ export default function SearchHotelsPage() {
 
         {/* SEARCH BOX */}
         <div style={{ background: "#fff", borderRadius: 16, padding: isMobile ? "16px" : "20px 24px", maxWidth: 900, margin: "0 auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1.2fr 1.2fr 0.8fr auto", gap: 0, position: "relative" }}>
-          {[
-            { label: "📍 Destination or Hotel", type: "text", placeholder: "Where to?", value: destination, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setDestination(e.target.value) },
-            { label: "📅 Check-in", type: "date", value: checkIn, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCheckIn(e.target.value) },
-            { label: "📅 Check-out", type: "date", value: checkOut, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCheckOut(e.target.value) },
-            { label: "👤 Guests", type: "select", value: guests, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setGuests(e.target.value) },
-          ].map((f, i) => (
-            <div key={i} style={{ padding: isMobile ? "10px 0" : "8px 16px", borderRight: isMobile ? "none" : i < 3 ? "1px solid #e2e8f0" : "none", borderBottom: isMobile ? i < 3 ? "1px solid #f1f5f9" : "none" : "none" }}>
-              <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>{f.label}</label>
-              {f.type === "select" ? (
-                <select value={f.value} onChange={f.onChange as React.ChangeEventHandler<HTMLSelectElement>} style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent", cursor: "pointer" }}>
-                  {["1 Adult", "2 Adults", "3 Adults", "4 Adults"].map(o => <option key={o}>{o}</option>)}
-                </select>
-              ) : (
-                <input type={f.type} placeholder={(f as { placeholder?: string }).placeholder} value={f.value} onChange={f.onChange as React.ChangeEventHandler<HTMLInputElement>}
-                  style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent" }} />
-              )}
-            </div>
-          ))}
+          <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>📍 Destination or Hotel</label>
+            <input type="text" placeholder="Where to?" value={destination} onChange={e => setDestination(e.target.value)}
+              style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent" }} />
+          </div>
+          <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>📅 Check-in</label>
+            <input type="date" value={checkIn} onChange={e => handleCheckInChange(e.target.value)}
+              style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent" }} />
+          </div>
+          <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>📅 Check-out</label>
+            <input type="date" value={checkOut} min={checkIn || undefined} onChange={e => handleCheckOutChange(e.target.value)}
+              style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent" }} />
+          </div>
+          <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>👤 Guests</label>
+            <select value={guests} onChange={e => setGuests(e.target.value)} style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent", cursor: "pointer" }}>
+              {["1 Adult", "2 Adults", "3 Adults", "4 Adults"].map(o => <option key={o}>{o}</option>)}
+            </select>
+          </div>
           <button onClick={handleSearch} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 22px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginLeft: isMobile ? 0 : 12, marginTop: isMobile ? 12 : 0, whiteSpace: "nowrap" as const, width: isMobile ? "100%" : "auto" }}>
             🔍 Search
           </button>
@@ -272,28 +329,25 @@ export default function SearchHotelsPage() {
       {/* TOP DESTINATIONS */}
       <div style={{ padding: isMobile ? "50px 20px" : "70px 40px", maxWidth: 1100, margin: "0 auto" }}>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Member Exclusive Rates</p>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8, flexWrap: "wrap" as const, gap: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28, flexWrap: "wrap" as const, gap: 12 }}>
           <div>
             <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Curated for rebuq members</h2>
             <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Handpicked destinations with rates unavailable anywhere else.</p>
           </div>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "#16a34a", whiteSpace: "nowrap" as const }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "#16a34a" }}>
             <span style={{ width: 7, height: 7, background: "#16a34a", borderRadius: "50%", display: "inline-block", animation: "pulse 1.5s infinite" }} /> Live rates
           </span>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gridTemplateRows: isMobile ? "auto" : "170px 170px", gap: 14, marginTop: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gridTemplateRows: isMobile ? "auto" : "170px 170px", gap: 14 }}>
           {DESTINATIONS.map((d, i) => (
-            <div key={i} onClick={() => setDestination(d.city)}
+            <div key={i}
+              onClick={() => { setActiveCity(d.city); document.getElementById("hotels-section")?.scrollIntoView({ behavior: "smooth" }); }}
               style={{ borderRadius: 14, overflow: "hidden", position: "relative", cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", transition: "transform .25s", gridColumn: !isMobile && d.large ? "1" : !isMobile && d.featured ? "2" : "auto", gridRow: !isMobile && (d.large || d.featured) ? "1/3" : "auto" }}
               onMouseOver={e => (e.currentTarget.style.transform = "translateY(-4px)")} onMouseOut={e => (e.currentTarget.style.transform = "none")}>
-              <div style={{ background: "#1a3a8f", width: "100%", height: "100%", minHeight: !isMobile && (d.large || d.featured) ? 340 : 160, position: "relative" }}>
-                <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", minHeight: !isMobile && (d.large || d.featured) ? 340 : 160 }} />
-              </div>
+              <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", minHeight: !isMobile && (d.large || d.featured) ? 340 : 160 }} />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 55%)" }} />
-              {d.badge && (
-                <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, padding: "3px 9px", borderRadius: 6, background: d.badgeColor, color: d.badgeText }}>{d.badge}</span>
-              )}
+              {d.badge && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, padding: "3px 9px", borderRadius: 6, background: d.badgeColor, color: d.badgeText }}>{d.badge}</span>}
               <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
                 <div className="sora" style={{ fontSize: 17, fontWeight: 700 }}>{d.city}</div>
                 <div style={{ fontSize: 12, opacity: 0.8 }}>{d.country}</div>
@@ -305,7 +359,7 @@ export default function SearchHotelsPage() {
       </div>
 
       {/* HOTELS */}
-      <div style={{ background: "#f8fafc", padding: isMobile ? "50px 0" : "70px 0" }}>
+      <div id="hotels-section" style={{ background: "#f8fafc", padding: isMobile ? "50px 0" : "70px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 20px" : "0 40px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Member Exclusive Rates</p>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap" as const, gap: 16 }}>
@@ -313,7 +367,7 @@ export default function SearchHotelsPage() {
               <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Curated for rebuq members</h2>
               <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Members save an average of <strong>₹24,600</strong> on these properties.</p>
             </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
               <span style={{ fontSize: 13, color: "#64748b" }}>Sort</span>
               {SORTS.map((s, i) => (
                 <button key={i} onClick={() => setActiveSort(i)}
@@ -324,17 +378,18 @@ export default function SearchHotelsPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" as const }}>
-            {FILTERS.map((f, i) => (
-              <button key={i} onClick={() => setActiveFilter(i)}
-                style={{ background: activeFilter === i ? NAVY : "#fff", border: `1.5px solid ${activeFilter === i ? NAVY : "#e2e8f0"}`, color: activeFilter === i ? "#fff" : NAVY, fontSize: 13, fontWeight: 500, padding: "7px 16px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit" }}>
-                {f}
+          {/* CITY FILTER TABS */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto", paddingBottom: 4 }}>
+            {CITY_FILTERS.map((f) => (
+              <button key={f} onClick={() => setActiveCity(f)}
+                style={{ background: activeCity === f ? NAVY : "#fff", border: `1.5px solid ${activeCity === f ? NAVY : "#e2e8f0"}`, color: activeCity === f ? "#fff" : NAVY, fontSize: 13, fontWeight: 500, padding: "7px 18px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, flexShrink: 0, transition: "all 0.2s" }}>
+                {f === "All Hotels" ? f : `${DESTINATIONS.find(d => d.city === f)?.flag || ""} ${f}`}
               </button>
             ))}
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20 }}>
-            {HOTELS.map((h, i) => (
+            {hotels.map((h, i) => (
               <div key={i} onClick={() => router.push(`/hotel/372446?checkIn=${checkIn || "2026-08-11"}&checkOut=${checkOut || "2026-08-13"}&adults=${guests || "2"}`)}
                 style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1.5px solid #e2e8f0", cursor: "pointer", transition: "transform .2s" }}
                 onMouseOver={e => (e.currentTarget.style.transform = "translateY(-4px)")} onMouseOut={e => (e.currentTarget.style.transform = "none")}>
@@ -368,32 +423,11 @@ export default function SearchHotelsPage() {
               </div>
             ))}
           </div>
+
           <div style={{ textAlign: "center", marginTop: 36 }}>
             <button onClick={handleSearch} style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
               ↓ Explore more member deals
             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* HOW IT WORKS */}
-      <div style={{ background: "#fff", padding: isMobile ? "50px 20px" : "70px 40px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>How it works</p>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 32, marginTop: 24 }}>
-            {[
-              { n: "01", title: "Upload your booking", text: "Share your hotel confirmation — any platform works. Upload once and we start watching immediately." },
-              { n: "02", title: "We watch the price", text: "AI monitors the price every 6 hours, 24/7 — nights, weekends, flash sales included." },
-              { n: "03", title: "Price drops → you save", text: "Instant WhatsApp alert with a rebooking link the moment it drops. Rebook in minutes." },
-            ].map(s => (
-              <div key={s.n} style={{ display: "flex", gap: 18, alignItems: "flex-start" }}>
-                <div className="sora" style={{ fontSize: 13, fontWeight: 800, color: B, background: "#eff6ff", width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{s.n}</div>
-                <div>
-                  <h3 className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 6 }}>{s.title}</h3>
-                  <p style={{ fontSize: 13.5, color: "#64748b", lineHeight: 1.65 }}>{s.text}</p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
