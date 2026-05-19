@@ -306,7 +306,7 @@ export default function HotelDetailPage() {
 
       {/* SEARCH BAR */}
       <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 32px" }}>
-        <div style={{ display: "flex", alignItems: "stretch", border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "hidden", background: "#fff", maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "stretch", border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
             <div style={{ flex: 2.5, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>📍 Destination or Hotel</div>
               <div style={{ ...inp }}>{hotel.name}</div>
