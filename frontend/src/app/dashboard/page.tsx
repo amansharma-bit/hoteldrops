@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 const B = "#1447b8";
 const NAVY = "#0f172a";
@@ -96,11 +102,11 @@ export default function Dashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Profile form state
-  const [firstName, setFirstName] = useState("Aarav");
-  const [lastName, setLastName] = useState("Sharma");
-  const [email, setEmail] = useState("aarav@example.com");
-  const [phone, setPhone] = useState("+91 98765 43210");
-  const [whatsapp, setWhatsapp] = useState("+91 98765 43210");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [whatsappAlerts, setWhatsappAlerts] = useState(true);
   const [profileSaved, setProfileSaved] = useState(false);
@@ -110,6 +116,23 @@ export default function Dashboard() {
   const [newPass, setNewPass] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [passSaved, setPassSaved] = useState(false);
+
+  useEffect(() => {
+    // Load real user data from Supabase
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        const meta = data.user.user_metadata;
+        const fullName = meta?.full_name || meta?.name || "";
+        const parts = fullName.split(" ");
+        setFirstName(parts[0] || "");
+        setLastName(parts.slice(1).join(" ") || "");
+        setEmail(data.user.email || "");
+      } else {
+        // Not logged in, redirect to signin
+        router.push("/signin");
+      }
+    });
+  }, []);
 
   useEffect(() => {
     async function load() {
