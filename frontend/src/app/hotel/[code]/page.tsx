@@ -288,14 +288,14 @@ function HotelDetailContent() {
             </ul>
           )}
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            {!isMobile && {user ? (
+            {!isMobile && (user ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href="/dashboard"}>
                 <div style={{ width: 32, height: 32, borderRadius: "50%", background: B, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
                 <span style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{user.name.split(" ")[0]}</span>
               </div>
             ) : (
               <button onClick={() => window.location.href="/signin"} style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>Sign in</button>
-            )}}
+            )}
             <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
               {isMobile ? "Check booking" : "Check my booking"}
             </button>
