@@ -124,6 +124,14 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
 
 const CITY_FILTERS = ["All Hotels", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai"];
 const PILLS = ["🇦🇪 Dubai, UAE","🇮🇳 New Delhi, India","🇸🇬 Singapore","🇮🇳 Goa, India","🇮🇩 Bali, Indonesia","🇮🇳 Mumbai, India"];
+const PILL_VALUES: Record<string, string> = {
+  "🇦🇪 Dubai, UAE": "Dubai, UAE",
+  "🇮🇳 New Delhi, India": "New Delhi, India",
+  "🇸🇬 Singapore": "Singapore",
+  "🇮🇳 Goa, India": "Goa, India",
+  "🇮🇩 Bali, Indonesia": "Bali, Indonesia",
+  "🇮🇳 Mumbai, India": "Mumbai, India",
+};
 const SORTS = ["↓ Savings","★ Rating","₹ Price"];
 
 const STATS = [
@@ -340,7 +348,7 @@ export default function SearchHotelsPage() {
         {/* DEST PILLS */}
         <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 20, flexWrap: "wrap" as const, position: "relative" }}>
           {PILLS.map((p, i) => (
-            <button key={i} onClick={() => { setActivePill(i); setDestination(Array.from(p).slice(3).join('').trim()); }}
+            <button key={i} onClick={() => { setActivePill(i); setDestination(PILL_VALUES[p] || p); }}
               style={{ background: activePill === i ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.85)", fontSize: 12.5, fontWeight: 500, padding: "5px 14px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit" }}>
               {p}
             </button>
