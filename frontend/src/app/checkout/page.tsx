@@ -27,7 +27,7 @@ function CheckoutContent() {
   const [coupon, setCoupon] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
   const [selectedRequests, setSelectedRequests] = useState<Set<number>>(new Set());
-  const [extras, setExtras] = useState<Set<number>>(new Set([0])); // breakfast added by default
+  const [extras, setExtras] = useState<Set<number>>(new Set([0]));
   const [specialNote, setSpecialNote] = useState("");
 
   const REQUESTS = ["Early check-in", "Late check-out", "Airport pickup", "High floor", "Twin beds", "Honeymoon setup"];
@@ -43,12 +43,8 @@ function CheckoutContent() {
   const total = price * nights + extraTotal + taxes - discount;
   const saving = Math.round(price * nights * 0.15) + (couponApplied ? discount : 0);
 
-  const toggleRequest = (i: number) => {
-    setSelectedRequests(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n; });
-  };
-  const toggleExtra = (i: number) => {
-    setExtras(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n; });
-  };
+  const toggleRequest = (i: number) => { setSelectedRequests(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n; }); };
+  const toggleExtra = (i: number) => { setExtras(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n; }); };
 
   const formatINR = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
   const formatDate = (d: string) => { if (!d) return "—"; const dt = new Date(d); return dt.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }); };
@@ -70,18 +66,23 @@ function CheckoutContent() {
         .enhance-item:hover { border-color: ${B}; }
         .enhance-item.added { border-color: ${B}; background: #f0f7ff; }
         .price-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #1e293b; margin-bottom: 10px; }
-        .btn-pay { width: 100%; background: linear-gradient(135deg, #1d4ed8, ${B}); color: #fff; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 16px rgba(20,71,184,0.35); transition: opacity .2s, transform .15s; }
-        .btn-pay:hover { opacity: 0.93; transform: translateY(-1px); }
+        .btn-pay { width: 100%; background: linear-gradient(135deg, #1d4ed8, ${B}); color: #fff; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 16px rgba(20,71,184,0.35); }
         textarea { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; font-size: 13.5px; font-family: inherit; color: ${NAVY}; resize: vertical; min-height: 90px; outline: none; transition: border-color .2s; }
-        textarea:focus { border-color: ${B}; box-shadow: 0 0 0 3px rgba(20,71,184,0.08); }
+        textarea:focus { border-color: ${B}; }
         textarea::placeholder { color: #94a3b8; }
       `}</style>
 
-      {/* NAV */}
+      {/* NAV — matches homepage */}
       <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 300 }}>
-        <a href="/" style={{ background: B, color: "#fff", fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 17, padding: "7px 16px", borderRadius: 8, textDecoration: "none" }}>rebuq</a>
-        <button onClick={() => router.push("/upload")} style={{ display: "flex", alignItems: "center", gap: 6, background: B, color: "#fff", border: "none", borderRadius: 20, padding: "8px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>✦ Price Watch</button>
-        <button onClick={() => router.push("/upload")} style={{ color: B, fontWeight: 600, fontSize: 13.5, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>👤 Sign in</button>
+        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
+        <ul style={{ display: "flex", gap: 32, listStyle: "none" }}>
+          <li><a href="/#how" style={{ fontSize: 14, color: "#64748b", textDecoration: "none", fontWeight: 500 }}>How it works</a></li>
+          <li><a href="/search-hotels" style={{ fontSize: 14, color: B, textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a></li>
+        </ul>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>Sign in</button>
+          <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Check my booking</button>
+        </div>
       </nav>
 
       {/* PROGRESS */}
@@ -110,11 +111,10 @@ function CheckoutContent() {
 
         {/* LEFT */}
         <div>
-
           {/* Hotel summary */}
           <div className="card">
             <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-              <div style={{ width: 100, height: 80, borderRadius: 10, background: "linear-gradient(160deg,#1a3a8f,#1447b8,#f59e0b 130%)", flexShrink: 0, overflow: "hidden" }}>
+              <div style={{ width: 100, height: 80, borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
                 <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=200&q=80&fit=crop" alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
               <div>
@@ -146,12 +146,12 @@ function CheckoutContent() {
             </div>
           </div>
 
-          {/* Free cancellation banner */}
+          {/* Room selected */}
           <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 10, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "flex-start", gap: 10 }}>
             <span style={{ fontSize: 18, color: "#16a34a", flexShrink: 0 }}>🛡</span>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: "#16a34a", marginBottom: 2 }}>Free cancellation available</div>
-              <div style={{ fontSize: 12.5, color: "#15803d" }}>No payment needed today · Pay at hotel option available</div>
+              <div style={{ fontSize: 12.5, color: "#15803d" }}>No payment needed today · Pay at hotel option available · Room: {roomName}</div>
             </div>
           </div>
 
@@ -162,26 +162,18 @@ function CheckoutContent() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
               <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
                 <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b" }}>First Name <span style={{ color: "#ef4444" }}>*</span></label>
-                <div className="form-input">
-                  <span style={{ color: "#94a3b8", fontSize: 15 }}>👤</span>
-                  <input type="text" placeholder="Aarav" value={firstName} onChange={e => setFirstName(e.target.value)} />
-                </div>
+                <div className="form-input"><span style={{ color: "#94a3b8", fontSize: 15 }}>👤</span><input type="text" placeholder="Aarav" value={firstName} onChange={e => setFirstName(e.target.value)} /></div>
               </div>
               <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
                 <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b" }}>Last Name <span style={{ color: "#ef4444" }}>*</span></label>
-                <div className="form-input">
-                  <input type="text" placeholder="Sharma" value={lastName} onChange={e => setLastName(e.target.value)} />
-                </div>
+                <div className="form-input"><input type="text" placeholder="Sharma" value={lastName} onChange={e => setLastName(e.target.value)} /></div>
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column" as const, gap: 6, marginBottom: 16 }}>
               <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b" }}>Title</label>
               <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
                 {["Mr.", "Ms.", "Mrs."].map(t => (
-                  <button key={t} onClick={() => setTitle(t)}
-                    style={{ border: `1.5px solid ${title === t ? B : "#e2e8f0"}`, borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: title === t ? 600 : 500, fontFamily: "inherit", background: title === t ? B : "#fff", color: title === t ? "#fff" : NAVY, cursor: "pointer", transition: "all .2s" }}>
-                    {t}
-                  </button>
+                  <button key={t} onClick={() => setTitle(t)} style={{ border: `1.5px solid ${title === t ? B : "#e2e8f0"}`, borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: title === t ? 600 : 500, fontFamily: "inherit", background: title === t ? B : "#fff", color: title === t ? "#fff" : NAVY, cursor: "pointer" }}>{t}</button>
                 ))}
               </div>
             </div>
@@ -191,27 +183,19 @@ function CheckoutContent() {
           {/* Contact details */}
           <div className="card">
             <div className="sora" style={{ fontSize: 18, fontWeight: 700, color: NAVY, marginBottom: 4 }}>Contact Details</div>
-            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>We'll send your booking confirmation here</div>
+            <div style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>We&apos;ll send your booking confirmation here</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
               <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
                 <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b" }}>Email <span style={{ color: "#ef4444" }}>*</span></label>
-                <div className="form-input">
-                  <span style={{ color: "#94a3b8" }}>✉</span>
-                  <input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} />
-                </div>
+                <div className="form-input"><span style={{ color: "#94a3b8" }}>✉</span><input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
               </div>
               <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
                 <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b" }}>Mobile Number <span style={{ color: "#ef4444" }}>*</span></label>
-                <div className="form-input">
-                  <span style={{ color: "#94a3b8" }}>📞</span>
-                  <input type="tel" placeholder="+91 98765 43210" value={phone} onChange={e => setPhone(e.target.value)} />
-                </div>
+                <div className="form-input"><span style={{ color: "#94a3b8" }}>📞</span><input type="tel" placeholder="+91 98765 43210" value={phone} onChange={e => setPhone(e.target.value)} /></div>
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => setWhatsapp(!whatsapp)}>
-              <div style={{ width: 18, height: 18, borderRadius: 5, background: whatsapp ? B : "#fff", border: `2px solid ${whatsapp ? B : "#e2e8f0"}`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, flexShrink: 0 }}>
-                {whatsapp ? "✓" : ""}
-              </div>
+              <div style={{ width: 18, height: 18, borderRadius: 5, background: whatsapp ? B : "#fff", border: `2px solid ${whatsapp ? B : "#e2e8f0"}`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, flexShrink: 0 }}>{whatsapp ? "✓" : ""}</div>
               <span style={{ fontSize: 13.5, color: "#1e293b", fontWeight: 500 }}>Send booking updates on WhatsApp</span>
             </div>
           </div>
@@ -223,9 +207,7 @@ function CheckoutContent() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
               {REQUESTS.map((r, i) => (
                 <div key={i} className={`req-item${selectedRequests.has(i) ? " selected" : ""}`} onClick={() => toggleRequest(i)}>
-                  <div style={{ width: 17, height: 17, border: `1.5px solid ${selectedRequests.has(i) ? B : "#e2e8f0"}`, borderRadius: 4, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: selectedRequests.has(i) ? B : "#fff", color: "#fff", fontSize: 11 }}>
-                    {selectedRequests.has(i) ? "✓" : ""}
-                  </div>
+                  <div style={{ width: 17, height: 17, border: `1.5px solid ${selectedRequests.has(i) ? B : "#e2e8f0"}`, borderRadius: 4, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: selectedRequests.has(i) ? B : "#fff", color: "#fff", fontSize: 11 }}>{selectedRequests.has(i) ? "✓" : ""}</div>
                   <span style={{ fontSize: 13.5, fontWeight: 500, color: "#1e293b" }}>{r}</span>
                 </div>
               ))}
@@ -241,13 +223,11 @@ function CheckoutContent() {
               const added = extras.has(i);
               return (
                 <div key={i} className={`enhance-item${added ? " added" : ""}`} onClick={() => toggleExtra(i)}>
-                  <div style={{ width: 44, height: 44, borderRadius: 10, background: added ? B : "#f8fafc", color: added ? "#fff" : "#64748b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0, transition: "all .2s" }}>
-                    {e.icon}
-                  </div>
+                  <div style={{ width: 44, height: 44, borderRadius: 10, background: added ? B : "#f8fafc", color: added ? "#fff" : "#64748b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{e.icon}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: NAVY, display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
                       {e.name}
-                      {e.tag && <span style={{ background: "#fef3c7", color: "#92400e", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4, letterSpacing: "0.04em" }}>{e.tag}</span>}
+                      {e.tag && <span style={{ background: "#fef3c7", color: "#92400e", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4 }}>{e.tag}</span>}
                     </div>
                     <div style={{ fontSize: 12.5, color: "#64748b" }}>{e.desc}</div>
                   </div>
@@ -259,31 +239,18 @@ function CheckoutContent() {
               );
             })}
           </div>
-
-          {/* GST */}
-          <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #e2e8f0", padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 3 }}>Claim GST credit on this booking</div>
-              <div style={{ fontSize: 12.5, color: "#64748b" }}>For business travel — add company GSTIN</div>
-            </div>
-            <span style={{ color: B, fontSize: 18 }}>▾</span>
-          </div>
         </div>
 
         {/* SIDEBAR */}
         <div style={{ position: "sticky", top: 76, alignSelf: "flex-start" as const, display: "flex", flexDirection: "column" as const, gap: 16 }}>
-
           {/* Coupon */}
           <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #e2e8f0", padding: "18px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 14 }}>🏷 Apply Coupon</div>
             <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-              <input type="text" value={coupon} onChange={e => setCoupon(e.target.value.toUpperCase())}
-                placeholder="REBUQ8"
+              <input type="text" value={coupon} onChange={e => setCoupon(e.target.value.toUpperCase())} placeholder="REBUQ8"
                 style={{ flex: 1, border: "1.5px dashed #e2e8f0", borderRadius: 8, padding: "10px 14px", fontSize: 14, fontFamily: "inherit", color: NAVY, outline: "none", letterSpacing: "0.06em", fontWeight: 600 }} />
               <button onClick={() => { if (coupon === "REBUQ8") setCouponApplied(true); }}
-                style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const }}>
-                Apply
-              </button>
+                style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Apply</button>
             </div>
             {couponApplied && <div style={{ fontSize: 12.5, color: "#16a34a", fontWeight: 600 }}>✓ REBUQ8 applied — 8% off!</div>}
             {!couponApplied && <div style={{ fontSize: 12.5, color: "#64748b" }}>Try <span style={{ color: B, fontWeight: 600, cursor: "pointer" }} onClick={() => setCoupon("REBUQ8")}>REBUQ8</span> for 8% off</div>}
@@ -292,45 +259,26 @@ function CheckoutContent() {
           {/* Price summary */}
           <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #e2e8f0", padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
             <div className="sora" style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Price Summary</div>
-            <div className="price-row">
-              <span style={{ color: "#64748b" }}>Room price × {nights} night{nights > 1 ? "s" : ""}</span>
-              <span style={{ fontWeight: 600, color: NAVY }}>{formatINR(price * nights)}</span>
-            </div>
-          {Array.from(extras).map(i => (
-              <div key={i} className="price-row">
-                <span style={{ color: "#64748b" }}>{EXTRAS[i].name}</span>
-                <span style={{ fontWeight: 600, color: NAVY }}>{formatINR(EXTRAS[i].price)}</span>
-              </div>
+            <div className="price-row"><span style={{ color: "#64748b" }}>Room price × {nights} night{nights > 1 ? "s" : ""}</span><span style={{ fontWeight: 600, color: NAVY }}>{formatINR(price * nights)}</span></div>
+            {Array.from(extras).map(i => (
+              <div key={i} className="price-row"><span style={{ color: "#64748b" }}>{EXTRAS[i].name}</span><span style={{ fontWeight: 600, color: NAVY }}>{formatINR(EXTRAS[i].price)}</span></div>
             ))}
-            <div className="price-row">
-              <span style={{ color: "#64748b" }}>Taxes & Service Fees</span>
-              <span style={{ fontWeight: 600, color: NAVY }}>{formatINR(taxes)}</span>
-            </div>
-            {couponApplied && (
-              <div className="price-row">
-                <span style={{ color: "#16a34a", fontWeight: 600 }}>Coupon REBUQ8</span>
-                <span style={{ fontWeight: 600, color: "#16a34a" }}>−{formatINR(discount)}</span>
-              </div>
-            )}
+            <div className="price-row"><span style={{ color: "#64748b" }}>Taxes & Service Fees</span><span style={{ fontWeight: 600, color: NAVY }}>{formatINR(taxes)}</span></div>
+            {couponApplied && <div className="price-row"><span style={{ color: "#16a34a", fontWeight: 600 }}>Coupon REBUQ8</span><span style={{ fontWeight: 600, color: "#16a34a" }}>−{formatINR(discount)}</span></div>}
             <hr style={{ border: "none", borderTop: "1px solid #e2e8f0", margin: "14px 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Total Payable</div>
-                <div style={{ fontSize: 12, color: "#64748b" }}>incl. all taxes</div>
-              </div>
+              <div><div style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Total Payable</div><div style={{ fontSize: 12, color: "#64748b" }}>incl. all taxes</div></div>
               <div className="sora" style={{ fontSize: 28, fontWeight: 800, color: NAVY }}>{formatINR(total)}</div>
             </div>
             <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 8, padding: "10px 14px", margin: "14px 0", display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, color: "#16a34a", fontWeight: 600 }}>
-              🌱 You're saving <strong style={{ color: "#15803d" }}>&nbsp;{formatINR(saving)}&nbsp;</strong> on this booking
+              🌱 You&apos;re saving <strong style={{ color: "#15803d" }}>&nbsp;{formatINR(saving)}&nbsp;</strong> on this booking
             </div>
             <button className="btn-pay">🔒 Pay {formatINR(total)} Securely</button>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, fontSize: 12, color: "#64748b", marginBottom: 4 }}>
-              <span>🔒 SSL Secured</span>
-              <span>💳 All cards · UPI · Wallets</span>
+              <span>🔒 SSL Secured</span><span>💳 All cards · UPI · Wallets</span>
             </div>
             <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6, textAlign: "center" as const, marginTop: 14 }}>
-              By proceeding, you agree to our <a href="#" style={{ color: B, fontWeight: 600, textDecoration: "none" }}>Terms</a> and <a href="#" style={{ color: B, fontWeight: 600, textDecoration: "none" }}>Privacy Policy</a>.<br />
-              Your booking is protected by rebuq Promise.
+              By proceeding, you agree to our <a href="#" style={{ color: B, fontWeight: 600, textDecoration: "none" }}>Terms</a> and <a href="#" style={{ color: B, fontWeight: 600, textDecoration: "none" }}>Privacy Policy</a>.
             </div>
           </div>
         </div>
