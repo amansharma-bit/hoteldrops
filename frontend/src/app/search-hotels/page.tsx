@@ -2,6 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 const B = "#1447b8";
 const NAVY = "#0f172a";
@@ -196,9 +202,20 @@ export default function SearchHotelsPage() {
     setCheckOut(val);
   };
 
+  const requireAuth = async (action: () => void) => {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      action();
+    } else {
+      router.push(`/signin?redirect=/search-hotels`);
+    }
+  };
+
   const handleSearch = () => {
     if (!destination) return;
-    router.push(`/search?destination=${encodeURIComponent(destination)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests}`);
+    requireAuth(() => {
+      router.push(`/search?destination=${encodeURIComponent(destination)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests}`);
+    });
   };
 
   const ticker = TICKER_ITEMS[tickerIdx];
@@ -406,7 +423,7 @@ export default function SearchHotelsPage() {
 
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20 }}>
             {hotels.map((h, i) => (
-              <div key={i} onClick={() => router.push(`/hotel/372446?checkIn=${checkIn || "2026-08-11"}&checkOut=${checkOut || "2026-08-13"}&adults=${guests || "2"}`)}
+              <div key={i} onClick={() => requireAuth(() => router.push(`/hotel/372446?checkIn=${checkIn || "2026-08-11"}&checkOut=${checkOut || "2026-08-13"}&adults=${guests || "2"}`))}
                 style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1.5px solid #e2e8f0", cursor: "pointer", transition: "transform .2s" }}
                 onMouseOver={e => (e.currentTarget.style.transform = "translateY(-4px)")} onMouseOut={e => (e.currentTarget.style.transform = "none")}>
                 <div style={{ height: 190, position: "relative", overflow: "hidden" }}>
