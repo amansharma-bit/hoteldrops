@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Eye, TrendingDown, IndianRupee, Calendar, Moon, Clock, RefreshCw, Check, ArrowRight, Plus } from "lucide-react";
 
+const B = "#1447b8";
+const NAVY = "#0f172a";
 const SUPABASE_URL = "https://wifspvhmvaavgzkepjqz.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3HpgXVmSAdGA7ZPypqCdQQ_D00QN0Nh";
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(true);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -16,6 +17,10 @@ function useIsMobile() {
     return () => window.removeEventListener("resize", check);
   }, []);
   return isMobile;
+}
+
+function formatINR(n: number) {
+  return "₹" + Math.round(n).toLocaleString("en-IN");
 }
 
 interface Booking {
@@ -33,42 +38,47 @@ interface Booking {
   offers?: { offer_price: number; customer_saving: number; status: string; id: string }[];
 }
 
-const STATUS: Record<string, { label: string; bg: string; color: string; icon: string }> = {
-  pending:    { label: "Setting up",   bg: "#fef3c7", color: "#d97706", icon: "⏳" },
-  tracking:   { label: "Watching",     bg: "#dbeafe", color: "#1447b8", icon: "🔍" },
-  drop_found: { label: "Drop Found!",  bg: "#dbeafe", color: "#1447b8", icon: "📉" },
-  offer_sent: { label: "Offer Sent",   bg: "#dbeafe", color: "#1447b8", icon: "📱" },
-  accepted:   { label: "Accepted",     bg: "#dbeafe", color: "#059669", icon: "✅" },
-  rebooked:   { label: "Rebooked ✓",  bg: "#dbeafe", color: "#059669", icon: "🎉" },
-  expired:    { label: "Expired",      bg: "#f4f6f9", color: "#9ca3af", icon: "⏰" },
-  no_drop:    { label: "No drop yet",  bg: "#f4f6f9", color: "#9ca3af", icon: "📊" },
+const WATCH_STATUS: Record<string, { label: string; bg: string; color: string; icon: string }> = {
+  pending:    { label: "Setting up",  bg: "#fef3c7", color: "#d97706", icon: "⏳" },
+  tracking:   { label: "Watching",    bg: "#dbeafe", color: "#1447b8", icon: "🔍" },
+  drop_found: { label: "Drop Found!", bg: "#dcfce7", color: "#16a34a", icon: "📉" },
+  offer_sent: { label: "Offer Sent",  bg: "#dbeafe", color: "#1447b8", icon: "📱" },
+  rebooked:   { label: "Saved ✓",    bg: "#dcfce7", color: "#16a34a", icon: "🎉" },
+  expired:    { label: "Expired",     bg: "#f4f6f9", color: "#9ca3af", icon: "⏰" },
+  no_drop:    { label: "No drop yet", bg: "#f4f6f9", color: "#9ca3af", icon: "📊" },
 };
 
-function formatINR(n: number) {
-  return "₹" + Math.round(n).toLocaleString("en-IN");
-}
-
-function nights(checkIn: string, checkOut: string) {
-  return Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
-}
-
-// Mock bookings for demo — shown when no real bookings exist
-const DEMO_BOOKINGS: Booking[] = [
+const DEMO_CONFIRMED = [
   {
-    id: "demo-1", hotel_name: "Atlantis The Palm", hotel_city: "Dubai",
+    id: "conf-1", hotel_name: "Damac Maison Dubai Mall Street", hotel_city: "Dubai",
+    check_in: "2026-08-11", check_out: "2026-08-13", room: "Suite Two Bedrooms",
+    guests: 2, nights: 2, price: 21262, status: "upcoming", booking_ref: "RBQ-482910",
+    img: "https://images.pexels.com/photos/33720952/pexels-photo-33720952.jpeg?auto=compress&cs=tinysrgb&w=300&fit=crop&h=200",
+  },
+  {
+    id: "conf-2", hotel_name: "Atlantis The Palm", hotel_city: "Dubai",
+    check_in: "2025-12-20", check_out: "2025-12-24", room: "Deluxe King Room",
+    guests: 2, nights: 4, price: 112000, status: "completed", booking_ref: "RBQ-371204",
+    img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&q=85&fit=crop",
+  },
+];
+
+const DEMO_WATCH: Booking[] = [
+  {
+    id: "watch-1", hotel_name: "Atlantis The Palm", hotel_city: "Dubai",
     check_in: "2026-12-14", check_out: "2026-12-18", original_price: 112000,
     status: "drop_found", last_checked_at: new Date(Date.now() - 3600000).toISOString(),
     nights: 4, room_type: "Deluxe Room", created_at: new Date().toISOString(),
     offers: [{ id: "offer-1", offer_price: 89600, customer_saving: 22400, status: "sent" }],
   },
   {
-    id: "demo-2", hotel_name: "Park Hyatt Bangkok", hotel_city: "Bangkok",
+    id: "watch-2", hotel_name: "Park Hyatt Bangkok", hotel_city: "Bangkok",
     check_in: "2027-01-03", check_out: "2027-01-07", original_price: 158000,
     status: "tracking", last_checked_at: new Date(Date.now() - 7200000).toISOString(),
     nights: 4, room_type: "Park King Room", created_at: new Date().toISOString(),
   },
   {
-    id: "demo-3", hotel_name: "W Bali Seminyak", hotel_city: "Bali",
+    id: "watch-3", hotel_name: "W Bali Seminyak", hotel_city: "Bali",
     check_in: "2027-02-08", check_out: "2027-02-12", original_price: 91000,
     status: "rebooked", last_checked_at: new Date(Date.now() - 86400000).toISOString(),
     nights: 4, room_type: "Wonderful Room", created_at: new Date().toISOString(),
@@ -79,27 +89,44 @@ const DEMO_BOOKINGS: Booking[] = [
 export default function Dashboard() {
   const router = useRouter();
   const isMobile = useIsMobile();
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [activeSection, setActiveSection] = useState<"bookings" | "watch" | "profile">("bookings");
+  const [watchBookings, setWatchBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"all" | "tracking" | "drops" | "completed">("all");
   const [isDemo, setIsDemo] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Profile form state
+  const [firstName, setFirstName] = useState("Aarav");
+  const [lastName, setLastName] = useState("Sharma");
+  const [email, setEmail] = useState("aarav@example.com");
+  const [phone, setPhone] = useState("+91 98765 43210");
+  const [whatsapp, setWhatsapp] = useState("+91 98765 43210");
+  const [emailAlerts, setEmailAlerts] = useState(true);
+  const [whatsappAlerts, setWhatsappAlerts] = useState(true);
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  // Password form state
+  const [currentPass, setCurrentPass] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [passSaved, setPassSaved] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
         const res = await fetch(
           `${SUPABASE_URL}/rest/v1/bookings?select=*,offers(id,offer_price,customer_saving,status)&order=created_at.desc`,
-          { headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` } }
+          { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
         );
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          setBookings(data);
+          setWatchBookings(data);
         } else {
-          setBookings(DEMO_BOOKINGS);
+          setWatchBookings(DEMO_WATCH);
           setIsDemo(true);
         }
       } catch {
-        setBookings(DEMO_BOOKINGS);
+        setWatchBookings(DEMO_WATCH);
         setIsDemo(true);
       }
       setLoading(false);
@@ -107,214 +134,384 @@ export default function Dashboard() {
     load();
   }, []);
 
-  const filtered = bookings.filter(b => {
-    if (tab === "tracking")  return ["tracking", "pending"].includes(b.status);
-    if (tab === "drops")     return ["drop_found", "offer_sent"].includes(b.status);
-    if (tab === "completed") return b.status === "rebooked";
-    return true;
-  });
+  const totalSaved = watchBookings.filter(b => b.status === "rebooked").reduce((s, b) => s + (b.offers?.[0]?.customer_saving || 0), 0);
+  const activeWatch = watchBookings.filter(b => ["tracking", "pending"].includes(b.status)).length;
+  const dropsFound = watchBookings.filter(b => ["drop_found", "offer_sent", "rebooked"].includes(b.status)).length;
 
-  const totalSaved = bookings
-    .filter(b => b.status === "rebooked")
-    .reduce((sum, b) => sum + (b.offers?.[0]?.customer_saving || 0), 0);
+  const NAV_ITEMS = [
+    { key: "bookings", label: "My Bookings", icon: "🏨" },
+    { key: "watch", label: "Price Watch", icon: "🔔" },
+    { key: "profile", label: "Profile & Settings", icon: "👤" },
+  ] as const;
 
-  const activeTracking = bookings.filter(b => ["tracking", "pending"].includes(b.status)).length;
-  const dropsFound = bookings.filter(b => ["drop_found", "offer_sent", "rebooked"].includes(b.status)).length;
-  const hasAlert = bookings.some(b => ["drop_found", "offer_sent"].includes(b.status));
-
-  const px = isMobile ? "16px" : "32px";
-
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f7f9fc", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 20, fontWeight: 700, marginBottom: 8 }}>rebuq<span style={{ color: "#1447b8" }}>.</span></div>
-          <div style={{ fontSize: 13, color: "#9ca3af" }}>Loading your bookings…</div>
-        </div>
-      </div>
-    );
-  }
+  const inp: React.CSSProperties = {
+    width: "100%", border: "1.5px solid #e2e8f0", borderRadius: 10,
+    padding: "11px 14px", fontSize: 14, fontFamily: "inherit",
+    color: NAVY, outline: "none", background: "#fff",
+  };
 
   return (
-    <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#f7f9fc", minHeight: "100vh" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#f8fafc", minHeight: "100vh", color: "#1e293b" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        .sora { font-family: 'Sora', sans-serif; }
+        @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.5} }
+        @keyframes spin { to{transform:rotate(360deg)} }
+      `}</style>
 
-      {/* Nav */}
-      <nav style={{ background: "#fff", borderBottom: "1px solid #eaeef2", padding: `0 ${px}`, height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
-        <a href="/" style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 20, fontWeight: 700, color: "#0a0a0f", textDecoration: "none" }}>
-          rebuq<span style={{ color: "#1447b8" }}>.</span>
-        </a>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {hasAlert && (
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#1447b8", boxShadow: "0 0 0 3px rgba(22,163,74,0.2)" }} />
+      {/* NAV */}
+      <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 300 }}>
+        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
+        {!isMobile && (
+          <ul style={{ display: "flex", gap: 32, listStyle: "none" }}>
+            <li><a href="/#how" style={{ fontSize: 14, color: "#64748b", textDecoration: "none", fontWeight: 500 }}>How it works</a></li>
+            <li><a href="/search-hotels" style={{ fontSize: 14, color: B, textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a></li>
+          </ul>
+        )}
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {!isMobile && (
+            <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              Check my booking
+            </button>
           )}
-          <button onClick={() => router.push("/upload")} style={{ background: "#1447b8", color: "#fff", border: "none", padding: isMobile ? "8px 14px" : "9px 20px", borderRadius: 8, fontSize: isMobile ? 12 : 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-            <Plus size={14} /> Track booking
-          </button>
+          {isMobile && (
+            <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+              <span style={{ display: "block", width: 22, height: 2, background: NAVY, transform: menuOpen ? "rotate(45deg) translate(5px,5px)" : "none", transition: "all 0.2s" }} />
+              <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : NAVY, transition: "all 0.2s" }} />
+              <span style={{ display: "block", width: 22, height: 2, background: NAVY, transform: menuOpen ? "rotate(-45deg) translate(5px,-5px)" : "none", transition: "all 0.2s" }} />
+            </button>
+          )}
         </div>
       </nav>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "20px 16px" : "32px 32px" }}>
-
-        {/* Demo banner */}
-        {isDemo && (
-          <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 12, color: "#92400e", display: "flex", alignItems: "center", gap: 8 }}>
-            <span>👀</span>
-            <span><strong>Demo mode</strong> — Upload a real voucher to start tracking your bookings.</span>
-            <button onClick={() => router.push("/upload")} style={{ marginLeft: "auto", background: "#d97706", color: "#fff", border: "none", padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-              Upload now →
-            </button>
-          </div>
-        )}
-
-        {/* Welcome */}
-        <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontFamily: "'Clash Display', sans-serif", fontSize: isMobile ? 24 : 28, fontWeight: 700, color: "#111827", letterSpacing: "-0.5px", marginBottom: 4 }}>
-            My tracked bookings
-          </h1>
-          <p style={{ fontSize: 13, color: "#9ca3af" }}>We&apos;re monitoring your hotel prices 24/7. Sit back and relax.</p>
+      {/* MOBILE MENU */}
+      {isMobile && menuOpen && (
+        <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 199, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <button onClick={() => setMenuOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>How it works</button>
+          <button onClick={() => { router.push("/search-hotels"); setMenuOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
+          <button onClick={() => { router.push("/upload"); setMenuOpen(false); }} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12 }}>Check my booking</button>
         </div>
+      )}
 
-        {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
-          {[
-            { label: "Bookings tracked", value: bookings.length, icon: <Building2 size={18} />, color: "#1447b8", bg: "#eff6ff" },
-            { label: "Actively watching", value: activeTracking, icon: <Eye size={18} />, color: "#7c3aed", bg: "#f5f3ff" },
-            { label: "Price drops found", value: dropsFound, icon: <TrendingDown size={18} />, color: "#1447b8", bg: "#eff6ff" },
-            { label: "Total saved", value: formatINR(totalSaved), icon: <IndianRupee size={18} />, color: "#d97706", bg: "#fef3c7" },
-          ].map((s, i) => (
-            <div key={i} style={{ background: "#fff", borderRadius: 14, padding: "16px 18px", border: "1px solid #eaeef2", display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: s.color }}>{s.icon}</div>
-              <div>
-                <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: isMobile ? 20 : 24, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{s.label}</div>
-              </div>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "20px 16px" : "32px 32px", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "240px 1fr", gap: 24, alignItems: "flex-start" }}>
+
+        {/* SIDEBAR */}
+        <div>
+          {/* Profile card */}
+          <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: "20px", marginBottom: 16, textAlign: "center" }}>
+            <div style={{ width: 60, height: 60, borderRadius: "50%", background: B, color: "#fff", fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+              {firstName[0]}{lastName[0]}
             </div>
-          ))}
+            <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 16, color: NAVY, marginBottom: 4 }}>{firstName} {lastName}</div>
+            <div style={{ fontSize: 12, color: "#64748b" }}>{email}</div>
+            <div style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 5, background: "#f0fdf4", color: "#16a34a", fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 100 }}>
+              ✓ rebuq Member
+            </div>
+          </div>
+
+          {/* Nav */}
+          <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, overflow: "hidden" }}>
+            {NAV_ITEMS.map((item, i) => (
+              <button key={item.key} onClick={() => setActiveSection(item.key)}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", border: "none", background: activeSection === item.key ? "#eff6ff" : "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: activeSection === item.key ? 600 : 500, color: activeSection === item.key ? B : "#1e293b", borderBottom: i < NAV_ITEMS.length - 1 ? "1px solid #f1f5f9" : "none", borderLeft: activeSection === item.key ? `3px solid ${B}` : "3px solid transparent", transition: "all 0.15s" }}>
+                <span style={{ fontSize: 16 }}>{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Stats */}
+          <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 16, marginTop: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Your stats</div>
+            {[
+              { label: "Bookings tracked", val: watchBookings.length, color: NAVY },
+              { label: "Actively watching", val: activeWatch, color: B },
+              { label: "Drops found", val: dropsFound, color: "#16a34a" },
+              { label: "Total saved", val: formatINR(totalSaved), color: "#f59e0b" },
+            ].map((s, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < 3 ? "1px solid #f8fafc" : "none", fontSize: 13 }}>
+                <span style={{ color: "#64748b" }}>{s.label}</span>
+                <span style={{ fontWeight: 700, color: s.color }}>{s.val}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Alert banner */}
-        {hasAlert && (
-          <div style={{ background: "#1447b8", borderRadius: 14, padding: "16px 20px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 40, height: 40, background: "rgba(255,255,255,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><TrendingDown size={20} color="#fff" /></div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Price drop found on your booking!</div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-                  {bookings.find(b => b.status === "drop_found")?.hotel_name} — Save {formatINR(bookings.find(b => b.status === "drop_found")?.offers?.[0]?.customer_saving || 0)}
+        {/* MAIN CONTENT */}
+        <div>
+
+          {/* ── MY BOOKINGS ── */}
+          {activeSection === "bookings" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div>
+                  <div className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY }}>My Bookings</div>
+                  <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Hotels you&apos;ve booked through rebuq</div>
                 </div>
+                <button onClick={() => router.push("/search-hotels")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>+ New booking</button>
               </div>
-            </div>
-            <button onClick={() => router.push(`/offer/${bookings.find(b => b.status === "drop_found")?.offers?.[0]?.id || ""}`)}
-              style={{ background: "#fff", color: "#1447b8", border: "none", padding: "9px 18px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-              View offer →
-            </button>
-          </div>
-        )}
 
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 4, background: "#f0f0f5", borderRadius: 12, padding: 4, marginBottom: 20, width: "fit-content" }}>
-          {([
-            { key: "all", label: `All (${bookings.length})` },
-            { key: "tracking", label: `Watching (${activeTracking})` },
-            { key: "drops", label: `Drops (${dropsFound})` },
-            { key: "completed", label: "Completed" },
-          ] as const).map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              style={{ background: tab === t.key ? "#fff" : "none", border: "none", padding: isMobile ? "7px 12px" : "8px 16px", borderRadius: 9, fontSize: isMobile ? 11 : 12, fontWeight: tab === t.key ? 700 : 500, color: tab === t.key ? "#111827" : "#6b7280", cursor: "pointer", fontFamily: "inherit", boxShadow: tab === t.key ? "0 1px 4px rgba(0,0,0,0.08)" : "none", whiteSpace: "nowrap" }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
+              {isDemo && (
+                <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "#92400e", display: "flex", alignItems: "center", gap: 8 }}>
+                  👀 <span><strong>Demo mode</strong> — these are sample bookings. Sign in to see your real bookings.</span>
+                </div>
+              )}
 
-        {/* Bookings list */}
-        {filtered.length === 0 ? (
-          <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #eaeef2", padding: 48, textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🏨</div>
-            <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 6 }}>No bookings here yet</div>
-            <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 20 }}>Upload a hotel voucher to start tracking</p>
-            <button onClick={() => router.push("/upload")} style={{ background: "#1447b8", color: "#fff", border: "none", padding: "11px 24px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-              Upload voucher →
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {filtered.map(b => {
-              const st = STATUS[b.status] || STATUS.tracking;
-              const offer = b.offers?.[0];
-              const numNights = b.nights || nights(b.check_in, b.check_out);
-              const isAlert = ["drop_found", "offer_sent"].includes(b.status);
-
-              return (
-                <div key={b.id} style={{ background: isAlert ? "#f0f7ff" : "#fff", borderRadius: 16, border: `1.5px solid ${isAlert ? "#bfdbfe" : "#eaeef2"}`, padding: "20px" } as React.CSSProperties}>
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flex: 1, minWidth: 0 }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 12, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Building2 size={20} color="#1447b8" /></div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 3 }}>
-                          <span style={{ fontFamily: "'Clash Display', sans-serif", fontSize: 16, fontWeight: 700, color: "#111827" }}>{b.hotel_name}</span>
-                          <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 20, whiteSpace: "nowrap" }}>{st.icon} {st.label}</span>
+              {/* Upcoming */}
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Upcoming</div>
+              {DEMO_CONFIRMED.filter(b => b.status === "upcoming").map(b => (
+                <div key={b.id} style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, overflow: "hidden", marginBottom: 14 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "120px 1fr", gap: 0 }}>
+                    <img src={b.img} alt={b.hotel_name} style={{ width: "100%", height: isMobile ? 160 : "100%", minHeight: 120, objectFit: "cover", display: "block" }} />
+                    <div style={{ padding: "18px 20px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
+                        <div>
+                          <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 3 }}>{b.hotel_name}</div>
+                          <div style={{ fontSize: 12, color: "#64748b" }}>📍 {b.hotel_city} · {b.room} · {b.guests} guests</div>
                         </div>
-                        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>{b.hotel_city}{b.room_type ? ` · ${b.room_type}` : ""}</div>
-                        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 11, color: "#9ca3af" }}>📅 {b.check_in} → {b.check_out}</span>
-                          <span style={{ fontSize: 11, color: "#9ca3af" }}>🌙 {numNights} nights</span>
-                          {b.last_checked_at && <span style={{ fontSize: 11, color: "#9ca3af" }}>🔍 {new Date(b.last_checked_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>}
+                        <span style={{ background: "#dbeafe", color: B, fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100 }}>Upcoming</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 20, marginBottom: 14 }}>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Check-in</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{b.check_in}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Check-out</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{b.check_out}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Total paid</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{formatINR(b.price)}</div>
                         </div>
                       </div>
-                    </div>
-                    <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 2 }}>You paid</div>
-                      <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, color: offer ? "#9ca3af" : "#111827", textDecoration: offer ? "line-through" : "none" }}>
-                        {formatINR(b.original_price)}
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12, color: "#64748b" }}>Ref: {b.booking_ref}</span>
+                        <button style={{ fontSize: 12, color: B, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>⬇ Download voucher</button>
+                        <button style={{ fontSize: 12, color: B, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>✉ Email</button>
+                        <button style={{ fontSize: 12, color: "#ef4444", fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>✕ Cancel</button>
                       </div>
-                      {offer && (
-                        <>
-                          <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, color: "#1447b8" }}>{formatINR(offer.offer_price)}</div>
-                          <div style={{ fontSize: 11, color: "#1447b8", fontWeight: 700 }}>Save {formatINR(offer.customer_saving)} 🎉</div>
-                        </>
-                      )}
                     </div>
                   </div>
-
-                  {/* Drop found CTA */}
-                  {isAlert && offer && (
-                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #dcfce7", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                      <div style={{ fontSize: 13, color: "#1447b8" }}>
-                        🎉 We found a lower price! Save <strong>{formatINR(offer.customer_saving)}</strong> on your stay.
-                      </div>
-                      <button onClick={() => router.push(`/offer/${offer.id}`)}
-                        style={{ background: "#1447b8", color: "#fff", border: "none", padding: "9px 18px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>
-                        View offer <ArrowRight size={14} />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Tracking status bar */}
-                  {b.status === "tracking" && (
-                    <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #f4f6f9", display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ flex: 1, background: "#f4f6f9", borderRadius: 4, height: 4, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: "60%", background: "#1447b8", borderRadius: 4, animation: "pulse 2s infinite" }} />
-                      </div>
-                      <span style={{ fontSize: 11, color: "#9ca3af", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 4 }}><RefreshCw size={11} /> Checking every 6 hours</span>
-                    </div>
-                  )}
                 </div>
-              );
-            })}
-          </div>
-        )}
+              ))}
 
-        {/* Upload CTA at bottom */}
-        <div style={{ marginTop: 24, background: "#1447b8", borderRadius: 16, padding: isMobile ? "24px 20px" : "32px 36px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontFamily: "'Clash Display', sans-serif", fontSize: isMobile ? 20 : 24, fontWeight: 700, color: "#fff", marginBottom: 4 }}>Got another booking?</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>Upload your voucher — we&apos;ll watch it 24/7.</div>
-          </div>
-          <button onClick={() => router.push("/upload")} style={{ background: "#fff", color: "#1447b8", border: "none", padding: "12px 24px", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Clash Display', sans-serif", whiteSpace: "nowrap" }}>
-            Track new booking →
-          </button>
+              {/* Past */}
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", margin: "24px 0 12px" }}>Past Bookings</div>
+              {DEMO_CONFIRMED.filter(b => b.status === "completed").map(b => (
+                <div key={b.id} style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, overflow: "hidden", marginBottom: 14, opacity: 0.85 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "120px 1fr", gap: 0 }}>
+                    <img src={b.img} alt={b.hotel_name} style={{ width: "100%", height: isMobile ? 140 : "100%", minHeight: 100, objectFit: "cover", display: "block", filter: "grayscale(20%)" }} />
+                    <div style={{ padding: "18px 20px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
+                        <div>
+                          <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 3 }}>{b.hotel_name}</div>
+                          <div style={{ fontSize: 12, color: "#64748b" }}>📍 {b.hotel_city} · {b.room} · {b.guests} guests</div>
+                        </div>
+                        <span style={{ background: "#f1f5f9", color: "#64748b", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100 }}>Completed</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 20, marginBottom: 14 }}>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Check-in</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{b.check_in}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Check-out</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{b.check_out}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>Total paid</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{formatINR(b.price)}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button style={{ fontSize: 12, color: B, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>⬇ Download voucher</button>
+                        <button style={{ fontSize: 12, color: B, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>Book again</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── PRICE WATCH ── */}
+          {activeSection === "watch" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div>
+                  <div className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY }}>Price Watch</div>
+                  <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Vouchers you&apos;ve uploaded for repricing</div>
+                </div>
+                <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>+ Upload voucher</button>
+              </div>
+
+              {isDemo && (
+                <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 16px", marginBottom: 16, fontSize: 12, color: "#92400e", display: "flex", alignItems: "center", gap: 8 }}>
+                  👀 <span><strong>Demo mode</strong> — Upload a real voucher to start tracking.</span>
+                  <button onClick={() => router.push("/upload")} style={{ marginLeft: "auto", background: "#d97706", color: "#fff", border: "none", padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>Upload now →</button>
+                </div>
+              )}
+
+              {loading ? (
+                <div style={{ textAlign: "center", padding: "60px 0" }}>
+                  <div style={{ width: 32, height: 32, border: `3px solid #bfdbfe`, borderTop: `3px solid ${B}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto" }} />
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {watchBookings.map(b => {
+                    const st = WATCH_STATUS[b.status] || WATCH_STATUS.tracking;
+                    const offer = b.offers?.[0];
+                    const isAlert = ["drop_found", "offer_sent"].includes(b.status);
+                    return (
+                      <div key={b.id} style={{ background: isAlert ? "#f0f7ff" : "#fff", border: `1.5px solid ${isAlert ? "#bfdbfe" : "#e2e8f0"}`, borderRadius: 14, padding: 20 }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                              <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>{b.hotel_name}</div>
+                              <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 20 }}>{st.icon} {st.label}</span>
+                            </div>
+                            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{b.hotel_city}{b.room_type ? ` · ${b.room_type}` : ""}</div>
+                            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 11, color: "#94a3b8" }}>📅 {b.check_in} → {b.check_out}</span>
+                              <span style={{ fontSize: 11, color: "#94a3b8" }}>🌙 {b.nights} nights</span>
+                              {b.last_checked_at && <span style={{ fontSize: 11, color: "#94a3b8" }}>🔍 Last checked {new Date(b.last_checked_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right", flexShrink: 0 }}>
+                            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>You paid</div>
+                            <div className="sora" style={{ fontSize: 20, fontWeight: 700, color: offer ? "#94a3b8" : NAVY, textDecoration: offer ? "line-through" : "none" }}>{formatINR(b.original_price)}</div>
+                            {offer && (
+                              <>
+                                <div className="sora" style={{ fontSize: 20, fontWeight: 700, color: B }}>{formatINR(offer.offer_price)}</div>
+                                <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>Save {formatINR(offer.customer_saving)} 🎉</div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {isAlert && offer && (
+                          <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #bfdbfe", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                            <div style={{ fontSize: 13, color: B }}>🎉 Lower price found! Save <strong>{formatINR(offer.customer_saving)}</strong></div>
+                            <button onClick={() => router.push(`/offer/${offer.id}`)} style={{ background: B, color: "#fff", border: "none", padding: "9px 18px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>View offer →</button>
+                          </div>
+                        )}
+
+                        {b.status === "tracking" && (
+                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ flex: 1, background: "#f1f5f9", borderRadius: 4, height: 4, overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: "60%", background: B, borderRadius: 4 }} />
+                            </div>
+                            <span style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap" }}>⟳ Checking every 6 hours</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={{ marginTop: 24, background: B, borderRadius: 14, padding: "24px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                <div>
+                  <div className="sora" style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 4 }}>Got another booking?</div>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>Upload your voucher — we watch it 24/7.</div>
+                </div>
+                <button onClick={() => router.push("/upload")} style={{ background: "#fff", color: B, border: "none", padding: "11px 22px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Track new booking →</button>
+              </div>
+            </div>
+          )}
+
+          {/* ── PROFILE ── */}
+          {activeSection === "profile" && (
+            <div>
+              <div className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 20 }}>Profile & Settings</div>
+
+              {/* Personal info */}
+              <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 18 }}>Personal Information</div>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div>
+                    <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b", display: "block", marginBottom: 6 }}>First Name</label>
+                    <input value={firstName} onChange={e => setFirstName(e.target.value)} style={inp} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b", display: "block", marginBottom: 6 }}>Last Name</label>
+                    <input value={lastName} onChange={e => setLastName(e.target.value)} style={inp} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b", display: "block", marginBottom: 6 }}>Email Address</label>
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} style={inp} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b", display: "block", marginBottom: 6 }}>Phone Number</label>
+                    <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} style={inp} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b", display: "block", marginBottom: 6 }}>WhatsApp Number</label>
+                    <input type="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} style={inp} />
+                    <div style={{ fontSize: 11.5, color: "#64748b", marginTop: 5 }}>Price drop alerts will be sent here</div>
+                  </div>
+                </div>
+                <button onClick={() => { setProfileSaved(true); setTimeout(() => setProfileSaved(false), 3000); }}
+                  style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "10px 22px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  {profileSaved ? "✓ Saved!" : "Save changes"}
+                </button>
+              </div>
+
+              {/* Notifications */}
+              <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 18 }}>Notification Preferences</div>
+                {[
+                  { label: "WhatsApp alerts", desc: "Get price drop alerts on WhatsApp instantly", val: whatsappAlerts, set: setWhatsappAlerts },
+                  { label: "Email alerts", desc: "Receive price drop summaries by email", val: emailAlerts, set: setEmailAlerts },
+                ].map((n, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: i === 0 ? "1px solid #f1f5f9" : "none" }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, marginBottom: 2 }}>{n.label}</div>
+                      <div style={{ fontSize: 12.5, color: "#64748b" }}>{n.desc}</div>
+                    </div>
+                    <div onClick={() => n.set(!n.val)} style={{ width: 44, height: 24, borderRadius: 12, background: n.val ? B : "#e2e8f0", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
+                      <div style={{ position: "absolute", top: 3, left: n.val ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Change password */}
+              <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 18 }}>Change Password</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 400 }}>
+                  <div>
+                    <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b", display: "block", marginBottom: 6 }}>Current Password</label>
+                    <input type="password" value={currentPass} onChange={e => setCurrentPass(e.target.value)} placeholder="••••••••" style={inp} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b", display: "block", marginBottom: 6 }}>New Password</label>
+                    <input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="Min. 8 characters" style={inp} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12.5, fontWeight: 600, color: "#1e293b", display: "block", marginBottom: 6 }}>Confirm New Password</label>
+                    <input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} placeholder="••••••••" style={inp} />
+                  </div>
+                  <button onClick={() => { setPassSaved(true); setTimeout(() => setPassSaved(false), 3000); setCurrentPass(""); setNewPass(""); setConfirmPass(""); }}
+                    style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "10px 22px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", width: "fit-content" }}>
+                    {passSaved ? "✓ Password updated!" : "Update password"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Danger zone */}
+              <div style={{ background: "#fff", border: "1.5px solid #fecaca", borderRadius: 14, padding: 24 }}>
+                <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: "#dc2626", marginBottom: 8 }}>Danger Zone</div>
+                <div style={{ fontSize: 13.5, color: "#64748b", marginBottom: 16 }}>Once you delete your account, all your data and bookings will be permanently removed. This cannot be undone.</div>
+                <button style={{ background: "#fff", color: "#dc2626", border: "1.5px solid #fecaca", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  Delete my account
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-
       </div>
     </div>
   );
