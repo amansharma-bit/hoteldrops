@@ -70,8 +70,7 @@ function CheckoutContent() {
   return (
     <div style={{ fontFamily: "'Inter',sans-serif", background: "#f8fafc", color: "#1e293b", fontSize: 15, WebkitFontSmoothing: "antialiased" as any }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+                * { box-sizing: border-box; margin: 0; padding: 0; }
         .sora { font-family: 'Sora', sans-serif; }
         .card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
         .form-input { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 11px 14px; font-size: 14px; font-family: inherit; color: ${NAVY}; outline: none; transition: border-color .2s; background: #fff; display: flex; align-items: center; gap: 10px; width: 100%; }
