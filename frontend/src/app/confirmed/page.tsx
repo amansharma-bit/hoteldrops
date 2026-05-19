@@ -1,5 +1,12 @@
 "use client";
 
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
@@ -9,6 +16,16 @@ const NAVY = "#0f172a";
 function ConfirmedContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const [user, setUser] = useState<{ name: string } | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        const meta = data.user.user_metadata;
+        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member" });
+      }
+    });
+  }, []);
 
   const hotelName = searchParams.get("hotel") || "Damac Maison Dubai Mall Street";
   const checkIn = searchParams.get("checkIn") || "";
@@ -67,7 +84,14 @@ function ConfirmedContent() {
           <li><a href="/search-hotels" style={{ fontSize: 14, color: B, textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a></li>
         </ul>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>Sign in</button>
+          {user ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href="/dashboard"}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: B, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
+                <span style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{user.name.split(" ")[0]}</span>
+              </div>
+            ) : (
+              <button onClick={() => window.location.href="/signin"} style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>Sign in</button>
+            )}
           <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Check my booking</button>
         </div>
       </nav>
