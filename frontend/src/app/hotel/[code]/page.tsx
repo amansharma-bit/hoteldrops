@@ -287,7 +287,7 @@ export default function HotelDetailPage() {
 
       {/* NAV */}
       <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", height: 60, position: "sticky", top: 0, zIndex: 300 }}>
-        <div style={{ ...W, height: 60, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
           <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
           {!isMobile && (
             <ul style={{ display: "flex", gap: 28, listStyle: "none" }}>
@@ -305,9 +305,8 @@ export default function HotelDetailPage() {
       </nav>
 
       {/* SEARCH BAR */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "12px 32px" }}>
-          <div style={{ display: "flex", alignItems: "stretch", border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+      <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 32px" }}>
+        <div style={{ display: "flex", alignItems: "stretch", border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
             <div style={{ flex: 2.5, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>📍 Destination or Hotel</div>
               <div style={{ ...inp }}>{hotel.name}</div>
@@ -328,7 +327,6 @@ export default function HotelDetailPage() {
               style={{ background: B, color: "#fff", border: "none", padding: "0 28px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0 }}>
               🔍 Search
             </button>
-          </div>
         </div>
       </div>
 
