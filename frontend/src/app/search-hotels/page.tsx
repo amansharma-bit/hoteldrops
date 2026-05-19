@@ -133,23 +133,6 @@ const PILL_VALUES: Record<string, string> = {
   "🇮🇳 Mumbai, India": "Mumbai, India",
 };
 
-const DESTINATIONS = [
-  { label: "Dubai, UAE", flag: "🇦🇪" },
-  { label: "New Delhi, India", flag: "🇮🇳" },
-  { label: "Mumbai, India", flag: "🇮🇳" },
-  { label: "Goa, India", flag: "🇮🇳" },
-  { label: "Bali, Indonesia", flag: "🇮🇩" },
-  { label: "Singapore", flag: "🇸🇬" },
-  { label: "Bangkok, Thailand", flag: "🇹🇭" },
-  { label: "Maldives", flag: "🇲🇻" },
-  { label: "Paris, France", flag: "🇫🇷" },
-  { label: "London, UK", flag: "🇬🇧" },
-  { label: "New York, USA", flag: "🇺🇸" },
-  { label: "Tokyo, Japan", flag: "🇯🇵" },
-  { label: "Phuket, Thailand", flag: "🇹🇭" },
-  { label: "Colombo, Sri Lanka", flag: "🇱🇰" },
-  { label: "Kathmandu, Nepal", flag: "🇳🇵" },
-];
 const SORTS = ["↓ Savings","★ Rating","₹ Price"];
 
 const STATS = [
@@ -163,6 +146,16 @@ export default function SearchHotelsPage() {
   const router = useRouter();
   const isMobile = useIsMobile();
   const [destination, setDestination] = useState("");
+  const [user, setUser] = useState<{ name: string } | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        const meta = data.user.user_metadata;
+        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member" });
+      }
+    });
+  }, []);
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState("2 Adults");
@@ -272,7 +265,14 @@ export default function SearchHotelsPage() {
           </ul>
         )}
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {!isMobile && <button style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: "7px 12px" }}>Sign in</button>}
+          {!isMobile && (user ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href="/dashboard"}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: B, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
+              <span style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{user.name.split(" ")[0]}</span>
+            </div>
+          ) : (
+            <button onClick={() => window.location.href="/signin"} style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>Sign in</button>
+          ))}
           {!isMobile && <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Check my booking</button>}
           {isMobile && (
             <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
@@ -347,15 +347,15 @@ export default function SearchHotelsPage() {
               style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent" }} />
             {showSuggestions && destination.length > 0 && (
               <div style={{ position: "absolute", top: "100%", left: 0, width: 320, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 200, maxHeight: 240, overflowY: "auto" as const, marginTop: 4 }}>
-                {DESTINATIONS.filter(d => d.label.toLowerCase().includes(destination.toLowerCase())).map((d, i) => (
-                  <div key={i} onMouseDown={() => { setDestination(d.label); setShowSuggestions(false); }}
+                {DESTINATIONS.filter(d => `${d.city}, ${d.country}`.toLowerCase().includes(destination.toLowerCase()) || d.city.toLowerCase().includes(destination.toLowerCase())).map((d, i) => (
+                  <div key={i} onMouseDown={() => { setDestination(`${d.city}, ${d.country}`); setShowSuggestions(false); }}
                     style={{ padding: "11px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: NAVY, borderBottom: "1px solid #f8fafc" }}
                     onMouseOver={e => (e.currentTarget.style.background = "#f0f7ff")}
                     onMouseOut={e => (e.currentTarget.style.background = "#fff")}>
-                    <span style={{ fontSize: 18 }}>{d.flag}</span>{d.label}
+                    <span style={{ fontSize: 18 }}>{d.flag}</span>{d.city}, {d.country}
                   </div>
                 ))}
-                {DESTINATIONS.filter(d => d.label.toLowerCase().includes(destination.toLowerCase())).length === 0 && (
+                {DESTINATIONS.filter(d => `${d.city}, ${d.country}`.toLowerCase().includes(destination.toLowerCase()) || d.city.toLowerCase().includes(destination.toLowerCase())).length === 0 && (
                   <div style={{ padding: "12px 16px", fontSize: 13, color: "#94a3b8" }}>No destinations found</div>
                 )}
               </div>
