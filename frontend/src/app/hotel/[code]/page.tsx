@@ -1,478 +1,783 @@
-"use client";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>rebuq — Hotel Detail Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+.sora { font-family: 'Sora', sans-serif; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+/* NAV */
+nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 40px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; }
+.nav-logo { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 20px; color: #0f172a; text-decoration: none; }
+.nav-links { display: flex; gap: 28px; list-style: none; }
+.nav-links a { font-size: 14px; color: #64748b; text-decoration: none; font-weight: 500; }
+.nav-links a.active { color: #1447b8; font-weight: 600; }
+.nav-right { display: flex; gap: 12px; align-items: center; }
+.btn-nav { background: #1447b8; color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
 
-const API = "https://hoteldrops-production.up.railway.app/api/hotels";
-const B = "#1447b8";
-const NAVY = "#0f172a";
+/* SEARCH BAR */
+.search-bar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 12px 40px; }
+.search-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1.2fr 1.2fr 0.8fr auto; gap: 0; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+.search-field { padding: 10px 16px; border-right: 1px solid #e2e8f0; }
+.search-field:last-of-type { border-right: none; }
+.search-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
+.search-val { font-size: 14px; font-weight: 600; color: #0f172a; }
+.search-btn { background: #1447b8; color: #fff; border: none; padding: 0 28px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 8px; }
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 960);
-    check(); window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-  return isMobile;
-}
+/* BREADCRUMB */
+.breadcrumb { max-width: 1200px; margin: 0 auto; padding: 12px 40px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748b; }
+.breadcrumb a { color: #64748b; text-decoration: none; }
+.breadcrumb span { color: #cbd5e1; }
+.breadcrumb strong { color: #1e293b; font-weight: 500; }
 
-function formatINR(n: number) { return "₹" + Math.round(n).toLocaleString("en-IN"); }
-function distLabel(m: number) { return m >= 1000 ? `${(m/1000).toFixed(1)} km` : `${m} m`; }
+/* MAIN */
+.main { max-width: 1200px; margin: 0 auto; padding: 0 40px 80px; }
+.hotel-header { margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start; }
+.hotel-name { font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 800; color: #0f172a; }
+.hotel-stars { color: #f59e0b; font-size: 18px; margin-left: 12px; }
+.hotel-addr { font-size: 13.5px; color: #64748b; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+.hotel-addr a { color: #1447b8; font-size: 13px; font-weight: 500; text-decoration: none; }
+.icon-btns { display: flex; gap: 10px; }
+.icon-btn { width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 17px; color: #64748b; }
 
-interface Room {
-  roomCode: string; name: string; type: string; characteristic: string;
-  maxAdults: number; size: number | null; bedrooms: number | null;
-  hasBalcony: boolean; bedType: string | null; amenities: string[];
-  images: string[]; pricePerNight: number | null; totalPrice: number | null;
-  boardCode: string | null; boardName: string | null;
-  cancellation: { type: string; from: string | null } | null;
-}
+/* PHOTO GRID */
+.photo-grid { display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: 220px 220px; gap: 8px; border-radius: 16px; overflow: hidden; margin-bottom: 24px; }
+.photo-main { grid-row: 1/3; position: relative; overflow: hidden; cursor: pointer; }
+.photo-main img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; }
+.photo-main:hover img { transform: scale(1.03); }
+.photo-sm { position: relative; overflow: hidden; cursor: pointer; }
+.photo-sm img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; }
+.photo-sm:hover img { transform: scale(1.03); }
+.photo-more { position: absolute; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; }
+.photo-more span { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; color: #fff; }
 
-interface Hotel {
-  code: number; name: string; description: string; stars: string;
-  chain: string; address: string; city: string; country: string;
-  coordinates: { latitude: number; longitude: number };
-  checkInTime: string; checkOutTime: string; totalRooms: number; floors: number;
-  images: { url: string; type: string }[];
-  rooms: Room[]; facilityGroups: Record<string, string[]>;
-  boards: { code: string; name: string }[];
-  distances: { label: string; distance: number }[];
-  interestPoints: { name: string; distance: number }[];
-  lowestPriceINR: number | null; lowestTotalINR: number | null;
-  nights: number; checkIn: string; checkOut: string; adults: number;
-}
+/* TABS */
+.tabs { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; display: flex; overflow: hidden; margin-bottom: 20px; position: sticky; top: 62px; z-index: 100; }
+.tab { flex: 1; padding: 14px; text-align: center; font-size: 13.5px; font-weight: 500; color: #64748b; cursor: pointer; border: none; background: none; font-family: inherit; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.tab.active { color: #1447b8; font-weight: 600; border-bottom-color: #1447b8; background: #eff6ff; }
+.tab:hover:not(.active) { color: #0f172a; }
 
-const AMENITY_ICONS: Record<string, string> = {
-  "Wi-fi": "📶", "Gym": "🏋️", "Outdoor freshwater pool": "🏊",
-  "Restaurant": "🍽️", "Café": "☕", "Bar": "🍸",
-  "Car park": "🚗", "Spa centre": "💆", "Sauna": "🧖",
-  "24-hour reception": "🕐", "Concierge": "🛎️", "Room service": "🍱",
-  "Laundry service": "👕", "Airport Shuttle": "✈️", "Transfer service": "🚐",
-  "Lift access": "🛗", "Terrace": "🌅", "Kids' club": "🧒",
-  "Massage": "💆", "Steam bath": "♨️", "Valet parking": "🚙",
-  "24-hour security": "🔒", "Multilingual staff": "🌍", "Breakfast": "🍳",
-};
+/* LAYOUT */
+.content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 28px; }
+.card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 28px; margin-bottom: 20px; }
+.card-title { font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 20px; }
 
-export default function HotelDetailPage() {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const isMobile = useIsMobile();
-  const code = params.code as string;
-  const checkIn = searchParams.get("checkIn") || "";
-  const checkOut = searchParams.get("checkOut") || "";
-  const adults = searchParams.get("adults") || "2";
+/* OVERVIEW */
+.rating-badge { background: #1447b8; color: #fff; border-radius: 12px; width: 64px; height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
+.rating-val { font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 800; line-height: 1; }
+.rating-sub { font-size: 11px; opacity: 0.8; }
+.rating-bars { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px 32px; margin-top: 20px; }
+.bar-label { display: flex; justify-content: space-between; font-size: 13px; color: #1e293b; margin-bottom: 5px; font-weight: 500; }
+.bar-track { height: 5px; background: #e2e8f0; border-radius: 100px; overflow: hidden; }
+.bar-fill { height: 100%; background: #1447b8; border-radius: 100px; }
 
-  const [hotel, setHotel] = useState<Hotel | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [mainImg, setMainImg] = useState(0);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
-  const [showAllAmenities, setShowAllAmenities] = useState(false);
+/* ROOMS TABLE */
+.rooms-table { width: 100%; border-collapse: collapse; }
+.rooms-table thead tr { background: #f8fafc; }
+.rooms-table th { padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; text-align: left; border-bottom: 1.5px solid #e2e8f0; }
+.rooms-table td { padding: 16px; font-size: 14px; color: #1e293b; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+.rooms-table tr:hover td { background: #fafbff; }
+.rooms-table tr:last-child td { border-bottom: none; }
+.room-name { font-family: 'Sora', sans-serif; font-weight: 700; color: #0f172a; font-size: 15px; margin-bottom: 4px; }
+.room-meta { font-size: 12px; color: #64748b; }
+.board-badge { display: inline-flex; align-items: center; gap: 5px; background: #f0fdf4; color: #166534; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 100px; }
+.refund-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 100px; }
+.refund-free { background: #f0fdf4; color: #166534; }
+.refund-no { background: #fef2f2; color: #991b1b; }
+.price-cell { text-align: right; white-space: nowrap; }
+.price-was { font-size: 12px; color: #94a3b8; text-decoration: line-through; }
+.price-now { font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 800; color: #0f172a; }
+.price-night { font-size: 11px; color: #64748b; font-weight: 400; }
+.price-tax { font-size: 11px; color: #64748b; margin-top: 2px; }
+.price-save { font-size: 12px; color: #16a34a; font-weight: 600; margin-top: 2px; }
+.select-btn { background: #1447b8; color: #fff; border: none; border-radius: 8px; padding: 9px 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.select-btn.selected { background: #16a34a; }
 
-  const overviewRef = useRef<HTMLDivElement>(null);
-  const roomsRef = useRef<HTMLDivElement>(null);
-  const amenitiesRef = useRef<HTMLDivElement>(null);
-  const locationRef = useRef<HTMLDivElement>(null);
+/* REVIEWS */
+.review-score { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.review-big { font-family: 'Sora', sans-serif; font-size: 48px; font-weight: 800; color: #0f172a; line-height: 1; }
+.review-label { font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 700; color: #0f172a; }
+.review-count { font-size: 13px; color: #64748b; }
+.review-filters { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.review-filter { border: 1.5px solid #e2e8f0; border-radius: 100px; padding: 6px 16px; font-size: 13px; font-weight: 500; cursor: pointer; background: #fff; color: #1e293b; font-family: inherit; }
+.review-filter.active { background: #1447b8; color: #fff; border-color: #1447b8; }
+.review-card { border-bottom: 1px solid #f1f5f9; padding: 20px 0; }
+.review-card:last-child { border-bottom: none; }
+.review-title { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
+.review-score-pill { background: #0f172a; color: #fff; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+.review-text { font-size: 13.5px; color: #64748b; line-height: 1.65; margin-bottom: 8px; }
+.review-meta { font-size: 12px; color: #94a3b8; }
 
-  useEffect(() => {
-    if (!checkIn || !checkOut) return;
-    fetch(`${API}/${code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`)
-      .then(r => r.json())
-      .then(d => { if (d.success) setHotel(d.hotel); else setError(d.error); })
-      .catch(() => setError("Could not connect to server"))
-      .finally(() => setLoading(false));
-  }, [code, checkIn, checkOut, adults]);
+/* FACILITIES */
+.facility-groups { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; }
+.facility-group-title { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.facility-item { font-size: 13.5px; color: #64748b; padding: 5px 0; display: flex; align-items: center; gap: 8px; }
+.facility-item::before { content: "✓"; color: #1447b8; font-weight: 700; font-size: 12px; }
 
-  const scrollToTab = (ref: React.RefObject<HTMLDivElement | null>, tab: string) => {
-    setActiveTab(tab);
-    ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+/* POLICIES */
+.policy-row { display: grid; grid-template-columns: 200px 1fr; gap: 20px; padding: 16px 0; border-bottom: 1px solid #f1f5f9; align-items: flex-start; }
+.policy-row:last-child { border-bottom: none; }
+.policy-label { font-size: 14px; font-weight: 600; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+.policy-val { font-size: 13.5px; color: #64748b; line-height: 1.65; }
 
-  if (loading) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter',sans-serif" }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ width: 36, height: 36, border: `3px solid #bfdbfe`, borderTop: `3px solid ${B}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
-        <div style={{ fontSize: 13, color: "#64748b" }}>Loading hotel…</div>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+/* MAP */
+.map-placeholder { background: #e8f0f8; border-radius: 12px; height: 240px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; position: relative; overflow: hidden; }
+.map-placeholder img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+.nearby-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.nearby-item { display: flex; justify-content: space-between; padding: 9px 12px; background: #f8fafc; border-radius: 8px; font-size: 13px; }
+.nearby-dist { font-weight: 700; color: #0f172a; }
+
+/* SIMILAR HOTELS */
+.similar-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+.similar-card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
+.similar-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+.similar-img { height: 160px; overflow: hidden; position: relative; }
+.similar-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.similar-off { position: absolute; top: 10px; left: 10px; background: #16a34a; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+.similar-body { padding: 14px 16px; }
+.similar-name { font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+.similar-loc { font-size: 12px; color: #64748b; margin-bottom: 8px; }
+.similar-rating { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.similar-score { background: #0f172a; color: #fff; font-size: 12px; font-weight: 700; padding: 2px 7px; border-radius: 5px; }
+.similar-price { display: flex; align-items: baseline; gap: 8px; }
+.similar-was { font-size: 12px; color: #94a3b8; text-decoration: line-through; }
+.similar-now { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 800; color: #0f172a; }
+.similar-night { font-size: 11px; color: #64748b; }
+.similar-perks { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.similar-perk { font-size: 11px; color: #16a34a; font-weight: 600; display: flex; align-items: center; gap: 3px; }
+
+/* SIDEBAR */
+.sidebar-card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); position: sticky; top: 72px; }
+.member-badge { display: inline-flex; align-items: center; gap: 6px; background: #16a34a; color: #fff; font-size: 11.5px; font-weight: 700; padding: 4px 12px; border-radius: 100px; margin-bottom: 14px; }
+.sidebar-price { font-family: 'Sora', sans-serif; font-size: 34px; font-weight: 800; color: #0f172a; }
+.sidebar-was { font-size: 15px; color: #94a3b8; text-decoration: line-through; margin-left: 10px; }
+.sidebar-nights { font-size: 12.5px; color: #64748b; margin-bottom: 18px; }
+.date-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.date-box { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; cursor: pointer; }
+.date-box-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
+.date-box-val { font-size: 14px; font-weight: 600; color: #0f172a; }
+.guest-box { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; cursor: pointer; }
+.selected-room-box { background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; }
+.book-btn { width: 100%; background: #1447b8; color: #fff; border: none; border-radius: 10px; padding: 15px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; margin-bottom: 10px; }
+.perks { margin-top: 16px; }
+.perk { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #16a34a; font-weight: 500; margin-bottom: 8px; }
+.perk::before { content: "✓"; font-weight: 800; }
+.track-box { border-top: 1px solid #e2e8f0; margin-top: 16px; padding-top: 16px; }
+.track-title { font-size: 12px; font-weight: 700; color: #1447b8; margin-bottom: 6px; }
+.track-btn { width: 100%; background: #eff6ff; color: #1447b8; border: 1px solid #bfdbfe; border-radius: 8px; padding: 9px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+
+/* UPSELL */
+.upsell { background: #1447b8; border-radius: 12px; padding: 24px 28px; margin-bottom: 20px; }
+.upsell-title { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+.upsell-text { font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.7; margin-bottom: 14px; }
+.upsell-btn { background: #fff; color: #1447b8; border: none; padding: 10px 22px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+
+/* FOOTER */
+footer { background: #0f172a; padding: 40px 40px 28px; }
+.footer-inner { max-width: 1200px; margin: 0 auto; }
+.footer-top { display: flex; justify-content: space-between; margin-bottom: 32px; gap: 40px; }
+.footer-logo { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 20px; color: #fff; margin-bottom: 10px; }
+.footer-desc { font-size: 13px; color: #94a3b8; max-width: 240px; line-height: 1.6; }
+.footer-cols { display: flex; gap: 48px; }
+.footer-col h4 { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b; margin-bottom: 12px; }
+.footer-col a { display: block; font-size: 13.5px; color: #94a3b8; text-decoration: none; margin-bottom: 9px; }
+.footer-bottom { border-top: 1px solid #1e293b; padding-top: 20px; display: flex; justify-content: space-between; align-items: center; }
+.footer-copy { font-size: 12.5px; color: #475569; }
+.social-icons { display: flex; gap: 10px; }
+.social-icon { width: 32px; height: 32px; border-radius: 50%; background: #1e293b; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.social-icon svg { fill: #94a3b8; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">rebuq<span style="color:#1447b8">.</span></a>
+  <ul class="nav-links">
+    <li><a href="#">How it works</a></li>
+    <li><a href="#" class="active">Exclusive Member Deals</a></li>
+  </ul>
+  <div class="nav-right">
+    <button style="font-size:14px;color:#0f172a;background:none;border:none;cursor:pointer;font-weight:500;font-family:inherit">Sign in</button>
+    <button class="btn-nav">Check my booking</button>
+  </div>
+</nav>
+
+<!-- SEARCH BAR -->
+<div class="search-bar">
+  <div class="search-inner">
+    <div class="search-field">
+      <div class="search-label">📍 Destination or Hotel</div>
+      <div class="search-val">Atlantis The Palm, Dubai</div>
+    </div>
+    <div class="search-field">
+      <div class="search-label">📅 Check-in</div>
+      <div class="search-val">Thu, 14 Aug 2026</div>
+    </div>
+    <div class="search-field">
+      <div class="search-label">📅 Check-out</div>
+      <div class="search-val">Sun, 17 Aug 2026</div>
+    </div>
+    <div class="search-field">
+      <div class="search-label">👤 Guests</div>
+      <div class="search-val">2 Adults · 1 Room</div>
+    </div>
+    <button class="search-btn">🔍 Search</button>
+  </div>
+</div>
+
+<!-- BREADCRUMB -->
+<div class="breadcrumb">
+  <a href="#">Hotels</a>
+  <span>›</span>
+  <a href="#">Dubai</a>
+  <span>›</span>
+  <strong>Atlantis The Palm</strong>
+</div>
+
+<div class="main">
+
+  <!-- HOTEL HEADER -->
+  <div class="hotel-header">
+    <div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <h1 class="hotel-name sora">Atlantis The Palm</h1>
+        <span class="hotel-stars">★★★★★</span>
+      </div>
+      <div class="hotel-addr">
+        📍 Crescent Rd, The Palm Jumeirah, Dubai, UAE
+        <a href="#">Show on map</a>
       </div>
     </div>
-  );
-
-  if (error || !hotel) return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
-      <div style={{ fontSize: 40 }}>🏨</div>
-      <div style={{ fontSize: 15, fontWeight: 600 }}>Could not load hotel</div>
-      <div style={{ fontSize: 13, color: "#64748b" }}>{error}</div>
-      <button onClick={() => router.back()} style={{ background: B, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>← Go back</button>
+    <div class="icon-btns">
+      <button class="icon-btn">⬆</button>
+      <button class="icon-btn">♡</button>
     </div>
-  );
+  </div>
 
-  const stars = hotel.stars?.includes("5") ? 5 : hotel.stars?.includes("4") ? 4 : 3;
-  const allFacilities = [...(hotel.facilityGroups.general || []), ...(hotel.facilityGroups.sports || []), ...(hotel.facilityGroups.wellness || []), ...(hotel.facilityGroups.dining || [])].filter((f, i, a) => a.indexOf(f) === i);
-  const shownFacilities = showAllAmenities ? allFacilities : allFacilities.slice(0, 10);
-  const fallback = hotel.images[0]?.url || "";
-  const selectedRoomData = hotel.rooms.find(r => r.roomCode === selectedRoom) || hotel.rooms[0];
-  const displayPrice = selectedRoomData?.pricePerNight || hotel.lowestPriceINR;
-  const ratingBars = [
-    { label: "Cleanliness", score: 9.4 },
-    { label: "Service", score: 9.2 },
-    { label: "Location", score: 8.8 },
-    { label: "Amenities", score: 9.0 },
-    { label: "Value for Money", score: 8.7 },
-    { label: "Comfort", score: 9.3 },
-  ];
+  <!-- PHOTO GRID -->
+  <div class="photo-grid">
+    <div class="photo-main">
+      <img src="https://images.pexels.com/photos/33720952/pexels-photo-33720952.jpeg?auto=compress&cs=tinysrgb&w=900&fit=crop&h=600" alt="Atlantis The Palm" />
+    </div>
+    <div class="photo-sm">
+      <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop" alt="" />
+    </div>
+    <div class="photo-sm">
+      <img src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop" alt="" />
+      <div class="photo-more">
+        <span>+18 Photos</span>
+      </div>
+    </div>
+  </div>
 
-  return (
-    <div style={{ fontFamily: "'Inter',sans-serif", background: "#f8fafc", color: "#1e293b", fontSize: 15, lineHeight: 1.6, WebkitFontSmoothing: "antialiased" as any }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        .sora { font-family: 'Sora', sans-serif; }
-        .card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 28px; margin-bottom: 20px; }
-        .room-card { border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 22px; margin-bottom: 14px; transition: box-shadow .2s; background: #fff; }
-        .room-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
-        .room-feat { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: #16a34a; font-weight: 500; margin-bottom: 6px; }
-        .room-feat::before { content: '✓'; font-weight: 700; }
-        .photo-cell { cursor: pointer; overflow: hidden; transition: filter .2s; }
-        .photo-cell:hover { filter: brightness(0.9); }
-        .stab { flex: 1; padding: 14px; text-align: center; font-size: 13.5px; font-weight: 500; color: #64748b; cursor: pointer; border: none; background: none; font-family: inherit; transition: all .2s; border-bottom: 2px solid transparent; }
-        .stab:hover { color: ${NAVY}; }
-        .amenity-item { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #1e293b; }
-        .amenity-icon { width: 36px; height: 36px; background: #f8fafc; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
-        .perk { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #16a34a; font-weight: 500; margin-bottom: 8px; }
-        .perk::before { content: '✓'; font-weight: 800; }
-        .icon-btn { width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 17px; transition: all .2s; color: #64748b; }
-        .icon-btn:hover { border-color: ${B}; color: ${B}; }
-      `}</style>
+  <!-- CONTENT GRID -->
+  <div class="content-grid">
 
-      {/* NAV */}
-      <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: isMobile ? "0 16px" : "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 200 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-          <a href="/" style={{ background: B, color: "#fff", fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 17, padding: "7px 16px", borderRadius: 8, textDecoration: "none" }}>rebuq</a>
-          {!isMobile && (
-            <div style={{ display: "flex", gap: 4 }}>
-              {[["🏨 Hotels", true], ["How it works", false], ["Results", false]].map(([l, active]) => (
-                <button key={l as string} style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13.5, fontWeight: active ? 600 : 500, color: active ? B : "#64748b", cursor: "pointer", border: "none", background: "none", fontFamily: "inherit", borderBottom: active ? `2px solid ${B}` : "2px solid transparent" }}>
-                  {l as string}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          {!isMobile && <button style={{ fontSize: 13.5, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>🎧 Support</button>}
-          <button onClick={() => router.push("/upload")} style={{ color: B, fontWeight: 600, fontSize: 13.5, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>👤 Sign in</button>
-          <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Check my booking</button>
-        </div>
-      </nav>
+    <!-- LEFT -->
+    <div>
 
-      {/* BREADCRUMB */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "12px 16px" : "14px 32px", display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#64748b" }}>
-        <button onClick={() => router.push("/search-hotels")} style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>Hotels</button>
-        <span style={{ color: "#cbd5e1" }}>›</span>
-        <span style={{ color: "#64748b" }}>{hotel.city}</span>
-        <span style={{ color: "#cbd5e1" }}>›</span>
-        <span style={{ color: "#1e293b", fontWeight: 500 }}>{hotel.name}</span>
+      <!-- TABS -->
+      <div class="tabs">
+        <button class="tab active" onclick="setTab(this,'overview')">Overview</button>
+        <button class="tab" onclick="setTab(this,'rooms')">Rooms</button>
+        <button class="tab" onclick="setTab(this,'reviews')">Reviews</button>
+        <button class="tab" onclick="setTab(this,'facilities')">Facilities</button>
+        <button class="tab" onclick="setTab(this,'location')">Location</button>
+        <button class="tab" onclick="setTab(this,'policies')">Policies</button>
       </div>
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "0 16px 40px" : "0 32px 60px" }}>
-
-        {/* HOTEL HEADER */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const }}>
-              <h1 className="sora" style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: NAVY }}>{hotel.name}</h1>
-              <span style={{ color: "#f59e0b", fontSize: 18 }}>{"★".repeat(stars)}</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13.5, color: "#64748b", marginTop: 8 }}>
-              📍 {hotel.address}, {hotel.city}, {hotel.country}
-              <button onClick={() => scrollToTab(locationRef, "location")} style={{ color: B, fontWeight: 500, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5 }}>Show on map</button>
-            </div>
+      <!-- OVERVIEW -->
+      <div class="card" id="overview">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
+          <div class="rating-badge">
+            <div class="rating-val">9.1</div>
+            <div class="rating-sub">/10</div>
           </div>
-          <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
-            <button className="icon-btn">⬆</button>
-            <button className="icon-btn">♡</button>
+          <div>
+            <div class="sora" style="font-size:20px;font-weight:700;color:#0f172a">Exceptional</div>
+            <div style="font-size:13px;color:#64748b;margin-top:2px">Based on 2,341 verified guest reviews</div>
+          </div>
+        </div>
+        <p style="font-size:14.5px;color:#64748b;line-height:1.75;margin-bottom:24px">
+          Atlantis The Palm is a landmark luxury resort on the crescent of the Palm Jumeirah. Home to Aquaventure Waterpark, The Lost Chambers Aquarium, over 20 world-class restaurants, and a private beach, it offers an unmatched experience for families, couples, and discerning travellers alike. As a rebuq member, you unlock rates significantly below public OTA pricing.
+        </p>
+
+        <!-- Highlights -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+          <div style="background:#f8fafc;border-radius:10px;padding:16px;border:1px solid #e2e8f0">
+            <div style="font-size:22px;margin-bottom:8px">🏖️</div>
+            <div style="font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px">Private Beach</div>
+            <div style="font-size:12px;color:#64748b">700m of exclusive beachfront with full service</div>
+          </div>
+          <div style="background:#f8fafc;border-radius:10px;padding:16px;border:1px solid #e2e8f0">
+            <div style="font-size:22px;margin-bottom:8px">🌊</div>
+            <div style="font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px">Aquaventure</div>
+            <div style="font-size:12px;color:#64748b">Award-winning waterpark included for guests</div>
+          </div>
+          <div style="background:#f8fafc;border-radius:10px;padding:16px;border:1px solid #e2e8f0">
+            <div style="font-size:22px;margin-bottom:8px">🍽️</div>
+            <div style="font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px">21 Restaurants</div>
+            <div style="font-size:12px;color:#64748b">Nobu, Bread Street Kitchen & 19 more</div>
           </div>
         </div>
 
-        {/* PHOTO GRID */}
-        {hotel.images.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: isMobile ? "180px 180px" : "220px 220px", gap: 8, borderRadius: 16, overflow: "hidden", marginBottom: 0 }}>
-            {/* Main large photo */}
-            <div className="photo-cell" style={{ gridColumn: "1", gridRow: "1/3" }} onClick={() => setMainImg(0)}>
-              <img src={hotel.images[mainImg]?.url || fallback} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            </div>
-            {/* 3 smaller photos */}
-            {hotel.images.slice(1, 3).map((img, i) => (
-              <div key={i} className="photo-cell" onClick={() => setMainImg(i + 1)}>
-                <img src={img.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              </div>
-            ))}
-            {/* +more overlay */}
-            {hotel.images.length > 3 && (
-              <div className="photo-cell" style={{ position: "relative" }} onClick={() => setMainImg(3)}>
-                <img src={hotel.images[3]?.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span className="sora" style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>+{hotel.images.length - 3} Photos</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* CONTENT + SIDEBAR */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 340px", gap: 28, marginTop: 24 }}>
-
-          {/* LEFT */}
-          <div>
-            {/* STICKY TABS */}
-            <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #e2e8f0", display: "flex", overflow: "hidden", marginBottom: 20, position: "sticky", top: 62, zIndex: 100 }}>
-              {[["Overview", overviewRef], ["Rooms", roomsRef], ["Amenities", amenitiesRef], ["Location", locationRef]].map(([label, ref]) => (
-                <button key={label as string} className="stab"
-                  onClick={() => scrollToTab(ref as React.RefObject<HTMLDivElement>, (label as string).toLowerCase())}
-                  style={{ borderBottom: activeTab === (label as string).toLowerCase() ? `2px solid ${B}` : "2px solid transparent", color: activeTab === (label as string).toLowerCase() ? B : "#64748b", fontWeight: activeTab === (label as string).toLowerCase() ? 600 : 500, background: activeTab === (label as string).toLowerCase() ? "#eff6ff" : "none" }}>
-                  {label as string}
-                </button>
-              ))}
-            </div>
-
-            {/* OVERVIEW */}
-            <div ref={overviewRef} className="card">
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 18 }}>
-                <div style={{ background: B, color: "#fff", borderRadius: 12, width: 64, height: 64, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <div className="sora" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>9.1</div>
-                  <div style={{ fontSize: 11, opacity: 0.8 }}>/10</div>
-                </div>
-                <div>
-                  <div className="sora" style={{ fontSize: 20, fontWeight: 700, color: NAVY }}>Exceptional</div>
-                  <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>Based on verified guest reviews</div>
-                </div>
-              </div>
-              <p style={{ fontSize: 14.5, color: "#64748b", lineHeight: 1.75, marginBottom: 24 }}>{hotel.description}</p>
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: "16px 32px" }}>
-                {ratingBars.map(rb => (
-                  <div key={rb.label}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#1e293b", marginBottom: 5, fontWeight: 500 }}>
-                      <span>{rb.label}</span><span style={{ fontWeight: 700, color: NAVY }}>{rb.score}</span>
-                    </div>
-                    <div style={{ height: 5, background: "#e2e8f0", borderRadius: 100, overflow: "hidden" }}>
-                      <div style={{ height: "100%", background: B, borderRadius: 100, width: `${rb.score * 10}%`, transition: "width 1s ease" }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* AMENITIES */}
-            <div ref={amenitiesRef} className="card">
-              <div className="sora" style={{ fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 20 }}>Amenities</div>
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: "14px 20px" }}>
-                {shownFacilities.map((f, i) => (
-                  <div key={i} className="amenity-item">
-                    <div className="amenity-icon">{AMENITY_ICONS[f] || "✓"}</div>
-                    {f}
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => setShowAllAmenities(!showAllAmenities)}
-                style={{ display: "inline-flex", alignItems: "center", gap: 5, color: B, fontSize: 14, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", marginTop: 20 }}>
-                {showAllAmenities ? "Show less ↑" : `View all ${allFacilities.length} amenities →`}
-              </button>
-            </div>
-
-            {/* ROOMS */}
-            <div ref={roomsRef} className="card">
-              <div className="sora" style={{ fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 20 }}>Choose your room</div>
-              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>{hotel.checkIn} → {hotel.checkOut} · {hotel.nights} nights · {hotel.adults} adults</div>
-
-              {hotel.rooms.map((room) => {
-                const isSelected = selectedRoom === room.roomCode || (!selectedRoom && hotel.rooms[0]?.roomCode === room.roomCode);
-                const isFree = !room.cancellation || room.cancellation.type === "free";
-                const roomImg = room.images[0] || fallback;
-
-                return (
-                  <div key={room.roomCode} className="room-card" style={{ border: `1.5px solid ${isSelected ? B : "#e2e8f0"}`, background: isSelected ? "#f0f7ff" : "#fff" }}>
-                    {/* Room image */}
-                    {roomImg && (
-                      <img src={roomImg} alt={room.name} style={{ width: "100%", height: 160, objectFit: "cover", borderRadius: 8, marginBottom: 14, display: "block" }} />
-                    )}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                      <div>
-                        <div className="sora" style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{room.name}</div>
-                        <div style={{ fontSize: 12.5, color: "#64748b" }}>
-                          {room.size && `${room.size} m²`}
-                          {room.size && room.bedType && " · "}
-                          {room.bedType}
-                          {room.maxAdults && ` · Up to ${room.maxAdults} adults`}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: "right" as const, flexShrink: 0 }}>
-                        {room.pricePerNight ? (
-                          <>
-                            <div style={{ fontSize: 13, color: "#64748b", textDecoration: "line-through" }}>
-                              {formatINR(Math.round(room.pricePerNight * 1.15))}
-                            </div>
-                            <div className="sora" style={{ fontSize: 24, fontWeight: 800, color: NAVY }}>
-                              {formatINR(room.pricePerNight)}<span style={{ fontSize: 12, color: "#64748b", fontFamily: "Inter,sans-serif", fontWeight: 400 }}>/night</span>
-                            </div>
-                          </>
-                        ) : (
-                          <div style={{ fontSize: 13, color: "#64748b" }}>Price on request</div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div style={{ marginBottom: 16 }}>
-                      {room.boardName && <div className="room-feat">{room.boardName}</div>}
-                      <div className="room-feat">{isFree ? "Free Cancellation" : "Non-refundable"}</div>
-                      {room.hasBalcony && <div className="room-feat">Balcony</div>}
-                      {room.amenities.slice(0, 3).map((a, i) => <div key={i} className="room-feat">{a}</div>)}
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                      <button onClick={() => setSelectedRoom(room.roomCode)}
-                        style={{ background: isSelected ? "#16a34a" : B, color: "#fff", border: "none", borderRadius: 10, padding: "11px 26px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                        {isSelected ? "✓ Selected" : "Select Room"}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* LOCATION */}
-            <div ref={locationRef} className="card">
-              <div className="sora" style={{ fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Location</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <span style={{ fontSize: 13.5, color: "#64748b" }}>📍 {hotel.address}, {hotel.city}</span>
-                <a href={`https://www.google.com/maps?q=${hotel.coordinates?.latitude},${hotel.coordinates?.longitude}`} target="_blank" rel="noopener noreferrer"
-                  style={{ color: B, fontWeight: 500, fontSize: 13, textDecoration: "none", marginLeft: "auto" }}>Open in Google Maps ↗</a>
-              </div>
-              <iframe
-                src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3610!2d${hotel.coordinates?.longitude}!3d${hotel.coordinates?.latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2z!5e0!3m2!1sen!2sin!4v1`}
-                width="100%" height="240"
-                style={{ border: "none", borderRadius: 12, display: "block", marginBottom: 14 }}
-                allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {hotel.distances.map((d, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "9px 12px", background: "#f8fafc", borderRadius: 8, fontSize: 13 }}>
-                    <span style={{ color: "#64748b" }}>{d.label}</span>
-                    <span style={{ fontWeight: 700, color: NAVY }}>{distLabel(d.distance)}</span>
-                  </div>
-                ))}
-              </div>
-              {hotel.interestPoints.length > 0 && (
-                <div style={{ marginTop: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Nearby attractions</div>
-                  {hotel.interestPoints.map((p, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f0f0f5", fontSize: 13, color: "#64748b" }}>
-                      <span>📌 {p.name}</span>
-                      <span style={{ fontWeight: 600, color: NAVY }}>{distLabel(p.distance)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Already booked upsell */}
-            <div style={{ background: B, borderRadius: 12, padding: "24px 28px", marginBottom: 20 }}>
-              <div className="sora" style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Already booked this hotel?</div>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.7, marginBottom: 14 }}>Upload your voucher and our AI watches the price 24/7. WhatsApp alert the moment it drops. Free to track.</p>
-              <button onClick={() => router.push("/upload")} style={{ background: "#fff", color: B, border: "none", padding: "10px 22px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                Upload voucher → Track price
-              </button>
-            </div>
-          </div>
-
-          {/* SIDEBAR */}
-          <div style={{ position: isMobile ? "static" : "sticky", top: 72, alignSelf: "flex-start" as const }}>
-            <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #e2e8f0", padding: 24, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }}>
-              {/* Offer badge */}
-              {hotel.lowestPriceINR && (
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#16a34a", color: "#fff", fontSize: 11.5, fontWeight: 700, padding: "4px 12px", borderRadius: 100, marginBottom: 14 }}>
-                  <span style={{ width: 6, height: 6, background: "#fff", borderRadius: "50%", display: "inline-block" }} />
-                  Member price · Save up to 28%
-                </div>
-              )}
-
-              {/* Price */}
-              {displayPrice ? (
-                <>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 4 }}>
-                    <div className="sora" style={{ fontSize: 34, fontWeight: 800, color: NAVY }}>{formatINR(displayPrice)}</div>
-                    <div style={{ fontSize: 15, color: "#64748b", textDecoration: "line-through" }}>{formatINR(Math.round(displayPrice * 1.15))}</div>
-                  </div>
-                  <div style={{ fontSize: 12.5, color: "#64748b", marginBottom: 18 }}>
-                    + taxes · per night · {hotel.nights} nights · {formatINR(displayPrice * hotel.nights)} total
-                  </div>
-                </>
-              ) : (
-                <div style={{ fontSize: 14, color: "#64748b", marginBottom: 18 }}>Select dates to see price</div>
-              )}
-
-              {/* Dates */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                {[["📅 Check-in", hotel.checkIn], ["📅 Check-out", hotel.checkOut]].map(([label, val]) => (
-                  <div key={label} style={{ border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "10px 14px", cursor: "pointer" }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.07em", marginBottom: 3 }}>{label}</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{val}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Guests */}
-              <div style={{ border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "10px 14px", marginBottom: 14, cursor: "pointer" }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.07em", marginBottom: 3 }}>👤 Guests</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{hotel.adults} Adults · 1 Room</div>
-              </div>
-
-              {/* Selected room */}
-              {selectedRoomData && (
-                <div style={{ background: "#f0f7ff", border: "1px solid #bfdbfe", borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
-                  <div style={{ fontSize: 11, color: B, fontWeight: 700, marginBottom: 2 }}>Selected room</div>
-                  <div style={{ fontSize: 13, color: "#374151" }}>{selectedRoomData.name}</div>
-                </div>
-              )}
-
-              <button style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 15, fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>
-                Book Now
-              </button>
-              <div style={{ textAlign: "center" as const, fontSize: 12.5, color: "#64748b", marginBottom: 16 }}>No payment needed today</div>
-
-              <div>
-                <div className="perk">Free cancellation available</div>
-                <div className="perk">Reserve now, pay at hotel</div>
-                <div className="perk">Best price guarantee</div>
-              </div>
-
-              <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: B, marginBottom: 6 }}>💡 Already booked this hotel?</div>
-                <div style={{ fontSize: 11.5, color: "#64748b", lineHeight: 1.6, marginBottom: 10 }}>Upload your voucher and we watch the price 24/7. WhatsApp alert when it drops.</div>
-                <button onClick={() => router.push("/upload")} style={{ width: "100%", background: "#eff6ff", color: B, border: "1px solid #bfdbfe", borderRadius: 8, padding: "9px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                  Track price drops →
-                </button>
-              </div>
-            </div>
-          </div>
+        <div class="rating-bars">
+          <div><div class="bar-label"><span>Cleanliness</span><span style="font-weight:700;color:#0f172a">9.4</span></div><div class="bar-track"><div class="bar-fill" style="width:94%"></div></div></div>
+          <div><div class="bar-label"><span>Service</span><span style="font-weight:700;color:#0f172a">9.2</span></div><div class="bar-track"><div class="bar-fill" style="width:92%"></div></div></div>
+          <div><div class="bar-label"><span>Location</span><span style="font-weight:700;color:#0f172a">9.5</span></div><div class="bar-track"><div class="bar-fill" style="width:95%"></div></div></div>
+          <div><div class="bar-label"><span>Amenities</span><span style="font-weight:700;color:#0f172a">9.6</span></div><div class="bar-track"><div class="bar-fill" style="width:96%"></div></div></div>
+          <div><div class="bar-label"><span>Value</span><span style="font-weight:700;color:#0f172a">8.7</span></div><div class="bar-track"><div class="bar-fill" style="width:87%"></div></div></div>
+          <div><div class="bar-label"><span>Comfort</span><span style="font-weight:700;color:#0f172a">9.3</span></div><div class="bar-track"><div class="bar-fill" style="width:93%"></div></div></div>
         </div>
       </div>
 
-      {/* MOBILE STICKY BAR */}
-      {isMobile && displayPrice && (
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: "1px solid #e2e8f0", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, zIndex: 99, boxShadow: "0 -4px 20px rgba(0,0,0,0.08)" }}>
+      <!-- ROOMS -->
+      <div class="card" id="rooms">
+        <div class="card-title">Select your room</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:16px;display:flex;gap:12px">
+          <span style="background:#f0fdf4;color:#166534;font-size:12px;font-weight:600;padding:4px 12px;border-radius:100px">Free Cancellation</span>
+          <span style="background:#eff6ff;color:#1447b8;font-size:12px;font-weight:600;padding:4px 12px;border-radius:100px">Free Breakfast</span>
+        </div>
+
+        <table class="rooms-table">
+          <thead>
+            <tr>
+              <th style="width:28%">Room Type</th>
+              <th style="width:20%">Board Basis</th>
+              <th style="width:18%">Cancellation</th>
+              <th style="width:22%;text-align:right">Price (incl. taxes)</th>
+              <th style="width:12%"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="room-name">Deluxe King Room</div>
+                <div class="room-meta">44 m² · King bed · Up to 2 adults</div>
+                <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+                  <span style="background:#f8fafc;color:#64748b;font-size:11px;padding:2px 8px;border-radius:6px">Sea view</span>
+                  <span style="background:#f8fafc;color:#64748b;font-size:11px;padding:2px 8px;border-radius:6px">Balcony</span>
+                </div>
+              </td>
+              <td><span class="board-badge">🍳 Breakfast incl.</span></td>
+              <td><span class="refund-badge refund-free">✓ Free cancel</span></td>
+              <td class="price-cell">
+                <div class="price-was">₹47,400</div>
+                <div class="price-now">₹28,400 <span class="price-night">/night</span></div>
+                <div class="price-tax">₹85,200 total · incl. taxes</div>
+                <div class="price-save">Save ₹56,800</div>
+              </td>
+              <td><button class="select-btn selected">✓ Selected</button></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="room-name">Premier Seaview Suite</div>
+                <div class="room-meta">88 m² · King bed · Up to 3 adults</div>
+                <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+                  <span style="background:#f8fafc;color:#64748b;font-size:11px;padding:2px 8px;border-radius:6px">Ocean view</span>
+                  <span style="background:#f8fafc;color:#64748b;font-size:11px;padding:2px 8px;border-radius:6px">Living room</span>
+                  <span style="background:#f8fafc;color:#64748b;font-size:11px;padding:2px 8px;border-radius:6px">Butler</span>
+                </div>
+              </td>
+              <td><span class="board-badge">🍳 Breakfast incl.</span></td>
+              <td><span class="refund-badge refund-free">✓ Free cancel</span></td>
+              <td class="price-cell">
+                <div class="price-was">₹72,000</div>
+                <div class="price-now">₹52,000 <span class="price-night">/night</span></div>
+                <div class="price-tax">₹1,56,000 total · incl. taxes</div>
+                <div class="price-save">Save ₹60,000</div>
+              </td>
+              <td><button class="select-btn" onclick="selectRoom(this)">Select</button></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="room-name">Deluxe King Room</div>
+                <div class="room-meta">44 m² · King bed · Up to 2 adults</div>
+                <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+                  <span style="background:#f8fafc;color:#64748b;font-size:11px;padding:2px 8px;border-radius:6px">Pool view</span>
+                </div>
+              </td>
+              <td><span style="background:#f8fafc;color:#64748b;font-size:12px;font-weight:600;padding:3px 10px;border-radius:100px">Room only</span></td>
+              <td><span class="refund-badge refund-no">✕ Non-refundable</span></td>
+              <td class="price-cell">
+                <div class="price-was">₹42,000</div>
+                <div class="price-now">₹24,600 <span class="price-night">/night</span></div>
+                <div class="price-tax">₹73,800 total · incl. taxes</div>
+                <div class="price-save">Save ₹51,800</div>
+              </td>
+              <td><button class="select-btn" onclick="selectRoom(this)">Select</button></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="room-name">Imperial Suite</div>
+                <div class="room-meta">220 m² · King bed · Up to 4 adults</div>
+                <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+                  <span style="background:#f8fafc;color:#64748b;font-size:11px;padding:2px 8px;border-radius:6px">Palm view</span>
+                  <span style="background:#f8fafc;color:#64748b;font-size:11px;padding:2px 8px;border-radius:6px">Private pool</span>
+                  <span style="background:#f8fafc;color:#64748b;font-size:11px;padding:2px 8px;border-radius:6px">Butler</span>
+                </div>
+              </td>
+              <td><span class="board-badge">🍽️ Half board</span></td>
+              <td><span class="refund-badge refund-free">✓ Free cancel</span></td>
+              <td class="price-cell">
+                <div class="price-was">₹1,80,000</div>
+                <div class="price-now">₹1,24,000 <span class="price-night">/night</span></div>
+                <div class="price-tax">₹3,72,000 total · incl. taxes</div>
+                <div class="price-save">Save ₹1,68,000</div>
+              </td>
+              <td><button class="select-btn" onclick="selectRoom(this)">Select</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- REVIEWS -->
+      <div class="card" id="reviews">
+        <div class="card-title">Guest Reviews</div>
+        <div class="review-score">
+          <div class="review-big">9.1</div>
           <div>
-            <div className="sora" style={{ fontSize: 22, fontWeight: 700, color: NAVY, lineHeight: 1 }}>{formatINR(displayPrice)}</div>
-            <div style={{ fontSize: 10, color: "#64748b" }}>per night · {hotel.nights} nights</div>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => router.push("/upload")} style={{ background: "#f4f6f9", color: B, border: `1px solid #bfdbfe`, padding: "10px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>🔔 Track</button>
-            <button style={{ background: B, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Book Now →</button>
+            <div class="review-label">Exceptional</div>
+            <div class="review-count">Based on 2,341 verified reviews</div>
           </div>
         </div>
-      )}
+        <div class="review-filters">
+          <button class="review-filter active">All Reviews (2341)</button>
+          <button class="review-filter">Couples (842)</button>
+          <button class="review-filter">Family (614)</button>
+          <button class="review-filter">Business (287)</button>
+          <button class="review-filter">Solo (598)</button>
+        </div>
+
+        <div class="review-card">
+          <div class="review-title">Absolutely incredible experience <span class="review-score-pill">10.0</span></div>
+          <div class="review-text">The Aquaventure was a highlight for the kids and the private beach was stunning. Room service was prompt and the butler service for our suite was impeccable. Will definitely return.</div>
+          <div class="review-meta">Priya M. · Family · India · April 2026</div>
+        </div>
+        <div class="review-card">
+          <div class="review-title">Best hotel in Dubai, hands down <span class="review-score-pill">9.5</span></div>
+          <div class="review-text">We celebrated our anniversary here and the hotel went above and beyond. The room was enormous, views were spectacular, and the breakfast spread was extraordinary. Worth every rupee.</div>
+          <div class="review-meta">Rahul & Neha S. · Couple · Mumbai · March 2026</div>
+        </div>
+        <div class="review-card">
+          <div class="review-title">Great for families <span class="review-score-pill">9.0</span></div>
+          <div class="review-text">Kids loved the waterpark — they didn't want to leave! Check-in was smooth, staff were incredibly helpful with everything. Dining options are excellent with so much variety.</div>
+          <div class="review-meta">Vikram T. · Family · Bengaluru · February 2026</div>
+        </div>
+        <button style="color:#1447b8;font-size:14px;font-weight:600;background:none;border:none;cursor:pointer;font-family:inherit;margin-top:8px">View all 2,341 reviews →</button>
+      </div>
+
+      <!-- FACILITIES -->
+      <div class="card" id="facilities">
+        <div class="card-title">Hotel Facilities</div>
+        <div class="facility-groups">
+          <div>
+            <div class="facility-group-title">🏊 Pool & Beach</div>
+            <div class="facility-item">Private beach access</div>
+            <div class="facility-item">Aquaventure Waterpark</div>
+            <div class="facility-item">Outdoor freshwater pool</div>
+            <div class="facility-item">Infinity pool</div>
+            <div class="facility-item">Kids pool</div>
+          </div>
+          <div>
+            <div class="facility-group-title">🍽️ Dining</div>
+            <div class="facility-item">21 restaurants & bars</div>
+            <div class="facility-item">Nobu Dubai</div>
+            <div class="facility-item">Bread Street Kitchen</div>
+            <div class="facility-item">24-hour room service</div>
+            <div class="facility-item">In-room dining</div>
+          </div>
+          <div>
+            <div class="facility-group-title">💆 Wellness</div>
+            <div class="facility-item">Spa & wellness centre</div>
+            <div class="facility-item">Gym & fitness centre</div>
+            <div class="facility-item">Sauna & steam room</div>
+            <div class="facility-item">Yoga classes</div>
+            <div class="facility-item">Massage treatments</div>
+          </div>
+          <div>
+            <div class="facility-group-title">🛎️ Services</div>
+            <div class="facility-item">24-hour concierge</div>
+            <div class="facility-item">Butler service (suites)</div>
+            <div class="facility-item">Airport transfer</div>
+            <div class="facility-item">Valet parking</div>
+            <div class="facility-item">Laundry service</div>
+          </div>
+          <div>
+            <div class="facility-group-title">🌐 Connectivity</div>
+            <div class="facility-item">Free high-speed WiFi</div>
+            <div class="facility-item">Business centre</div>
+            <div class="facility-item">Meeting rooms</div>
+            <div class="facility-item">Multilingual staff</div>
+          </div>
+          <div>
+            <div class="facility-group-title">👨‍👩‍👧 Family</div>
+            <div class="facility-item">Kids club</div>
+            <div class="facility-item">Babysitting service</div>
+            <div class="facility-item">Kids menu</div>
+            <div class="facility-item">Lost chambers aquarium</div>
+            <div class="facility-item">Dolphin Bay</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POLICIES -->
+      <div class="card" id="policies">
+        <div class="card-title">Hotel Policies</div>
+        <div class="policy-row">
+          <div class="policy-label">🕐 Check-in</div>
+          <div class="policy-val">From 3:00 PM · Early check-in available on request (subject to availability)</div>
+        </div>
+        <div class="policy-row">
+          <div class="policy-label">🕐 Check-out</div>
+          <div class="policy-val">Until 12:00 PM · Late check-out available on request</div>
+        </div>
+        <div class="policy-row">
+          <div class="policy-label">👶 Children</div>
+          <div class="policy-val">All children welcome · Infants (0–2) stay free · Children (3–12) share existing bedding free · Extra beds available at additional charge</div>
+        </div>
+        <div class="policy-row">
+          <div class="policy-label">🐾 Pets</div>
+          <div class="policy-val">Pets not allowed</div>
+        </div>
+        <div class="policy-row">
+          <div class="policy-label">🚬 Smoking</div>
+          <div class="policy-val">Non-smoking rooms available · Designated smoking areas</div>
+        </div>
+        <div class="policy-row">
+          <div class="policy-label">📋 Property Info</div>
+          <div class="policy-val">104 rooms · 18 floors · Distance to airport: 40 min · Free WiFi throughout · Valet parking: AED 50/day · Breakfast charge (if not included): AED 110</div>
+        </div>
+      </div>
+
+      <!-- LOCATION -->
+      <div class="card" id="location">
+        <div class="card-title">Location</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="font-size:13.5px;color:#64748b">📍 Crescent Rd, The Palm Jumeirah, Dubai, UAE</span>
+          <a href="https://maps.google.com" target="_blank" style="color:#1447b8;font-weight:500;font-size:13px;text-decoration:none;margin-left:auto">Open in Google Maps ↗</a>
+        </div>
+        <div class="map-placeholder">
+          <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=900&q=85&fit=crop" alt="Map area" style="opacity:0.6" />
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#1447b8;color:#fff;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 12px rgba(0,0,0,0.3)">📍</div>
+        </div>
+        <div class="nearby-grid">
+          <div class="nearby-item"><span style="color:#64748b">Dubai Mall</span><span class="nearby-dist">12 km</span></div>
+          <div class="nearby-item"><span style="color:#64748b">Burj Khalifa</span><span class="nearby-dist">13 km</span></div>
+          <div class="nearby-item"><span style="color:#64748b">DXB Airport</span><span class="nearby-dist">38 km</span></div>
+          <div class="nearby-item"><span style="color:#64748b">Dubai Marina</span><span class="nearby-dist">4.2 km</span></div>
+          <div class="nearby-item"><span style="color:#64748b">JBR Beach</span><span class="nearby-dist">5.1 km</span></div>
+          <div class="nearby-item"><span style="color:#64748b">Mall of Emirates</span><span class="nearby-dist">9.8 km</span></div>
+        </div>
+      </div>
+
+      <!-- UPSELL -->
+      <div class="upsell">
+        <div class="upsell-title">Already booked this hotel?</div>
+        <div class="upsell-text">Upload your voucher and our AI watches the price 24/7. WhatsApp alert the moment it drops. Free to track — you only pay if we save you money.</div>
+        <button class="upsell-btn">Upload voucher → Track price</button>
+      </div>
+
+      <!-- SIMILAR HOTELS -->
+      <div style="margin-bottom:20px">
+        <div class="sora" style="font-size:22px;font-weight:800;color:#0f172a;margin-bottom:20px">People also viewed</div>
+        <div class="similar-grid">
+          <div class="similar-card">
+            <div class="similar-img">
+              <img src="https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" alt="Burj Al Arab" />
+              <span class="similar-off">↓ 12% off</span>
+            </div>
+            <div class="similar-body">
+              <div class="similar-name">Burj Al Arab</div>
+              <div class="similar-loc">📍 Dubai · 8.2 km from this hotel</div>
+              <div class="similar-rating">
+                <span class="similar-score">9.4</span>
+                <span style="font-size:12px;color:#64748b;font-weight:600">Exceptional</span>
+                <span style="font-size:12px;color:#94a3b8">· 1,812 ratings</span>
+              </div>
+              <div class="similar-price">
+                <span class="similar-was">₹1,20,000</span>
+                <span class="similar-now">₹84,000</span>
+                <span class="similar-night">/night</span>
+              </div>
+              <div class="similar-perks">
+                <span class="similar-perk">✓ Free WiFi</span>
+                <span class="similar-perk">✓ Free Breakfast</span>
+              </div>
+            </div>
+          </div>
+          <div class="similar-card">
+            <div class="similar-img">
+              <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop" alt="Jumeirah Al Qasr" />
+              <span class="similar-off">↓ 18% off</span>
+            </div>
+            <div class="similar-body">
+              <div class="similar-name">Jumeirah Al Qasr</div>
+              <div class="similar-loc">📍 Dubai · 12.4 km from this hotel</div>
+              <div class="similar-rating">
+                <span class="similar-score">9.1</span>
+                <span style="font-size:12px;color:#64748b;font-weight:600">Exceptional</span>
+                <span style="font-size:12px;color:#94a3b8">· 3,241 ratings</span>
+              </div>
+              <div class="similar-price">
+                <span class="similar-was">₹44,000</span>
+                <span class="similar-now">₹31,800</span>
+                <span class="similar-night">/night</span>
+              </div>
+              <div class="similar-perks">
+                <span class="similar-perk">✓ Free Cancellation</span>
+                <span class="similar-perk">✓ Free WiFi</span>
+              </div>
+            </div>
+          </div>
+          <div class="similar-card">
+            <div class="similar-img">
+              <img src="https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop" alt="Address Downtown" />
+              <span class="similar-off">↓ 14% off</span>
+            </div>
+            <div class="similar-body">
+              <div class="similar-name">Address Downtown Dubai</div>
+              <div class="similar-loc">📍 Dubai · 16.2 km from this hotel</div>
+              <div class="similar-rating">
+                <span class="similar-score">9.2</span>
+                <span style="font-size:12px;color:#64748b;font-weight:600">Exceptional</span>
+                <span style="font-size:12px;color:#94a3b8">· 5,614 ratings</span>
+              </div>
+              <div class="similar-price">
+                <span class="similar-was">₹52,000</span>
+                <span class="similar-now">₹37,400</span>
+                <span class="similar-night">/night</span>
+              </div>
+              <div class="similar-perks">
+                <span class="similar-perk">✓ Free Cancellation</span>
+                <span class="similar-perk">✓ Burj view</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
-  );
+
+    <!-- SIDEBAR -->
+    <div>
+      <div class="sidebar-card">
+        <div class="member-badge">
+          <span style="width:6px;height:6px;background:#fff;border-radius:50%;display:inline-block"></span>
+          Member price · Save up to 28%
+        </div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+          <span class="sidebar-price">₹28,400</span>
+          <span class="sidebar-was">₹47,400</span>
+        </div>
+        <div class="sidebar-nights">+ taxes included · per night · 3 nights · ₹85,200 total</div>
+
+        <div class="date-grid">
+          <div class="date-box">
+            <div class="date-box-label">📅 Check-in</div>
+            <div class="date-box-val">Thu, 14 Aug</div>
+          </div>
+          <div class="date-box">
+            <div class="date-box-label">📅 Check-out</div>
+            <div class="date-box-val">Sun, 17 Aug</div>
+          </div>
+        </div>
+
+        <div class="guest-box">
+          <div class="date-box-label">👤 Guests</div>
+          <div class="date-box-val">2 Adults · 1 Room</div>
+        </div>
+
+        <div class="selected-room-box">
+          <div style="font-size:11px;color:#1447b8;font-weight:700;margin-bottom:2px">Selected room</div>
+          <div style="font-size:13px;color:#374151">Deluxe King Room · Breakfast incl.</div>
+        </div>
+
+        <button class="book-btn">Book Now →</button>
+        <div style="text-align:center;font-size:12.5px;color:#64748b;margin-bottom:8px">No payment needed today</div>
+
+        <div class="perks">
+          <div class="perk">Free cancellation available</div>
+          <div class="perk">Reserve now, pay at hotel</div>
+          <div class="perk">Best member price guarantee</div>
+        </div>
+
+        <div class="track-box">
+          <div class="track-title">💡 Already booked this hotel?</div>
+          <div style="font-size:11.5px;color:#64748b;line-height:1.6;margin-bottom:10px">Upload your voucher — we watch the price 24/7 and WhatsApp you when it drops.</div>
+          <button class="track-btn">Track price drops →</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">rebuq<span style="color:#1447b8">.</span></div>
+        <p class="footer-desc">AI-powered hotel price monitoring for Indian travelers. Never overpay for a hotel again.</p>
+      </div>
+      <div class="footer-cols">
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="#">How it works</a>
+          <a href="#">Member Deals</a>
+          <a href="#">Why rebuq</a>
+          <a href="#">Check my booking</a>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <a href="#">About</a>
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copy">© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
+      <div class="social-icons">
+        <a href="#" class="social-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.261 5.632 5.903-5.632zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="#" class="social-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="#" class="social-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+function setTab(btn, id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+function selectRoom(btn) {
+  document.querySelectorAll('.select-btn').forEach(b => { b.textContent = 'Select'; b.classList.remove('selected'); });
+  btn.textContent = '✓ Selected';
+  btn.classList.add('selected');
+}
+document.querySelectorAll('.review-filter').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.review-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
