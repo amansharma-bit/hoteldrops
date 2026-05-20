@@ -121,6 +121,8 @@ function HotelDetailContent() {
   const [reviewFilter, setReviewFilter] = useState("All");
   const [similarHotels, setSimilarHotels] = useState<SimilarHotel[]>([]);
 
+  // ── refs for scroll targets ──────────────────────────────────────────────
+  const refSearchBar = useRef<HTMLDivElement>(null);   // FIX: search bar ref
   const refOverview = useRef<HTMLDivElement>(null);
   const refRooms = useRef<HTMLDivElement>(null);
   const refReviews = useRef<HTMLDivElement>(null);
@@ -159,7 +161,12 @@ function HotelDetailContent() {
     };
     const ref = map[tab];
     if (ref?.current) {
-      const top = ref.current.getBoundingClientRect().top + window.pageYOffset - 130;
+      // FIX: dynamically read sticky heights so scroll offset is always accurate
+      const navH = 60;
+      const searchH = refSearchBar.current?.offsetHeight ?? 80;
+      const tabsH = 50;
+      const offset = navH + searchH + tabsH + 8;
+      const top = ref.current.getBoundingClientRect().top + window.pageYOffset - offset;
       window.scrollTo({ top, behavior: "smooth" });
     }
   };
@@ -223,6 +230,7 @@ function HotelDetailContent() {
         </div>
       )}
 
+      {/* ── Nav: sticky, top 0, z 300 ── */}
       <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", height: 60, position: "sticky", top: 0, zIndex: 300 }}>
         <div style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
           <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
@@ -249,7 +257,11 @@ function HotelDetailContent() {
         </div>
       </nav>
 
-      <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 32px" }}>
+      {/* ── Search bar: FIX — sticky, top 60, z 250 ── */}
+      <div
+        ref={refSearchBar}
+        style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 32px", position: "sticky", top: 60, zIndex: 250 }}
+      >
         <div style={{ display: "flex", alignItems: "stretch", border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
           <div style={{ flex: 2.5, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>Destination or Hotel</div>
@@ -300,6 +312,7 @@ function HotelDetailContent() {
           </div>
         </div>
 
+        {/* ── Photo grid: FIX — price card cell gets position relative + z 1 ── */}
         <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gridTemplateRows: "220px 220px", gap: 8, marginBottom: 24, borderRadius: 14, overflow: "hidden" }}>
           <div style={{ gridRow: "1/3", position: "relative", cursor: "pointer", overflow: "hidden", borderRadius: 12 }} onClick={() => openLightbox(0)}>
             <img src={hotel.images[0]?.url || fallbackImg} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -310,7 +323,8 @@ function HotelDetailContent() {
           <div style={{ cursor: "pointer", overflow: "hidden", borderRadius: 10 }} onClick={() => openLightbox(1)}>
             <img src={hotel.images[1]?.url || fallbackImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
-          <div style={{ background: "#fff", display: "flex", flexDirection: "column", justifyContent: "center", padding: "20px 22px" }}>
+          {/* FIX: position relative + zIndex 1 keeps this below the sticky tabs bar */}
+          <div style={{ background: "#fff", display: "flex", flexDirection: "column", justifyContent: "center", padding: "20px 22px", position: "relative", zIndex: 1 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#16a34a", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 100, marginBottom: 10, width: "fit-content" }}>
               Member price · Save up to 28%
             </div>
@@ -335,7 +349,8 @@ function HotelDetailContent() {
           </div>
         </div>
 
-        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, display: "flex", overflow: "hidden", marginBottom: 20, position: "sticky", top: 61, zIndex: 200 }}>
+        {/* ── Tabs bar: FIX — top = nav(60) + searchBar(80) = 140, z 200 ── */}
+        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, display: "flex", overflow: "hidden", marginBottom: 20, position: "sticky", top: 140, zIndex: 200 }}>
           {[["overview", "Overview"], ["rooms", "Rooms"], ["reviews", "Reviews"], ["facilities", "Facilities"], ["location", "Location"], ["policies", "Policies"]].map(([id, label]) => (
             <button key={id} className={"tab-btn" + (activeTab === id ? " active" : "")} onClick={() => goToSection(id)}>{label}</button>
           ))}
