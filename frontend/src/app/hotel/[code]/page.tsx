@@ -335,7 +335,7 @@ function HotelDetailContent() {
           </div>
         </div>
 
-        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, display: "flex", overflow: "hidden", marginBottom: 20, position: "sticky", top: 60, zIndex: 200 }}>
+        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, display: "flex", overflow: "hidden", marginBottom: 20, position: "sticky", top: 61, zIndex: 200 }}>
           {[["overview", "Overview"], ["rooms", "Rooms"], ["reviews", "Reviews"], ["facilities", "Facilities"], ["location", "Location"], ["policies", "Policies"]].map(([id, label]) => (
             <button key={id} className={"tab-btn" + (activeTab === id ? " active" : "")} onClick={() => goToSection(id)}>{label}</button>
           ))}
