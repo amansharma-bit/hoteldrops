@@ -283,7 +283,7 @@ function SearchResults() {
 
             return (
               <div key={hotel.code} className="hotel-card"
-                onClick={() => router.push(`/hotel/372446?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`)}>
+                onClick={() => router.push(`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`)}>
                 <div style={{ position: "relative", minHeight: 220 }}>
                   <img src={getImg(hotel, globalIdx)} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", minHeight: 220 }} />
                   <div style={{ position: "absolute", top: 12, left: 12, background: "#fff", color: NAVY, fontSize: 11.5, fontWeight: 700, padding: "4px 10px", borderRadius: 6, display: "flex", alignItems: "center", gap: 5, boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
