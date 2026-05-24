@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="rebuq Pitch">
+  <meta name="theme-color" content="#0D1A30">
+  <meta name="description" content="rebuq — Post-Booking Price tracker platform for hotel bookings. Series Seed 2026 Investment Proposal.">
+  <link rel="manifest" href="manifest.json">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rebuq — Investor Pitch 2026</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");:root{
+  --royal-blue:#3B5BDB;
+  --royal-blue-dim:rgba(59,91,219,0.8);
+  --dark-bg:#0D1A30;
+  --dark-surface:#111f35;
+  --white:#ffffff;
+  --foreground:#0D1117;
+  --muted:#6B7280;
+  --border:#E5E7EB;
+  --border-dark:rgba(255,255,255,0.08);
+  --bg:#F9FAFB;
+  --card-bg:#ffffff;
+}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{background:var(--dark-bg);color:var(--foreground)}
+
+/* NOISE TEXTURE */
+.noise-overlay{
+  position:absolute;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:0.5;
+}
+
+/* SLIDE CONTAINER */
+.deck{position:fixed;inset:0;display:flex;flex-direction:column}
+.slide-viewport{flex:1;position:relative;overflow:hidden}
+.slide{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  transition:opacity 0.35s ease,transform 0.35s ease;
+}
+.slide.dark-slide{background:var(--dark-bg)}
+.slide.light-slide{background:var(--white)}
+.slide.hidden-next{opacity:0;transform:translateY(16px);pointer-events:none}
+.slide.hidden-prev{opacity:0;transform:translateY(-16px);pointer-events:none}
+.slide.active{opacity:1;transform:translateY(0);pointer-events:all}
+
+/* PROGRESS BAR */
+.progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:rgba(255,255,255,0.08);z-index:100;
+}
+.progress-fill{
+  height:100%;background:var(--royal-blue);
+  transition:width 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* TOP NAV */
+.top-nav{
+  position:absolute;top:0;left:0;right:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 48px;height:56px;z-index:10;
+}
+.nav-section-label{
+  font-size:10px;font-weight:600;letter-spacing:0.12em;
+  text-transform:uppercase;display:flex;align-items:center;gap:10px;
+}
+.nav-section-label.dark{color:rgba(255,255,255,0.3)}
+.nav-section-label.light{color:var(--muted)}
+.nav-dash{width:20px;height:1px}
+.nav-dash.dark{background:rgba(255,255,255,0.2)}
+.nav-dash.light{background:var(--border)}
+.nav-logo{
+  font-size:14px;font-weight:700;letter-spacing:-0.01em;
+}
+.nav-logo.dark{color:rgba(255,255,255,0.9)}
+.nav-logo.light{color:var(--foreground)}
+.nav-logo span{color:var(--royal-blue)}
+
+/* BOTTOM NAV */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 32px;height:52px;z-index:100;
+  backdrop-filter:blur(12px);
+  transition:background 0.35s,border-color 0.35s;
+}
+.bottom-nav.dark-nav{
+  background:rgba(13,26,48,0.95);
+  border-top:1px solid rgba(59,91,219,0.2);
+}
+.bottom-nav.light-nav{
+  background:rgba(255,255,255,0.95);
+  border-top:1px solid var(--border);
+}
+.slide-id{font-size:11px;font-weight:500;letter-spacing:0.04em}
+.slide-id.dark-text{color:rgba(255,255,255,0.45)}
+.slide-id.light-text{color:var(--muted)}
+.brand-label{font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase}
+.brand-label.dark-text{color:rgba(255,255,255,0.3)}
+.brand-label.light-text{color:var(--muted)}
+
+/* DOT NAV */
+.dot-nav{display:flex;align-items:center;gap:6px}
+.dot{
+  height:6px;border-radius:3px;
+  border:none;cursor:pointer;
+  transition:width 0.25s,background 0.25s;
+}
+.dot.active{width:20px;background:var(--royal-blue)}
+.dot.inactive-dark{width:6px;background:rgba(255,255,255,0.2)}
+.dot.inactive-light{width:6px;background:var(--border)}
+
+/* NAV ARROWS */
+.nav-arrows{display:flex;gap:8px}
+.arrow-btn{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;border:none;transition:all 0.2s;
+}
+.arrow-btn.prev-dark{background:transparent;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.6)}
+.arrow-btn.prev-light{background:transparent;border:1px solid var(--border);color:var(--foreground)}
+.arrow-btn.next-btn{background:var(--royal-blue);color:#fff}
+.arrow-btn:disabled{opacity:0.3;cursor:not-allowed}
+.arrow-btn.next-btn:disabled{background:var(--border)}
+
+/* ============================
+   SLIDE CONTENT STYLES
+   ============================ */
+
+/* SECTION HEADER */
+.section-header{
+  display:flex;align-items:center;gap:12px;
+  font-size:10px;font-weight:600;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--muted);
+  margin-bottom:28px;
+}
+.section-header::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-num{color:var(--foreground);font-weight:700}
+
+/* TYPOGRAPHY */
+.slide-title{
+  font-size:clamp(28px,3.5vw,44px);
+  font-weight:700;letter-spacing:-0.025em;
+  color:var(--foreground);margin-bottom:6px;line-height:1.1;
+}
+.slide-sub{
+  font-size:14px;color:var(--muted);
+  margin-bottom:40px;font-weight:400;
+}
+
+/* CARD */
+.card{
+  background:var(--white);
+  border:1px solid var(--border);
+  border-radius:12px;padding:24px;
+}
+.card.active-card{border-color:var(--royal-blue);background:rgba(59,91,219,0.04)}
+.card.dark-card{background:#111f35;border-color:rgba(255,255,255,0.08)}
+.card.bg-card{background:var(--bg);border-color:var(--border)}
+
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+.grid-auto{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px}
+
+/* STAT */
+.stat-label{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.stat-big{font-size:clamp(32px,4vw,52px);font-weight:700;letter-spacing:-0.03em;line-height:1;color:var(--royal-blue);margin:4px 0}
+.stat-big.dark-num{color:var(--foreground)}
+.stat-desc{font-size:13px;color:var(--muted);line-height:1.55;margin-top:8px}
+
+/* BULLET */
+.bullets{list-style:none;display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.bullets li{font-size:13px;color:var(--muted);display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+.bullets li::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--royal-blue);flex-shrink:0;margin-top:7px}
+
+/* STAGE TAG */
+.stage-tag{font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:block}
+.stage-tag.blue{color:var(--royal-blue)}
+
+/* PILL */
+.pill{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;background:rgba(59,91,219,0.08);color:var(--royal-blue);margin:2px}
+
+/* SPLIT */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+.split-wide{display:grid;grid-template-columns:1.15fr 0.85fr;gap:48px;align-items:start}
+
+/* LEDGER */
+.ledger{background:var(--bg);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.ledger-header{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ledger-dots{display:flex;gap:5px}
+.ldot{width:10px;height:10px;border-radius:50%}
+.ledger-title{font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)}
+.ledger-row{display:flex;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--border);font-size:12px}
+.ledger-row:last-child{border-bottom:none}
+.lkey{color:var(--muted)}
+.lval{font-weight:500;color:var(--foreground)}
+.lval.green{display:inline-flex;align-items:center;background:#dcfce7;color:#166534;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600}
+
+/* TABLE */
+.cap-table{width:100%;border-collapse:collapse;font-size:12px}
+.cap-table th{padding:9px 14px;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);text-align:left}
+.cap-table th.hi{color:var(--royal-blue);background:rgba(59,91,219,0.05)}
+.cap-table td{padding:13px 14px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--foreground)}
+.cap-table td.hi{background:rgba(59,91,219,0.04)}
+.cap-table tr:last-child td{border-bottom:none}
+.yes{color:var(--royal-blue);font-weight:600}
+.no{color:#EF4444;font-weight:500}
+.partial{color:#F59E0B;font-weight:500}
+
+/* TX */
+.tx-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.tx-row:last-child{border-bottom:none}
+.tx-label{font-size:13px;font-weight:500;color:var(--foreground)}
+.tx-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.tx-val{font-size:13px;font-weight:600;color:var(--foreground);text-align:right}
+.tx-val.blue{color:var(--royal-blue)}
+.tx-val.muted{color:var(--muted);text-decoration:line-through;font-weight:400}
+
+/* MINI STAT */
+.mini-stat{border-left:2px solid var(--royal-blue);padding-left:12px}
+.mini-stat .val{font-size:20px;font-weight:700;letter-spacing:-0.02em;color:var(--foreground)}
+.mini-stat .lbl{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* PHASE */
+.phase-badge{display:inline-flex;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:3px 9px;border-radius:4px;background:rgba(59,91,219,0.1);color:var(--royal-blue);margin-right:8px}
+
+/* TEAM AVATAR */
+.avatar{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.avatar.blue{background:var(--royal-blue);color:#fff}
+.avatar.light{background:rgba(59,91,219,0.1);color:var(--royal-blue)}
+
+/* YEAR CARD */
+.year-card{border:1px solid var(--border);border-radius:12px;padding:22px;background:var(--white)}
+.year-card.featured{background:var(--royal-blue);border-color:var(--royal-blue);color:#fff}
+.year-num{font-size:clamp(22px,3vw,34px);font-weight:700;letter-spacing:-0.025em;color:var(--foreground);margin:6px 0 12px}
+.year-card.featured .year-num{color:#fff}
+.year-card.featured .stat-label{color:rgba(255,255,255,0.6)}
+.year-card.featured .year-stat-val{color:#fff}
+.year-stat-val{font-size:13px;font-weight:500;color:var(--foreground)}
+
+/* MOAT STAT */
+.moat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.moat-stat{background:var(--bg);border-radius:8px;padding:10px 12px}
+.moat-stat .mv{font-size:15px;font-weight:700;color:var(--foreground)}
+.moat-stat .ml{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* ALLOCATION */
+.alloc-bar{height:6px;border-radius:3px;display:flex;overflow:hidden;margin:14px 0 6px}
+.alloc-seg{height:100%}
+
+/* RATE BOX */
+.rate-box{background:var(--bg);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+
+/* SLIDE PADDING */
+.slide-body{flex:1;padding:56px 56px 52px;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.slide-body.top-align{justify-content:flex-start;padding-top:52px}
+
+/* SCROLLABLE */
+.scroll-inner{overflow-y:auto;flex:1;-ms-overflow-style:none;scrollbar-width:none}
+.scroll-inner::-webkit-scrollbar{display:none}
+
+/* CHECK/CROSS */
+.check-icon{display:inline-flex;width:22px;height:22px;border-radius:50%;background:rgba(59,91,219,0.1);color:var(--royal-blue);align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.cross-icon{display:inline-flex;width:22px;height:22px;border-radius:50%;background:#fef2f2;color:#EF4444;align-items:center;justify-content:center;font-size:11px}
+.part-icon{display:inline-flex;width:22px;height:22px;border-radius:50%;background:#fffbeb;color:#F59E0B;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+
+/* TABLE ALIGN */
+.cap-table td[style*="center"]{text-align:center}
+
+.mode-btn{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,0.25);border-radius:20px;padding:5px 14px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);transition:all 0.2s;white-space:nowrap;letter-spacing:0.02em}
+.mode-btn.light-mode-btn{border-color:var(--border);color:var(--muted);background:transparent}
+.mode-btn:hover{border-color:var(--royal-blue);color:var(--royal-blue);background:rgba(59,91,219,0.06)}
+body.scroll-mode .slide.hidden-next,body.scroll-mode .slide.hidden-prev{opacity:1;transform:none;pointer-events:all;position:relative}
+body.scroll-mode .slide-viewport{overflow-y:auto}
+body.scroll-mode .slide{position:relative;min-height:100vh}
+
+/* WEBSITE TOP NAV */
+.website-nav{
+  position:fixed;top:0;left:0;right:0;height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;
+  background:rgba(255,255,255,0.97);
+  border-bottom:0.5px solid var(--border);
+  backdrop-filter:blur(12px);
+  z-index:200;
+}
+.website-nav .wn-logo{
+  font-size:16px;font-weight:700;color:var(--foreground);
+  letter-spacing:-0.02em;text-decoration:none;
+}
+.website-nav .wn-logo span{color:var(--royal-blue)}
+.website-nav .wn-links{
+  display:flex;align-items:center;gap:32px;
+}
+.website-nav .wn-link{
+  font-size:13px;font-weight:400;color:var(--muted);
+  cursor:pointer;transition:color 0.2s;text-decoration:none;
+  border:none;background:none;padding:0;
+}
+.website-nav .wn-link:hover{color:var(--foreground)}
+.website-nav .wn-link.active{color:var(--foreground);font-weight:500}
+.website-nav .wn-cta{
+  font-size:13px;font-weight:500;color:#fff;
+  background:var(--royal-blue);border:none;
+  padding:8px 20px;border-radius:20px;cursor:pointer;
+  transition:all 0.2s;
+}
+.website-nav .wn-cta:hover{background:#2d4bc4}
+/* Push content down for top nav */
+.progress-bar{top:56px!important}
+.slide-viewport{top:56px!important;bottom:52px!important;position:fixed;left:0;right:0}
+.bottom-nav{bottom:0}
+</style>
+</head>
+<body>
+
+
+<nav class="website-nav" id="websiteNav">
+  <a class="wn-logo" href="#">rebuq<span>.</span></a>
+  <div class="wn-links">
+    <button class="wn-link" onclick="jumpTo(1)">Problem</button>
+    <button class="wn-link" onclick="jumpTo(2)">Solution</button>
+    <button class="wn-link" onclick="jumpTo(4)">Market</button>
+    <button class="wn-link" onclick="jumpTo(11)">Financials</button>
+    <button class="wn-link" onclick="jumpTo(12)">Team</button>
+  </div>
+  <button class="wn-cta" onclick="jumpTo(13)">Investment Deck</button>
+</nav>
+<div class="progress-bar"><div class="progress-fill" id="pFill" style="width:6.67%"></div></div>
+
+<div class="deck">
+<div class="slide-viewport" id="viewport"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav dark-nav" id="bottomNav">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="brand-label dark-text" id="brandLabel">REBUQ</span>
+    <span style="color:rgba(255,255,255,0.15);font-size:11px">/</span>
+    <span class="slide-id dark-text" id="slideId">01 — Cover</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px"><button class="mode-btn" id="modeBtn" onclick="toggleScroll()">&#x21D5; Scroll</button><div class="dot-nav" id="dotNav"></div></div>
+  <div class="nav-arrows">
+    <button class="arrow-btn prev-dark" id="prevBtn" onclick="nav(-1)" disabled>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <button class="arrow-btn next-btn" id="nextBtn" onclick="nav(1)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+const SLIDES = [
+  {
+    id:'cover', title:'Cover', dark:true,
+    html:`<div class="slide dark-slide" id="s0" style="position:relative;overflow:hidden;display:flex;flex-direction:column;background:#0D1A30;height:100%">
+
+      <!-- Grid texture -->
+      <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(59,91,219,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(59,91,219,0.07) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0"></div>
+
+      <!-- Bottom gradient -->
+      <div style="position:absolute;bottom:0;left:0;right:0;height:45%;background:linear-gradient(to bottom,transparent,rgba(20,40,90,0.3));pointer-events:none;z-index:0"></div>
+
+      <!-- Dot grid top right -->
+      <div style="position:absolute;top:80px;right:56px;display:grid;grid-template-columns:repeat(6,8px);gap:8px;opacity:0.15;pointer-events:none;z-index:1">
+        ${Array(24).fill('<div style="width:4px;height:4px;border-radius:50%;background:#3B5BDB"></div>').join('')}
+      </div>
+
+      <!-- Badge -->
+      <div style="position:relative;z-index:10;padding:32px 64px 0">
+        <span style="display:inline-flex;align-items:center;gap:8px;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);border:1px solid rgba(255,255,255,0.12);padding:5px 14px;border-radius:20px">
+          <span style="width:5px;height:5px;border-radius:50%;background:var(--royal-blue);display:inline-block;flex-shrink:0"></span>
+          Series Seed — 2026 Institutional Investment Proposal
+        </span>
+      </div>
+
+      <!-- Main content -->
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 64px;position:relative;z-index:10;gap:20px">
+        <!-- Giant headline -->
+        <div style="display:flex;align-items:flex-end;gap:0;line-height:0.88">
+          <h1 style="font-size:clamp(96px,13vw,160px);font-weight:800;letter-spacing:-0.04em;color:#ffffff;margin:0;line-height:0.88">rebuq</h1><span style="font-size:clamp(96px,13vw,160px);font-weight:800;color:var(--royal-blue);line-height:0.88">.</span>
+        </div>
+
+        <!-- Tagline -->
+        <p style="font-size:clamp(16px,1.6vw,20px);font-weight:300;line-height:1.6;color:rgba(255,255,255,0.55);max-width:640px;margin:0">
+          Post-Booking Price tracker platform for <strong style="color:rgba(255,255,255,0.9);font-weight:500">hotel bookings.</strong>
+        </p>
+
+        <!-- CTAs -->
+        <div style="display:flex;gap:12px;align-items:center">
+          <a href="https://www.rebuq.com" target="_blank" style="padding:12px 24px;background:var(--royal-blue);color:#fff;border:none;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">Visit rebuq.com</a>
+          <button onclick="window.goTo(1)" style="padding:12px 24px;background:transparent;color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.18);border-radius:24px;font-size:13px;font-weight:500;cursor:pointer">View Pitch Deck →</button>
+        </div>
+      </div>
+
+      <!-- Stats row — pinned to bottom -->
+      <div style="position:relative;z-index:10;padding:0 64px 68px">
+        <div style="border-top:1px solid rgba(255,255,255,0.07);padding-top:24px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0">
+          ${[
+            ['₹7,400','Avg Money Overpaid Per Booking'],
+            ['13–27%','Hotel Price Fluctuation Post-Booking'],
+            ['14% CAGR','Outbound 4/5-Star Booking Growth'],
+            ['5.7M / yr','Eligible Premium Bookings — India'],
+          ].map((s,i) => `
+          <div style="${i>0?'border-left:1px solid rgba(255,255,255,0.08);padding-left:32px;':'padding-right:32px;'}">
+            <div style="font-size:clamp(20px,2.2vw,28px);font-weight:700;color:var(--royal-blue);letter-spacing:-0.02em">${s[0]}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:4px;line-height:1.4">${s[1]}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Footnote -->
+      <div style="position:absolute;bottom:12px;left:0;right:0;z-index:10;text-align:center">
+        <p style="font-size:10px;color:rgba(255,255,255,0.15);letter-spacing:0.02em">Confidential document intended solely for authorized investment reviews.</p>
+      </div>
+    </div>`
+  },
+  {
+    id:'problem', title:'The Problem', dark:false,
+    html:`<div class="slide light-slide" id="s1">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">02</span><div class="nav-dash light"></div><span>THE PROBLEM</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="slide-body top-align">
+        <h2 class="slide-title" style="font-size:clamp(26px,3vw,36px);margin-bottom:24px;max-width:700px;line-height:1.2">You booked at the right price.<br>It dropped. <span style="color:var(--royal-blue)">You never knew.</span></h2>
+        <div class="split-wide" style="gap:40px;align-items:center">
+          <!-- LEFT -->
+          <div>
+            <div style="font-size:clamp(48px,6vw,72px);font-weight:700;color:var(--royal-blue);line-height:1;letter-spacing:-0.03em">₹7,400</div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:6px;margin-bottom:20px">Average capital overpaid per booking</div>
+            <div style="height:1px;background:var(--border);margin-bottom:18px"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="mini-stat"><div class="val" style="font-size:18px">13–27%</div><div class="lbl">Post-booking price swing — KAYAK 2024</div></div>
+              <div class="mini-stat"><div class="val" style="font-size:18px">64%</div><div class="lbl">Bookings that change price — Rule of Sixty</div></div>
+            </div>
+          </div>
+          <!-- RIGHT -->
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="card" style="padding:16px 18px">
+              <div style="display:flex;align-items:center;gap:8px;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:8px">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--royal-blue);flex-shrink:0"></div>
+                The Pricing Flaw
+              </div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.65">Hotel rates swing 13–27% after booking — confirmed by KAYAK's 2024 data and the Rule of Sixty, which shows 64% of hotel reservations change price between booking and check-in. Yield management algorithms slash rates aggressively when occupancy dips. Premium travellers have no automated way to know, and no way to act.</div>
+            </div>
+            <div class="card" style="padding:16px 18px">
+              <div style="display:flex;align-items:center;gap:8px;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:8px">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--royal-blue);flex-shrink:0"></div>
+                The Visibility Gap
+              </div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.65">Once a booking is confirmed, travellers never re-check rates. That single behaviour costs the average premium traveller ₹7,400 per trip — money they're entitled to but have no tool to recover. rebuq exists to close this gap: monitoring every booking automatically so travellers never leave savings on the table.</div>
+            </div>
+            <div class="card" style="padding:16px 18px">
+              <div style="display:flex;align-items:center;gap:8px;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:8px">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--royal-blue);flex-shrink:0"></div>
+                The Incentive Trap
+              </div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.65">OTAs earn commission on gross booking value. Every price drop they flag costs them revenue. They are structurally built to work against your financial interest — which is exactly why rebuq had to be built from outside the OTA model.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  },
+  {
+    id:'solution', title:'The Solution', dark:false,
+    html:`<div class="slide light-slide" id="s2">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">03</span><div class="nav-dash light"></div><span>THE SOLUTION</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="slide-body top-align">
+        <h2 class="slide-title" style="font-size:clamp(24px,3vw,38px);margin-bottom:28px;max-width:800px;line-height:1.2">Three steps between your booking and your savings.<br><span style="color:var(--royal-blue)">You only do one of them.</span></h2>
+        <div class="grid-3">
+
+          <!-- Step 01 -->
+          <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;padding:24px">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Step 01</span>
+              </div>
+              <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em;color:var(--foreground)">Upload Your Booking</h3>
+              <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px">Forward your email confirmation, booking screenshot, or voucher on WhatsApp — or fill in details manually. AI parses it instantly.</p>
+              <div style="height:1px;background:var(--border);margin-bottom:12px"></div>
+              <ul class="bullets">
+                <li>Works with any booking format — Booking.com, Expedia, travel agents, or direct hotel</li>
+                <li>Only refundable bookings are enrolled — verified automatically</li>
+                <li>No app to install. No account setup. Live in under 60 seconds.</li>
+              </ul>
+            </div>
+            <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Onboarding time</span>
+              <span style="font-size:16px;font-weight:700;color:var(--foreground)">&lt;30s</span>
+            </div>
+          </div>
+
+          <!-- Step 02 -->
+          <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;padding:24px">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Step 02</span>
+              </div>
+              <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em;color:var(--foreground)">We Monitor 24/7</h3>
+              <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px">Our AI checks rates across 50+ supplier APIs and 500k+ properties worldwide.</p>
+              <div style="height:1px;background:var(--border);margin-bottom:12px"></div>
+              <ul class="bullets">
+                <li>Tracks the 13–27% price drops that happen post-booking</li>
+                <li>Refundability re-verified before triggering any alert or action</li>
+                <li>Access wholesale rates unavailable on any public booking platform</li>
+              </ul>
+            </div>
+            <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Audit frequency</span>
+              <span style="font-size:16px;font-weight:700;color:var(--foreground)">Automated</span>
+            </div>
+          </div>
+
+          <!-- Step 03 -->
+          <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;padding:24px">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Step 03</span>
+              </div>
+              <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em;color:var(--foreground)">You Get a Lower Price</h3>
+              <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px">The moment a lower rate is confirmed, you get an instant WhatsApp + email alert with the exact savings amount.</p>
+              <div style="height:1px;background:var(--border);margin-bottom:12px"></div>
+              <ul class="bullets">
+                <li>One tap lands you directly on the booking page — no friction</li>
+                <li>Zero fee to the traveller — rebuq earns only from the spread</li>
+                <li>No app to install. Stays completely in your ecosystem.</li>
+              </ul>
+            </div>
+            <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Execution</span>
+              <span style="font-size:16px;font-weight:700;color:var(--foreground)">1 Tap</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>`
+  },
+  {
+        id:'tech', title:'Why Now', dark:false,
+    html:`<div class="slide light-slide" id="s3">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">04</span><div class="nav-dash light"></div><span>WHY NOW</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="slide-body top-align">
+        <h2 class="slide-title" style="font-size:clamp(24px,3vw,38px);margin-bottom:6px;line-height:1.15">This wasn't possible 3 years ago.<br><span style="color:var(--royal-blue)">AI made it inevitable.</span></h2>
+        <p class="slide-sub" style="margin-bottom:28px">The problem existed for decades. The tools to solve it — Vision AI, wholesale APIs, WhatsApp automation — only converged in the last 2 years. rebuq is built exactly at this inflection point.</p>
+
+        <div class="grid-3" style="margin-bottom:20px">
+
+          <!-- Reason 1 -->
+          <div class="card" style="padding:24px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:8px">Vision AI crossed the threshold</div>
+            <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">Frontier models like Anthropic Claude can now read any document — PDF, screenshot, WhatsApp forward — and extract structured data with 99%+ accuracy. Manual data entry is no longer needed. This unlocks onboarding that was previously impossible at scale.</p>
+            <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div style="background:var(--bg);border-radius:8px;padding:10px 12px">
+                <div style="font-size:16px;font-weight:700;color:var(--foreground)">99%+</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">Parsing accuracy</div>
+              </div>
+              <div style="background:var(--bg);border-radius:8px;padding:10px 12px">
+                <div style="font-size:16px;font-weight:700;color:var(--foreground)">&lt;5 sec</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">Per booking parsed</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reason 2 -->
+          <div class="card" style="padding:24px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:8px">Wholesale APIs went global</div>
+            <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">50+ hotel wholesale networks now offer programmatic API access. Rate monitoring that once required a human calling wholesalers daily can now run automatically, continuously, across 500k+ properties simultaneously — at zero marginal cost.</p>
+            <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div style="background:var(--bg);border-radius:8px;padding:10px 12px">
+                <div style="font-size:16px;font-weight:700;color:var(--foreground)">50+</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">Supplier APIs</div>
+              </div>
+              <div style="background:var(--bg);border-radius:8px;padding:10px 12px">
+                <div style="font-size:16px;font-weight:700;color:var(--foreground)">500k+</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">Properties monitored</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reason 3 -->
+          <div class="card" style="padding:24px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:8px">WhatsApp became the layer</div>
+            <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">India has 500M+ WhatsApp users. Travellers already live there. No app install, no new behaviour required — alerts and one-tap rebooks happen inside a channel people check 50x a day. Distribution with zero friction.</p>
+            <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div style="background:var(--bg);border-radius:8px;padding:10px 12px">
+                <div style="font-size:16px;font-weight:700;color:var(--foreground)">500M+</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">WhatsApp users in India</div>
+              </div>
+              <div style="background:var(--bg);border-radius:8px;padding:10px 12px">
+                <div style="font-size:16px;font-weight:700;color:var(--foreground)">0</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">Apps to install</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom callout -->
+        <div class="card bg-card" style="padding:16px 24px;border-left:3px solid var(--royal-blue);border-radius:0 12px 12px 0">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="font-size:22px">⚡</div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--foreground);margin-bottom:3px">The convergence window is open right now</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.6">Vision AI accuracy, wholesale API access, and WhatsApp distribution reached viable scale simultaneously in 2023–24. First movers who build on this stack now will be extremely difficult to displace. rebuq is that first mover in Indian travel.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  },
+  {
+    id:'market', title:'Market TAM / SAM / SOM', dark:false,
+    html:`<div class="slide light-slide" id="s4">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">05</span><div class="nav-dash light"></div><span>MARKET TAM / SAM / SOM</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="slide-body top-align">
+        <h2 class="slide-title">Market Sizing</h2>
+        <p class="slide-sub">Indian 4 & 5-Star Refundable Hotel Bookings — Domestic + Outbound · Sources: Ministry of Tourism India, Hotelivate, TravClan, Prostay, KAYAK 2024, Research & Markets 2025</p>
+
+        <div class="grid-3" style="margin-bottom:16px">
+
+          <!-- TAM -->
+          <div class="card">
+            <div class="stat-label" style="margin-bottom:8px">TAM — Total Addressable Market</div>
+            <div class="stat-big dark-num" style="font-size:36px">29.9M</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:12px">true outbound travellers + domestic trips</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.6">32.7M total departures minus 1.5M work visa emigrants and 1.3M student emigrants = 29.9M true travellers. Plus all domestic Indian 4/5-star travel.</div>
+            <div style="margin-top:12px;padding:8px 10px;background:var(--bg);border-radius:6px;font-size:10px;color:var(--muted)">Outbound growing 5.9% YoY · Domestic luxury 11% CAGR</div>
+          </div>
+
+          <!-- SAM -->
+          <div class="card" style="border:1px solid var(--royal-blue)">
+            <div class="stat-label" style="margin-bottom:8px">SAM — Serviceable Addressable Market</div>
+            <div class="stat-big" style="font-size:36px">5.7M / yr</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:12px">refundable 4/5-star bookings</div>
+            <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">
+              <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Outbound 4/5-star refundable (60%)</span><span style="font-weight:600">2.2M</span></div>
+              <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Domestic India 4/5-star refundable (60%)</span><span style="font-weight:600">3.5M</span></div>
+              <div style="padding:8px 12px;display:flex;justify-content:space-between;font-size:11px;background:rgba(59,91,219,0.04)"><span style="font-weight:600">Total eligible bookings / year</span><span style="font-weight:700;color:var(--royal-blue)">5.7M</span></div>
+            </div>
+            <div style="padding:8px 10px;background:rgba(59,91,219,0.06);border-radius:6px;font-size:10px;color:var(--royal-blue)">Growing to 7.1M by Year 3 · Blended 12% CAGR</div>
+          </div>
+
+          <!-- SOM -->
+          <div class="card" style="border:1px solid var(--royal-blue)">
+            <div class="stat-label" style="margin-bottom:8px">SOM — Serviceable Obtainable Market</div>
+            <div class="stat-big" style="font-size:36px">₹22.6 Cr</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:12px">3-year base case revenue</div>
+            <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">
+              <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Stream 1 — Post-booking rebooking</span><span style="font-weight:600">₹15.19 Cr</span></div>
+              <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Stream 2 — Members direct booking</span><span style="font-weight:600">₹7.38 Cr</span></div>
+              <div style="padding:8px 12px;display:flex;justify-content:space-between;font-size:11px;background:rgba(59,91,219,0.04)"><span style="font-weight:600">71,138 bookings · 3 years</span><span style="font-weight:700;color:var(--royal-blue)">₹22.6 Cr</span></div>
+            </div>
+            <div style="padding:8px 10px;background:rgba(59,91,219,0.06);border-radius:6px;font-size:10px;color:var(--royal-blue)">Bear ₹16.7 Cr · Base ₹22.6 Cr · Bull ₹28.95 Cr</div>
+          </div>
+        </div>
+
+        <!-- Bottom stats -->
+        <div class="card bg-card">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0">
+            <div class="mini-stat" style="padding-right:24px">
+              <div class="val">5.7M</div>
+              <div class="lbl">Eligible refundable 4/5-star bookings/year — built bottom-up from traveller headcount</div>
+            </div>
+            <div class="mini-stat" style="padding:0 24px;border-left:1px solid var(--border)">
+              <div class="val">2 streams</div>
+              <div class="lbl">Post-booking rebooking (S1) + Members direct booking (S2) — both live</div>
+            </div>
+            <div class="mini-stat" style="padding-left:24px;border-left:1px solid var(--border)">
+              <div class="val">₹284.5 Cr</div>
+              <div class="lbl">Total GMV over 3 years · ₹40,000 avg booking · 71,138 bookings</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  },
+  {
+    id:'economics', title:'Unit Economics', dark:false,
+    html:`<div class="slide light-slide" id="s5">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">06</span><div class="nav-dash light"></div><span>UNIT ECONOMICS</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="slide-body top-align">
+        <h2 class="slide-title" style="margin-bottom:6px">Two Ways rebuq Makes <span style="color:var(--royal-blue)">Money</span></h2>
+        <p class="slide-sub" style="margin-bottom:20px">One principle across both — rebuq captures the spread. Traveller always pays <span style="color:var(--royal-blue);font-weight:500">less than OTA.</span> Zero fee, always.</p>
+
+        <div class="grid-2" style="margin-bottom:16px">
+
+          <!-- Stream 1: Post-Booking Price Drop -->
+          <div class="card" style="padding:22px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">Revenue Stream 01</div>
+              <div style="font-size:9px;padding:2px 10px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600">LIVE NOW</div>
+            </div>
+            <h3 style="font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:10px">Post-Booking Price Drop</h3>
+            <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:16px">AI bots monitor live market rates across 50+ supplier APIs. When yield management cuts kick in post-booking, rebuq catches the drop, rebooks, and captures the spread above the new lower rate.</p>
+
+            <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px">
+              <div style="padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted)"><span>Example — ₹40,000 avg booking</span><span>INR</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">OTA rate paid at booking</span><span style="font-weight:500;text-decoration:line-through;color:var(--muted)">₹40,000</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">Wholesale cost to rebuq (85%)</span><span style="font-weight:600;color:#EF4444">₹34,000</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">rebuq sells to traveller at</span><span style="font-weight:600;color:var(--royal-blue)">₹37,900</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:13px;font-weight:700;border-bottom:1px solid var(--border);background:rgba(59,91,219,0.03)"><span>rebuq margin (65% take)</span><span style="color:var(--royal-blue)">₹3,900</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Traveller saves vs OTA</span><span style="font-weight:600;color:#166534">₹2,100 ✓</span></div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <span class="pill" style="font-size:10px">50+ supplier APIs</span>
+              <span class="pill" style="font-size:10px">500k+ properties</span>
+              <span class="pill" style="font-size:10px">WhatsApp alert</span>
+              <span class="pill" style="font-size:10px">1 tap to rebook</span>
+            </div>
+          </div>
+
+          <!-- Stream 2: Members Direct Booking -->
+          <div class="card" style="padding:22px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">Revenue Stream 02</div>
+              <div style="font-size:9px;padding:2px 10px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600">LIVE NOW</div>
+            </div>
+            <h3 style="font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:10px">Members-Only Direct Booking</h3>
+            <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:16px">500k+ exclusive pre-negotiated hotel deals at 12% below OTA rates — available only to rebuq members. rebuq earns a 12% commission per booking. Traveller always pays less than any public platform.</p>
+
+            <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px">
+              <div style="padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted)"><span>Example — ₹40,000 avg booking</span><span>INR</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">OTA public rate</span><span style="font-weight:500;text-decoration:line-through;color:var(--muted)">₹40,000</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">Wholesale cost to rebuq (85%)</span><span style="font-weight:600;color:#EF4444">₹34,000</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">rebuq member price (+12% on cost)</span><span style="font-weight:600;color:var(--royal-blue)">₹38,080</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:13px;font-weight:700;border-bottom:1px solid var(--border);background:rgba(59,91,219,0.03)"><span>rebuq margin (12% on cost)</span><span style="color:var(--royal-blue)">₹4,080</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Traveller saves vs OTA</span><span style="font-weight:600;color:#166534">₹1,920 ✓</span></div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <span class="pill" style="font-size:10px">500k+ hotels</span>
+              <span class="pill" style="font-size:10px">12% below OTA</span>
+              <span class="pill" style="font-size:10px">No app needed</span>
+              <span class="pill" style="font-size:10px">Members only</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom combined economics -->
+        <div class="card bg-card" style="padding:14px 20px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Combined Unit Economics — Per Active Traveller / Year · Base Case Y2</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0">
+            <div class="mini-stat" style="padding-right:20px">
+              <div class="val" style="font-size:18px">2× avg</div>
+              <div class="lbl">Bookings per traveller per year</div>
+            </div>
+            <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">₹3,927</div>
+              <div class="lbl">Blended avg margin per booking (Y2 base)</div>
+            </div>
+            <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">₹7,854</div>
+              <div class="lbl">Annual LTV per traveller (2 events × ₹3,927)</div>
+            </div>
+            <div class="mini-stat" style="padding-left:20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">Zero</div>
+              <div class="lbl">Upfront fee to traveller — ever</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  },
+  {
+    id:'competitive', title:'Competitive Alignment', dark:false,
+    html:`<div class="slide light-slide" id="s8">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">07</span><div class="nav-dash light"></div><span>COMPETITIVE ALIGNMENT</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="slide-body top-align">
+        <h2 class="slide-title" style="font-size:clamp(24px,3vw,36px);margin-bottom:6px;line-height:1.2">Every existing player is structurally incentivised<br>to <span style="color:var(--royal-blue)">ignore your savings.</span></h2>
+        <p class="slide-sub" style="margin-bottom:24px">It's not a technology gap. It's an incentive gap. rebuq is the only player whose revenue is perfectly aligned with the traveller.</p>
+
+        <!-- 4 player cards -->
+        <div class="grid-2" style="margin-bottom:16px;gap:14px">
+
+          <!-- OTAs -->
+          <div class="card dark-card" style="padding:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(59,91,219,0.7)">Online Travel Agents (OTAs)</div>
+              <div style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(239,68,68,0.2);color:#EF4444;font-weight:600">INCENTIVE: AGAINST YOU</div>
+            </div>
+            <p style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.65;margin-bottom:12px">OTAs earn 10–20% commission on gross booking value. Every time a price drops and a traveller saves, the OTA earns less. They are mathematically incentivised to never alert you.</p>
+            <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:12px">
+              <div style="font-size:9px;color:rgba(59,91,219,0.7);font-weight:600;letter-spacing:0.08em;margin-bottom:8px">THE MATH</div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div><div style="font-size:9px;color:rgba(255,255,255,0.4)">Commission at booking</div><div style="font-size:18px;font-weight:700;color:#fff">₹4,000</div><div style="font-size:9px;color:rgba(255,255,255,0.3)">10% on ₹40,000</div></div>
+                <div style="font-size:16px;color:rgba(255,255,255,0.2)">→</div>
+                <div style="text-align:right"><div style="font-size:9px;color:rgba(255,255,255,0.4)">After price drop</div><div style="font-size:18px;font-weight:700;color:#EF4444">₹3,400</div><div style="font-size:9px;color:rgba(255,255,255,0.3)">10% on ₹34,000</div></div>
+              </div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.25);text-align:center;margin-top:8px">OTA loses ₹600 every time you save — zero incentive to build this</div>
+            </div>
+          </div>
+
+          <!-- Offline Agents -->
+          <div class="card" style="padding:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">Offline Travel Agents</div>
+              <div style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(239,68,68,0.08);color:#EF4444;font-weight:600">INCENTIVE: AGAINST YOU</div>
+            </div>
+            <p style="font-size:12px;color:var(--muted);line-height:1.65;">Offline agents earn commission the same way OTAs do — on gross booking value. Additionally, automating post-booking savings would make their role redundant. They have both a financial and existential reason to never build this.</p>
+          </div>
+
+          <!-- Hotels -->
+          <div class="card" style="padding:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">Hotels</div>
+              <div style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(239,68,68,0.08);color:#EF4444;font-weight:600">INCENTIVE: AGAINST YOU</div>
+            </div>
+            <p style="font-size:12px;color:var(--muted);line-height:1.65;">Hotels use yield management to maximise revenue per room. When a guest rebooks at a lower rate, the hotel earns less per night. They will never proactively alert travellers to price drops — their entire pricing strategy depends on travellers not noticing.</p>
+          </div>
+
+          <!-- Tech Startups -->
+          <div class="card" style="padding:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">New Tech Entrants</div>
+              <div style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(245,158,11,0.08);color:#F59E0B;font-weight:600">CANNOT BUILD IT</div>
+            </div>
+            <p style="font-size:12px;color:var(--muted);line-height:1.65;">Even a well-funded startup faces two walls: wholesale supplier API access requires years of established travel industry relationships — and a day-one audience of premium travellers. rebuq has both through Visa2Fly. A new entrant has neither.</p>
+          </div>
+        </div>
+
+        <!-- Bottom callout -->
+        <div class="card" style="padding:14px 20px;background:rgba(59,91,219,0.05);border:1px solid rgba(59,91,219,0.2)">
+          <div style="font-size:13px;color:var(--royal-blue);line-height:1.65;text-align:center;font-weight:500">rebuq is the only player in the travel chain whose revenue <strong>increases</strong> when the traveller saves more.<br>That alignment is the moat — and it cannot be replicated by anyone already inside the industry.</div>
+        </div>
+      </div>
+    </div>`
+  },
+  {
+    id:'gtm', title:'Go-To-Market', dark:false,
+    html:`<div class="slide light-slide" id="s_gtm">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">08</span><div class="nav-dash light"></div><span>GO-TO-MARKET</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="slide-body top-align">
+        <h2 class="slide-title" style="margin-bottom:6px">Zero paid acquisition.<br><span style="color:var(--royal-blue)">The audience already exists.</span></h2>
+        <p class="slide-sub" style="margin-bottom:24px">rebuq's distribution advantage is structural — not paid. Three channels that require zero cold outreach and near-zero CAC at launch.</p>
+
+        <div class="grid-3" style="margin-bottom:16px">
+
+          <!-- Channel 1: Visa2Fly -->
+          <div class="card" style="padding:24px;display:flex;flex-direction:column;justify-content:space-between">
+            <div>
+              <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:6px">Channel 01 · Live Now</div>
+              <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em">Visa2Fly Base</h3>
+              <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+              <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Aman's existing Visa2Fly customer base — premium Indian outbound travellers who already trust the brand, already book luxury hotels, and are already experiencing the exact problem rebuq solves. A single WhatsApp broadcast activates the first cohort.</p>
+              <ul class="bullets">
+                <li>Warm audience — zero cold outreach needed</li>
+                <li>Established trust — existing brand relationship</li>
+                <li>Day one activation — no ramp-up period</li>
+                <li>Zero CAC for the first 100+ profiles</li>
+              </ul>
+            </div>
+            <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:9px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">CAC</span>
+              <span style="font-size:15px;font-weight:700;color:var(--foreground)">₹0</span>
+            </div>
+          </div>
+
+          <!-- Channel 2: iXiGO -->
+          <div class="card" style="padding:24px;display:flex;flex-direction:column;justify-content:space-between">
+            <div>
+              <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:6px">Channel 02 · Phase 1</div>
+              <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em">iXiGO Partnership</h3>
+              <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+              <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Strategic partnership with iXiGO — one of India's largest travel platforms. A post-booking integration surfaces rebuq to millions of active Indian travellers at exactly the right moment — right after they confirm a hotel booking.</p>
+              <ul class="bullets">
+                <li>Distribution at scale — millions of active travellers</li>
+                <li>Post-booking trigger — perfect moment of relevance</li>
+                <li>Partnership-driven — no paid media required</li>
+                <li>Warm context — traveller just made a booking</li>
+              </ul>
+            </div>
+            <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:9px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Model</span>
+              <span style="font-size:15px;font-weight:700;color:var(--foreground)">Revenue share</span>
+            </div>
+          </div>
+
+          <!-- Channel 3: Organic -->
+          <div class="card" style="padding:24px;display:flex;flex-direction:column;justify-content:space-between">
+            <div>
+              <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:6px">Channel 03 · Ongoing</div>
+              <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em">Organic & Word of Mouth</h3>
+              <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+              <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Every traveller who saves ₹7,400 tells their network. Real savings stories shared in Indian travel WhatsApp groups, social media, and travel communities create organic pull that no paid campaign can replicate.</p>
+              <ul class="bullets">
+                <li>Product-led growth — savings are inherently shareable</li>
+                <li>WhatsApp travel communities — high-intent audience</li>
+                <li>Real savings proof — builds trust organically</li>
+                <li>Self-reinforcing loop — more savers = more referrals</li>
+              </ul>
+            </div>
+            <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:9px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">CAC</span>
+              <span style="font-size:15px;font-weight:700;color:var(--foreground)">Near zero</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom callout -->
+        <div class="card bg-card" style="padding:14px 24px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0">
+            <div class="mini-stat" style="padding-right:20px">
+              <div class="val" style="font-size:18px">₹0</div>
+              <div class="lbl">Paid acquisition budget — Phase 1</div>
+            </div>
+            <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">3 channels</div>
+              <div class="lbl">All partnership or referral driven</div>
+            </div>
+            <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">Day 1</div>
+              <div class="lbl">Visa2Fly cohort activates immediately</div>
+            </div>
+            <div class="mini-stat" style="padding-left:20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">₹7,400</div>
+              <div class="lbl">Avg saving per traveller — the best referral tool</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`,
+  },
+  {
+        id:'roadmap', title:'Roadmap', dark:false,
+    html:`<div class="slide light-slide" id="s9">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">09</span><div class="nav-dash light"></div><span>ROADMAP</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="slide-body top-align">
+        <h2 class="slide-title" style="margin-bottom:6px">36-Month Execution Plan</h2>
+        <p class="slide-sub" style="margin-bottom:24px">Both revenue streams are live. Seed capital funds the team and scale — not the product build.</p>
+
+        <div class="grid-3" style="margin-bottom:16px">
+
+          <!-- Phase 1 -->
+          <div class="card" style="padding:24px;display:flex;flex-direction:column;justify-content:space-between">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <span style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">Phase 1</span>
+                <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600">AUG–DEC 2026</span>
+              </div>
+              <h3 style="font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em">Validate the Core Loop</h3>
+              <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Both streams live. First paying cohort. Prove the model works at small scale before opening distribution.</p>
+              <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+              <ul class="bullets">
+                <li>Onboard first 100 active profiles via Visa2Fly — zero CAC</li>
+                <li>Post-booking tracker + WhatsApp alert flow fully operational</li>
+                <li>Exclusive Members Deals section live and transacting</li>
+                <li>iXiGO partnership signed and integration underway</li>
+                <li>Vision AI parsing accuracy validated above 99%</li>
+                <li>First 50+ real savings events delivered to travellers</li>
+              </ul>
+            </div>
+            <div style="margin-top:16px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+              <div style="padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em"><span>Revenue target</span><span>Bookings</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between">
+                <span style="font-size:16px;font-weight:700;color:var(--foreground)">₹28.4 Lakhs</span>
+                <span style="font-size:14px;font-weight:600;color:var(--muted)">1,575</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Phase 2 -->
+          <div class="card" style="padding:24px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid var(--royal-blue)">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <span style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">Phase 2</span>
+                <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600">JAN–DEC 2028</span>
+              </div>
+              <h3 style="font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em">Scale Both Streams</h3>
+              <p style="font-size:11px;color:var(--muted);margin-bottom:14px">iXiGO integration live. Members Deals driving Stream 2 revenue from Jan. CTO and Head of Supply operational.</p>
+              <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+              <ul class="bullets">
+                <li>iXiGO post-booking integration live — distribution at scale</li>
+                <li>Members-Only Deals fully open to all registered members</li>
+                <li>CTO hired — tech infrastructure scaled for volume</li>
+                <li>Head of Supply hired — supplier API network expanded</li>
+                <li>2,000+ active profiles under management</li>
+                <li>Both Stream 1 and Stream 2 running simultaneously</li>
+              </ul>
+            </div>
+            <div style="margin-top:16px;border:1px solid rgba(59,91,219,0.2);border-radius:8px;overflow:hidden">
+              <div style="padding:8px 12px;background:rgba(59,91,219,0.04);border-bottom:1px solid rgba(59,91,219,0.1);display:flex;justify-content:space-between;font-size:10px;color:var(--royal-blue);font-weight:600;text-transform:uppercase;letter-spacing:0.06em"><span>Revenue target</span><span>Bookings</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between">
+                <span style="font-size:16px;font-weight:700;color:var(--royal-blue)">₹5.43 Crore</span>
+                <span style="font-size:14px;font-weight:600;color:var(--royal-blue)">20,055</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Phase 3 -->
+          <div class="card" style="padding:24px;display:flex;flex-direction:column;justify-content:space-between">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <span style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">Phase 3</span>
+                <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600">JAN–DEC 2028</span>
+              </div>
+              <h3 style="font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em">Full Platform · Series A Ready</h3>
+              <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Platform fully automated at scale. New distribution partnerships. Series A fundraise initiated on the back of proven revenue model.</p>
+              <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+              <ul class="bullets">
+                <li>Expand distribution — new travel platform partnerships</li>
+                <li>Top 50 Indian outbound agencies onboarded</li>
+                <li>Members Deals catalogue expanded to 1M+ properties</li>
+                <li>20,000+ active profiles under management</li>
+                <li>Full automation — minimal manual intervention</li>
+                <li>Series A fundraise initiated — ₹16.86 Cr annual revenue</li>
+              </ul>
+            </div>
+            <div style="margin-top:16px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+              <div style="padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em"><span>Revenue target</span><span>Bookings</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between">
+                <span style="font-size:16px;font-weight:700;color:var(--foreground)">₹16.86 Crore</span>
+                <span style="font-size:14px;font-weight:600;color:var(--muted)">49,508</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="card bg-card" style="padding:14px 24px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0">
+            <div class="mini-stat" style="padding-right:20px">
+              <div class="val" style="font-size:18px">Live now</div>
+              <div class="lbl">Both streams built — seed funds scale not product</div>
+            </div>
+            <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">₹22.6 Cr</div>
+              <div class="lbl">3-year base case cumulative revenue</div>
+            </div>
+            <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">71,138</div>
+              <div class="lbl">Total bookings processed over 36 months</div>
+            </div>
+            <div class="mini-stat" style="padding-left:20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">Series A</div>
+              <div class="lbl">Target raise initiation — end of Year 3</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  },
+  {
+    id:'financials', title:'Financial Projections', dark:false,
+    html:`<div class="slide light-slide" id="s11">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">12</span><div class="nav-dash light"></div><span>FINANCIAL PROJECTIONS</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="slide-body top-align">
+        <h2 class="slide-title" style="font-size:32px;margin-bottom:4px">3-Year Revenue Projections</h2>
+        <p class="slide-sub" style="margin-bottom:20px">Base case: 15% avg price drop · 60%→65%→70% take-rate ramp · ₹40,000 avg booking · Go-live Aug 2026 · Two revenue streams</p>
+
+        <div class="grid-3" style="margin-bottom:16px">
+          <!-- Y1 -->
+          <div class="year-card">
+            <div class="stat-label">Year 1 · Aug–Dec 2026 <span style="font-weight:400;color:var(--muted)">(5 months)</span></div>
+            <div class="year-num">₹28.4 Lakhs</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Platform revenue · Both streams · Phase 1 validation</div>
+            <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
+            <div class="stat-label">Total bookings</div><div class="year-stat-val">1,575</div>
+            <div class="stat-label" style="margin-top:6px">Successful rebooks</div><div class="year-stat-val">788</div>
+            <div class="stat-label" style="margin-top:6px">Rev / booking (S1)</div><div class="year-stat-val">₹3,600 · Take 60%</div>
+            <div class="stat-label" style="margin-top:6px">GMV</div><div class="year-stat-val">₹6.3 Cr</div>
+          </div>
+
+          <!-- Y2 -->
+          <div class="year-card featured">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div class="stat-label">Year 2 · Jan–Dec 2027</div>
+              <span style="font-size:9px;background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:4px;font-weight:600">Target</span>
+            </div>
+            <div class="year-num">₹5.43 Crore</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:12px">S1 ₹3.99 Cr + S2 ₹1.44 Cr</div>
+            <div style="height:1px;background:rgba(255,255,255,0.2);margin-bottom:10px"></div>
+            <div class="stat-label">Total bookings</div><div class="year-stat-val">20,055</div>
+            <div class="stat-label" style="margin-top:6px">Direct bookings (S2)</div><div class="year-stat-val">3,006 · 15% mix</div>
+            <div class="stat-label" style="margin-top:6px">Blended rev / booking</div><div class="year-stat-val">₹2,709</div>
+            <div class="stat-label" style="margin-top:6px">GMV</div><div class="year-stat-val">₹80.2 Cr</div>
+          </div>
+
+          <!-- Y3 -->
+          <div class="year-card">
+            <div class="stat-label">Year 3 · Jan–Dec 2028</div>
+            <div class="year-num">₹16.86 Crore</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px">S1 ₹10.92 Cr + S2 ₹5.94 Cr</div>
+            <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
+            <div class="stat-label">Total bookings</div><div class="year-stat-val">49,508</div>
+            <div class="stat-label" style="margin-top:6px">Direct bookings (S2)</div><div class="year-stat-val">12,377 · 25% mix</div>
+            <div class="stat-label" style="margin-top:6px">Blended rev / booking</div><div class="year-stat-val">₹3,405</div>
+            <div class="stat-label" style="margin-top:6px">GMV</div><div class="year-stat-val">₹198 Cr</div>
+          </div>
+        </div>
+
+        <!-- 3-year summary -->
+        <div class="card bg-card" style="padding:16px 24px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">3-Year Cumulative — Bear ₹16.7 Cr · <span style="color:var(--royal-blue)">Base ₹22.6 Cr</span> · Bull ₹29.0 Cr</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0">
+            <div style="padding-right:20px">
+              <div style="font-size:20px;font-weight:700;color:var(--royal-blue)">₹22.6 Cr</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">Total rebuq revenue · base case</div>
+            </div>
+            <div style="padding:0 20px;border-left:1px solid var(--border)">
+              <div style="font-size:20px;font-weight:700;color:var(--foreground)">₹284.5 Cr</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">Total GMV — all sales processed</div>
+            </div>
+            <div style="padding:0 20px;border-left:1px solid var(--border)">
+              <div style="font-size:20px;font-weight:700;color:var(--foreground)">71,138</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">Total bookings processed · 3 years</div>
+            </div>
+            <div style="padding-left:20px;border-left:1px solid var(--border)">
+              <div style="font-size:20px;font-weight:700;color:#166534">₹14.4 Cr</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">Total traveller savings · base case</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  },
+  {
+    id:'leadership', title:'Leadership', dark:false,
+    html:`<div class="slide light-slide" id="s10">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">10</span><div class="nav-dash light"></div><span>LEADERSHIP</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="slide-body top-align">
+        <h2 class="slide-title">Founding Team</h2>
+        <p class="slide-sub" style="margin-bottom:20px">Domain expertise, industry relationships, and first-hand knowledge of the problem</p>
+
+        <!-- Top row: Aman + 2 Advisors -->
+        <div class="grid-3" style="margin-bottom:14px">
+
+          <!-- Aman -->
+          <div class="card" style="padding:22px;border-top:3px solid var(--royal-blue)">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+              <div style="width:44px;height:44px;border-radius:10px;background:var(--royal-blue);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">AS</div>
+              <div>
+                <div style="font-size:15px;font-weight:700;color:var(--foreground)">Aman Sharma</div>
+                <div style="font-size:11px;color:var(--muted)">Founder & CEO · SVP, Visa2Fly</div>
+              </div>
+            </div>
+            <div style="font-size:9px;padding:2px 10px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600;display:inline-block;margin-bottom:12px">FOUNDER</div>
+            <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Built and scaled Visa2Fly — an established Indian outbound travel platform — giving rebuq direct access to the premium traveller segment from day one. Deep expertise across luxury travel distribution, wholesale supplier networks, and the exact problem rebuq solves.</p>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <span class="pill" style="font-size:10px">Visa2Fly SVP</span>
+              <span class="pill" style="font-size:10px">Travel Distribution</span>
+              <span class="pill" style="font-size:10px">Wholesale Networks</span>
+              <span class="pill" style="font-size:10px">HNI Sales</span>
+            </div>
+          </div>
+
+          <!-- Vijayendra -->
+          <div class="card" style="padding:22px;border-top:3px solid var(--royal-blue)">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+              <div style="width:44px;height:44px;border-radius:10px;background:rgba(59,91,219,0.08);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--royal-blue);flex-shrink:0">VB</div>
+              <div>
+                <div style="font-size:15px;font-weight:700;color:var(--foreground)">Vijayendra Bawa</div>
+                <div style="font-size:11px;color:var(--muted)">Strategic Advisor</div>
+              </div>
+            </div>
+            <div style="font-size:9px;padding:2px 10px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600;display:inline-block;margin-bottom:12px">STRATEGIC ADVISOR</div>
+            <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">CEO, Visa2Fly · Ex iXiGO · Ex MobiKwik. Deep expertise across Indian travel distribution, consumer fintech, and scaling digital platforms in the Indian market.</p>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <span class="pill" style="font-size:10px">CEO Visa2Fly</span>
+              <span class="pill" style="font-size:10px">Ex iXiGO</span>
+              <span class="pill" style="font-size:10px">Ex MobiKwik</span>
+            </div>
+          </div>
+
+          <!-- Deepak -->
+          <div class="card" style="padding:22px;border-top:3px solid var(--royal-blue)">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+              <div style="width:44px;height:44px;border-radius:10px;background:rgba(59,91,219,0.08);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--royal-blue);flex-shrink:0">DN</div>
+              <div>
+                <div style="font-size:15px;font-weight:700;color:var(--foreground)">Deepak Narula</div>
+                <div style="font-size:11px;color:var(--muted)">Strategic Advisor</div>
+              </div>
+            </div>
+            <div style="font-size:9px;padding:2px 10px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600;display:inline-block;margin-bottom:12px">STRATEGIC ADVISOR</div>
+            <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Founder, GRNConnect.com — one of Asia's largest wholesale hotel distribution networks. Direct supply-side relationship giving rebuq access to net rates unavailable on any consumer platform.</p>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <span class="pill" style="font-size:10px">Founder GRNConnect</span>
+              <span class="pill" style="font-size:10px">Wholesale Supply</span>
+              <span class="pill" style="font-size:10px">Hotel Networks</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom row: 2 hiring cards -->
+        <div style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Open Roles</div>
+        <div class="grid-2" style="gap:14px">
+          <div class="card" style="padding:18px;background:var(--bg);display:flex;align-items:start;gap:14px">
+            <div style="width:40px;height:40px;border-radius:10px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--muted);flex-shrink:0">?</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--muted)">CTO / Tech Lead</div>
+              <div style="font-size:9px;padding:2px 8px;border-radius:4px;background:var(--border);color:var(--muted);font-weight:600;display:inline-block;margin:4px 0 8px">CURRENTLY HIRING</div>
+              <div style="font-size:11px;color:var(--muted);line-height:1.6">End-to-end technical ownership — Vision LLM pipeline, 50+ supplier API integrations, Twilio WhatsApp automation, traveller dashboard.</div>
+            </div>
+          </div>
+          <div class="card" style="padding:18px;background:var(--bg);display:flex;align-items:start;gap:14px">
+            <div style="width:40px;height:40px;border-radius:10px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--muted);flex-shrink:0">?</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--muted)">Head of Supply & Growth</div>
+              <div style="font-size:9px;padding:2px 8px;border-radius:4px;background:var(--border);color:var(--muted);font-weight:600;display:inline-block;margin:4px 0 8px">CURRENTLY HIRING</div>
+              <div style="font-size:11px;color:var(--muted);line-height:1.6">Manage and expand the wholesale supplier network, drive distribution partnerships and scale the members-only deals pipeline.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  },
+  {
+    id:'ask', title:'The Ask', dark:false,
+    html:`<div class="slide light-slide" id="s12">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">12</span><div class="nav-dash light"></div><span>THE ASK</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="slide-body top-align">
+        <h2 class="slide-title" style="margin-bottom:6px">Seed Investment Request</h2>
+        <p class="slide-sub" style="margin-bottom:24px">The product is built. Both streams are live. This raise funds the team and scale — not the build.</p>
+
+        <div class="split-wide" style="gap:32px;align-items:start">
+
+          <!-- LEFT -->
+          <div style="display:flex;flex-direction:column;gap:16px">
+
+            <!-- Amount -->
+            <div class="card" style="padding:22px">
+              <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Raising</div>
+              <div style="font-size:48px;font-weight:800;color:var(--foreground);letter-spacing:-0.03em;line-height:1">₹1.5 <span style="font-size:28px">Crore</span></div>
+              <div style="font-size:12px;color:var(--muted);margin-top:6px">Series Seed — 2026 Institutional Round</div>
+              <div style="height:1px;background:var(--border);margin:14px 0"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div><div style="font-size:18px;font-weight:700;color:var(--foreground)">19 months</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Full runway at ₹7.75L/month burn</div></div>
+                <div><div style="font-size:18px;font-weight:700;color:var(--foreground)">Phase 1+2</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Covers validation and scale phases</div></div>
+              </div>
+            </div>
+
+            <!-- Milestone -->
+            <div class="card" style="padding:22px;background:rgba(59,91,219,0.04);border:1px solid rgba(59,91,219,0.15)">
+              <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:12px">What This Unlocks</div>
+              ${[
+                ['1,575 bookings', 'Phase 1 target — both streams validated'],
+                ['iXiGO live', 'Distribution partnership operational'],
+                ['2 key hires', 'CTO + Head of Supply onboarded'],
+                ['Series A ready', 'End of Phase 2 — ₹5.43 Cr annual revenue'],
+              ].map(m => `
+              <div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--royal-blue);flex-shrink:0;margin-top:5px"></div>
+                <div><div style="font-size:12px;font-weight:600;color:var(--foreground)">${m[0]}</div><div style="font-size:11px;color:var(--muted)">${m[1]}</div></div>
+              </div>`).join('')}
+            </div>
+          </div>
+
+          <!-- RIGHT: Capital allocation -->
+          <div class="card" style="padding:22px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:16px">Capital Allocation — Monthly Burn ₹7.75 Lakhs</div>
+
+            ${[
+              { label: 'Salaries', sub: 'CTO, Head of Supply + existing team', amount: '₹6,00,000', pct: 77, color: 'var(--royal-blue)' },
+              { label: 'GTM Spend', sub: 'Visa2Fly activation, iXiGO integration, community', amount: '₹1,00,000', pct: 13, color: '#6B7AE8' },
+              { label: 'Infrastructure & Tech', sub: 'Cloud, APIs, Twilio, Anthropic, monitoring', amount: '₹50,000', pct: 6, color: '#9BA8F0' },
+              { label: 'Legal & Compliance', sub: 'Structuring, data privacy, contracts', amount: '₹25,000', pct: 3, color: '#C5CCFA' },
+            ].map(item => `
+            <div style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--foreground)">${item.label}</div>
+                  <div style="font-size:10px;color:var(--muted)">${item.sub}</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:13px;font-weight:700;color:var(--foreground)">${item.amount}</div>
+                  <div style="font-size:10px;color:var(--muted)">${item.pct}%</div>
+                </div>
+              </div>
+              <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden">
+                <div style="height:100%;width:${item.pct}%;background:${item.color};border-radius:3px"></div>
+              </div>
+            </div>`).join('')}
+
+            <div style="height:1px;background:var(--border);margin:16px 0"></div>
+
+            <!-- Stacked bar -->
+            <div style="height:10px;border-radius:5px;overflow:hidden;display:flex;margin-bottom:10px">
+              <div style="width:77%;background:var(--royal-blue)"></div>
+              <div style="width:13%;background:#6B7AE8"></div>
+              <div style="width:6%;background:#9BA8F0"></div>
+              <div style="width:4%;background:#C5CCFA"></div>
+            </div>
+
+            <div style="background:var(--bg);border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center">
+              <div style="font-size:12px;color:var(--muted)">Total monthly burn</div>
+              <div style="font-size:16px;font-weight:700;color:var(--foreground)">₹7,75,000 / month</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  },
+  {
+    id:'closing', title:'Closing', dark:false,
+    html:`<div class="slide light-slide" id="s13">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">13</span><div class="nav-dash light"></div><span>CLOSING</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="slide-body" style="justify-content:center;align-items:center;text-align:center">
+        <div style="max-width:680px;display:flex;flex-direction:column;align-items:center;gap:20px">
+          <div style="width:48px;height:2px;background:var(--royal-blue)"></div>
+          <h2 style="font-size:clamp(24px,3vw,38px);font-weight:700;color:var(--foreground);line-height:1.3;letter-spacing:-0.02em">
+            The problem is structural.<br>The timing is right.<br><span style="color:var(--royal-blue)">The product is live.</span>
+          </h2>
+          <p style="font-size:14px;color:var(--muted);line-height:1.7;max-width:520px">Every premium traveller overpays. Every OTA profits from it. rebuq is the only platform built to return that money to the traveller — and earn from doing so.</p>
+          <div style="width:48px;height:2px;background:var(--royal-blue)"></div>
+          <div>
+            <div style="font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Get in touch</div>
+            <div style="font-size:18px;font-weight:600;color:var(--royal-blue)">hello@rebuq.com · rebuq.com</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">Aman Sharma · Founder & CEO</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:center">
+            <a href="https://www.rebuq.com" target="_blank" style="padding:12px 24px;background:var(--royal-blue);color:#fff;border:none;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block">Visit rebuq.com</a>
+            <button onclick="window.goTo(0)" style="padding:12px 24px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:24px;font-size:13px;font-weight:500;cursor:pointer">Back to start</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;border-top:1px solid var(--border);padding-top:20px;width:100%;margin-top:10px">
+            ${[['₹22.6 Cr','3-year revenue'],['71,138','Total bookings'],['₹284.5 Cr','Total GMV'],['₹14.4 Cr','Traveller savings']].map((s,i)=>`
+            <div style="${i>0?'border-left:1px solid var(--border);padding-left:20px;':'padding-right:20px;'}">
+              <div style="font-size:20px;font-weight:700;color:var(--royal-blue)">${s[0]}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px">${s[1]}</div>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`
+  }
+];
+
+const TOTAL = SLIDES.length;
+let current = 0;
+let transitioning = false;
+
+const viewport = document.getElementById('viewport');
+const pFill = document.getElementById('pFill');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const dotNav = document.getElementById('dotNav');
+const bottomNav = document.getElementById('bottomNav');
+const slideId = document.getElementById('slideId');
+const brandLabel = document.getElementById('brandLabel');
+
+// Build slides
+SLIDES.forEach((s,i)=>{
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = s.html;
+  const el = wrapper.firstElementChild;
+  el.classList.remove('active');
+  el.classList.add(i===0?'active':'hidden-next');
+  el.id = 's'+i;
+  viewport.appendChild(el);
+});
+
+// Build dots
+SLIDES.forEach((_,i)=>{
+  const d = document.createElement('button');
+  d.className = 'dot '+(i===0?'active':'inactive-dark');
+  d.onclick = ()=>goTo(i);
+  dotNav.appendChild(d);
+});
+
+function updateNav(){
+  const dark = SLIDES[current].dark;
+  // bottom nav
+  bottomNav.className = 'bottom-nav '+(dark?'dark-nav':'light-nav');
+  brandLabel.className = 'brand-label '+(dark?'dark-text':'light-text');
+  slideId.className = 'slide-id '+(dark?'dark-text':'light-text');
+  slideId.textContent = String(current+1).padStart(2,'0')+' — '+SLIDES[current].title;
+  // progress
+  pFill.style.width = ((current+1)/TOTAL*100)+'%';
+  // prev btn
+  prevBtn.disabled = current===0;
+  var mb=document.getElementById('modeBtn');if(mb)mb.className='mode-btn '+(dark?'':'light-mode-btn');
+  prevBtn.className = 'arrow-btn '+(dark?'prev-dark':'prev-light');
+  // next btn
+  nextBtn.disabled = current===TOTAL-1;
+  // dots
+  const isDark = dark;
+  document.querySelectorAll('.dot').forEach((d,i)=>{
+    d.className = 'dot '+(i===current?'active':(isDark?'inactive-dark':'inactive-light'));
+  });
+}
+
+function goTo(n){
+  if(transitioning||n===current||n<0||n>=TOTAL) return;
+  transitioning = true;
+  const dir = n>current?'next':'prev';
+  const old = document.getElementById('s'+current);
+  const neo = document.getElementById('s'+n);
+  old.classList.remove('active');
+  old.classList.add(dir==='next'?'hidden-prev':'hidden-next');
+  neo.classList.remove('hidden-next','hidden-prev');
+  neo.classList.add('active');
+  current = n;
+  updateNav();
+  updateNavLinks();
+  setTimeout(()=>{ transitioning=false; },380);
+}
+
+window.nav = function(d){ goTo(current+d); }
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){e.preventDefault();goTo(current+1)}
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();goTo(current-1)}
+});
+
+let ty=0;
+document.addEventListener('touchstart',e=>{ty=e.touches[0].clientY},{passive:true});
+document.addEventListener('touchend',e=>{
+  const dy=ty-e.changedTouches[0].clientY;
+  if(Math.abs(dy)>50) goTo(current+(dy>0?1:-1));
+},{passive:true});
+
+
+let scrollMode=false;
+function toggleScroll(){
+  scrollMode=!scrollMode;
+  const btn=document.getElementById('modeBtn');
+  const vp=document.querySelector('.slide-viewport');
+  document.body.classList.toggle('scroll-mode',scrollMode);
+  if(scrollMode){
+    btn.textContent='⇔ Slides';
+    document.querySelectorAll('.slide').forEach(function(s){s.classList.remove('hidden-next','hidden-prev');s.classList.add('active');});
+    vp.style.overflowY='auto';
+  } else {
+    btn.textContent='⇕ Scroll';
+    vp.style.overflowY='hidden';
+    document.querySelectorAll('.slide').forEach(function(s,i){
+      s.classList.remove('active','hidden-next','hidden-prev');
+      if(i===current){s.classList.add('active');}
+      else if(i<current){s.classList.add('hidden-prev');}
+      else{s.classList.add('hidden-next');}
+    });
+  }
+}
+
+function jumpTo(n){ window.goTo(n); }
+
+function updateNavLinks(){
+  const map = {1:'Problem',2:'Solution',4:'Market',11:'Financials',12:'Team'};
+  document.querySelectorAll('.wn-link').forEach(function(btn){
+    btn.classList.remove('active');
+  });
+  var links = document.querySelectorAll('.wn-link');
+  links.forEach(function(btn, i){
+    var targets = [1,2,4,11,12];
+    if(targets[i] === current) btn.classList.add('active');
+  });
+}
+updateNav();
+updateNavLinks();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').then(function(reg) {
+      console.log('SW registered');
+    }).catch(function(err) {
+      console.log('SW registration failed:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
