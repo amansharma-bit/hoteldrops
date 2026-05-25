@@ -50,10 +50,12 @@ const EXTRACTION_PROMPT = `You are a hotel booking voucher parser for rebuq, an 
 Extract ALL fields below from this hotel booking confirmation/voucher.
 Respond ONLY with a valid JSON object. No markdown, no code fences, no explanation.
 
-PRICING RULES:
-- "original_price" = price per room per night BEFORE taxes if shown separately
-- "total_price_paid" = TOTAL the customer actually paid (all rooms × all nights + ALL taxes + GST)
-- If only one total is shown, put it in both fields
+PRICING RULES (critical — read carefully):
+- "total_price_paid" = the FINAL amount customer actually pays — AFTER all discounts and savings
+- If voucher shows "You saved X" or a crossed-out higher price, IGNORE that higher number completely
+- The LOWER final amount = total_price_paid. Example: shows INR 24441 then INR 20519 → use 20519
+- "original_price" = same as total_price_paid (never use the pre-discount or crossed-out price)
+- If only one price shown, use it for both fields
 - Convert non-INR: EUR=112, USD=84, GBP=107, AED=22.8, THB=2.3, SGD=62
 - Always output prices in INR as plain numbers
 
