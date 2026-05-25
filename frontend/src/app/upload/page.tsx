@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useRouter } from 'next/navigation'
 
@@ -52,14 +52,15 @@ const EXTRACTION_PROMPT = `You are a hotel booking voucher parser for rebuq, an 
 Extract ALL fields below from this hotel booking confirmation/voucher.
 Respond ONLY with a valid JSON object. No markdown, no code fences, no explanation.
 
-PRICING RULES (critical — read carefully):
-- "total_price_paid" = the FINAL amount customer actually pays — AFTER all discounts and savings
-- If voucher shows "You saved X" or a crossed-out higher price, IGNORE that higher number completely
-- The LOWER final amount = total_price_paid. Example: shows INR 24441 then INR 20519 → use 20519
-- "original_price" = same as total_price_paid (never use the pre-discount or crossed-out price)
-- If only one price shown, use it for both fields
-- Convert non-INR: EUR=112, USD=84, GBP=107, AED=22.8, THB=2.3, SGD=62
-- Always output prices in INR as plain numbers
+PRICING RULES (critical):
+- "total_price_paid" = FINAL amount customer pays AFTER all discounts
+- Ignore "You saved X" or crossed-out prices — use the LOWER final amount
+- Example: shows INR 24441 then INR 20519 → total_price_paid = 20519
+- ALWAYS identify the currency first (AMD, AED, EUR, USD, etc.)
+- Convert ALL non-INR to INR: EUR=112, USD=84, GBP=107, AED=22.8, THB=2.3, AMD=0.21, MYR=18, JPY=0.56, OMR=218, SAR=22.4, QAR=23.1, NPR=0.63
+- AMD example: AMD 140000 × 0.21 = INR 29400
+- Set currency_original to the ORIGINAL currency code on the voucher (e.g. "AMD", "AED")
+- Always output final prices as plain INR numbers
 
 CHILDREN AGE RULES:
 - List each child's age: [4, 7]. If ages not stated: [null, null]. Empty [] if no children.
@@ -96,8 +97,17 @@ BOARD BASIS: RO=Room Only, BB=Bed & Breakfast, HB=Half Board, FB=Full Board, AI=
   "booking_reference": "PNR/ref number or null",
   "cancellation_policy": "free|partial|non-refundable|unknown",
   "cancellation_deadline": "YYYY-MM-DD or null",
-  "cancellation_penalty": number or null
-}`
+  "cancellation_penalty": number or null,
+  "payment_type": "pay_now|pay_at_property|partial_payment",
+  "amount_paid_upfront": 0
+}
+
+PAYMENT TYPE — look for these exact phrases:
+- pay_at_property: "payment must be collected by the property", "pay at the property", "payment for this booking has not been collected", "you will pay [amount] to the property on check-in", "collected by the property", "Payment for this booking must be collected by the property"
+- pay_now: full amount already charged to card
+- partial_payment: deposit paid, rest due later
+- For pay_at_property: amount_paid_upfront = 0, but total_price_paid = full INR equivalent
+- The Remarks section often states "You will pay AMD/AED/EUR X to the property" — this is the total`
 
 const BOARD_OPTIONS = [
   { code: 'RO', label: 'Room Only' },
@@ -144,6 +154,7 @@ export default function UploadPage() {
   const [email,       setEmail]       = useState('')
   const [menuOpen,    setMenuOpen]    = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const f = acceptedFiles[0]
@@ -198,7 +209,12 @@ export default function UploadPage() {
       const parsed = JSON.parse(text)
 
       // Currency conversion
-      const RATES: Record<string, number> = { EUR: 112, USD: 84, GBP: 107, AED: 22.8, THB: 2.3, SGD: 62 }
+      const RATES: Record<string, number> = {
+        EUR: 112, USD: 84, GBP: 107, AED: 22.8, THB: 2.3, SGD: 62,
+        AMD: 0.21, MYR: 18, IDR: 0.005, JPY: 0.56, KRW: 0.063,
+        TRY: 2.5, SAR: 22.4, OMR: 218, BHD: 223, QAR: 23.1,
+        MXN: 4.2, ZAR: 4.5, EGP: 1.7, NPR: 0.63, LKR: 0.26, MUR: 1.9,
+      }
       const rate = RATES[parsed.currency_original] || 1
       if (parsed.currency_original && parsed.currency_original !== 'INR' && rate !== 1) {
         if (parsed.original_price)        parsed.original_price        = Math.round(parsed.original_price        * rate)
@@ -384,7 +400,7 @@ export default function UploadPage() {
                   <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>PDF, screenshot or confirmation email</div>
 
                   <div {...getRootProps()} style={{ border: `2px dashed ${dragActive ? B : file ? '#86efac' : '#bfdbfe'}`, borderRadius: 12, padding: '28px 16px', textAlign: 'center' as const, cursor: 'pointer', background: dragActive ? '#eff6ff' : file ? '#f0fdf4' : '#f8fbff', transition: 'all 0.2s', marginBottom: 14 }}>
-                    <input {...getInputProps()} id="voucher-file-input" />
+                    <input {...getInputProps()} ref={fileInputRef} style={{ display: 'none' }} />
                     {file ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                         <div style={{ width: 44, height: 44, background: '#dcfce7', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>✓</div>
@@ -400,7 +416,7 @@ export default function UploadPage() {
                         <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>Drag & drop your voucher here</div>
                         <div style={{ fontSize: 12, color: '#64748b' }}>Any hotel confirmation — all major booking platforms</div>
                         <div style={{ fontSize: 12, color: '#cbd5e1', margin: '4px 0' }}>— or —</div>
-                        <label htmlFor="voucher-file-input" style={{ background: B, color: '#fff', fontSize: 13, fontWeight: 600, padding: '8px 20px', borderRadius: 8, cursor: 'pointer', border: 'none', fontFamily: 'inherit', display: 'inline-block' }}>Browse file</label>
+                        <button onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }} style={{ background: B, color: '#fff', fontSize: 13, fontWeight: 600, padding: '8px 20px', borderRadius: 8, cursor: 'pointer', border: 'none', fontFamily: 'inherit' }}>Browse file</button>
                       </div>
                     )}
                   </div>
@@ -619,11 +635,23 @@ export default function UploadPage() {
               {/* ── Pricing ───────────────────────────────────────────── */}
               <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #e2e8f0', padding: 24, marginBottom: 16 }}>
                 <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 18 }}>💳 Pricing</div>
+                {extracted.currency_original && extracted.currency_original !== 'INR' && (
+                  <div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span>💱</span>
+                    <span>Original currency: <strong>{extracted.currency_original}</strong> — converted to INR automatically. Please verify the amount.</span>
+                  </div>
+                )}
+                {extracted.payment_type === 'pay_at_property' && (
+                  <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: '#166534', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span>🏨</span>
+                    <span><strong>Pay at property</strong> — nothing charged now. Full amount due at hotel on arrival.</span>
+                  </div>
+                )}
                 <div style={grid2}>
                   <div>
-                    <label style={lbl}>Total price paid (₹) *</label>
+                    <label style={lbl}>{extracted.payment_type === 'pay_at_property' ? 'Total due at hotel (₹) *' : 'Total price paid (₹) *'}</label>
                     <input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: parseFloat(e.target.value), original_price: parseFloat(e.target.value) })} placeholder="e.g. 85000" />
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>All rooms · all nights · incl. taxes</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{extracted.payment_type === 'pay_at_property' ? 'Not charged yet — pay at hotel' : 'All rooms · all nights · incl. taxes'}</div>
                   </div>
                   <div>
                     <label style={lbl}>Price per night (₹)</label>
