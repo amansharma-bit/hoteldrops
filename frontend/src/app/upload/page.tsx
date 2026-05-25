@@ -381,7 +381,7 @@ export default function UploadPage() {
                   <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>PDF, screenshot or confirmation email</div>
 
                   <div {...getRootProps()} style={{ border: `2px dashed ${dragActive ? B : file ? '#86efac' : '#bfdbfe'}`, borderRadius: 12, padding: '28px 16px', textAlign: 'center' as const, cursor: 'pointer', background: dragActive ? '#eff6ff' : file ? '#f0fdf4' : '#f8fbff', transition: 'all 0.2s', marginBottom: 14 }}>
-                    <input {...getInputProps()} />
+                    <input {...getInputProps()} id="voucher-file-input" />
                     {file ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                         <div style={{ width: 44, height: 44, background: '#dcfce7', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>✓</div>
@@ -397,7 +397,7 @@ export default function UploadPage() {
                         <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>Drag & drop your voucher here</div>
                         <div style={{ fontSize: 12, color: '#64748b' }}>Any hotel confirmation — all major booking platforms</div>
                         <div style={{ fontSize: 12, color: '#cbd5e1', margin: '4px 0' }}>— or —</div>
-                        <button onClick={e => e.stopPropagation()} style={{ background: B, color: '#fff', fontSize: 13, fontWeight: 600, padding: '8px 20px', borderRadius: 8, cursor: 'pointer', border: 'none', fontFamily: 'inherit' }}>Browse file</button>
+                        <label htmlFor="voucher-file-input" style={{ background: B, color: '#fff', fontSize: 13, fontWeight: 600, padding: '8px 20px', borderRadius: 8, cursor: 'pointer', border: 'none', fontFamily: 'inherit', display: 'inline-block' }}>Browse file</label>
                       </div>
                     )}
                   </div>
@@ -440,6 +440,18 @@ export default function UploadPage() {
                   <div style={{ fontSize: 12.5, color: '#64748b', lineHeight: 1.6 }}>{f.text}</div>
                 </div>
               ))}
+            </div>
+
+            {/* ── Exclusive deals banner ─────────────────────────────── */}
+            <div style={{ maxWidth: 1000, margin: '32px auto 0', background: 'linear-gradient(135deg, #0f172a 0%, #1447b8 100%)', borderRadius: 16, padding: isMobile ? '28px 20px' : '32px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: 20 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>Members only</div>
+                <div className="sora" style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: '#fff', marginBottom: 6 }}>Browse exclusive hotel deals</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6 }}>Pre-negotiated rates only available to rebuq members — up to 40% below OTA prices.</div>
+              </div>
+              <button onClick={() => router.push('/search-hotels')} style={{ background: '#FCD34D', color: NAVY, border: 'none', borderRadius: 10, padding: '13px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>
+                Browse deals →
+              </button>
             </div>
           </div>
         </>
