@@ -26,10 +26,10 @@ router.post('/whatsapp-reply', async (req, res) => {
     console.log(`📱 WhatsApp reply from ${phone}: "${Body}"`)
 
     // ── Find user by phone ──────────────────────────────────────────────────
-    const { data: booking: bookingWithPhone } = await supabase
+    const { data: bookingWithPhone } = await supabase
       .from('bookings')
       .select('*')
-      .ilike('phone', `%${phone.slice(-10)}%`)  // match last 10 digits
+      .ilike('phone', `%${phone.slice(-10)}%`)
       .in('status', ['tracking', 'drop_found', 'offer_sent'])
       .order('created_at', { ascending: false })
       .limit(1)
