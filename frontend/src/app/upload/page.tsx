@@ -42,6 +42,8 @@ interface ExtractedData {
   cancellation_policy:   string
   cancellation_deadline: string
   cancellation_penalty:  number | null
+  payment_type:          string  // 'pay_now' | 'pay_at_property' | 'partial_payment'
+  amount_paid_upfront:   number  // 0 if pay at property
 }
 
 // ── Claude extraction prompt (full version matching backend) ─────────────────
@@ -124,6 +126,7 @@ const emptyExtracted = (): ExtractedData => ({
   original_price: 0, total_price_paid: 0, price_per_night: 0, currency_original: 'INR',
   ota_name: '', booking_reference: '',
   cancellation_policy: 'unknown', cancellation_deadline: '', cancellation_penalty: null,
+  payment_type: 'pay_now', amount_paid_upfront: 0,
 })
 
 export default function UploadPage() {
@@ -458,43 +461,94 @@ export default function UploadPage() {
       )}
 
       {/* ════════════════════════════════════════════════════════
-          BLOCKED — Non-refundable booking
+          BLOCKED — Non-refundable booking (rebuq blue theme)
       ════════════════════════════════════════════════════════ */}
       {step === 'blocked' && extracted && (
         <>
-          <div style={{ background: '#7f1d1d', padding: isMobile ? '40px 20px' : '64px 40px' }}>
-            <div style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center' as const }}>
-              <div style={{ width: 72, height: 72, background: 'rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, margin: '0 auto 24px' }}>❌</div>
-              <h1 className="sora" style={{ fontSize: isMobile ? 28 : 38, fontWeight: 800, color: '#fff', lineHeight: 1.2, marginBottom: 16 }}>
-                This booking is non-refundable
+          {/* Hero */}
+          <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1447b8 100%)', padding: isMobile ? '48px 20px' : '72px 40px' }}>
+            <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center' as const }}>
+              <div style={{ width: 80, height: 80, background: 'rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, margin: '0 auto 28px', border: '2px solid rgba(255,255,255,0.2)' }}>🔒</div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '5px 14px', borderRadius: 100, fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 20, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
+                Non-refundable booking detected
+              </div>
+              <h1 className="sora" style={{ fontSize: isMobile ? 28 : 42, fontWeight: 800, color: '#fff', lineHeight: 1.15, marginBottom: 16 }}>
+                We can&apos;t track this one —<br />
+                <span style={{ color: '#FCD34D' }}>but here&apos;s what to do next</span>
               </h1>
-              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, marginBottom: 32 }}>
-                rebuq can only help with <strong style={{ color: '#fff' }}>refundable or partially-refundable</strong> bookings — because even if we find a lower price, you&apos;d need to cancel and rebook to save money.
+              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.7)', lineHeight: 1.8, maxWidth: 520, margin: '0 auto' }}>
+                rebuq works by finding a lower price and helping you rebook. With a non-refundable booking, even if the price drops, you can&apos;t cancel — so there&apos;s nothing to save.
               </p>
-              <div style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 16, padding: '24px', marginBottom: 32, textAlign: 'left' as const }}>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 12, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Your booking</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{extracted.hotel_name}</div>
-                <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', marginBottom: 12 }}>📍 {extracted.hotel_city} &nbsp;·&nbsp; {extracted.check_in} → {extracted.check_out}</div>
-                {extracted.room_type && <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', marginBottom: 8 }}>🛏️ {extracted.room_type}</div>}
-                {extracted.board_basis_label && <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', marginBottom: 8 }}>🍽️ {extracted.board_basis_label}</div>}
+            </div>
+          </div>
+
+          {/* Booking card + advice */}
+          <div style={{ background: '#f8fafc', padding: isMobile ? '32px 20px' : '48px 40px' }}>
+            <div style={{ maxWidth: 680, margin: '0 auto' }}>
+
+              {/* Booking summary card */}
+              <div style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #e2e8f0', padding: 24, marginBottom: 20, boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: '#64748b', marginBottom: 16 }}>Your booking</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>{extracted.hotel_name}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  {[
+                    { icon: '📍', label: 'City', value: extracted.hotel_city },
+                    { icon: '📅', label: 'Dates', value: `${extracted.check_in} → ${extracted.check_out}` },
+                    { icon: '🛏️', label: 'Room', value: extracted.room_type || 'Standard Room' },
+                    { icon: '🍽️', label: 'Meals', value: extracted.board_basis_label || 'Room Only' },
+                  ].map((item, i) => (
+                    <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px' }}>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>{item.icon} {item.label}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
                 {extracted.total_price_paid > 0 && (
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#fca5a5', marginTop: 12 }}>
-                    💳 Total paid: ₹{extracted.total_price_paid.toLocaleString('en-IN')}
+                  <div style={{ background: 'linear-gradient(135deg, #0f172a, #1447b8)', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>💳 Total paid</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: '#FCD34D' }}>₹{extracted.total_price_paid.toLocaleString('en-IN')}</span>
                   </div>
                 )}
               </div>
-              <div style={{ background: 'rgba(252,211,77,0.1)', border: '1px solid rgba(252,211,77,0.3)', borderRadius: 12, padding: '16px 20px', marginBottom: 32, textAlign: 'left' as const }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#FCD34D', marginBottom: 8 }}>💡 Next time, book a flexible rate</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.7 }}>
-                  Flexible rates often cost only a little more upfront — but rebuq regularly finds drops that save ₹10,000–₹40,000. The flexible rate pays for itself many times over.
+
+              {/* Tip card */}
+              <div style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #bfdbfe', padding: 24, marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  <div style={{ width: 36, height: 36, background: '#eff6ff', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>💡</div>
+                  <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Next time, book a flexible rate</div>
+                </div>
+                <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, marginBottom: 16 }}>
+                  Flexible rates often cost only a little more upfront — but rebuq regularly finds drops that save <strong style={{ color: '#1447b8' }}>₹10,000–₹40,000</strong>. The savings far outweigh the small premium.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {[
+                    { icon: '✅', text: 'Cancel anytime for free' },
+                    { icon: '💰', text: 'rebuq can find price drops' },
+                    { icon: '🔄', text: 'Rebook if price drops' },
+                    { icon: '🎯', text: 'Avg saving: ₹24,000' },
+                  ].map((item, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#475569' }}>
+                      <span>{item.icon}</span>{item.text}
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' as const }}>
-                <button onClick={() => { setStep(1); setFile(null); setExtracted(null) }} style={{ background: '#fff', color: '#7f1d1d', border: 'none', padding: '13px 28px', borderRadius: 10, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+
+              {/* Search deals CTA */}
+              <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1447b8 100%)', borderRadius: 16, padding: '28px 24px', marginBottom: 20, textAlign: 'center' as const }}>
+                <div className="sora" style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Browse exclusive member deals</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginBottom: 20, lineHeight: 1.6 }}>Pre-negotiated flexible rates — so rebuq can track them from day one.</div>
+                <button onClick={() => router.push('/search-hotels')} style={{ background: '#FCD34D', color: '#0f172a', border: 'none', borderRadius: 10, padding: '12px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Browse deals →
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                <button onClick={() => { setStep(1); setFile(null); setExtracted(null) }} style={{ flex: 1, background: B, color: '#fff', border: 'none', padding: '13px 28px', borderRadius: 10, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
                   Track another booking
                 </button>
-                <button onClick={() => router.push('/')} style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '13px 28px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  ← Back to home
+                <button onClick={() => router.push('/')} style={{ background: '#fff', color: '#64748b', border: '1.5px solid #e2e8f0', padding: '13px 28px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  ← Home
                 </button>
               </div>
             </div>
@@ -513,9 +567,19 @@ export default function UploadPage() {
             <div style={{ maxWidth: 680, margin: '0 auto' }}>
 
               {file && (
-                <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#166534' }}>
+                <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#166534' }}>
                   <span style={{ fontSize: 18 }}>✨</span>
                   <span><strong>AI extracted successfully</strong> — verify the details below and correct anything that looks wrong.</span>
+                </div>
+              )}
+
+              {/* Pay at property special banner */}
+              {extracted.payment_type === 'pay_at_property' && (
+                <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1447b8', marginBottom: 4 }}>🏨 Pay at property booking — perfect for rebuq!</div>
+                  <div style={{ fontSize: 12, color: '#3b82f6', lineHeight: 1.6 }}>
+                    You haven&apos;t paid yet — you pay at the hotel. These bookings are almost always free to cancel, which means if we find a lower price, you can rebook instantly with zero hassle.
+                  </div>
                 </div>
               )}
 
