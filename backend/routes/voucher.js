@@ -185,12 +185,10 @@ router.post('/submit', async (req, res) => {
       await sendNonRefundableWhatsApp(phone, data)
 
       if (data.email) {
-        try {
-          await email.nonRefundable(data.email, {
-            name: data.email.split('@')[0],
-            booking: { hotelName: data.hotel_name, checkinDate: data.check_in }
-          })
-        } catch (e) { console.error('Non-refundable email failed:', e.message) }
+        email.nonRefundable(data.email, {
+          name: data.email.split('@')[0],
+          booking: { hotelName: data.hotel_name, checkinDate: data.check_in }
+        }).catch(e => console.error('Non-refundable email failed:', e.message))
       }
 
       return res.status(200).json({
@@ -216,29 +214,29 @@ router.post('/submit', async (req, res) => {
 
     await sendTrackingStartedWhatsApp(phone, booking)
 
-    if (booking.email) {
-      try {
-        await email.bookingReceived(booking.email, {
-          name: booking.email.split('@')[0],
-          booking: {
-            hotelName:    booking.hotel_name,
-            city:         booking.hotel_city,
-            checkinDate:  booking.check_in,
-            checkoutDate: booking.check_out,
-            nights:       booking.total_nights,
-            roomType:     booking.room_type,
-            adults:       booking.num_adults,
-            children:     booking.children_ages || [],
-            amountPaid:   booking.total_price_paid,
-            currency:     'INR',
-            otaName:      booking.ota_name,
-            bookingRef:   booking.booking_reference,
-          }
-        })
-      } catch (e) { console.error('Booking received email failed:', e.message) }
-    }
-
+    // Respond immediately — don't wait for email
     res.json({ success: true, booking_id: booking.id, message: 'Tracking started!' })
+
+    // Send email in background — non-blocking
+    if (booking.email) {
+      email.bookingReceived(booking.email, {
+        name: booking.email.split('@')[0],
+        booking: {
+          hotelName:    booking.hotel_name,
+          city:         booking.hotel_city,
+          checkinDate:  booking.check_in,
+          checkoutDate: booking.check_out,
+          nights:       booking.total_nights,
+          roomType:     booking.room_type,
+          adults:       booking.num_adults,
+          children:     booking.children_ages || [],
+          amountPaid:   booking.total_price_paid,
+          currency:     'INR',
+          otaName:      booking.ota_name,
+          bookingRef:   booking.booking_reference,
+        }
+      }).catch(e => console.error('Booking received email failed:', e.message))
+    }
 
   } catch (err) {
     console.error('❌ Submit error:', err.message)
