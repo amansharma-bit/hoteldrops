@@ -1,11 +1,12 @@
 // backend/routes/voucher.js
-// PATCHED: Full field extraction + cancellation policy gate
+// PATCHED: Full field extraction + cancellation policy gate + email notifications
 
 const express = require('express')
 const multer  = require('multer')
 const axios   = require('axios')
 const { createClient } = require('@supabase/supabase-js')
 const router  = express.Router()
+const email   = require('../utils/emailService')
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
 
@@ -19,20 +20,11 @@ const upload = multer({
   }
 })
 
-// ─── Currency conversion rates ───────────────────────────────────────────────
 const RATES_TO_INR = {
-  INR: 1,
-  EUR: 112,
-  USD: 84,
-  GBP: 107,
-  AED: 22.8,
-  THB: 2.3,
-  SGD: 62,
-  MYR: 18,
-  IDR: 0.005,
+  INR: 1, EUR: 112, USD: 84, GBP: 107,
+  AED: 22.8, THB: 2.3, SGD: 62, MYR: 18, IDR: 0.005,
 }
 
-// ─── Claude extraction prompt ─────────────────────────────────────────────────
 const EXTRACTION_PROMPT = `You are a hotel booking voucher parser for rebuq, an Indian travel price-tracking service.
 
 Extract ALL fields below from this hotel booking confirmation/voucher.
@@ -59,11 +51,7 @@ CANCELLATION RULES (read very carefully):
 - cancellation_penalty  = penalty amount in INR if cancelled after deadline. null if free cancellation.
 
 BOARD BASIS CODES:
-- RO = Room Only (no meals)
-- BB = Bed & Breakfast
-- HB = Half Board (breakfast + dinner)
-- FB = Full Board (all 3 meals)
-- AI = All Inclusive
+- RO = Room Only, BB = Bed & Breakfast, HB = Half Board, FB = Full Board, AI = All Inclusive
 
 Respond with exactly this JSON shape:
 
@@ -73,17 +61,14 @@ Respond with exactly this JSON shape:
   "check_in": "YYYY-MM-DD",
   "check_out": "YYYY-MM-DD",
   "total_nights": number,
-
-  "room_type": "exact room type e.g. Deluxe King Room, Superior Twin, Studio Apartment",
+  "room_type": "exact room type",
   "num_adults": number,
   "num_children": number,
   "children_ages": [],
   "num_rooms": number,
-
   "board_basis": "RO|BB|HB|FB|AI",
   "board_basis_label": "Room Only|Bed & Breakfast|Half Board|Full Board|All Inclusive",
-  "rate_plan_name": "e.g. Early Bird 21, Flexible Rate, Non-Refundable Saver, or null",
-
+  "rate_plan_name": "or null",
   "original_price": number,
   "total_price_paid": number,
   "taxes_included": true,
@@ -96,16 +81,13 @@ Respond with exactly this JSON shape:
     "total": number
   },
   "currency_original": "INR|EUR|USD|AED|THB|GBP|SGD",
-
   "ota_name": "MakeMyTrip|Booking.com|Agoda|Goibibo|Hotels.com|Expedia|Direct|Other",
   "booking_reference": "confirmation/PNR number as string, or null",
-
   "cancellation_policy": "free|partial|non-refundable|unknown",
   "cancellation_deadline": "YYYY-MM-DD or null",
   "cancellation_penalty": number in INR or null
 }`
 
-// ─── Build Claude content array (PDF vs image) ────────────────────────────────
 function buildClaudeContent(base64Data, mimeType) {
   if (mimeType === 'application/pdf') {
     return [
@@ -119,8 +101,6 @@ function buildClaudeContent(base64Data, mimeType) {
   ]
 }
 
-// ─── POST /api/voucher/extract ────────────────────────────────────────────────
-// Step 1: Extract data from voucher — returns parsed fields to frontend
 router.post('/extract', upload.single('voucher'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
@@ -144,11 +124,10 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
       }
     )
 
-    const rawText = response.data.content[0].text.trim()
-    const clean   = rawText.replace(/```json|```/g, '').trim()
+    const rawText   = response.data.content[0].text.trim()
+    const clean     = rawText.replace(/```json|```/g, '').trim()
     const extracted = JSON.parse(clean)
 
-    // ── Normalise prices to INR ──────────────────────────────────────────────
     const currency = extracted.currency_original || 'INR'
     const rate     = RATES_TO_INR[currency] || 1
 
@@ -162,19 +141,16 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
         if (pb.taxes)     pb.taxes     = Math.round(pb.taxes     * rate)
         if (pb.total)     pb.total     = Math.round(pb.total     * rate)
       }
-      if (extracted.cancellation_penalty) {
+      if (extracted.cancellation_penalty)
         extracted.cancellation_penalty = Math.round(extracted.cancellation_penalty * rate)
-      }
     }
 
-    // ── Derive total_nights if missing ───────────────────────────────────────
     if (!extracted.total_nights && extracted.check_in && extracted.check_out) {
       extracted.total_nights = Math.round(
         (new Date(extracted.check_out) - new Date(extracted.check_in)) / 86400000
       )
     }
 
-    // ── Derive price_per_night for convenience ───────────────────────────────
     if (extracted.total_price_paid && extracted.total_nights > 0) {
       extracted.price_per_night = Math.round(
         extracted.total_price_paid / (extracted.total_nights * (extracted.num_rooms || 1))
@@ -184,10 +160,9 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
     console.log(`✅ Voucher extracted: ${extracted.hotel_name} | ${extracted.cancellation_policy} | ₹${extracted.total_price_paid}`)
 
     res.json({
-      success:   true,
-      data:      extracted,
-      // Tell the frontend immediately if this booking is non-refundable
-      blocked:   extracted.cancellation_policy === 'non-refundable',
+      success:     true,
+      data:        extracted,
+      blocked:     extracted.cancellation_policy === 'non-refundable',
       blockReason: extracted.cancellation_policy === 'non-refundable' ? 'non_refundable' : null,
     })
 
@@ -197,9 +172,6 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
   }
 })
 
-// ─── POST /api/voucher/submit ─────────────────────────────────────────────────
-// Step 2: After user reviews extracted data, submit for tracking
-// This is where we gate non-refundable bookings
 router.post('/submit', async (req, res) => {
   try {
     const data  = req.body
@@ -207,29 +179,33 @@ router.post('/submit', async (req, res) => {
 
     if (!phone) return res.status(400).json({ error: 'Phone number required' })
 
-    // ── GATE: Block non-refundable bookings ──────────────────────────────────
+    // GATE: Block non-refundable
     if (data.cancellation_policy === 'non-refundable') {
-      // Save to DB with status non-refundable (for our records)
       await supabase.from('bookings').insert(buildBookingRow(data, 'non-refundable'))
-
-      // Send WhatsApp explaining why we can't track
       await sendNonRefundableWhatsApp(phone, data)
 
+      if (data.email) {
+        try {
+          await email.nonRefundable(data.email, {
+            name: data.email.split('@')[0],
+            booking: { hotelName: data.hotel_name, checkinDate: data.check_in }
+          })
+        } catch (e) { console.error('Non-refundable email failed:', e.message) }
+      }
+
       return res.status(200).json({
-        success:    false,
-        blocked:    true,
-        reason:     'non_refundable',
-        message:    'This booking is non-refundable and cannot be repriced. Customer has been notified via WhatsApp.',
+        success: false, blocked: true, reason: 'non_refundable',
+        message: 'This booking is non-refundable. Customer notified via WhatsApp.',
         hotel_name: data.hotel_name,
       })
     }
 
-    // ── WARN: Unknown policy — save and track, but alert team ────────────────
+    // WARN: Unknown policy
     if (data.cancellation_policy === 'unknown') {
       await sendUnknownPolicyWhatsApp(phone, data)
     }
 
-    // ── PROCEED: Save booking and start tracking ─────────────────────────────
+    // PROCEED: Save and track
     const { data: booking, error } = await supabase
       .from('bookings')
       .insert(buildBookingRow(data, 'tracking'))
@@ -238,8 +214,29 @@ router.post('/submit', async (req, res) => {
 
     if (error) throw error
 
-    // Send tracking confirmation WhatsApp
     await sendTrackingStartedWhatsApp(phone, booking)
+
+    if (booking.email) {
+      try {
+        await email.bookingReceived(booking.email, {
+          name: booking.email.split('@')[0],
+          booking: {
+            hotelName:    booking.hotel_name,
+            city:         booking.hotel_city,
+            checkinDate:  booking.check_in,
+            checkoutDate: booking.check_out,
+            nights:       booking.total_nights,
+            roomType:     booking.room_type,
+            adults:       booking.num_adults,
+            children:     booking.children_ages || [],
+            amountPaid:   booking.total_price_paid,
+            currency:     'INR',
+            otaName:      booking.ota_name,
+            bookingRef:   booking.booking_reference,
+          }
+        })
+      } catch (e) { console.error('Booking received email failed:', e.message) }
+    }
 
     res.json({ success: true, booking_id: booking.id, message: 'Tracking started!' })
 
@@ -249,66 +246,48 @@ router.post('/submit', async (req, res) => {
   }
 })
 
-// ─── Build booking row for Supabase ──────────────────────────────────────────
 function buildBookingRow(data, status) {
   const nights = data.total_nights ||
     (data.check_in && data.check_out
       ? Math.round((new Date(data.check_out) - new Date(data.check_in)) / 86400000)
       : 1)
-
-  const totalPaid  = data.total_price_paid || data.original_price || 0
-  const perNight   = data.price_per_night  ||
+  const totalPaid = data.total_price_paid || data.original_price || 0
+  const perNight  = data.price_per_night  ||
     (totalPaid && nights > 0 ? Math.round(totalPaid / (nights * (data.num_rooms || 1))) : 0)
 
   return {
-    // User
-    phone:                data.phone || data.whatsapp,
-    email:                data.email || null,
-
-    // Hotel
-    hotel_name:           data.hotel_name,
-    hotel_city:           data.hotel_city,
-    check_in:             data.check_in,
-    check_out:            data.check_out,
-    total_nights:         nights,
-
-    // Room
-    room_type:            data.room_type    || null,
-    num_adults:           data.num_adults   || 2,
-    num_children:         data.num_children || 0,
-    children_ages:        data.children_ages || [],
-    num_rooms:            data.num_rooms    || 1,
-
-    // Board
-    board_basis:          data.board_basis       || null,
-    board_basis_label:    data.board_basis_label  || null,
-    rate_plan_name:       data.rate_plan_name     || null,
-
-    // Price
-    original_price:       data.original_price    || totalPaid,
-    total_price_paid:     totalPaid,
-    price_per_night:      perNight,
-    currency:             'INR',
-    taxes_included:       data.taxes_included ?? true,
-    price_breakdown:      data.price_breakdown    || null,
-
-    // OTA
-    ota_name:             data.ota_name           || null,
-    booking_reference:    data.booking_reference  || null,
-
-    // Cancellation
+    phone:                 data.phone || data.whatsapp,
+    email:                 data.email || null,
+    hotel_name:            data.hotel_name,
+    hotel_city:            data.hotel_city,
+    check_in:              data.check_in,
+    check_out:             data.check_out,
+    total_nights:          nights,
+    room_type:             data.room_type            || null,
+    num_adults:            data.num_adults            || 2,
+    num_children:          data.num_children          || 0,
+    children_ages:         data.children_ages         || [],
+    num_rooms:             data.num_rooms             || 1,
+    board_basis:           data.board_basis           || null,
+    board_basis_label:     data.board_basis_label     || null,
+    rate_plan_name:        data.rate_plan_name        || null,
+    original_price:        data.original_price        || totalPaid,
+    total_price_paid:      totalPaid,
+    price_per_night:       perNight,
+    currency:              'INR',
+    taxes_included:        data.taxes_included ?? true,
+    price_breakdown:       data.price_breakdown       || null,
+    ota_name:              data.ota_name              || null,
+    booking_reference:     data.booking_reference     || null,
     cancellation_policy:   data.cancellation_policy   || 'unknown',
     cancellation_deadline: data.cancellation_deadline || null,
     cancellation_penalty:  data.cancellation_penalty  || null,
-
-    // Tracking
     status,
-    tracking_active: status === 'tracking',
-    next_check_at:   status === 'tracking' ? new Date().toISOString() : null,
+    tracking_active:       status === 'tracking',
+    next_check_at:         status === 'tracking' ? new Date().toISOString() : null,
   }
 }
 
-// ─── WhatsApp helpers ─────────────────────────────────────────────────────────
 const twilio = require('twilio')
 
 function getTwilioClient() {
@@ -316,7 +295,7 @@ function getTwilioClient() {
 }
 
 async function sendWhatsApp(to, body) {
-  const client = getTwilioClient()
+  const client    = getTwilioClient()
   const formatted = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:+91${to}`
   await client.messages.create({
     from: 'whatsapp:+14155238886',
@@ -326,7 +305,7 @@ async function sendWhatsApp(to, body) {
 }
 
 async function sendNonRefundableWhatsApp(phone, data) {
-  const nights   = data.total_nights || '?'
+  const nights    = data.total_nights || '?'
   const totalPaid = data.total_price_paid
     ? `₹${Number(data.total_price_paid).toLocaleString('en-IN')}`
     : 'amount on voucher'
@@ -350,11 +329,8 @@ rebuq only makes sense for refundable or partially-refundable bookings.
 We'll be here for your next booking! 🏨
 — Team rebuq`
 
-  try {
-    await sendWhatsApp(phone, msg)
-  } catch (e) {
-    console.error('Non-refundable WhatsApp failed:', e.message)
-  }
+  try { await sendWhatsApp(phone, msg) }
+  catch (e) { console.error('Non-refundable WhatsApp failed:', e.message) }
 }
 
 async function sendUnknownPolicyWhatsApp(phone, data) {
@@ -377,15 +353,12 @@ This helps us track correctly and not send alerts you can't act on.
 
 — Team rebuq`
 
-  try {
-    await sendWhatsApp(phone, msg)
-  } catch (e) {
-    console.error('Unknown policy WhatsApp failed:', e.message)
-  }
+  try { await sendWhatsApp(phone, msg) }
+  catch (e) { console.error('Unknown policy WhatsApp failed:', e.message) }
 }
 
 async function sendTrackingStartedWhatsApp(phone, booking) {
-  const nights  = booking.total_nights || '?'
+  const nights   = booking.total_nights || '?'
   const perNight = booking.price_per_night
     ? `₹${Number(booking.price_per_night).toLocaleString('en-IN')}/night` : ''
 
@@ -402,8 +375,7 @@ async function sendTrackingStartedWhatsApp(phone, booking) {
     ? `\n👶 Children: ${booking.children_ages.map(a => a ? `${a} yrs` : 'age TBD').join(', ')}`
     : ''
 
-  const mealLine = booking.board_basis_label
-    ? `\n🍽️ ${booking.board_basis_label}` : ''
+  const mealLine = booking.board_basis_label ? `\n🍽️ ${booking.board_basis_label}` : ''
 
   const msg = `✅ *rebuq is watching your booking!*
 
@@ -423,11 +395,8 @@ Reply *STATUS* anytime to check.
 
 — Team rebuq 🏨`
 
-  try {
-    await sendWhatsApp(phone, msg)
-  } catch (e) {
-    console.error('Tracking started WhatsApp failed:', e.message)
-  }
+  try { await sendWhatsApp(phone, msg) }
+  catch (e) { console.error('Tracking started WhatsApp failed:', e.message) }
 }
 
 module.exports = router
