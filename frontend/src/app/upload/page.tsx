@@ -268,7 +268,7 @@ export default function UploadPage() {
 
     setLoading(true)
     try {
-      const res = await fetch('https://hoteldrops-production.up.railway.app/api/voucher/submit', {
+      const res = await fetch('https://hoteldrops-production-9107.up.railway.app/api/voucher/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...extracted, phone, email }),
