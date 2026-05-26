@@ -18,7 +18,6 @@ function useIsMobile() {
   return isMobile
 }
 
-// ── All fields Claude now extracts ───────────────────────────────────────────
 interface ExtractedData {
   hotel_name:            string
   hotel_city:            string
@@ -42,11 +41,10 @@ interface ExtractedData {
   cancellation_policy:   string
   cancellation_deadline: string
   cancellation_penalty:  number | null
-  payment_type:          string  // 'pay_now' | 'pay_at_property' | 'partial_payment'
-  amount_paid_upfront:   number  // 0 if pay at property
+  payment_type:          string
+  amount_paid_upfront:   number
 }
 
-// ── Claude extraction prompt (full version matching backend) ─────────────────
 const EXTRACTION_PROMPT = `You are a hotel booking voucher parser for rebuq, an Indian travel price-tracking service.
 
 Extract ALL fields below from this hotel booking confirmation/voucher.
@@ -102,12 +100,11 @@ BOARD BASIS: RO=Room Only, BB=Bed & Breakfast, HB=Half Board, FB=Full Board, AI=
   "amount_paid_upfront": 0
 }
 
-PAYMENT TYPE — look for these exact phrases:
-- pay_at_property: "payment must be collected by the property", "pay at the property", "payment for this booking has not been collected", "you will pay [amount] to the property on check-in", "collected by the property", "Payment for this booking must be collected by the property"
+PAYMENT TYPE:
+- pay_at_property: "payment must be collected by the property", "pay at the property", "payment for this booking has not been collected"
 - pay_now: full amount already charged to card
 - partial_payment: deposit paid, rest due later
-- For pay_at_property: amount_paid_upfront = 0, but total_price_paid = full INR equivalent
-- The Remarks section often states "You will pay AMD/AED/EUR X to the property" — this is the total`
+- For pay_at_property: amount_paid_upfront = 0, but total_price_paid = full INR equivalent`
 
 const BOARD_OPTIONS = [
   { code: 'RO', label: 'Room Only' },
@@ -124,7 +121,6 @@ const CANCEL_OPTIONS = [
   { code: 'unknown',        label: '❓ Not sure' },
 ]
 
-// ── Shared styles ────────────────────────────────────────────────────────────
 const inp: React.CSSProperties  = { width: '100%', background: '#f9fafb', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '11px 14px', fontSize: 14, fontFamily: 'inherit', outline: 'none', color: NAVY }
 const lbl: React.CSSProperties  = { fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.07em', color: '#64748b', display: 'block', marginBottom: 6 }
 const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }
@@ -169,7 +165,6 @@ export default function UploadPage() {
     maxFiles: 1, maxSize: 10 * 1024 * 1024,
   })
 
-  // ── Scan voucher via Claude ──────────────────────────────────────────────
   async function doScan() {
     if (!file) return
     setScanning(true)
@@ -208,7 +203,6 @@ export default function UploadPage() {
       const text = data.content[0].text.trim().replace(/```json|```/g, '').trim()
       const parsed = JSON.parse(text)
 
-      // Currency conversion
       const RATES: Record<string, number> = {
         EUR: 112, USD: 84, GBP: 107, AED: 22.8, THB: 2.3, SGD: 62,
         AMD: 0.21, MYR: 18, IDR: 0.005, JPY: 0.56, KRW: 0.063,
@@ -223,18 +217,15 @@ export default function UploadPage() {
         if (parsed.cancellation_penalty)  parsed.cancellation_penalty  = Math.round(parsed.cancellation_penalty  * rate)
       }
 
-      // Derive total_nights if missing
       if (!parsed.total_nights && parsed.check_in && parsed.check_out) {
         parsed.total_nights = Math.round((new Date(parsed.check_out).getTime() - new Date(parsed.check_in).getTime()) / 86400000)
       }
 
-      // Ensure total_price_paid is always set
       if (!parsed.total_price_paid) parsed.total_price_paid = parsed.original_price || 0
 
       clearInterval(interval)
       setExtracted({ ...emptyExtracted(), ...parsed })
 
-      // Non-refundable: go straight to blocked screen
       if (parsed.cancellation_policy === 'non-refundable') {
         setStep('blocked')
       } else {
@@ -243,14 +234,12 @@ export default function UploadPage() {
 
     } catch {
       clearInterval(interval)
-      // Fallback: let user fill manually
       setExtracted(emptyExtracted())
       setStep(2)
     }
     setScanning(false)
   }
 
-  // ── Submit booking ────────────────────────────────────────────────────────
   async function submitBooking() {
     setSubmitError('')
     if (!phone || phone.length < 10)     { setSubmitError('Please enter a valid 10-digit WhatsApp number'); return }
@@ -260,7 +249,6 @@ export default function UploadPage() {
     if (!extracted?.check_out)           { setSubmitError('Please enter check-out date'); return }
     if (!extracted?.total_price_paid)    { setSubmitError('Please enter the total price you paid'); return }
 
-    // Last gate: block non-refundable before hitting backend
     if (extracted?.cancellation_policy === 'non-refundable') {
       setStep('blocked')
       return
@@ -292,7 +280,6 @@ export default function UploadPage() {
     ? (extracted.total_nights || Math.max(0, Math.round((new Date(extracted.check_out).getTime() - new Date(extracted.check_in).getTime()) / 86400000)))
     : 0
 
-  // ── Nav ───────────────────────────────────────────────────────────────────
   const Nav = () => (
     <>
       <nav style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '0 32px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 300 }}>
@@ -323,7 +310,6 @@ export default function UploadPage() {
     </>
   )
 
-  // ── Step header with progress ─────────────────────────────────────────────
   const StepHeader = ({ stepNum, title, subtitle }: { stepNum: string; title: string; subtitle: string }) => (
     <div style={{ background: B, padding: isMobile ? '24px 20px' : '28px 40px' }}>
       <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: 16 }}>
@@ -356,7 +342,6 @@ export default function UploadPage() {
         .cancel-btn:hover { background: #f1f5f9 !important; }
       `}</style>
 
-      {/* Scanning overlay */}
       {scanning && (
         <div style={{ position: 'fixed', inset: 0, background: B, zIndex: 999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
           <div style={{ width: 52, height: 52, border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -367,9 +352,6 @@ export default function UploadPage() {
 
       <Nav />
 
-      {/* ════════════════════════════════════════════════════════
-          STEP 1 — Upload
-      ════════════════════════════════════════════════════════ */}
       {step === 1 && (
         <>
           <section style={{ background: B, padding: isMobile ? '40px 20px 0' : '56px 40px 0' }}>
@@ -460,8 +442,6 @@ export default function UploadPage() {
                 </div>
               ))}
             </div>
-
-            {/* ── Exclusive deals banner ─────────────────────────────── */}
             <div style={{ maxWidth: 1000, margin: '32px auto 0', background: 'linear-gradient(135deg, #0f172a 0%, #1447b8 100%)', borderRadius: 16, padding: isMobile ? '28px 20px' : '32px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: 20 }}>
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>Members only</div>
@@ -476,12 +456,8 @@ export default function UploadPage() {
         </>
       )}
 
-      {/* ════════════════════════════════════════════════════════
-          BLOCKED — Non-refundable booking (rebuq blue theme)
-      ════════════════════════════════════════════════════════ */}
       {step === 'blocked' && extracted && (
         <>
-          {/* Hero */}
           <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1447b8 100%)', padding: isMobile ? '48px 20px' : '72px 40px' }}>
             <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center' as const }}>
               <div style={{ width: 80, height: 80, background: 'rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, margin: '0 auto 28px', border: '2px solid rgba(255,255,255,0.2)' }}>🔒</div>
@@ -497,12 +473,8 @@ export default function UploadPage() {
               </p>
             </div>
           </div>
-
-          {/* Booking card + advice */}
           <div style={{ background: '#f8fafc', padding: isMobile ? '32px 20px' : '48px 40px' }}>
             <div style={{ maxWidth: 680, margin: '0 auto' }}>
-
-              {/* Booking summary card */}
               <div style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #e2e8f0', padding: 24, marginBottom: 20, boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: '#64748b', marginBottom: 16 }}>Your booking</div>
                 <div style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>{extracted.hotel_name}</div>
@@ -526,39 +498,15 @@ export default function UploadPage() {
                   </div>
                 )}
               </div>
-
-              {/* Tip card */}
               <div style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #bfdbfe', padding: 24, marginBottom: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                   <div style={{ width: 36, height: 36, background: '#eff6ff', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>💡</div>
                   <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Next time, book a flexible rate</div>
                 </div>
                 <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, marginBottom: 16 }}>
-                  Flexible rates often cost only a little more upfront — but rebuq regularly finds drops that save <strong style={{ color: '#1447b8' }}>₹10,000–₹40,000</strong>. The savings far outweigh the small premium.
+                  Flexible rates often cost only a little more upfront — but rebuq regularly finds drops that save <strong style={{ color: '#1447b8' }}>₹10,000–₹40,000</strong>.
                 </p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {[
-                    { icon: '✅', text: 'Cancel anytime for free' },
-                    { icon: '💰', text: 'rebuq can find price drops' },
-                    { icon: '🔄', text: 'Rebook if price drops' },
-                    { icon: '🎯', text: 'Avg saving: ₹24,000' },
-                  ].map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#475569' }}>
-                      <span>{item.icon}</span>{item.text}
-                    </div>
-                  ))}
-                </div>
               </div>
-
-              {/* Search deals CTA */}
-              <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1447b8 100%)', borderRadius: 16, padding: '28px 24px', marginBottom: 20, textAlign: 'center' as const }}>
-                <div className="sora" style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Browse exclusive member deals</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginBottom: 20, lineHeight: 1.6 }}>Pre-negotiated flexible rates — so rebuq can track them from day one.</div>
-                <button onClick={() => router.push('/search-hotels')} style={{ background: '#FCD34D', color: '#0f172a', border: 'none', borderRadius: 10, padding: '12px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Browse deals →
-                </button>
-              </div>
-
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <button onClick={() => { setStep(1); setFile(null); setExtracted(null) }} style={{ flex: 1, background: B, color: '#fff', border: 'none', padding: '13px 28px', borderRadius: 10, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
                   Track another booking
@@ -572,34 +520,25 @@ export default function UploadPage() {
         </>
       )}
 
-      {/* ════════════════════════════════════════════════════════
-          STEP 2 — Confirm details
-      ════════════════════════════════════════════════════════ */}
       {step === 2 && extracted && (
         <>
           <StepHeader stepNum="2" title="Confirm your booking details" subtitle="Review what our AI extracted — edit anything that looks wrong" />
-
           <div style={{ background: '#f8fafc', minHeight: '100vh', padding: isMobile ? '20px 16px' : '32px 40px' }}>
             <div style={{ maxWidth: 680, margin: '0 auto' }}>
-
               {file && (
                 <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#166534' }}>
                   <span style={{ fontSize: 18 }}>✨</span>
                   <span><strong>AI extracted successfully</strong> — verify the details below and correct anything that looks wrong.</span>
                 </div>
               )}
-
-              {/* Pay at property special banner */}
               {extracted.payment_type === 'pay_at_property' && (
                 <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#1447b8', marginBottom: 4 }}>🏨 Pay at property booking — perfect for rebuq!</div>
                   <div style={{ fontSize: 12, color: '#3b82f6', lineHeight: 1.6 }}>
-                    You haven&apos;t paid yet — you pay at the hotel. These bookings are almost always free to cancel, which means if we find a lower price, you can rebook instantly with zero hassle.
+                    You haven&apos;t paid yet — you pay at the hotel. These bookings are almost always free to cancel.
                   </div>
                 </div>
               )}
-
-              {/* ── Hotel details ─────────────────────────────────────── */}
               <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #e2e8f0', padding: 24, marginBottom: 16 }}>
                 <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 18 }}>🏨 Hotel details</div>
                 <div style={grid2}>
@@ -632,7 +571,6 @@ export default function UploadPage() {
                 </div>
               </div>
 
-              {/* ── Pricing ───────────────────────────────────────────── */}
               <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #e2e8f0', padding: 24, marginBottom: 16 }}>
                 <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 18 }}>💳 Pricing</div>
                 {extracted.currency_original && extracted.currency_original !== 'INR' && (
@@ -641,22 +579,14 @@ export default function UploadPage() {
                     <span>Original currency: <strong>{extracted.currency_original}</strong> — converted to INR automatically. Please verify the amount.</span>
                   </div>
                 )}
-                {extracted.payment_type === 'pay_at_property' && (
-                  <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: '#166534', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span>🏨</span>
-                    <span><strong>Pay at property</strong> — nothing charged now. Full amount due at hotel on arrival.</span>
-                  </div>
-                )}
                 <div style={grid2}>
                   <div>
                     <label style={lbl}>{extracted.payment_type === 'pay_at_property' ? 'Total due at hotel (₹) *' : 'Total price paid (₹) *'}</label>
                     <input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: parseFloat(e.target.value), original_price: parseFloat(e.target.value) })} placeholder="e.g. 85000" />
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{extracted.payment_type === 'pay_at_property' ? 'Not charged yet — pay at hotel' : 'All rooms · all nights · incl. taxes'}</div>
                   </div>
                   <div>
                     <label style={lbl}>Price per night (₹)</label>
                     <input style={inp} type="number" value={extracted.price_per_night || ''} onChange={e => setExtracted({ ...extracted, price_per_night: parseFloat(e.target.value) })} placeholder="Auto-calculated" />
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Per room per night</div>
                   </div>
                 </div>
                 <div style={grid2}>
@@ -685,17 +615,14 @@ export default function UploadPage() {
                           }} />
                         ))}
                       </div>
-                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Age of each child at check-in</div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* ── Cancellation policy ───────────────────────────────── */}
               <div style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${extracted.cancellation_policy === 'non-refundable' ? '#fecaca' : '#e2e8f0'}`, padding: 24, marginBottom: 16 }}>
                 <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 6 }}>🔒 Cancellation policy</div>
                 <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>This is critical — we can only track refundable bookings.</div>
-
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: 10, marginBottom: 16 }}>
                   {CANCEL_OPTIONS.map(o => (
                     <button key={o.code} onClick={() => setExtracted({ ...extracted, cancellation_policy: o.code })} style={{ padding: '10px 8px', borderRadius: 10, border: `2px solid ${extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#ef4444' : B) : '#e2e8f0'}`, background: extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#fef2f2' : '#eff6ff') : '#fff', color: extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#dc2626' : B) : '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' as const, transition: 'all 0.15s' }}>
@@ -703,24 +630,17 @@ export default function UploadPage() {
                     </button>
                   ))}
                 </div>
-
-                {/* Non-refundable warning inline */}
                 {extracted.cancellation_policy === 'non-refundable' && (
                   <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#dc2626', marginBottom: 4 }}>⚠️ rebuq cannot track non-refundable bookings</div>
-                    <div style={{ fontSize: 12, color: '#b91c1c', lineHeight: 1.6 }}>
-                      Even if the price drops, you would not be able to cancel and rebook. Please change to a refundable rate next time — or if you selected this by mistake, change above.
-                    </div>
+                    <div style={{ fontSize: 12, color: '#b91c1c', lineHeight: 1.6 }}>Even if the price drops, you would not be able to cancel and rebook.</div>
                   </div>
                 )}
-
-                {/* Free cancellation deadline */}
                 {(extracted.cancellation_policy === 'free' || extracted.cancellation_policy === 'partial') && (
                   <div style={grid2}>
                     <div>
                       <label style={lbl}>Free cancel deadline</label>
                       <input style={inp} type="date" value={extracted.cancellation_deadline} onChange={e => setExtracted({ ...extracted, cancellation_deadline: e.target.value })} />
-                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Last date to cancel for free</div>
                     </div>
                     <div>
                       <label style={lbl}>Penalty if cancelled late (₹)</label>
@@ -730,7 +650,6 @@ export default function UploadPage() {
                 )}
               </div>
 
-              {/* ── WhatsApp / email ──────────────────────────────────── */}
               <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #e2e8f0', padding: 24, marginBottom: 24 }}>
                 <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 18 }}>📱 Where should we send the alert?</div>
                 <div style={grid2}>
@@ -762,9 +681,6 @@ export default function UploadPage() {
         </>
       )}
 
-      {/* ════════════════════════════════════════════════════════
-          STEP 3 — Success / Tracking started
-      ════════════════════════════════════════════════════════ */}
       {step === 3 && extracted && (
         <>
           <div style={{ background: B, padding: isMobile ? '40px 20px' : '64px 40px' }}>
@@ -777,7 +693,7 @@ export default function UploadPage() {
                   We&apos;re watching<br />your hotel<br /><span style={{ color: '#FCD34D' }}>24/7.</span>
                 </h1>
                 <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', lineHeight: 1.8, marginBottom: 28 }}>
-                  The moment <strong style={{ color: '#fff' }}>{extracted.hotel_name}</strong> drops in price for the <strong style={{ color: '#fff' }}>same room and meal plan</strong>, you&apos;ll get a WhatsApp message instantly.
+                  The moment <strong style={{ color: '#fff' }}>{extracted.hotel_name}</strong> drops in price, you&apos;ll get a WhatsApp message instantly.
                 </p>
                 {extracted.cancellation_deadline && (
                   <div style={{ background: 'rgba(252,211,77,0.15)', border: '1px solid rgba(252,211,77,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: '#FCD34D', fontWeight: 600 }}>
@@ -789,49 +705,36 @@ export default function UploadPage() {
                   <button onClick={() => { setStep(1); setFile(null); setExtracted(null); setPhone(''); setEmail('') }} style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', padding: '12px 24px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Track another booking</button>
                 </div>
               </div>
-
-              {/* WhatsApp mockup — now shows meal plan + cancellation */}
               <div style={{ background: '#fff', borderRadius: 16, padding: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
                 <div style={{ textAlign: 'center' as const, color: '#94a3b8', fontSize: 11, marginBottom: 12 }}>Today, 2:14 PM</div>
                 <div style={{ background: '#f8fafc', borderRadius: '10px 10px 10px 2px', padding: '14px 16px', color: '#64748b', lineHeight: 1.7, fontSize: 13, marginBottom: 10 }}>
                   💰 <strong>Price Drop — rebuq</strong><br /><br />
                   <strong style={{ color: NAVY }}>{extracted.hotel_name}</strong><br />
                   🛏️ {extracted.room_type || 'Standard Room'}<br />
-                  {extracted.board_basis_label && <>🍽️ {extracted.board_basis_label}<br /></>}
                   <br />
                   You paid: ₹{(extracted.total_price_paid || extracted.original_price).toLocaleString('en-IN')}<br />
                   New price: <span style={{ color: '#15803d', fontWeight: 700 }}>₹{Math.round((extracted.total_price_paid || extracted.original_price) * 0.82).toLocaleString('en-IN')}</span><br />
-                  💚 Save: <strong>₹{Math.round((extracted.total_price_paid || extracted.original_price) * 0.18).toLocaleString('en-IN')}</strong><br /><br />
-                  {extracted.cancellation_deadline && <><em style={{ fontSize: 12 }}>⚠️ Free cancel until {new Date(extracted.cancellation_deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</em><br /></>}
-                  <em style={{ fontSize: 12 }}>Same room · same meals · like-for-like</em>
+                  💚 Save: <strong>₹{Math.round((extracted.total_price_paid || extracted.original_price) * 0.18).toLocaleString('en-IN')}</strong>
                 </div>
-                <div style={{ background: B, color: '#fff', borderRadius: '10px 10px 2px 10px', padding: '10px 14px', fontSize: 13, fontWeight: 600, textAlign: 'right' as const, marginBottom: 10 }}>YES — rebook now</div>
-                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px 10px 10px 2px', padding: '10px 14px', fontSize: 12, color: '#15803d', lineHeight: 1.6 }}>
-                  ✓ Rebooking confirmed. Cancel your original reservation to complete the saving.
-                </div>
+                <div style={{ background: B, color: '#fff', borderRadius: '10px 10px 2px 10px', padding: '10px 14px', fontSize: 13, fontWeight: 600, textAlign: 'right' as const }}>YES — rebook now</div>
               </div>
             </div>
           </div>
-
           <div style={{ background: '#fff', padding: isMobile ? '32px 20px' : '48px 40px' }}>
             <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 24 }}>
-              {/* Booking summary — now shows all new fields */}
               <div style={{ border: '1.5px solid #e2e8f0', borderRadius: 14, padding: 24 }}>
                 <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Booking summary</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   {[
-                    { l: 'Hotel',       v: extracted.hotel_name },
-                    { l: 'City',        v: extracted.hotel_city },
-                    { l: 'Check-in',    v: extracted.check_in },
-                    { l: 'Check-out',   v: extracted.check_out },
-                    { l: 'Duration',    v: `${numNights} nights` },
-                    { l: 'Room',        v: extracted.room_type || '—' },
-                    { l: 'Meals',       v: extracted.board_basis_label || '—' },
-                    { l: 'Total paid',  v: `₹${(extracted.total_price_paid || extracted.original_price).toLocaleString('en-IN')}` },
-                    { l: 'Per night',   v: extracted.price_per_night ? `₹${extracted.price_per_night.toLocaleString('en-IN')}` : '—' },
-                    { l: 'Booked on',   v: extracted.ota_name || '—' },
-                    ...(extracted.booking_reference ? [{ l: 'Ref no.', v: extracted.booking_reference }] : []),
-                    ...(extracted.cancellation_deadline ? [{ l: 'Free cancel by', v: new Date(extracted.cancellation_deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) }] : []),
+                    { l: 'Hotel',      v: extracted.hotel_name },
+                    { l: 'City',       v: extracted.hotel_city },
+                    { l: 'Check-in',   v: extracted.check_in },
+                    { l: 'Check-out',  v: extracted.check_out },
+                    { l: 'Duration',   v: `${numNights} nights` },
+                    { l: 'Room',       v: extracted.room_type || '—' },
+                    { l: 'Meals',      v: extracted.board_basis_label || '—' },
+                    { l: 'Total paid', v: `₹${(extracted.total_price_paid || extracted.original_price).toLocaleString('en-IN')}` },
+                    { l: 'Booked on',  v: extracted.ota_name || '—' },
                   ].map((item, i) => (
                     <div key={i}>
                       <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>{item.l}</div>
@@ -840,13 +743,12 @@ export default function UploadPage() {
                   ))}
                 </div>
               </div>
-
               <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 14, padding: 24 }}>
                 <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: '#166534', marginBottom: 16 }}>What happens next</div>
                 {[
                   { icon: '🔍', text: 'Our AI checks live rates every 6 hours — same hotel, same room, same meal plan' },
                   { icon: '📱', text: 'Price drops → instant WhatsApp alert straight to your phone' },
-                  { icon: '✅', text: 'Reply YES → we send you a secure rebooking link' },
+                  { icon: '✅', text: 'Tap the link in the WhatsApp → select your room → cancel original → rebook at lower rate' },
                   { icon: '💰', text: 'You keep the savings. We earn only when we deliver.' },
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: i < 3 ? 12 : 0, fontSize: 13, color: '#166534', lineHeight: 1.55 }}>
