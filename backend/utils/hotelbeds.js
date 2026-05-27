@@ -8,6 +8,16 @@ const BASE    = process.env.HOTELBEDS_ENV === 'production'
   ? 'https://api.hotelbeds.com'
   : 'https://api.test.hotelbeds.com'
 
+// ── HARDCODED HOTEL IDs — bypasses fuzzy matching ─────────────────────────
+// Add any hotel here that the fuzzy matcher gets wrong
+// Format: 'hotel name lowercase' : hotelbeds_code
+const HOTEL_OVERRIDES = {
+  'residence inn by marriott sheikh zayed road': 2856,
+  'residence inn marriott sheikh zayed road':    2856,
+  'residence inn sheikh zayed road':             2856,
+  'residence inn dubai':                         2856,
+}
+
 function getAuthHeaders() {
   const timestamp = Math.floor(Date.now() / 1000).toString()
   const signature = crypto
@@ -149,10 +159,18 @@ async function findHotelsByKeyword(destinationCode, language = 'ENG') {
 
 async function findHotelCode(hotelName, destinationCode) {
   try {
+    // ── Check hardcoded overrides first ──────────────────────────────────
+    const nameLower = hotelName.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim()
+    for (const [key, code] of Object.entries(HOTEL_OVERRIDES)) {
+      if (nameLower.includes(key) || key.includes(nameLower)) {
+        console.log(`🎯 Hardcoded match for "${hotelName}": ${code}`)
+        return code
+      }
+    }
+
+    // ── Fall back to fuzzy matching ───────────────────────────────────────
     const hotels = await findHotelsByKeyword(destinationCode)
     if (!hotels.length) return null
-
-    const nameLower = hotelName.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim()
 
     const scored = hotels.map(h => {
       const hn    = (h.name?.content || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim()
@@ -197,7 +215,6 @@ async function cancelBooking(reference, simulate = false) {
 
 function getDestinationCode(cityName) {
   const map = {
-    // ── INDIA ──
     'mumbai': 'BOM', 'bombay': 'BOM',
     'delhi': 'DEL', 'new delhi': 'DEL',
     'bangalore': 'BLR', 'bengaluru': 'BLR',
@@ -231,8 +248,6 @@ function getDestinationCode(cityName) {
     'darjeeling': 'DAR',
     'leh': 'IXL',
     'gangtok': 'GTK',
-
-    // ── MIDDLE EAST ──
     'dubai': 'DXB',
     'abu dhabi': 'AUH',
     'sharjah': 'SHJ',
@@ -244,8 +259,6 @@ function getDestinationCode(cityName) {
     'bahrain': 'BAH',
     'beirut': 'BEY',
     'amman': 'AMM',
-
-    // ── EUROPE ──
     'london': 'LON',
     'paris': 'PAR',
     'amsterdam': 'AMS',
@@ -275,8 +288,6 @@ function getDestinationCode(cityName) {
     'dublin': 'DUB',
     'edinburgh': 'EDI',
     'manchester': 'MAN',
-
-    // ── SOUTHEAST ASIA ──
     'bangkok': 'BKK',
     'singapore': 'SIN',
     'kuala lumpur': 'KUL', 'kl': 'KUL',
@@ -295,8 +306,6 @@ function getDestinationCode(cityName) {
     'kathmandu': 'KTM',
     'phnom penh': 'PNH',
     'siem reap': 'REP',
-
-    // ── EAST ASIA ──
     'tokyo': 'TYO',
     'osaka': 'OSA',
     'kyoto': 'UKY',
@@ -305,8 +314,6 @@ function getDestinationCode(cityName) {
     'hong kong': 'HKG',
     'seoul': 'SEL',
     'taipei': 'TPE',
-
-    // ── USA & CANADA ──
     'new york': 'NYC', 'new york city': 'NYC',
     'los angeles': 'LAX',
     'las vegas': 'LAS',
@@ -317,26 +324,19 @@ function getDestinationCode(cityName) {
     'toronto': 'YTO',
     'vancouver': 'YVR',
     'cancun': 'CUN',
-
-    // ── AUSTRALIA ──
     'sydney': 'SYD',
     'melbourne': 'MEL',
     'brisbane': 'BNE',
     'gold coast': 'OOL',
-
-    // ── AFRICA ──
     'cape town': 'CPT',
     'johannesburg': 'JNB',
     'nairobi': 'NBO',
     'cairo': 'CAI',
     'marrakech': 'RAK',
     'casablanca': 'CAS',
-
-    // ── POPULAR ISLANDS ──
     'mauritius': 'MRU',
     'seychelles': 'SEZ',
     'zanzibar': 'ZNZ',
-    'phuket': 'HKT',
     'mykonos': 'JMK',
     'santorini': 'JTR',
   }
