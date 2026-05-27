@@ -23,8 +23,8 @@ app.use('/api/hotels',   hotelRoutes)
 app.use('/api/voucher',  voucherRoutes)
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }))
 
-// Runs every 1 minute for testing — change back to '0 */6 * * *' for production
-cron.schedule('* * * * *', async () => {
+// Runs every 1 hour
+cron.schedule('0 * * * *', async () => {
   console.log('⏰ Running price tracker job...')
   try {
     const result = await runPriceTracker()
