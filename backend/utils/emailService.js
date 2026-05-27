@@ -1,30 +1,34 @@
 // utils/emailService.js
-// Nodemailer wrapper — use this to send all rebuq emails
+// Uses Resend for reliable transactional email delivery
 
-const nodemailer     = require('nodemailer')
 const emailTemplates = require('./emailTemplates')
-
-const transporter = nodemailer.createTransport({
-  host:   process.env.SMTP_HOST,
-  port:   Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-})
 
 async function sendEmail(to, { subject, html }) {
   try {
-    await transporter.sendMail({
-      from: `"rebuq." <${process.env.SMTP_FROM || 'hello@rebuq.com'}>`,
-      to,
-      subject,
-      html,
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'rebuq. <onboarding@resend.dev>',
+        to,
+        subject,
+        html,
+      }),
     })
-    console.log(`Email sent to ${to}: ${subject}`)
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Resend API error')
+    }
+
+    console.log(`✅ Email sent to ${to}: ${subject}`)
+    return data
   } catch (err) {
-    console.error(`Email failed to ${to}:`, err.message)
+    console.error(`❌ Email failed to ${to}:`, err.message)
     throw err
   }
 }
