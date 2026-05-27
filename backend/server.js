@@ -10,24 +10,21 @@ const adminRoutes   = require('./routes/admin')
 const hotelRoutes   = require('./routes/hotels')
 const voucherRoutes = require('./routes/voucher')
 const { runPriceTracker } = require('./jobs/priceTracker')
-
 const app = express()
-
 app.use(cors({ origin: '*' }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
-
 app.use('/api/bookings', bookingRoutes)
 app.use('/api/test',     testRoutes)
 app.use('/api/alerts',   alertRoutes)
 app.use('/api/admin',    adminRoutes)
 app.use('/api/hotels',   hotelRoutes)
 app.use('/api/voucher',  voucherRoutes)
-
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }))
 
-cron.schedule('0 */6 * * *', async () => {
+// Runs every 1 minute for testing — change back to '0 */6 * * *' for production
+cron.schedule('* * * * *', async () => {
   console.log('⏰ Running price tracker job...')
   try {
     const result = await runPriceTracker()
@@ -43,7 +40,6 @@ if (process.env.NODE_ENV === 'development') {
     try { await runPriceTracker() } catch(e) { console.error(e.message) }
   }, 10000)
 }
-
 const PORT = process.env.PORT || 4000
 app.listen(PORT, () => {
   console.log(`🏨 HotelDrops backend running on port ${PORT}`)
