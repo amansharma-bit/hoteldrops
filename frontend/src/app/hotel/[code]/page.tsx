@@ -9,7 +9,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const API = "https://hoteldrops-production.up.railway.app/api/hotels";
+const API = "https://hoteldrops-production-9107.up.railway.app/api/hotels";
 const B = "#1447b8";
 const NAVY = "#0f172a";
 
@@ -106,9 +106,13 @@ function HotelDetailContent() {
 
   const isMobile = useIsMobile();
   const code = params.code as string;
-  const checkIn = searchParams.get("checkIn") || "";
+  const checkIn  = searchParams.get("checkIn")  || "";
   const checkOut = searchParams.get("checkOut") || "";
-  const adults = searchParams.get("adults") || "2";
+  const adults   = searchParams.get("adults")   || "2";
+  const offerId  = searchParams.get("offerId")  || "";
+  const saving   = searchParams.get("saving")   || "";
+  const newPrice = searchParams.get("newPrice") || "";
+  const oldPrice = searchParams.get("oldPrice") || "";
 
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [loading, setLoading] = useState(true);
@@ -118,17 +122,15 @@ function HotelDetailContent() {
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [selectedRoomName, setSelectedRoomName] = useState<string>("");
-  const [reviewFilter, setReviewFilter] = useState("All");
   const [similarHotels, setSimilarHotels] = useState<SimilarHotel[]>([]);
 
-  // ── refs for scroll targets ──────────────────────────────────────────────
-  const refSearchBar = useRef<HTMLDivElement>(null);   // FIX: search bar ref
-  const refOverview = useRef<HTMLDivElement>(null);
-  const refRooms = useRef<HTMLDivElement>(null);
-  const refReviews = useRef<HTMLDivElement>(null);
+  const refSearchBar = useRef<HTMLDivElement>(null);
+  const refOverview  = useRef<HTMLDivElement>(null);
+  const refRooms     = useRef<HTMLDivElement>(null);
+  const refReviews   = useRef<HTMLDivElement>(null);
   const refFacilities = useRef<HTMLDivElement>(null);
-  const refLocation = useRef<HTMLDivElement>(null);
-  const refPolicies = useRef<HTMLDivElement>(null);
+  const refLocation  = useRef<HTMLDivElement>(null);
+  const refPolicies  = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!checkIn || !checkOut) return;
@@ -161,11 +163,11 @@ function HotelDetailContent() {
     };
     const ref = map[tab];
     if (ref?.current) {
-      // FIX: dynamically read sticky heights so scroll offset is always accurate
-      const navH = 60;
+      const navH    = 60;
+      const offerH  = offerId && saving ? 60 : 0;
       const searchH = refSearchBar.current?.offsetHeight ?? 80;
-      const tabsH = 50;
-      const offset = navH + searchH + tabsH + 8;
+      const tabsH   = 50;
+      const offset  = navH + offerH + searchH + tabsH + 8;
       const top = ref.current.getBoundingClientRect().top + window.pageYOffset - offset;
       window.scrollTo({ top, behavior: "smooth" });
     }
@@ -230,7 +232,7 @@ function HotelDetailContent() {
         </div>
       )}
 
-      {/* ── Nav: sticky, top 0, z 300 ── */}
+      {/* NAV */}
       <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", height: 60, position: "sticky", top: 0, zIndex: 300 }}>
         <div style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
           <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
@@ -250,33 +252,48 @@ function HotelDetailContent() {
             {!isMobile && !user && (
               <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>Sign in</button>
             )}
-            <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+            <button onClick={() => router.push("/")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
               {isMobile ? "Check booking" : "Check my booking"}
             </button>
           </div>
         </div>
       </nav>
 
-      {/* ── Search bar: FIX — sticky, top 60, z 250 ── */}
-      <div
-        ref={refSearchBar}
-        style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 32px", position: "sticky", top: 60, zIndex: 250 }}
-      >
+      {/* OFFER BANNER — shown only when coming from price drop alert */}
+      {offerId && saving && (
+        <div style={{ background: "#16a34a", padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 12, position: "sticky", top: 60, zIndex: 290 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 24 }}>🎉</span>
+            <div>
+              <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: "#fff" }}>rebuq found you a better deal!</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                You paid <span style={{ textDecoration: "line-through" }}>₹{Number(oldPrice).toLocaleString("en-IN")}</span> — new price is <strong>₹{Number(newPrice).toLocaleString("en-IN")}</strong> · Select a room below and book
+              </div>
+            </div>
+          </div>
+          <div style={{ background: "#fff", color: "#16a34a", fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, padding: "8px 20px", borderRadius: 10, flexShrink: 0 }}>
+            Save ₹{Number(saving).toLocaleString("en-IN")}
+          </div>
+        </div>
+      )}
+
+      {/* SEARCH BAR */}
+      <div ref={refSearchBar} style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 32px", position: "sticky", top: offerId && saving ? 120 : 60, zIndex: 250 }}>
         <div style={{ display: "flex", alignItems: "stretch", border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
           <div style={{ flex: 2.5, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>Destination or Hotel</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or Hotel</div>
             <div style={{ ...inp }}>{hotel.name}</div>
           </div>
           <div style={{ flex: 1.2, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
             <div style={{ ...inp }}>{hotel.checkIn}</div>
           </div>
           <div style={{ flex: 1.2, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>Check-out</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-out</div>
             <div style={{ ...inp }}>{hotel.checkOut}</div>
           </div>
           <div style={{ flex: 1, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>Guests</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Guests</div>
             <div style={{ ...inp }}>{hotel.adults} Adults</div>
           </div>
           <button onClick={() => router.push("/search?destination=" + encodeURIComponent(hotel.city) + "&checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults)}
@@ -287,6 +304,7 @@ function HotelDetailContent() {
       </div>
 
       <div style={W}>
+        {/* BREADCRUMB */}
         <div style={{ padding: "12px 0", fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
           <button onClick={() => router.push("/search-hotels")} style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>Hotels</button>
           <span>›</span>
@@ -297,7 +315,7 @@ function HotelDetailContent() {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const }}>
               <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 22 : 26, fontWeight: 800, color: NAVY }}>{hotel.name}</h1>
               <span style={{ color: "#f59e0b", fontSize: 18 }}>{"★".repeat(stars)}</span>
             </div>
@@ -312,7 +330,7 @@ function HotelDetailContent() {
           </div>
         </div>
 
-        {/* ── Photo grid: FIX — price card cell gets position relative + z 1 ── */}
+        {/* PHOTO GRID */}
         <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gridTemplateRows: "220px 220px", gap: 8, marginBottom: 24, borderRadius: 14, overflow: "hidden" }}>
           <div style={{ gridRow: "1/3", position: "relative", cursor: "pointer", overflow: "hidden", borderRadius: 12 }} onClick={() => openLightbox(0)}>
             <img src={hotel.images[0]?.url || fallbackImg} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -323,7 +341,6 @@ function HotelDetailContent() {
           <div style={{ cursor: "pointer", overflow: "hidden", borderRadius: 10 }} onClick={() => openLightbox(1)}>
             <img src={hotel.images[1]?.url || fallbackImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
-          {/* FIX: position relative + zIndex 1 keeps this below the sticky tabs bar */}
           <div style={{ background: "#fff", display: "flex", flexDirection: "column", justifyContent: "center", padding: "20px 22px", position: "relative", zIndex: 1 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#16a34a", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 100, marginBottom: 10, width: "fit-content" }}>
               Member price · Save up to 28%
@@ -349,13 +366,14 @@ function HotelDetailContent() {
           </div>
         </div>
 
-        {/* ── Tabs bar: FIX — top = nav(60) + searchBar(80) = 140, z 200 ── */}
-        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, display: "flex", overflow: "hidden", marginBottom: 20, position: "sticky", top: 140, zIndex: 200 }}>
+        {/* TABS */}
+        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, display: "flex", overflow: "hidden", marginBottom: 20, position: "sticky", top: offerId && saving ? 180 : 140, zIndex: 200 }}>
           {[["overview", "Overview"], ["rooms", "Rooms"], ["reviews", "Reviews"], ["facilities", "Facilities"], ["location", "Location"], ["policies", "Policies"]].map(([id, label]) => (
             <button key={id} className={"tab-btn" + (activeTab === id ? " active" : "")} onClick={() => goToSection(id)}>{label}</button>
           ))}
         </div>
 
+        {/* OVERVIEW */}
         <div className="card" ref={refOverview}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 18 }}>
             <div style={{ background: B, color: "#fff", borderRadius: 12, width: 64, height: 64, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -382,6 +400,7 @@ function HotelDetailContent() {
           </div>
         </div>
 
+        {/* ROOMS */}
         <div className="card" ref={refRooms}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Select your room</div>
           <table className="rooms-table">
@@ -431,12 +450,12 @@ function HotelDetailContent() {
             </tbody>
           </table>
           {selectedRoomData && displayPrice && (
-            <div style={{ marginTop: 20, background: "#f0f7ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+            <div style={{ marginTop: 20, background: "#f0f7ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 12 }}>
               <div>
                 <div style={{ fontSize: 12, color: B, fontWeight: 600, marginBottom: 2 }}>Selected: {selectedRoomName}</div>
                 <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: NAVY }}>{formatINR(displayPrice)}<span style={{ fontSize: 12, color: "#64748b", fontFamily: "inherit", fontWeight: 400 }}>/night</span></div>
               </div>
-              <button onClick={() => router.push("/checkout?hotel=" + encodeURIComponent(hotel.name) + "&checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults + "&room=" + encodeURIComponent(selectedRoomName) + "&price=" + displayPrice)}
+              <button onClick={() => router.push("/checkout?hotel=" + encodeURIComponent(hotel.name) + "&checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults + "&room=" + encodeURIComponent(selectedRoomName) + "&price=" + displayPrice + (offerId ? "&offerId=" + offerId : ""))}
                 style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                 Book Now →
               </button>
@@ -444,6 +463,7 @@ function HotelDetailContent() {
           )}
         </div>
 
+        {/* REVIEWS */}
         <div className="card" ref={refReviews}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Guest Reviews</div>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
@@ -465,6 +485,7 @@ function HotelDetailContent() {
           ))}
         </div>
 
+        {/* FACILITIES */}
         <div className="card" ref={refFacilities}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 20 }}>Hotel Facilities</div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: "24px 32px" }}>
@@ -482,6 +503,7 @@ function HotelDetailContent() {
           </div>
         </div>
 
+        {/* LOCATION */}
         <div className="card" ref={refLocation}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Location</div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -505,6 +527,7 @@ function HotelDetailContent() {
           </div>
         </div>
 
+        {/* POLICIES */}
         <div className="card" ref={refPolicies}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Hotel Policies</div>
           {[
@@ -519,14 +542,16 @@ function HotelDetailContent() {
           ))}
         </div>
 
+        {/* TRACK BANNER */}
         <div style={{ background: B, borderRadius: 12, padding: "24px 28px", marginBottom: 20 }}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Already booked this hotel?</div>
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.7, marginBottom: 14 }}>Upload your voucher and our AI watches the price 24/7. WhatsApp alert the moment it drops.</p>
-          <button onClick={() => router.push("/upload")} style={{ background: "#fff", color: B, border: "none", padding: "10px 22px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={() => router.push("/")} style={{ background: "#fff", color: B, border: "none", padding: "10px 22px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
             Upload voucher → Track price
           </button>
         </div>
 
+        {/* SIMILAR HOTELS */}
         <div style={{ marginBottom: 40 }}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 20 }}>People also viewed</div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20 }}>
@@ -554,7 +579,7 @@ function HotelDetailContent() {
 
       <footer style={{ background: NAVY, padding: "40px 0 28px" }}>
         <div style={W}>
-          <div style={{ borderTop: "1px solid #1e293b", paddingTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ borderTop: "1px solid #1e293b", paddingTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" as const, gap: 12 }}>
             <span style={{ fontSize: 12.5, color: "#475569" }}>© 2026 rebuq. All rights reserved.</span>
           </div>
         </div>
@@ -566,7 +591,7 @@ function HotelDetailContent() {
             <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY }}>{formatINR(displayPrice)}</div>
             <div style={{ fontSize: 10, color: "#64748b" }}>per night</div>
           </div>
-          <button onClick={() => router.push("/checkout?hotel=" + encodeURIComponent(hotel.name) + "&checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults + "&room=" + encodeURIComponent(selectedRoomName) + "&price=" + displayPrice)}
+          <button onClick={() => router.push("/checkout?hotel=" + encodeURIComponent(hotel.name) + "&checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults + "&room=" + encodeURIComponent(selectedRoomName) + "&price=" + displayPrice + (offerId ? "&offerId=" + offerId : ""))}
             style={{ background: B, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Book Now →</button>
         </div>
       )}
