@@ -1,374 +1,274 @@
-const https  = require('https')
-const crypto = require('crypto')
-const zlib   = require('zlib')
+const express = require('express')
+const router  = express.Router()
+const { searchHotels, getDestinationCode, getHotelContent, getHotelRooms } = require('../utils/hotelbeds')
 
-const API_KEY = process.env.HOTELBEDS_API_KEY
-const SECRET  = process.env.HOTELBEDS_SECRET
-const BASE    = process.env.HOTELBEDS_ENV === 'production'
-  ? 'https://api.hotelbeds.com'
-  : 'https://api.test.hotelbeds.com'
+const PHOTO_BASE = 'https://photos.hotelbeds.com/giata/xl'
 
-// ── HARDCODED HOTEL IDs — bypasses fuzzy matching ─────────────────────────
-// Add any hotel here that the fuzzy matcher gets wrong
-// Format: 'hotel name lowercase' : hotelbeds_code
-const HOTEL_OVERRIDES = {
-  'residence inn by marriott sheikh zayed road': 135812,
-  'residence inn marriott sheikh zayed road':    135812,
-  'residence inn sheikh zayed road':             135812,
-  'residence inn dubai':                         135812,
-}
-
-function getAuthHeaders() {
-  const timestamp = Math.floor(Date.now() / 1000).toString()
-  const signature = crypto
-    .createHash('sha256')
-    .update(API_KEY + SECRET + timestamp)
-    .digest('hex')
-  return {
-    'Api-key':        API_KEY,
-    'X-Signature':    signature,
-    'Accept':         'application/json',
-    'Accept-Encoding':'gzip',
-    'Content-Type':   'application/json',
+const HOTEL_CACHE = {
+  "372446": {
+    code: 372446,
+    name: { content: "Damac Maison Dubai Mall Street" },
+    description: { content: "Set in the heart of the bustling Burj Area of Dubai, this exclusive private luxury aparthotel offers sumptuous city living with upmarket service and privacy." },
+    country: { code: "AE", description: { content: "United Arab Emirates" } },
+    destination: { code: "DXB", name: { content: "Dubai" } },
+    coordinates: { longitude: 55.283775, latitude: 25.195252 },
+    category: { description: { content: "5 STARS" } },
+    chain: { description: { content: "Damac Hotels & Resorts Management LLC" } },
+    address: { content: "Mohammed Bin Rashid Boulevard, Downtown" },
+    city: { content: "DUBAI" },
+    boards: [
+      { code: "BB", description: { content: "BED AND BREAKFAST" } },
+      { code: "SC", description: { content: "SELF CATERING" } },
+      { code: "HB", description: { content: "HALF BOARD" } },
+      { code: "RO", description: { content: "ROOM ONLY" } }
+    ],
+    rooms: [
+      { roomCode: "SUI.B2", description: "SUITE TWO BEDROOMS", type: { description: { content: "SUITE" } }, characteristic: { description: { content: "TWO BEDROOMS" } }, maxAdults: 8, maxPax: 8, roomFacilities: [], roomStays: [] },
+      { roomCode: "DBL.DX", description: "DOUBLE DELUXE", type: { description: { content: "DOUBLE" } }, characteristic: { description: { content: "DELUXE" } }, maxAdults: 2, maxPax: 2, roomFacilities: [], roomStays: [] },
+    ],
+    facilities: [],
+    images: [
+      { type: { code: "GEN" }, path: "37/372446/372446a_hb_a_001.jpg", visualOrder: 1 },
+    ]
   }
 }
 
-function apiRequest(path, method = 'GET', body = null) {
-  return new Promise((resolve, reject) => {
-    const url     = `${BASE}${path}`
-    const headers = getAuthHeaders()
-    const options = { method, headers }
+// GET /api/hotels/search
+router.get('/search', async (req, res) => {
+  try {
+    const { destination, checkIn, checkOut, adults = 2, children = 0, rooms = 1 } = req.query
+    if (!destination || !checkIn || !checkOut) {
+      return res.status(400).json({ error: 'Missing required fields: destination, checkIn, checkOut' })
+    }
+    const destinationCode = getDestinationCode(destination)
+    if (!destinationCode) {
+      return res.status(400).json({ error: `Unknown destination: "${destination}".` })
+    }
 
-    const req = https.request(url, options, (res) => {
-      const chunks = []
-      res.on('data', c => chunks.push(c))
-      res.on('end', () => {
-        const buffer   = Buffer.concat(chunks)
-        const encoding = res.headers['content-encoding']
-
-        const parseBuffer = (buf) => {
-          try {
-            const raw    = buf.toString('utf8')
-            const parsed = JSON.parse(raw)
-            if (res.statusCode >= 400) {
-              const msg = parsed?.error?.message || parsed?.message || `HTTP ${res.statusCode}`
-              reject(new Error(`Hotelbeds API error: ${msg}`))
-            } else {
-              resolve(parsed)
-            }
-          } catch (e) {
-            reject(new Error(`JSON parse error: ${e.message}`))
-          }
-        }
-
-        if (encoding === 'gzip') {
-          zlib.gunzip(buffer, (err, decoded) => {
-            if (err) return reject(new Error(`Gzip error: ${err.message}`))
-            parseBuffer(decoded)
-          })
-        } else if (encoding === 'deflate') {
-          zlib.inflate(buffer, (err, decoded) => {
-            if (err) return reject(new Error(`Deflate error: ${err.message}`))
-            parseBuffer(decoded)
-          })
-        } else {
-          parseBuffer(buffer)
-        }
-      })
+    console.log(`🔍 Searching: ${destination} (${destinationCode}) | ${checkIn} → ${checkOut}`)
+    const hotels = await searchHotels({
+      destination: destinationCode, checkIn, checkOut,
+      adults: parseInt(adults), children: parseInt(children),
+      rooms: parseInt(rooms), maxHotels: 40,
     })
 
-    req.on('error', reject)
-    if (body) req.write(JSON.stringify(body))
-    req.end()
-  })
-}
+    const hotelsWithImages = await Promise.all(
+      hotels.map(async (hotel) => {
+        try {
+          const content = await getHotelContent(hotel.code)
+          const images = (content?.images || [])
+            .filter(img => img.type?.code === 'GEN')
+            .sort((a, b) => a.visualOrder - b.visualOrder)
+          const firstImage = images[0]
+          return {
+            ...hotel,
+            imageUrl: firstImage ? `${PHOTO_BASE}/${firstImage.path}` : null,
+            address: content?.address?.content || null,
+            chain: content?.chain?.description?.content || null,
+          }
+        } catch {
+          return hotel
+        }
+      })
+    )
 
-async function searchHotels({ destination, checkIn, checkOut, adults = 2, children = 0, rooms = 1, hotelCodes = [], maxHotels = 20 }) {
-  const payload = {
-    stay:        { checkIn, checkOut },
-    occupancies: [{ rooms, adults, children }],
-    filter:      { maxHotels },
+    console.log(`✅ Found ${hotels.length} hotels`)
+    res.json({ hotels: { hotels: hotelsWithImages, total: hotels.length, checkIn, checkOut } })
+  } catch (err) {
+    console.error('❌ Search error:', err.message)
+    res.status(500).json({ error: err.message })
   }
-  if (hotelCodes.length > 0) {
-    payload.hotels = { hotel: hotelCodes }
-  } else {
-    payload.destination = { code: destination }
-  }
-  const data = await apiRequest('/hotel-api/1.0/hotels', 'POST', payload)
-  return data.hotels?.hotels || []
-}
+})
 
-async function checkHotelPrice({ hotelCode, checkIn, checkOut, adults = 2, children = 0, rooms = 1 }) {
-  const payload = {
-    stay:        { checkIn, checkOut },
-    occupancies: [{ rooms, adults, children }],
-    hotels:      { hotel: [parseInt(hotelCode)] },
-    filter:      { maxHotels: 1 },
-  }
-  const data = await apiRequest('/hotel-api/1.0/hotels', 'POST', payload)
-  const hotels = data.hotels?.hotels || []
-  if (!hotels.length) return null
+// GET /api/hotels/:code
+router.get('/:code', async (req, res) => {
+  try {
+    const { code } = req.params
+    const { checkIn, checkOut, adults = 2, children = 0, rooms = 1 } = req.query
 
-  const hotel = hotels[0]
-  let lowestRate = null
-  let lowestPrice = Infinity
+    if (!checkIn || !checkOut) {
+      return res.status(400).json({ error: 'checkIn and checkOut required' })
+    }
 
-  for (const room of (hotel.rooms || [])) {
-    for (const rate of (room.rates || [])) {
-      const price = parseFloat(rate.net || 0)
-      if (price > 0 && price < lowestPrice) {
-        lowestPrice = price
-        lowestRate  = {
-          rateKey:    rate.rateKey,
-          rateType:   rate.rateType,
-          net:        price,
-          boardCode:  rate.boardCode,
-          boardName:  rate.boardName,
-          roomCode:   room.code,
-          roomName:   room.name,
-          cancellationPolicies: rate.cancellationPolicies,
-          paymentType: rate.paymentType,
-          allotment:   rate.allotment,
+    console.log(`🏨 Hotel detail: ${code} | ${checkIn} → ${checkOut}`)
+
+    let content
+    try {
+      content = await getHotelContent(code)
+    } catch (e) {
+      console.error('Content fetch error:', e.message)
+      if (HOTEL_CACHE[code]) {
+        console.log('Using cached data for hotel', code)
+        content = HOTEL_CACHE[code]
+      } else {
+        return res.status(503).json({ error: 'Hotel data temporarily unavailable. Please try again in a few minutes.' })
+      }
+    }
+
+    if (!content) {
+      return res.status(404).json({ error: 'Hotel not found' })
+    }
+
+    const allImages = (content.images || []).sort((a, b) => a.visualOrder - b.visualOrder)
+    const generalImages = allImages
+      .filter(img => ['GEN', 'COM', 'PIS', 'TER', 'BAR', 'RES'].includes(img.type?.code))
+      .map(img => ({ url: `${PHOTO_BASE}/${img.path}`, type: img.type?.description?.content || 'General' }))
+
+    const roomImages = {}
+    allImages.filter(img => img.type?.code === 'HAB' && img.roomCode).forEach(img => {
+      if (!roomImages[img.roomCode]) roomImages[img.roomCode] = []
+      roomImages[img.roomCode].push(`${PHOTO_BASE}/${img.path}`)
+    })
+
+    const facilityGroups = { general: [], sports: [], wellness: [], dining: [], connectivity: [] }
+    const groupMap = { 70: 'general', 73: 'sports', 74: 'wellness', 71: 'dining', 80: 'dining' }
+    ;(content.facilities || []).forEach(f => {
+      const group = groupMap[f.facilityGroupCode]
+      if (group && f.description?.content && f.indLogic !== false) {
+        const label = f.description.content.trim()
+        if (!facilityGroups[group].includes(label)) facilityGroups[group].push(label)
+      }
+    })
+
+    const EUR_TO_INR = 112
+    const nights = Math.max(1, Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000))
+
+    const roomPrices = {}
+    let lowestPrice = null
+    let lowestTotal = null
+
+    await new Promise(r => setTimeout(r, 500))
+
+    try {
+      const hotelRooms = await getHotelRooms({
+        hotelCode: code, checkIn, checkOut,
+        adults: parseInt(adults), children: 0, rooms: 1,
+      })
+
+      let minPrice = Infinity
+      for (const room of hotelRooms) {
+        let bestRate = null
+        let bestPrice = Infinity
+        for (const rate of (room.rates || [])) {
+          const price = parseFloat(rate.net || 0)
+          if (price > 0 && price < bestPrice) {
+            bestPrice = price
+            bestRate = rate
+          }
+        }
+        if (bestRate) {
+          roomPrices[room.code] = {
+            price: bestPrice,
+            rateKey: bestRate.rateKey,
+            boardCode: bestRate.boardCode,
+            boardName: bestRate.boardName,
+            cancellationPolicies: bestRate.cancellationPolicies,
+            rateType: bestRate.rateType,
+            paymentType: bestRate.paymentType,
+            allotment: bestRate.allotment,
+          }
+          if (bestPrice < minPrice) {
+            minPrice = bestPrice
+            lowestPrice = Math.round(bestPrice * EUR_TO_INR / nights)
+            lowestTotal = Math.round(bestPrice * EUR_TO_INR)
+          }
         }
       }
+    } catch (e) {
+      console.error('Price fetch error:', e.message)
     }
-  }
 
-  return lowestRate ? {
-    price:    lowestPrice,
-    currency: data.hotels?.currency || 'EUR',
-    rate:     lowestRate,
-    hotelCode: hotel.code,
-    hotelName: hotel.name,
-  } : null
-}
+    const roomList = (content.rooms || []).slice(0, 15).map(room => {
+      const priceInfo = roomPrices[room.roomCode]
+      const sizeFacility = (room.roomFacilities || []).find(f => f.facilityCode === 295)
+      const bedroomsFacility = (room.roomFacilities || []).find(f => f.facilityCode === 298)
+      const balconyFacility = (room.roomFacilities || []).find(f => f.facilityCode === 230)
+      const bedStay = (room.roomStays || []).find(s => s.stayType === 'BED')
+      const bedType = bedStay?.roomStayFacilities?.[0]?.description?.content || null
+      const amenities = (room.roomFacilities || [])
+        .filter(f => f.indLogic === true && f.description?.content)
+        .map(f => f.description.content.trim())
+        .slice(0, 8)
 
-async function getHotelContent(hotelCode, language = 'ENG') {
-  const data = await apiRequest(
-    `/hotel-content-api/1.0/hotels/${hotelCode}/details?language=${language}&useSecondaryLanguage=false`
-  )
-  return data.hotel || null
-}
+      const pricePerNight = priceInfo ? Math.round(priceInfo.price * EUR_TO_INR / nights) : null
+      const totalPrice = priceInfo ? Math.round(priceInfo.price * EUR_TO_INR) : null
 
-async function findHotelsByKeyword(destinationCode, language = 'ENG') {
-  const data = await apiRequest(
-    `/hotel-content-api/1.0/hotels?destinationCode=${destinationCode}&language=${language}&useSecondaryLanguage=false&fields=all&from=1&to=100`
-  )
-  return data.hotels || []
-}
-
-async function findHotelCode(hotelName, destinationCode) {
-  try {
-    // ── Check hardcoded overrides first ──────────────────────────────────
-    const nameLower = hotelName.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim()
-    for (const [key, code] of Object.entries(HOTEL_OVERRIDES)) {
-      if (nameLower.includes(key) || key.includes(nameLower)) {
-        console.log(`🎯 Hardcoded match for "${hotelName}": ${code}`)
-        return code
+      let cancellation = null
+      if (priceInfo?.cancellationPolicies?.length) {
+        const policy = priceInfo.cancellationPolicies[0]
+        cancellation = {
+          type: priceInfo.rateType === 'RECHECK' ? 'free' : 'non-refundable',
+          from: policy.dateFrom || null,
+          penalty: policy.amount ? Math.round(policy.amount * EUR_TO_INR) : null,
+        }
       }
-    }
 
-    // ── Fall back to fuzzy matching ───────────────────────────────────────
-    const hotels = await findHotelsByKeyword(destinationCode)
-    if (!hotels.length) return null
+      return {
+        roomCode: room.roomCode,
+        name: room.description,
+        type: room.type?.description?.content,
+        characteristic: room.characteristic?.description?.content,
+        maxAdults: room.maxAdults,
+        maxPax: room.maxPax,
+        size: sizeFacility?.number || null,
+        bedrooms: bedroomsFacility?.number || null,
+        hasBalcony: balconyFacility?.indLogic === true,
+        bedType,
+        amenities,
+        images: roomImages[room.roomCode] || Object.values(roomImages)[0] || [],
+        pricePerNight,
+        totalPrice,
+        boardCode: priceInfo?.boardCode || null,
+        boardName: priceInfo?.boardName || null,
+        rateKey: priceInfo?.rateKey || null,
+        cancellation,
+        paymentType: priceInfo?.paymentType || null,
+      }
+    })
 
-    const scored = hotels.map(h => {
-      const hn    = (h.name?.content || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim()
-      const score = stringSimilarity(nameLower, hn)
-      return { code: h.code, name: h.name?.content, score }
-    }).sort((a, b) => b.score - a.score)
+    const checkInFacility = (content.facilities || []).find(f => f.facilityCode === 260 && f.facilityGroupCode === 70)
+    const checkOutFacility = (content.facilities || []).find(f => f.facilityCode === 390 && f.facilityGroupCode === 70)
+    const distances = (content.facilities || [])
+      .filter(f => f.facilityGroupCode === 40 && f.distance)
+      .map(f => ({ label: f.description?.content, distance: f.distance }))
+    const interestPoints = (content.interestPoints || []).map(p => ({ name: p.poiName, distance: parseInt(p.distance) }))
+    const boards = (content.boards || []).map(b => ({ code: b.code, name: b.description?.content }))
 
-    const best = scored[0]
-    console.log(`🏨 Best match for "${hotelName}": "${best.name}" (score: ${best.score.toFixed(2)})`)
-    return best.score > 0.35 ? best.code : null
+    res.json({
+      success: true,
+      hotel: {
+        code: content.code,
+        name: content.name?.content,
+        description: content.description?.content,
+        stars: content.category?.description?.content,
+        chain: content.chain?.description?.content,
+        address: content.address?.content,
+        city: content.city?.content,
+        country: content.country?.description?.content,
+        coordinates: content.coordinates,
+        checkInTime: checkInFacility?.timeFrom?.slice(0,5) || '15:00',
+        checkOutTime: checkOutFacility?.timeFrom?.slice(0,5) || '12:00',
+        totalRooms: (content.facilities || []).find(f => f.facilityCode === 70 && f.facilityGroupCode === 10)?.number,
+        floors: (content.facilities || []).find(f => f.facilityCode === 50 && f.facilityGroupCode === 10)?.number,
+        images: generalImages,
+        rooms: roomList,
+        facilityGroups,
+        boards,
+        distances,
+        interestPoints,
+        lowestPriceINR: lowestPrice,
+        lowestTotalINR: lowestTotal,
+        nights,
+        checkIn,
+        checkOut,
+        adults: parseInt(adults),
+      }
+    })
+
   } catch (err) {
-    console.error('findHotelCode error:', err.message)
-    return null
+    console.error('❌ Hotel detail error:', err.message)
+    res.status(500).json({ error: err.message })
   }
-}
+})
 
-async function recheckRate(rateKey) {
-  const data = await apiRequest('/hotel-api/1.0/checkrates', 'POST', { rooms: [{ rateKey }] })
-  return data.hotel || null
-}
-
-async function createBooking({ rateKey, holderName, holderSurname, paxes, clientReference, remark }) {
-  const payload = {
-    holder: { name: holderName, surname: holderSurname },
-    rooms:  [{ rateKey, paxes }],
-    clientReference,
-    tolerance: 2.00,
-    ...(remark && { remark }),
-  }
-  const data = await apiRequest('/hotel-api/1.0/bookings', 'POST', payload)
-  return data.booking || null
-}
-
-async function cancelBooking(reference, simulate = false) {
-  const flag = simulate ? 'SIMULATION' : 'CANCELLATION'
-  const data = await apiRequest(
-    `/hotel-api/1.0/bookings/${reference}?cancellationFlag=${flag}`,
-    'DELETE'
-  )
-  return data.booking || null
-}
-
-function getDestinationCode(cityName) {
-  const map = {
-    'mumbai': 'BOM', 'bombay': 'BOM',
-    'delhi': 'DEL', 'new delhi': 'DEL',
-    'bangalore': 'BLR', 'bengaluru': 'BLR',
-    'hyderabad': 'HYD',
-    'chennai': 'MAA', 'madras': 'MAA',
-    'kolkata': 'CCU', 'calcutta': 'CCU',
-    'pune': 'PNQ',
-    'goa': 'GOA',
-    'jaipur': 'JAI',
-    'ahmedabad': 'AMD',
-    'kochi': 'COK', 'cochin': 'COK',
-    'udaipur': 'UDR',
-    'agra': 'AGR',
-    'varanasi': 'VNS',
-    'amritsar': 'ATQ',
-    'lucknow': 'LKO',
-    'chandigarh': 'IXC',
-    'srinagar': 'SXR',
-    'shimla': 'SLV',
-    'manali': 'KUU',
-    'jodhpur': 'JDH',
-    'mysore': 'MYQ', 'mysuru': 'MYQ',
-    'coimbatore': 'CJB',
-    'surat': 'STV',
-    'nagpur': 'NAG',
-    'bhopal': 'BHO',
-    'indore': 'IDR',
-    'visakhapatnam': 'VTZ', 'vizag': 'VTZ',
-    'pondicherry': 'PNY',
-    'ooty': 'OOT',
-    'darjeeling': 'DAR',
-    'leh': 'IXL',
-    'gangtok': 'GTK',
-    'dubai': 'DXB',
-    'abu dhabi': 'AUH',
-    'sharjah': 'SHJ',
-    'doha': 'DOH',
-    'riyadh': 'RUH',
-    'jeddah': 'JED',
-    'muscat': 'MCT',
-    'kuwait city': 'KWI', 'kuwait': 'KWI',
-    'bahrain': 'BAH',
-    'beirut': 'BEY',
-    'amman': 'AMM',
-    'london': 'LON',
-    'paris': 'PAR',
-    'amsterdam': 'AMS',
-    'rome': 'ROM',
-    'barcelona': 'BCN',
-    'madrid': 'MAD',
-    'berlin': 'BER',
-    'frankfurt': 'FRA',
-    'munich': 'MUC',
-    'vienna': 'VIE',
-    'zurich': 'ZRH',
-    'geneva': 'GVA',
-    'milan': 'MIL',
-    'venice': 'VCE',
-    'florence': 'FLR',
-    'prague': 'PRG',
-    'budapest': 'BUD',
-    'warsaw': 'WAW',
-    'stockholm': 'STO',
-    'copenhagen': 'CPH',
-    'oslo': 'OSL',
-    'helsinki': 'HEL',
-    'brussels': 'BRU',
-    'lisbon': 'LIS',
-    'athens': 'ATH',
-    'istanbul': 'IST',
-    'dublin': 'DUB',
-    'edinburgh': 'EDI',
-    'manchester': 'MAN',
-    'bangkok': 'BKK',
-    'singapore': 'SIN',
-    'kuala lumpur': 'KUL', 'kl': 'KUL',
-    'bali': 'DPS',
-    'jakarta': 'JKT',
-    'ho chi minh city': 'SGN', 'saigon': 'SGN',
-    'hanoi': 'HAN',
-    'phuket': 'HKT',
-    'pattaya': 'UTP',
-    'chiang mai': 'CNX',
-    'manila': 'MNL',
-    'cebu': 'CEB',
-    'yangon': 'RGN',
-    'colombo': 'CMB',
-    'male': 'MLE', 'maldives': 'MLE',
-    'kathmandu': 'KTM',
-    'phnom penh': 'PNH',
-    'siem reap': 'REP',
-    'tokyo': 'TYO',
-    'osaka': 'OSA',
-    'kyoto': 'UKY',
-    'beijing': 'BJS',
-    'shanghai': 'SHA',
-    'hong kong': 'HKG',
-    'seoul': 'SEL',
-    'taipei': 'TPE',
-    'new york': 'NYC', 'new york city': 'NYC',
-    'los angeles': 'LAX',
-    'las vegas': 'LAS',
-    'miami': 'MIA',
-    'chicago': 'CHI',
-    'san francisco': 'SFO',
-    'orlando': 'ORL',
-    'toronto': 'YTO',
-    'vancouver': 'YVR',
-    'cancun': 'CUN',
-    'sydney': 'SYD',
-    'melbourne': 'MEL',
-    'brisbane': 'BNE',
-    'gold coast': 'OOL',
-    'cape town': 'CPT',
-    'johannesburg': 'JNB',
-    'nairobi': 'NBO',
-    'cairo': 'CAI',
-    'marrakech': 'RAK',
-    'casablanca': 'CAS',
-    'mauritius': 'MRU',
-    'seychelles': 'SEZ',
-    'zanzibar': 'ZNZ',
-    'mykonos': 'JMK',
-    'santorini': 'JTR',
-  }
-  return map[cityName?.toLowerCase()?.trim()] || null
-}
-
-function stringSimilarity(a, b) {
-  if (!a || !b) return 0
-  const wa = new Set(a.split(' ').filter(w => w.length > 2))
-  const wb = new Set(b.split(' ').filter(w => w.length > 2))
-  if (!wa.size || !wb.size) return 0
-  let common = 0
-  wa.forEach(w => { if (wb.has(w)) common++ })
-  return common / Math.max(wa.size, wb.size)
-}
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
-
-async function getHotelRooms({ hotelCode, checkIn, checkOut, adults = 2, children = 0, rooms = 1 }) {
-  const payload = {
-    stay:        { checkIn, checkOut },
-    occupancies: [{ rooms, adults, children }],
-    hotels:      { hotel: [parseInt(hotelCode)] },
-    filter:      { maxHotels: 1 },
-  }
-  const data = await apiRequest('/hotel-api/1.0/hotels', 'POST', payload)
-  const hotel = (data.hotels?.hotels || [])[0]
-  return hotel?.rooms || []
-}
-
-module.exports = {
-  searchHotels, checkHotelPrice, getHotelContent, getHotelRooms,
-  findHotelCode, recheckRate, createBooking,
-  cancelBooking, getDestinationCode, sleep,
-}
+module.exports = router
