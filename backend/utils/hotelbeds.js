@@ -12,10 +12,10 @@ const BASE    = process.env.HOTELBEDS_ENV === 'production'
 // Add any hotel here that the fuzzy matcher gets wrong
 // Format: 'hotel name lowercase' : hotelbeds_code
 const HOTEL_OVERRIDES = {
-  'residence inn by marriott sheikh zayed road': 2856,
-  'residence inn marriott sheikh zayed road':    2856,
-  'residence inn sheikh zayed road':             2856,
-  'residence inn dubai':                         2856,
+  'residence inn by marriott sheikh zayed road': 135812,
+  'residence inn marriott sheikh zayed road':    135812,
+  'residence inn sheikh zayed road':             135812,
+  'residence inn dubai':                         135812,
 }
 
 function getAuthHeaders() {
