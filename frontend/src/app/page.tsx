@@ -287,7 +287,6 @@ export default function Home() {
       if (json.blocked && json.reason === 'non_refundable') { setUploadStep('blocked'); return; }
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to submit');
       sessionStorage.setItem('rebuq_booking', JSON.stringify({ extracted, bookingId: json.booking_id }));
-      closeModal();
       router.push('/upload');
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
