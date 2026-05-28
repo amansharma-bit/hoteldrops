@@ -586,7 +586,14 @@ export default function Home() {
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 12 }}>Real savings · Verified drops</p>
           <h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>rebuq members saved on these hotels</h2>
         </div>
-        <div style={{ overflow: "hidden", padding: isMobile ? "0 16px" : "0 40px" }}>
+        <div style={{ overflow: "hidden", padding: isMobile ? "0 16px" : "0 40px" }}
+          onTouchStart={e => { const t = e.touches[0]; (e.currentTarget as any)._touchStartX = t.clientX; }}
+          onTouchEnd={e => {
+            const startX = (e.currentTarget as any)._touchStartX;
+            const endX = e.changedTouches[0].clientX;
+            const diff = startX - endX;
+            if (Math.abs(diff) > 50) { scrollCarousel(diff > 0 ? 1 : -1); }
+          }}>
           <div style={{ display: "flex", gap: 16, transform: `translateX(-${carouselPos * (CARD_WIDTH + 16)}px)`, transition: "transform 0.4s cubic-bezier(.4,0,.2,1)" }}>
             {CARDS.map((c, i) => (
               <div key={i} className="hotel-card" style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
@@ -601,9 +608,19 @@ export default function Home() {
             ))}
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 20 }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
           <button onClick={() => scrollCarousel(-1)} disabled={carouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos === 0 ? 0.4 : 1 }}>‹</button>
+          <div style={{ display: "flex", gap: 6 }}>
+            {Array.from({ length: CARDS.length - VISIBLE + 1 }, (_, i) => (
+              <div key={i} onClick={() => setCarouselPos(i)} style={{ width: i === carouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === carouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />
+            ))}
+          </div>
           <button onClick={() => scrollCarousel(1)} disabled={carouselPos >= MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos >= MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos >= MAX_POS ? 0.4 : 1 }}>›</button>
+        </div>
+        <div style={{ textAlign: "center", marginTop: 16 }}>
+          <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "none", border: "1.5px solid #e2e8f0", color: NAVY, borderRadius: 10, padding: "10px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+            Explore all member deals →
+          </button>
         </div>
       </div>
 
