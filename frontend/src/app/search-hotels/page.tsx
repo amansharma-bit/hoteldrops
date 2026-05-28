@@ -10,7 +10,7 @@ const supabase = createClient(
 );
 
 const B = "#1447b8";
-const ORANGE = "#f97316";
+const YELLOW = "#FCD34D";
 const NAVY = "#0f172a";
 
 function useIsMobile() {
@@ -285,11 +285,12 @@ export default function SearchHotelsPage() {
     .ticker-hidden { opacity: 0; }
     .hotel-card { transition: transform .2s; }
     .hotel-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
-    .guest-btn { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid #e2e8f0; background: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; transition: all .15s; }
-    .guest-btn:hover:not(:disabled) { border-color: ${B}; color: ${B}; }
+    .guest-btn { width: 32px; height: 32px; border-radius: 6px; border: 1.5px solid #cbd5e1; background: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; transition: all .15s; color: #475569; }
+    .guest-btn:hover:not(:disabled) { border-color: ${B}; color: ${B}; background: #eff6ff; }
     .guest-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .search-field { transition: background 0.15s; }
-    .search-field:hover { background: #f0f7ff; }
+    .search-field { transition: background 0.15s; cursor: pointer; }
+    .search-field:hover { background: #f8fafc; }
+    .search-btn-y:hover { background: #e6b800 !important; }
     input[type=date] { position: absolute; opacity: 0; pointer-events: none; top: 0; left: 0; width: 1px; height: 1px; }
   `;
 
@@ -338,36 +339,39 @@ export default function SearchHotelsPage() {
       )}
 
       {/* HERO */}
-      <section style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)", padding: isMobile ? "48px 20px 64px" : "72px 40px 96px", textAlign: "center", position: "relative", overflow: "visible" }}>
+      <section style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)", padding: isMobile ? "48px 0 0" : "72px 0 0", textAlign: "center", position: "relative", overflow: "visible" }}>
 
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
-          ✦ Exclusive Member Deals
+        <div style={{ padding: isMobile ? "0 20px" : "0 40px" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
+            ✦ Exclusive Member Deals
+          </div>
+          <h1 className="sora" style={{ fontSize: isMobile ? 34 : 60, fontWeight: 800, color: "#fff", lineHeight: 1.08, marginBottom: 18, maxWidth: 760, margin: "0 auto 18px" }}>
+            Find your <span style={{ color: "#FCD34D" }}>perfect stay</span>
+          </h1>
+          <p style={{ fontSize: isMobile ? 15 : 16.5, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.7 }}>
+            500,000+ exclusive deals across the globe for members only.
+          </p>
+
+          {/* LIVE TICKER */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: isMobile ? 12 : 13, padding: "8px 18px", borderRadius: 100, marginBottom: 36 }}>
+            <span style={{ width: 8, height: 8, background: "#4ade80", borderRadius: "50%", flexShrink: 0, animation: "pulse 1.5s infinite" }} />
+            <span className={tickerVisible ? "ticker-visible" : "ticker-hidden"} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const, justifyContent: "center" }}>
+              <span style={{ fontWeight: 600, color: "#FCD34D" }}>{ticker.name}</span>
+              <span style={{ color: "rgba(255,255,255,0.7)" }}>saved on</span>
+              <span style={{ fontWeight: 600 }}>{ticker.hotel}</span>
+              <span style={{ color: "#4ade80", fontWeight: 700 }}>— {ticker.saved}</span>
+              <span style={{ background: "rgba(255,255,255,0.15)", fontSize: 11, padding: "2px 8px", borderRadius: 6, color: "rgba(255,255,255,0.7)" }}>{ticker.time}</span>
+            </span>
+          </div>
         </div>
-        <h1 className="sora" style={{ fontSize: isMobile ? 34 : 60, fontWeight: 800, color: "#fff", lineHeight: 1.08, marginBottom: 18, maxWidth: 760, margin: "0 auto 18px" }}>
-          Find your <span style={{ color: "#FCD34D" }}>perfect stay</span>
-        </h1>
-        <p style={{ fontSize: isMobile ? 15 : 16.5, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.7 }}>
-          500,000+ exclusive deals across the globe for members only.
-        </p>
 
-        {/* LIVE TICKER */}
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: isMobile ? 12 : 13, padding: "8px 18px", borderRadius: 100, marginBottom: 32 }}>
-          <span style={{ width: 8, height: 8, background: "#4ade80", borderRadius: "50%", flexShrink: 0, animation: "pulse 1.5s infinite" }} />
-          <span className={tickerVisible ? "ticker-visible" : "ticker-hidden"} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const, justifyContent: "center" }}>
-            <span style={{ fontWeight: 600, color: "#FCD34D" }}>{ticker.name}</span>
-            <span style={{ color: "rgba(255,255,255,0.7)" }}>saved on</span>
-            <span style={{ fontWeight: 600 }}>{ticker.hotel}</span>
-            <span style={{ color: "#4ade80", fontWeight: 700 }}>— {ticker.saved}</span>
-            <span style={{ background: "rgba(255,255,255,0.15)", fontSize: 11, padding: "2px 8px", borderRadius: 6, color: "rgba(255,255,255,0.7)" }}>{ticker.time}</span>
-          </span>
-        </div>
-
-        {/* ── SEARCH BOX ─────────────────────────────────────────────────────── */}
-        <div ref={searchBoxRef} style={{ background: "#fff", borderRadius: 16, maxWidth: 980, margin: "0 auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", position: "relative", overflow: "visible" }}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1.1fr 1.1fr 1.4fr auto", gap: 0 }}>
+        {/* ── IXIGO-STYLE FULL-WIDTH SEARCH BAR — sits at hero bottom, overhangs into white ── */}
+        <div ref={searchBoxRef} style={{ width: "100%", padding: isMobile ? "0 12px" : "0 40px" }}>
+          <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.22)", overflow: "visible", position: "relative", marginBottom: isMobile ? -32 : -36 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: isMobile ? "auto" : 72 }}>
 
             {/* ── DESTINATION ── */}
-            <div className="search-field" style={{ padding: isMobile ? "14px 16px" : "16px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", borderRadius: isMobile ? "16px 16px 0 0" : "16px 0 0 16px" }}>
+            <div className="search-field" style={{ padding: isMobile ? "14px 16px" : "0 24px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", borderRadius: isMobile ? "16px 16px 0 0" : "16px 0 0 16px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Destination or hotel</div>
               <input
                 type="text"
@@ -395,10 +399,10 @@ export default function SearchHotelsPage() {
               )}
             </div>
 
-            {/* ── CHECK-IN ── styled display div + hidden input ── */}
+            {/* ── CHECK-IN ── */}
             <div
               className="search-field"
-              style={{ padding: isMobile ? "14px 16px" : "16px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", cursor: "pointer", position: "relative" }}
+              style={{ padding: isMobile ? "14px 16px" : "0 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", cursor: "pointer", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center" }}
               onClick={() => { try { checkInRef.current?.showPicker(); } catch (e) { checkInRef.current?.focus(); } }}
             >
               <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-in</div>
@@ -415,10 +419,10 @@ export default function SearchHotelsPage() {
               />
             </div>
 
-            {/* ── CHECK-OUT ── styled display div + hidden input ── */}
+            {/* ── CHECK-OUT ── */}
             <div
               className="search-field"
-              style={{ padding: isMobile ? "14px 16px" : "16px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", cursor: "pointer", position: "relative" }}
+              style={{ padding: isMobile ? "14px 16px" : "0 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", cursor: "pointer", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center" }}
               onClick={() => { try { checkOutRef.current?.showPicker(); } catch (e) { checkOutRef.current?.focus(); } }}
             >
               <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-out</div>
@@ -436,16 +440,16 @@ export default function SearchHotelsPage() {
             </div>
 
             {/* ── ROOMS & GUESTS ── */}
-            <div ref={guestPanelRef} style={{ padding: isMobile ? "14px 16px" : "16px 20px", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", cursor: "pointer", overflow: "visible" }} onClick={() => setGuestPanelOpen(!guestPanelOpen)}>
+            <div ref={guestPanelRef} style={{ padding: isMobile ? "14px 16px" : "0 20px", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", cursor: "pointer", overflow: "visible", display: "flex", flexDirection: "column", justifyContent: "center" }} onClick={() => setGuestPanelOpen(!guestPanelOpen)}>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Rooms &amp; Guests</div>
               <div style={{ fontSize: 15, fontWeight: 600, color: NAVY, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span>{guestSummary()}</span>
                 <span style={{ fontSize: 10, color: "#64748b", marginLeft: 4 }}>▼</span>
               </div>
 
-              {/* Guest Panel Dropdown */}
+              {/* Guest Panel — opens UPWARD so it never goes off screen */}
               {guestPanelOpen && (
-                <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 8px)", right: isMobile ? "auto" : 0, left: isMobile ? 0 : "auto", width: isMobile ? "calc(100vw - 40px)" : 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 16px 48px rgba(0,0,0,0.2)", zIndex: 9999, padding: 20 }}>
+                <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: "calc(100% + 10px)", right: isMobile ? "auto" : 0, left: isMobile ? "-8px" : "auto", width: isMobile ? "calc(100vw - 24px)" : 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 -8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 20 }}>
                   {[
                     { label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 },
                     { label: "Adults", sub: "Age 13+", key: "adults" as keyof GuestState, min: 1, max: 16 },
@@ -493,30 +497,25 @@ export default function SearchHotelsPage() {
               )}
             </div>
 
-            {/* ── SEARCH BUTTON — orange like Booking.com ── */}
+            {/* ── SEARCH BUTTON — yellow, matching "perfect stay" color ── */}
             <button
+              className="search-btn-y"
               onClick={handleSearch}
               style={{
-                background: ORANGE,
-                color: "#fff",
+                background: YELLOW,
+                color: "#1a1a1a",
                 border: "none",
-                padding: isMobile ? "16px" : "0 32px",
-                fontSize: 15,
-                fontWeight: 700,
+                padding: isMobile ? "16px 20px" : "0 40px",
+                fontSize: 16,
+                fontWeight: 800,
                 cursor: "pointer",
                 fontFamily: "inherit",
                 borderRadius: isMobile ? "0 0 16px 16px" : "0 16px 16px 0",
                 width: isMobile ? "100%" : "auto",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                transition: "background 0.15s",
+                whiteSpace: "nowrap" as const,
+                minWidth: isMobile ? "auto" : 130,
               }}
-              onMouseOver={e => (e.currentTarget.style.background = "#ea6c00")}
-              onMouseOut={e => (e.currentTarget.style.background = ORANGE)}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               Search
             </button>
           </div>
@@ -527,11 +526,15 @@ export default function SearchHotelsPage() {
               ⚠️ {searchError}
             </div>
           )}
-        </div>
+        </div>{/* end white bar */}
+        </div>{/* end full-width wrapper */}
+
+        {/* Spacer so hero gives room for the search bar overhang */}
+        <div style={{ height: isMobile ? 48 : 56 }} />
       </section>
 
-      {/* STATS BAR */}
-      <div style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }} ref={statsRef}>
+      {/* STATS BAR — extra top padding absorbs the search bar overhang */}
+      <div style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", paddingTop: isMobile ? 48 : 56 }} ref={statsRef}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "20px" : "26px 40px", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)" }}>
           {STATS.map((s, i) => (
             <div key={i} style={{ textAlign: "center", borderRight: !isMobile && i < 3 ? "1px solid #e2e8f0" : "none", padding: "0 20px" }}>
