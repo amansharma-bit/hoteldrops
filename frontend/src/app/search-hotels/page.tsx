@@ -10,6 +10,7 @@ const supabase = createClient(
 );
 
 const B = "#1447b8";
+const ORANGE = "#f97316";
 const NAVY = "#0f172a";
 
 function useIsMobile() {
@@ -121,6 +122,13 @@ interface GuestState {
   childAges: number[];
 }
 
+// ── Helper: format "2026-08-11" → "Mon, 11 Aug" ──────────────────────────────
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+}
+
 export default function SearchHotelsPage() {
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -195,11 +203,11 @@ export default function SearchHotelsPage() {
     return () => observer.disconnect();
   }, []);
 
+  // ── FIX: removed showPicker() auto-jump — that was causing calendar month
+  //        navigation to jump to the check-out picker ────────────────────────
   const handleCheckInChange = (val: string) => {
     setCheckIn(val);
     setSearchError("");
-    // Auto-focus checkout
-    setTimeout(() => { try { checkOutRef.current?.showPicker(); } catch(e) {} }, 100);
     if (checkOut && checkOut <= val) {
       const next = new Date(val);
       next.setDate(next.getDate() + 1);
@@ -217,7 +225,6 @@ export default function SearchHotelsPage() {
     setGuests(prev => {
       const next = { ...prev, [key]: val };
       if (key === "children") {
-        // Adjust childAges array
         if (val > prev.childAges.length) {
           next.childAges = [...prev.childAges, ...Array(val - prev.childAges.length).fill(2)];
         } else {
@@ -276,12 +283,14 @@ export default function SearchHotelsPage() {
     @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
     .ticker-visible { animation: fadeIn 0.4s ease forwards; }
     .ticker-hidden { opacity: 0; }
-    input[type=date]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; }
     .hotel-card { transition: transform .2s; }
     .hotel-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
-    .guest-btn { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid #e2e8f0; background: #fff; font-size: 18; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; transition: all .15s; }
+    .guest-btn { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid #e2e8f0; background: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; transition: all .15s; }
     .guest-btn:hover:not(:disabled) { border-color: ${B}; color: ${B}; }
     .guest-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .search-field { transition: background 0.15s; }
+    .search-field:hover { background: #f0f7ff; }
+    input[type=date] { position: absolute; opacity: 0; pointer-events: none; top: 0; left: 0; width: 1px; height: 1px; }
   `;
 
   return (
@@ -331,18 +340,18 @@ export default function SearchHotelsPage() {
       {/* HERO */}
       <section style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)", padding: isMobile ? "48px 20px 64px" : "72px 40px 96px", textAlign: "center", position: "relative", overflow: "visible" }}>
 
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const, position: "relative" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
           ✦ Exclusive Member Deals
         </div>
-        <h1 className="sora" style={{ fontSize: isMobile ? 34 : 60, fontWeight: 800, color: "#fff", lineHeight: 1.08, marginBottom: 18, position: "relative", maxWidth: 760, margin: "0 auto 18px" }}>
+        <h1 className="sora" style={{ fontSize: isMobile ? 34 : 60, fontWeight: 800, color: "#fff", lineHeight: 1.08, marginBottom: 18, maxWidth: 760, margin: "0 auto 18px" }}>
           Find your <span style={{ color: "#FCD34D" }}>perfect stay</span>
         </h1>
-        <p style={{ fontSize: isMobile ? 15 : 16.5, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.7, position: "relative" }}>
+        <p style={{ fontSize: isMobile ? 15 : 16.5, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.7 }}>
           500,000+ exclusive deals across the globe for members only.
         </p>
 
         {/* LIVE TICKER */}
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: isMobile ? 12 : 13, padding: "8px 18px", borderRadius: 100, marginBottom: 32, position: "relative" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: isMobile ? 12 : 13, padding: "8px 18px", borderRadius: 100, marginBottom: 32 }}>
           <span style={{ width: 8, height: 8, background: "#4ade80", borderRadius: "50%", flexShrink: 0, animation: "pulse 1.5s infinite" }} />
           <span className={tickerVisible ? "ticker-visible" : "ticker-hidden"} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const, justifyContent: "center" }}>
             <span style={{ fontWeight: 600, color: "#FCD34D" }}>{ticker.name}</span>
@@ -353,17 +362,22 @@ export default function SearchHotelsPage() {
           </span>
         </div>
 
-        {/* SEARCH BOX */}
-        <div ref={searchBoxRef} style={{ background: "#fff", borderRadius: 16, maxWidth: 960, margin: "0 auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", position: "relative", overflow: "visible" }}>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1.2fr 1.2fr 1.4fr auto", gap: 0 }}>
-            {/* Destination */}
-            <div style={{ padding: isMobile ? "14px 16px" : "14px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative" }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Destination or Hotel</div>
-              <input type="text" placeholder="Where to? e.g. Dubai, UAE" value={destination}
+        {/* ── SEARCH BOX ─────────────────────────────────────────────────────── */}
+        <div ref={searchBoxRef} style={{ background: "#fff", borderRadius: 16, maxWidth: 980, margin: "0 auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", position: "relative", overflow: "visible" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1.1fr 1.1fr 1.4fr auto", gap: 0 }}>
+
+            {/* ── DESTINATION ── */}
+            <div className="search-field" style={{ padding: isMobile ? "14px 16px" : "16px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", borderRadius: isMobile ? "16px 16px 0 0" : "16px 0 0 16px" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Destination or hotel</div>
+              <input
+                type="text"
+                placeholder="Where to? e.g. Dubai, UAE"
+                value={destination}
                 onChange={e => { setDestination(e.target.value); setShowSuggestions(true); setSearchError(""); }}
                 onFocus={() => setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: NAVY, background: "transparent" }} />
+                style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 15, fontWeight: 600, color: NAVY, background: "transparent" }}
+              />
               {showSuggestions && destination.length > 0 && (
                 <div style={{ position: "absolute", top: "100%", left: 0, width: 320, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 300, maxHeight: 240, overflowY: "auto" as const, marginTop: 4 }}>
                   {DESTINATIONS.filter(d => `${d.city}, ${d.country}`.toLowerCase().includes(destination.toLowerCase())).map((d, i) => (
@@ -381,26 +395,50 @@ export default function SearchHotelsPage() {
               )}
             </div>
 
-            {/* Check-in */}
-            <div style={{ padding: isMobile ? "14px 16px" : "14px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
+            {/* ── CHECK-IN ── styled display div + hidden input ── */}
+            <div
+              className="search-field"
+              style={{ padding: isMobile ? "14px 16px" : "16px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", cursor: "pointer", position: "relative" }}
+              onClick={() => { try { checkInRef.current?.showPicker(); } catch (e) { checkInRef.current?.focus(); } }}
+            >
               <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-in</div>
-              <input ref={checkInRef} type="date" value={checkIn} min={new Date().toISOString().split("T")[0]}
+              <div style={{ fontSize: 15, fontWeight: 600, color: checkIn ? NAVY : "#94a3b8" }}>
+                {checkIn ? formatDate(checkIn) : "Add date"}
+              </div>
+              {/* Hidden native date input — invisible but functional */}
+              <input
+                ref={checkInRef}
+                type="date"
+                value={checkIn}
+                min={new Date().toISOString().split("T")[0]}
                 onChange={e => handleCheckInChange(e.target.value)}
-                style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: checkIn ? NAVY : "#94a3b8", background: "transparent" }} />
+              />
             </div>
 
-            {/* Check-out */}
-            <div style={{ padding: isMobile ? "14px 16px" : "14px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
+            {/* ── CHECK-OUT ── styled display div + hidden input ── */}
+            <div
+              className="search-field"
+              style={{ padding: isMobile ? "14px 16px" : "16px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", cursor: "pointer", position: "relative" }}
+              onClick={() => { try { checkOutRef.current?.showPicker(); } catch (e) { checkOutRef.current?.focus(); } }}
+            >
               <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-out</div>
-              <input ref={checkOutRef} type="date" value={checkOut} min={checkIn || new Date().toISOString().split("T")[0]}
+              <div style={{ fontSize: 15, fontWeight: 600, color: checkOut ? NAVY : "#94a3b8" }}>
+                {checkOut ? formatDate(checkOut) : "Add date"}
+              </div>
+              {/* Hidden native date input */}
+              <input
+                ref={checkOutRef}
+                type="date"
+                value={checkOut}
+                min={checkIn || new Date().toISOString().split("T")[0]}
                 onChange={e => handleCheckOutChange(e.target.value)}
-                style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: checkOut ? NAVY : "#94a3b8", background: "transparent" }} />
+              />
             </div>
 
-            {/* Guests — Booking.com style dropdown */}
-            <div ref={guestPanelRef} style={{ padding: isMobile ? "14px 16px" : "14px 20px", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", cursor: "pointer", overflow: "visible" }} onClick={() => setGuestPanelOpen(!guestPanelOpen)}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Rooms & Guests</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            {/* ── ROOMS & GUESTS ── */}
+            <div ref={guestPanelRef} style={{ padding: isMobile ? "14px 16px" : "16px 20px", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", cursor: "pointer", overflow: "visible" }} onClick={() => setGuestPanelOpen(!guestPanelOpen)}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Rooms &amp; Guests</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: NAVY, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span>{guestSummary()}</span>
                 <span style={{ fontSize: 10, color: "#64748b", marginLeft: 4 }}>▼</span>
               </div>
@@ -408,10 +446,8 @@ export default function SearchHotelsPage() {
               {/* Guest Panel Dropdown */}
               {guestPanelOpen && (
                 <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 8px)", right: isMobile ? "auto" : 0, left: isMobile ? 0 : "auto", width: isMobile ? "calc(100vw - 40px)" : 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 16px 48px rgba(0,0,0,0.2)", zIndex: 9999, padding: 20 }}>
-
-                  {/* Rooms */}
                   {[
-                    { label: "Rooms", sub: "", key: "rooms" as keyof GuestState, min: 1, max: 4 },
+                    { label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 },
                     { label: "Adults", sub: "Age 13+", key: "adults" as keyof GuestState, min: 1, max: 16 },
                     { label: "Children", sub: "Age 0–12", key: "children" as keyof GuestState, min: 0, max: 8 },
                   ].map(item => (
@@ -430,7 +466,6 @@ export default function SearchHotelsPage() {
                     </div>
                   ))}
 
-                  {/* Child ages */}
                   {guests.children > 0 && (
                     <div style={{ marginTop: 14 }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>Age of children at check-in</div>
@@ -458,9 +493,31 @@ export default function SearchHotelsPage() {
               )}
             </div>
 
-            {/* Search button */}
-            <button onClick={handleSearch} style={{ background: B, color: "#fff", border: "none", padding: isMobile ? "14px" : "0 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", borderRadius: isMobile ? "0 0 16px 16px" : "0 16px 16px 0", width: isMobile ? "100%" : "auto" }}>
-              🔍 Search
+            {/* ── SEARCH BUTTON — orange like Booking.com ── */}
+            <button
+              onClick={handleSearch}
+              style={{
+                background: ORANGE,
+                color: "#fff",
+                border: "none",
+                padding: isMobile ? "16px" : "0 32px",
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                borderRadius: isMobile ? "0 0 16px 16px" : "0 16px 16px 0",
+                width: isMobile ? "100%" : "auto",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                transition: "background 0.15s",
+              }}
+              onMouseOver={e => (e.currentTarget.style.background = "#ea6c00")}
+              onMouseOut={e => (e.currentTarget.style.background = ORANGE)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Search
             </button>
           </div>
 
