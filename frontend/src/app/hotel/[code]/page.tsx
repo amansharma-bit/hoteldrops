@@ -123,6 +123,14 @@ function HotelDetailContent() {
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
   const [selectedRoomName, setSelectedRoomName] = useState<string>("");
   const [similarHotels, setSimilarHotels] = useState<SimilarHotel[]>([]);
+  const [editCheckIn, setEditCheckIn] = useState(checkIn);
+  const [editCheckOut, setEditCheckOut] = useState(checkOut);
+  const [editAdults, setEditAdults] = useState(adults);
+
+  // Sync edit fields when URL params change
+  useEffect(() => { setEditCheckIn(checkIn); }, [checkIn]);
+  useEffect(() => { setEditCheckOut(checkOut); }, [checkOut]);
+  useEffect(() => { setEditAdults(adults); }, [adults]);
 
   const refSearchBar = useRef<HTMLDivElement>(null);
   const refOverview  = useRef<HTMLDivElement>(null);
@@ -195,7 +203,9 @@ function HotelDetailContent() {
   const W: React.CSSProperties = { maxWidth: 1100, margin: "0 auto", padding: "0 32px" };
   const inp: React.CSSProperties = { border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: NAVY, background: "transparent", width: "100%", overflow: "hidden", textOverflow: "ellipsis" };
 
-  const CSS = "* { box-sizing: border-box; margin: 0; padding: 0; } .sora { font-family: 'Sora', sans-serif; } @keyframes spin { to { transform: rotate(360deg); } } .tab-btn { flex: 1; padding: 14px 8px; text-align: center; font-size: 13.5px; font-weight: 500; color: #64748b; cursor: pointer; border: none; background: none; font-family: inherit; border-bottom: 2px solid transparent; transition: all .15s; } .tab-btn.active { color: #1447b8; font-weight: 600; border-bottom: 2px solid #1447b8; background: #eff6ff; } .tab-btn:hover:not(.active) { color: #0f172a; background: #f8fafc; } .card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 24px; margin-bottom: 20px; } .fac-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; padding: 4px 0; } .rooms-table { width: 100%; border-collapse: collapse; } .rooms-table th { padding: 11px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; text-align: left; border-bottom: 1.5px solid #e2e8f0; background: #f8fafc; } .rooms-table td { padding: 14px; font-size: 13.5px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; } .select-btn { border: 1.5px solid #1447b8; color: #1447b8; background: #fff; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; } .select-btn.sel { background: #1447b8; color: #fff; } .sim-card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; overflow: hidden; cursor: pointer; transition: all .2s; } .sim-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.1); transform: translateY(-2px); }";
+  const CSS = "* { box-sizing: border-box; margin: 0; padding: 0; } .sora { font-family: 'Sora', sans-serif; } @keyframes spin { to { transform: rotate(360deg); } } .tab-btn { flex: 1; padding: 14px 8px; text-align: center; font-size: 13.5px; font-weight: 500; color: #64748b; cursor: pointer; border: none; background: none; font-family: inherit; border-bottom: 2px solid transparent; transition: all .15s; } .tab-btn.active { color: #1447b8; font-weight: 600; border-bottom: 2px solid #1447b8; background: #eff6ff; } .tab-btn:hover:not(.active) { color: #0f172a; background: #f8fafc; } .card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 24px; margin-bottom: 20px; } .fac-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; padding: 4px 0; } .rooms-table { width: 100%; border-collapse: collapse; } .rooms-table th { padding: 11px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; text-align: left; border-bottom: 1.5px solid #e2e8f0; background: #f8fafc; } .rooms-table td { padding: 14px; font-size: 13.5px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; } .select-btn { border: 1.5px solid #1447b8; color: #1447b8; background: #fff; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; } .select-btn.sel { background: #1447b8; color: #fff; } .sim-card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; overflow: hidden; cursor: pointer; transition: all .2s; } .sim-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.1); transform: translateY(-2px); }
+.room-card { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.room-card.selected { background: #f0f7ff; border-color: #1447b8; }";
 
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter',sans-serif" }}>
@@ -286,15 +296,20 @@ function HotelDetailContent() {
           </div>
           <div style={{ flex: 1.2, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
-            <div style={{ ...inp }}>{hotel.checkIn}</div>
+            <input type="date" value={editCheckIn} onChange={e => setEditCheckIn(e.target.value)}
+              style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: NAVY, background: "transparent", width: "100%" }} />
           </div>
           <div style={{ flex: 1.2, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-out</div>
-            <div style={{ ...inp }}>{hotel.checkOut}</div>
+            <input type="date" value={editCheckOut} onChange={e => setEditCheckOut(e.target.value)} min={editCheckIn || undefined}
+              style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: NAVY, background: "transparent", width: "100%" }} />
           </div>
           <div style={{ flex: 1, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Guests</div>
-            <div style={{ ...inp }}>{hotel.adults} Adults</div>
+            <select value={editAdults} onChange={e => setEditAdults(e.target.value)}
+              style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: NAVY, background: "transparent", width: "100%", cursor: "pointer" }}>
+              {["1", "2", "3", "4"].map(n => <option key={n} value={n}>{n} Adults</option>)}
+            </select>
           </div>
           <button onClick={() => router.push("/search?destination=" + encodeURIComponent(hotel.city) + "&checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults)}
             style={{ background: B, color: "#fff", border: "none", padding: "0 28px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
@@ -403,52 +418,89 @@ function HotelDetailContent() {
         {/* ROOMS */}
         <div className="card" ref={refRooms}>
           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Select your room</div>
-          <table className="rooms-table">
-            <thead>
-              <tr>
-                <th style={{ width: "35%" }}>Room Type</th>
-                <th style={{ width: "18%" }}>Board</th>
-                <th style={{ width: "17%" }}>Cancellation</th>
-                <th style={{ width: "20%", textAlign: "right" }}>Price/night</th>
-                <th style={{ width: "10%", textAlign: "center" }}>Select</th>
-              </tr>
-            </thead>
-            <tbody>
+          {isMobile ? (
+            // MOBILE: Card layout
+            <div>
               {hotel.rooms.map(room => {
                 const isSel = selectedRoom === room.roomCode;
                 const isFree = !room.cancellation || room.cancellation.type === "free";
                 return (
-                  <tr key={room.roomCode} style={{ background: isSel ? "#f0f7ff" : "" }}>
-                    <td>
-                      <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, color: NAVY, fontSize: 14, marginBottom: 3 }}>{room.name}</div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>{room.size ? room.size + " m²" : ""}{room.bedType ? " · " + room.bedType : ""}</div>
-                    </td>
-                    <td>
+                  <div key={room.roomCode} className={"room-card" + (isSel ? " selected" : "")}
+                    onClick={() => { setSelectedRoom(room.roomCode); setSelectedRoomName(room.name + (room.boardName ? " · " + room.boardName : "")); }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, color: NAVY, fontSize: 14, marginBottom: 3 }}>{room.name}</div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>{room.size ? room.size + " m²" : ""}{room.bedType ? " · " + room.bedType : ""}</div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
+                        {room.pricePerNight
+                          ? <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 800, color: NAVY }}>{formatINR(room.pricePerNight)}<span style={{ fontSize: 10, color: "#64748b", fontWeight: 400 }}>/night</span></div>
+                          : <div style={{ fontSize: 13, color: "#64748b" }}>On request</div>}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
                       {room.boardName
-                        ? <span style={{ background: "#f0fdf4", color: "#166634", fontSize: 12, fontWeight: 600, padding: "3px 8px", borderRadius: 100 }}>{room.boardName}</span>
-                        : <span style={{ background: "#f8fafc", color: "#64748b", fontSize: 12, padding: "3px 8px", borderRadius: 100 }}>Room only</span>}
-                    </td>
-                    <td>
-                      <span style={{ background: isFree ? "#f0fdf4" : "#fef2f2", color: isFree ? "#166534" : "#991b1b", fontSize: 12, fontWeight: 600, padding: "3px 8px", borderRadius: 100 }}>
-                        {isFree ? "Free cancel" : "Non-refundable"}
+                        ? <span style={{ background: "#f0fdf4", color: "#166634", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 100 }}>{room.boardName}</span>
+                        : <span style={{ background: "#f8fafc", color: "#64748b", fontSize: 11, padding: "3px 8px", borderRadius: 100 }}>Room only</span>}
+                      <span style={{ background: isFree ? "#f0fdf4" : "#fef2f2", color: isFree ? "#166534" : "#991b1b", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 100 }}>
+                        {isFree ? "✓ Free cancel" : "Non-refundable"}
                       </span>
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      {room.pricePerNight ? (
-                        <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, color: NAVY }}>{formatINR(room.pricePerNight)}</div>
-                      ) : <div style={{ fontSize: 13, color: "#64748b" }}>On request</div>}
-                    </td>
-                    <td style={{ textAlign: "center" }}>
-                      <button className={"select-btn" + (isSel ? " sel" : "")}
-                        onClick={() => { setSelectedRoom(room.roomCode); setSelectedRoomName(room.name + (room.boardName ? " · " + room.boardName : "")); }}>
-                        {isSel ? "Selected" : "Select"}
-                      </button>
-                    </td>
-                  </tr>
+                      {isSel && <span style={{ background: B, color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, marginLeft: "auto" }}>✓ Selected</span>}
+                      {!isSel && <span style={{ border: "1.5px solid " + B, color: B, fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, marginLeft: "auto", cursor: "pointer" }}>Select</span>}
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+          ) : (
+            // DESKTOP: Table layout
+            <table className="rooms-table">
+              <thead>
+                <tr>
+                  <th style={{ width: "35%" }}>Room Type</th>
+                  <th style={{ width: "18%" }}>Board</th>
+                  <th style={{ width: "17%" }}>Cancellation</th>
+                  <th style={{ width: "20%", textAlign: "right" }}>Price/night</th>
+                  <th style={{ width: "10%", textAlign: "center" }}>Select</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hotel.rooms.map(room => {
+                  const isSel = selectedRoom === room.roomCode;
+                  const isFree = !room.cancellation || room.cancellation.type === "free";
+                  return (
+                    <tr key={room.roomCode} style={{ background: isSel ? "#f0f7ff" : "" }}>
+                      <td>
+                        <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, color: NAVY, fontSize: 14, marginBottom: 3 }}>{room.name}</div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>{room.size ? room.size + " m²" : ""}{room.bedType ? " · " + room.bedType : ""}</div>
+                      </td>
+                      <td>
+                        {room.boardName
+                          ? <span style={{ background: "#f0fdf4", color: "#166634", fontSize: 12, fontWeight: 600, padding: "3px 8px", borderRadius: 100 }}>{room.boardName}</span>
+                          : <span style={{ background: "#f8fafc", color: "#64748b", fontSize: 12, padding: "3px 8px", borderRadius: 100 }}>Room only</span>}
+                      </td>
+                      <td>
+                        <span style={{ background: isFree ? "#f0fdf4" : "#fef2f2", color: isFree ? "#166534" : "#991b1b", fontSize: 12, fontWeight: 600, padding: "3px 8px", borderRadius: 100 }}>
+                          {isFree ? "Free cancel" : "Non-refundable"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        {room.pricePerNight ? (
+                          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, color: NAVY }}>{formatINR(room.pricePerNight)}</div>
+                        ) : <div style={{ fontSize: 13, color: "#64748b" }}>On request</div>}
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <button className={"select-btn" + (isSel ? " sel" : "")}
+                          onClick={() => { setSelectedRoom(room.roomCode); setSelectedRoomName(room.name + (room.boardName ? " · " + room.boardName : "")); }}>
+                          {isSel ? "Selected" : "Select"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
           {selectedRoomData && displayPrice && (
             <div style={{ marginTop: 20, background: "#f0f7ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 12 }}>
               <div>
