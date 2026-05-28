@@ -85,6 +85,27 @@ const STATS = [
   { id: 3, target: 500000, prefix: "", suffix: "+", label: "Hotels in our network" },
 ];
 
+// Extracted style safely away from component compilation scope
+const RAW_CSS = `
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  .sora { font-family: 'Sora', sans-serif; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes slideInRight { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+  .ticker-visible { animation: fadeIn 0.4s ease forwards; }
+  .ticker-hidden { opacity: 0; }
+  .hotel-card { transition: transform .2s; }
+  .hotel-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+  .gbtn { width: 36px; height: 36px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; transition: all .15s; color: #475569; }
+  .gbtn:hover:not(:disabled) { border-color: #1447b8; color: #1447b8; background: #eff6ff; }
+  .gbtn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .sfield { cursor: pointer; transition: background 0.15s; position: relative; }
+  .sfield:hover { background: rgba(0,0,0,0.02); }
+  .arrow-indicator { font-size: 10px; color: #64748b; margin-left: 6px; display: inline-block; vertical-align: middle; transition: transform 0.2s; }
+  .sfield:hover .arrow-indicator { color: #1447b8; }
+  .fs { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; flex-direction: column; animation: slideInRight 0.22s ease; }
+  .ybtn:hover { background: #e6b800 !important; }
+`;
+
 interface GuestState { rooms: number; adults: number; children: number; childAges: number[]; }
 
 export default function SearchHotelsPage() {
@@ -296,115 +317,4 @@ export default function SearchHotelsPage() {
             else if (isEnd) { bg = B; clr = "#fff"; br = "0 50% 50% 0"; fw = 700; }
             else if (isOnly) { bg = B; clr = "#fff"; br = "50%"; fw = 700; }
             else if (isInRange) { bg = "#dbeafe"; clr = B; br = "0"; }
-            else if (isToday) { clr = B; }
-            return (
-              <div key={day} onClick={() => !isDisabled && handleDayClick(ds)}
-                style={{ height: 40, display: "flex", alignItems: "center", justifyContent: "center", background: bg, color: clr, borderRadius: br, fontWeight: fw, fontSize: 14, cursor: isDisabled ? "not-allowed" : "pointer", opacity: isDisabled ? 0.35 : 1, transition: "background 0.1s" }}>
-                {day}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  const ticker = TICKER_ITEMS[tickerIdx];
-  const hotels = HOTELS_BY_CITY[activeCity] || HOTELS_BY_CITY["All Hotels"];
-
-  const CSS = `
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    .sora { font-family: 'Sora', sans-serif; }
-    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-    @keyframes slideInRight { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
-    .ticker-visible { animation: fadeIn 0.4s ease forwards; }
-    .ticker-hidden { opacity: 0; }
-    .hotel-card { transition: transform .2s; }
-    .hotel-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
-    .gbtn { width: 36px; height: 36px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; transition: all .15s; color: #475569; }
-    .gbtn:hover:not(:disabled) { border-color: ${B}; color: ${B}; background: #eff6ff; }
-    .gbtn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .sfield { cursor: pointer; transition: background 0.15s; position: relative; }
-    .sfield:hover { background: rgba(0,0,0,0.02); }
-    .arrow-indicator { font-size: 10px; color: #64748b; margin-left: 6px; display: inline-block; vertical-align: middle; transition: transform 0.2s; }
-    .sfield:hover .arrow-indicator { color: ${B}; }
-    .fs { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; flex-direction: column; animation: slideInRight 0.22s ease; }
-    .ybtn:hover { background: #e6b800 !important; }
-  `;
-
-  return (
-    <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, overflowX: "hidden" }}>
-      <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-      <style dangerouslySetInnerHTML={{ __html: CSS }} />
-
-      {/* ── MOBILE FULL-SCREEN CALENDAR ── */}
-      {isMobile && calOpen && (
-        <div className="fs">
-          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderBottom: "1px solid #f1f5f9", flexShrink: 0 }}>
-            <button onClick={() => setCalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, color: NAVY, lineHeight: 1, padding: 2 }}>←</button>
-            <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 17, color: NAVY }}>
-              {calMode === "checkin" ? "Select Check-in Date" : "Select Check-out Date"}
-            </div>
-          </div>
-          <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 0" }}>
-            {Array.from({ length: 12 }).map((_, i) => {
-              const dm = new Date(today.getFullYear(), today.getMonth() + i);
-              return renderMonth(dm.getFullYear(), dm.getMonth());
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── MOBILE FULL-SCREEN GUESTS ── */}
-      {isMobile && guestOpen && (
-        <div className="fs">
-          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderBottom: "1px solid #f1f5f9", flexShrink: 0 }}>
-            <button onClick={() => setGuestOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, color: NAVY, lineHeight: 1, padding: 2 }}>←</button>
-            <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 17, color: NAVY }}>Select Rooms &amp; Guests</div>
-          </div>
-          <div style={{ flex: 1, padding: "0 20px", overflowY: "auto" }}>
-            {[
-              { label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 },
-              { label: "Adults", sub: "13 years & above", key: "adults" as keyof GuestState, min: 1, max: 16 },
-              { label: "Children", sub: "0–12 years", key: "children" as keyof GuestState, min: 0, max: 8 },
-            ].map(item => (
-              <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 0", borderBottom: "1px solid #f1f5f9" }}>
-                <div>
-                  <div style={{ fontSize: 17, fontWeight: 600, color: NAVY }}>{item.label}</div>
-                  <div style={{ fontSize: 13, color: "#94a3b8" }}>{item.sub}</div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  <button className="gbtn" style={{ width: 40, height: 40 }} disabled={(guests[item.key] as number) <= item.min}
-                    onClick={() => updateGuests(item.key, Math.max(item.min, (guests[item.key] as number) - 1))}>−</button>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: NAVY, minWidth: 28, textAlign: "center" }}>{guests[item.key]}</span>
-                  <button className="gbtn" style={{ width: 40, height: 40 }} disabled={(guests[item.key] as number) >= item.max}
-                    onClick={() => updateGuests(item.key, Math.min(item.max, (guests[item.key] as number) + 1))}>+</button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ borderTop: "1px solid #e2e8f0", padding: "16px 20px 32px", background: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-            <button onClick={() => setGuestOpen(false)} style={{ background: YELLOW, color: "#1a1a1a", border: "none", borderRadius: 12, padding: "14px 28px", fontSize: 16, fontWeight: 700, cursor: "pointer", width: "100%" }}>Select</button>
-          </div>
-        </div>
-      )}
-
-      {/* ── STICKY TOP NAVIGATION BAR ── */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: NAVY, color: "#fff", padding: "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.5px", fontFamily: "'Sora', sans-serif", color: "#fff" }}>rebuq<span style={{ color: YELLOW }}>.</span></span>
-        </div>
-        
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          {!isMobile && <span style={{ fontSize: 14, color: "#94a3b8", cursor: "pointer" }}>How it works</span>}
-          {!isMobile && <span style={{ fontSize: 14, color: "#fff", fontWeight: 500, cursor: "pointer" }}>Exclusive Member Deals</span>}
-          {user ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: B, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600 }}>{user.name[0].toUpperCase()}</div>
-              {!isMobile && <span style={{ fontSize: 14, fontWeight: 500 }}>{user.name}</span>}
-            </div>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: B, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 600, color: "#fff" }}>A</div>
-              <span style={{ fontSize: 14, fontWeight: 500 }}>Aman</span>
-              <button style={{ background: "#1e293b", color: "#fff", border: "1px solid rgba(255,255,25
+            else if (isToday) { clr = B
