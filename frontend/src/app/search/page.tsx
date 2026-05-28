@@ -743,7 +743,26 @@ function SearchResults() {
 
         {/* ── RESULTS ── */}
         <div>
-          {/* Header row */}
+        {/* ── MOBILE HOTEL NAME SEARCH ── */}
+        {isMobile && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, padding: "10px 14px", marginBottom: 14 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Search by hotel name..."
+              value={hotelSearch}
+              onChange={e => setHotelSearch(e.target.value)}
+              style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, color: NAVY, background: "transparent", width: "100%", fontWeight: hotelSearch ? 500 : 400 }}
+            />
+            {hotelSearch && (
+              <button onClick={() => setHotelSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
+            )}
+          </div>
+        )}
+
+        {/* Results header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap" as const, gap: 8 }}>
             <div className="sora" style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: NAVY }}>
               Hotels in {destination}
