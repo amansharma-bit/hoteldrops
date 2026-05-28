@@ -292,6 +292,18 @@ function SearchResults() {
   const desktopCalRef = useRef<HTMLDivElement>(null);
   const desktopGuestRef = useRef<HTMLDivElement>(null);
 
+  // Unregister any old service workers that may be caching API calls
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(reg => {
+          // Force update to pick up the new sw.js
+          reg.update();
+        });
+      });
+    }
+  }, []);
+
   // Close desktop popups on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -310,7 +322,7 @@ function SearchResults() {
     if (!c1 || !c2) { setLoading(false); setError("Please select check-in and check-out dates."); return; }
     setLoading(true); setError(null); setPage(1);
     try {
-      const res = await fetch(`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}&rooms=${gs.rooms}`);
+      const res = await fetch(`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}&rooms=${gs.rooms}`, { cache: "no-store" });
       const data = await res.json();
       if (data.hotels?.hotels) {
         setHotels(data.hotels.hotels);
