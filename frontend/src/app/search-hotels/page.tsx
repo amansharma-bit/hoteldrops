@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder"
 );
 
 const B = "#1447b8";
@@ -17,7 +17,8 @@ function useIsMobile() {
   const [isMobile, setIsMobile] = useState(true);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 900);
-    check(); window.addEventListener("resize", check);
+    check(); 
+    window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
   return isMobile;
@@ -47,38 +48,36 @@ const TICKER_ITEMS = [
 ];
 
 const DESTINATIONS = [
-  { flag: "🇦🇪", city: "Dubai", country: "UAE", img: "/dubai.jpg", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
-  { flag: "🇮🇳", city: "New Delhi", country: "India", img: "/newdelhi.jpg", badge: "Member Deal", badgeColor: "#1447b8", badgeText: "#fff" },
-  { flag: "🇸🇬", city: "Singapore", country: "Southeast Asia", img: "/singapore.jpg" },
-  { flag: "🇮🇳", city: "Goa", country: "India", img: "/goa.jpg", badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
-  { flag: "🇮🇩", city: "Bali", country: "Indonesia", img: "/bali.jpg" },
-  { flag: "🇮🇳", city: "Mumbai", country: "India", img: "/mumbai.jpg" },
+  { flag: "🇦🇪", city: "Dubai", country: "UAE", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
+  { flag: "🇮🇳", city: "New Delhi", country: "India", badge: "Member Deal", badgeColor: "#1447b8", badgeText: "#fff" },
+  { flag: "🇸🇬", city: "Singapore", country: "Southeast Asia" },
+  { flag: "🇮🇳", city: "Goa", country: "India", badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
+  { flag: "🇮🇩", city: "Bali", country: "Indonesia" },
+  { flag: "🇮🇳", city: "Mumbai", country: "India" },
 ];
 
-const HOTELS_BY_CITY: Record<string, Array<{name:string;loc:string;stars:number;rating:string;tags:string[];was:string;now:string;save:string;badges:[string,string][];img:string}>> = {
+const HOTELS_BY_CITY: Record<string, Array<{name:string;loc:string;stars:number;rating:string;tags:string[];was:string;now:string;save:string;badges:[string,string][]}>> = {
   "All Hotels": [
-    { name: "Atlantis The Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach","Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/atlantisthepalmdubai.jpg" },
-    { name: "Four Seasons Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view","Spa","Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending","trending"],["3.5% Off","off"]], img: "/FourSeasonsbali.jpg" },
-    { name: "Marina Bay Sands", loc: "Singapore", stars: 5, rating: "4.7 (19.1k)", tags: ["Infinity pool","SkyPark","Casino"], was: "₹47,000", now: "₹34,600", save: "Save ₹12,400", badges: [["AI Watching","watching"],["4% Off","off"]], img: "/marinabaysandssingapore.jpg" },
-    { name: "The Leela Palace", loc: "New Delhi, India", stars: 5, rating: "4.9 (8.2k)", tags: ["Pool","Spa","Fine dining"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/theleelapalace.jpg" },
-    { name: "Taj Mahal Palace", loc: "Mumbai, India", stars: 5, rating: "4.9 (22.4k)", tags: ["Heritage","Sea view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/tajmahalpalacemumbai.jpg" },
-    { name: "The Leela Goa", loc: "Goa, India", stars: 5, rating: "4.8 (12.1k)", tags: ["Beach","Lagoon","Golf"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/leelagoa.jpg" },
+    { name: "Atlantis The Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach","Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]] },
+    { name: "Four Seasons Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view","Spa","Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending","trending"],["3.5% Off","off"]] },
+    { name: "Marina Bay Sands", loc: "Singapore", stars: 5, rating: "4.7 (19.1k)", tags: ["Infinity pool","SkyPark","Casino"], was: "₹47,000", now: "₹34,600", save: "Save ₹12,400", badges: [["AI Watching","watching"],["4% Off","off"]] },
   ],
   "Dubai": [
-    { name: "Atlantis The Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/atlantisthepalmdubai.jpg" },
-    { name: "Burj Al Arab", loc: "Dubai, UAE", stars: 5, rating: "4.8 (12.3k)", tags: ["Iconic","Private beach"], was: "₹1,20,000", now: "₹84,000", save: "Save ₹36,000", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/burjalarab.jpg" },
-    { name: "Four Seasons DIFC", loc: "Dubai, UAE", stars: 5, rating: "4.7 (6.2k)", tags: ["City view","Spa"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Best Value","best"],["3% Off","off"]], img: "/fourseasonsdifc.jpg" },
-    { name: "Jumeirah Al Qasr", loc: "Dubai, UAE", stars: 5, rating: "4.6 (8.9k)", tags: ["Beach","Pool"], was: "₹44,000", now: "₹31,800", save: "Save ₹12,200", badges: [["Trending","trending"],["5% Off","off"]], img: "/jumeirahalqasr.jpg" },
-    { name: "Address Downtown", loc: "Dubai, UAE", stars: 5, rating: "4.7 (14.2k)", tags: ["Burj view","Rooftop pool"], was: "₹52,000", now: "₹37,400", save: "Save ₹14,600", badges: [["AI Watching","watching"],["6% Off","off"]], img: "/addressdowntown.jpg" },
-    { name: "W Dubai Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (9.1k)", tags: ["Palm view","Beach"], was: "₹35,000", now: "₹24,500", save: "Save ₹10,500", badges: [["Best Value","best"],["4% Off","off"]], img: "/wdubaipalm.jpg" },
+    { name: "Atlantis The Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]] },
+    { name: "Burj Al Arab", loc: "Dubai, UAE", stars: 5, rating: "4.8 (12.3k)", tags: ["Iconic","Private beach"], was: "₹1,20,000", now: "₹84,000", save: "Save ₹36,000", badges: [["Luxury","luxury"],["AI Watching","watching"]] },
   ],
 };
 
 const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
-  luxury: { bg: "#1e293b", color: "#fff" }, best: { bg: "#16a34a", color: "#fff" },
-  watching: { bg: "rgba(20,71,184,0.92)", color: "#fff" }, trending: { bg: "#f59e0b", color: "#1a1a1a" }, off: { bg: "#ef4444", color: "#fff" },
+  luxury: { bg: "#1e293b", color: "#fff" }, 
+  best: { bg: "#16a34a", color: "#fff" },
+  watching: { bg: "rgba(20,71,184,0.92)", color: "#fff" }, 
+  trending: { bg: "#f59e0b", color: "#1a1a1a" }, 
+  off: { bg: "#ef4444", color: "#fff" },
 };
+
 const CITY_FILTERS = ["All Hotels", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai"];
+
 const STATS = [
   { id: 0, target: 4200, prefix: "", suffix: "+", label: "Member deals live right now" },
   { id: 1, target: 18, prefix: "₹", suffix: "Cr", label: "Saved for members" },
@@ -98,7 +97,6 @@ export default function SearchHotelsPage() {
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState<GuestState>({ rooms: 1, adults: 2, children: 0, childAges: [] });
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeCity, setActiveCity] = useState("All Hotels");
   const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
@@ -106,7 +104,6 @@ export default function SearchHotelsPage() {
   const [searchError, setSearchError] = useState("");
   const [calOpen, setCalOpen] = useState(false);
   const [calMode, setCalMode] = useState<"checkin"|"checkout">("checkin");
-  const [calMonthOffset, setCalMonthOffset] = useState(0);
   const [guestOpen, setGuestOpen] = useState(false);
   
   const [isUploading, setIsUploading] = useState(false);
@@ -120,7 +117,7 @@ export default function SearchHotelsPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
+      if (data?.user) {
         const meta = data.user.user_metadata;
         setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member" });
       }
@@ -139,7 +136,10 @@ export default function SearchHotelsPage() {
   useEffect(() => {
     const iv = setInterval(() => {
       setTickerVisible(false);
-      setTimeout(() => { setTickerIdx(p => (p + 1) % TICKER_ITEMS.length); setTickerVisible(true); }, 400);
+      setTimeout(() => { 
+        setTickerIdx(p => (p + 1) % TICKER_ITEMS.length); 
+        setTickerVisible(true); 
+      }, 400);
     }, 4000);
     return () => clearInterval(iv);
   }, []);
@@ -173,7 +173,8 @@ export default function SearchHotelsPage() {
   const handleDayClick = (ds: string) => {
     setSearchError("");
     if (calMode === "checkin") {
-      setCheckIn(ds); setCheckOut("");
+      setCheckIn(ds); 
+      setCheckOut("");
       setCalMode("checkout");
     } else {
       if (ds <= checkIn) return;
@@ -202,7 +203,7 @@ export default function SearchHotelsPage() {
 
   const requireAuth = async (action: () => void) => {
     const { data } = await supabase.auth.getSession();
-    if (data.session) action(); else router.push(`/signin?redirect=/search-hotels`);
+    if (data?.session) action(); else router.push(`/signin?redirect=/search-hotels`);
   };
 
   const handleSearch = () => {
@@ -211,7 +212,15 @@ export default function SearchHotelsPage() {
     if (!checkIn) { setSearchError("Please select a check-in date"); return; }
     if (!checkOut) { setSearchError("Please select a check-out date"); return; }
     requireAuth(() => {
-      const params = new URLSearchParams({ destination, checkIn, checkOut, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), ...(guests.childAges.length > 0 ? { childAges: guests.childAges.join(",") } : {}) });
+      const params = new URLSearchParams({ 
+        destination, 
+        checkIn, 
+        checkOut, 
+        adults: String(guests.adults), 
+        rooms: String(guests.rooms), 
+        children: String(guests.children), 
+        ...(guests.childAges.length > 0 ? { childAges: guests.childAges.join(",") } : {}) 
+      });
       router.push(`/search?${params.toString()}`);
     });
   };
@@ -234,7 +243,7 @@ export default function SearchHotelsPage() {
         });
         const result = await res.json();
 
-        switch (result.status) {
+        switch (result?.status) {
           case "VALID_PREPAID":
           case "VALID_POSTPAID":
           case "VALID_SCREENSHOT":
@@ -248,10 +257,10 @@ export default function SearchHotelsPage() {
             setFeedbackType("error");
             setFeedbackMessage("We had trouble reading this document layout clearly. Please try a cleaner snapshot file.");
         }
-      } catch (error) {
+      } catch {
         setFeedbackType("error");
         setFeedbackMessage("Connection tracking timed out. Please verify upload network stability.");
-      } finaly {
+      } finally {
         setIsUploading(false);
       }
     };
@@ -346,6 +355,40 @@ export default function SearchHotelsPage() {
         </div>
       )}
 
+      {/* ── MOBILE FULL-SCREEN GUESTS ── */}
+      {isMobile && guestOpen && (
+        <div className="fs">
+          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderBottom: "1px solid #f1f5f9", flexShrink: 0 }}>
+            <button onClick={() => setGuestOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, color: NAVY, lineHeight: 1, padding: 2 }}>←</button>
+            <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 17, color: NAVY }}>Select Rooms &amp; Guests</div>
+          </div>
+          <div style={{ flex: 1, padding: "0 20px", overflowY: "auto" }}>
+            {[
+              { label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 },
+              { label: "Adults", sub: "13 years & above", key: "adults" as keyof GuestState, min: 1, max: 16 },
+              { label: "Children", sub: "0–12 years", key: "children" as keyof GuestState, min: 0, max: 8 },
+            ].map(item => (
+              <div key={item.key} style={{ display: "flex", alignItems: "center", justifyBetween: "space-between", padding: "20px 0", borderBottom: "1px solid #f1f5f9" }}>
+                <div>
+                  <div style={{ fontSize: 17, fontWeight: 600, color: NAVY }}>{item.label}</div>
+                  <div style={{ fontSize: 13, color: "#94a3b8" }}>{item.sub}</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <button className="gbtn" style={{ width: 40, height: 40 }} disabled={(guests[item.key] as number) <= item.min}
+                    onClick={() => updateGuests(item.key, Math.max(item.min, (guests[item.key] as number) - 1))}>−</button>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: NAVY, minWidth: 28, textAlign: "center" }}>{guests[item.key]}</span>
+                  <button className="gbtn" style={{ width: 40, height: 40 }} disabled={(guests[item.key] as number) >= item.max}
+                    onClick={() => updateGuests(item.key, Math.min(item.max, (guests[item.key] as number) + 1))}>+</button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ borderTop: "1px solid #e2e8f0", padding: "16px 20px 32px", background: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+            <button onClick={() => setGuestOpen(false)} style={{ background: YELLOW, color: "#1a1a1a", border: "none", borderRadius: 12, padding: "14px 28px", fontSize: 16, fontWeight: 700, cursor: "pointer", width: "100%" }}>Select</button>
+          </div>
+        </div>
+      )}
+
       {/* ── STICKY TOP NAVIGATION BAR ── */}
       <nav style={{ position: "sticky", top: 0, zIndex: 100, background: NAVY, color: "#fff", padding: "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -375,3 +418,183 @@ export default function SearchHotelsPage() {
         <div style={{ display: "inline-flex", alignItems: "center", background: "rgba(255,255,255,0.08)", padding: "6px 16px", borderRadius: 100, fontSize: 12, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#cbd5e1", marginBottom: 24, border: "1px solid rgba(255,255,255,0.1)" }}>
           ✦ Exclusive Member Deals
         </div>
+
+        <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: isMobile ? 36 : 56, fontWeight: 800, lineHeight: 1.1, marginBottom: 16, letterSpacing: "-1px" }}>
+          Find your <span style={{ color: YELLOW }}>perfect stay</span>
+        </h1>
+        <p style={{ fontSize: isMobile ? 15 : 18, color: "#94a3b8", maxWidth: 640, margin: "0 auto 36px", fontWeight: 400 }}>
+          500,000+ exclusive deals across the globe for members only.
+        </p>
+
+        {/* ── RECENT DROP TICKER LINK ── */}
+        <div style={{ display: "inline-flex", alignItems: "center", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", padding: "8px 20px", borderRadius: 100, marginBottom: 32, minHeight: 40 }}>
+          <div className={tickerVisible ? "ticker-visible" : "ticker-hidden"} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#fff" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+            <span style={{ color: YELLOW, fontWeight: 600 }}>{ticker.name}</span> saved on <strong style={{ fontWeight: 600 }}>{ticker.hotel}</strong> 
+            <span style={{ color: "#22c55e", fontWeight: 700 }}> Saved {ticker.saved}</span>
+            <span style={{ color: "#64748b", fontSize: 12, marginLeft: 4 }}>{ticker.time}</span>
+          </div>
+        </div>
+
+        {/* ── CORE ENGINE INTERACTION CONTROL PANEL ── */}
+        <div ref={calRef} style={{ maxWidth: 1060, margin: "0 auto", background: "#fff", borderRadius: 12, padding: 6, boxShadow: "0 20px 40px rgba(0,0,0,0.3)", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.5fr 1fr 1fr 1.2fr 0.6fr", gap: 0, alignItems: "center" }}>
+          
+          {/* Destination */}
+          <div className="sfield" style={{ padding: "14px 20px", borderRadius: 8, textAlign: "left", borderRight: isMobile ? "none" : "1px solid #e2e8f0" }}>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 2 }}>Destination or Hotel</label>
+            <input type="text" placeholder="Enter city, area or property name" value={destination} onChange={e => setDestination(e.target.value)}
+              style={{ width: "100%", border: "none", outline: "none", fontSize: 14, fontWeight: 600, color: NAVY, background: "transparent", padding: 0 }} />
+          </div>
+
+          {/* Check In */}
+          <div onClick={() => { setCalMode("checkin"); setCalOpen(true); }} className="sfield" style={{ padding: "14px 20px", borderRadius: 8, textAlign: "left", borderRight: isMobile ? "none" : "1px solid #e2e8f0" }}>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 2 }}>Check-in</label>
+            <div style={{ fontSize: 14, fontWeight: 600, color: checkIn ? NAVY : "#94a3b8", marginTop: 2 }}>
+              {checkIn ? formatDate(checkIn) : "Add date"}
+            </div>
+          </div>
+
+          {/* Check Out */}
+          <div onClick={() => { setCalMode("checkout"); setCalOpen(true); }} className="sfield" style={{ padding: "14px 20px", borderRadius: 8, textAlign: "left", borderRight: isMobile ? "none" : "1px solid #e2e8f0" }}>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 2 }}>Check-out</label>
+            <div style={{ fontSize: 14, fontWeight: 600, color: checkOut ? NAVY : "#94a3b8", marginTop: 2 }}>
+              {checkOut ? formatDate(checkOut) : "Add date"}
+            </div>
+          </div>
+
+          {/* Guests Trigger Row */}
+          <div onClick={() => setGuestOpen(true)} className="sfield" style={{ padding: "14px 20px", borderRadius: 8, textAlign: "left" }}>
+            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 2 }}>Rooms &amp; Guests</label>
+            <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, marginTop: 2, display: "flex", alignItems: "center" }}>
+              <span>{guestSummary()}</span>
+              <span className="arrow-indicator">▼</span>
+            </div>
+          </div>
+
+          {/* Action Trigger Button */}
+          <button onClick={handleSearch} className="ybtn" style={{ background: YELLOW, color: "#1a1a1a", border: "none", borderRadius: 8, padding: "18px", fontSize: 15, fontWeight: 700, cursor: "pointer", width: "100%", transition: "background 0.15s" }}>
+            Search
+          </button>
+        </div>
+
+        {searchError && <div style={{ color: "#f87171", fontSize: 14, fontWeight: 500, marginTop: 16 }}>{searchError}</div>}
+      </header>
+
+      {/* ── AI VOUCHER DRAG DROP DROPZONE ── */}
+      <section style={{ maxWidth: 1060, margin: "-20px auto 64px", padding: "0 24px", position: "relative", zIndex: 10 }}>
+        <div style={{ border: `2px dashed ${B}`, borderRadius: 12, padding: "32px 24px", textAlign: "center", background: "#f8fafc", boxShadow: "0 10px 25px rgba(0,0,0,0.05)" }}>
+          <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: 18, color: NAVY, marginBottom: 8 }}>Already Booked Somewhere Else?</h3>
+          <p style={{ fontSize: 14, color: "#64748b", marginBottom: 20 }}>Upload your confirmation voucher or OTA app screenshot. Our bots will scan for lower prices every 6 hours.</p>
+          
+          <label style={{ display: "inline-block", background: B, color: "#fff", padding: "12px 24px", borderRadius: 8, fontWeight: 600, cursor: isUploading ? "not-allowed" : "pointer" }}>
+            {isUploading ? "Processing Document Assets..." : "Upload Voucher / Screenshot"}
+            <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} disabled={isUploading} style={{ display: "none" }} />
+          </label>
+
+          {feedbackMessage && (
+            <div style={{ maxWidth: 550, margin: "20px auto 0", padding: 14, borderRadius: 8, fontSize: 14, fontWeight: 500, textAlign: "left",
+              background: feedbackType === "success" ? "#f0fdf4" : feedbackType === "error" ? "#fef2f2" : "#eff6ff",
+              color: feedbackType === "success" ? "#16a34a" : feedbackType === "error" ? "#ef4444" : B,
+              border: `1px solid ${feedbackType === "success" ? "#bbf7d0" : feedbackType === "error" ? "#fca5a5" : "#bfdbfe"}`
+            }}>
+              {feedbackMessage}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── DATA METRICS DASHBOARD SECTION ── */}
+      <section ref={statsRef} style={{ borderBottom: "1px solid #f1f5f9", padding: "0 24px 48px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: isMobile ? 24 : 16 }}>
+          {STATS.map((s, idx) => (
+            <div key={s.id} style={{ textAlign: "center", borderLeft: !isMobile && idx > 0 ? "1px solid #e2e8f0" : "none" }}>
+              <div style={{ fontFamily: "'Sora', sans-serif", fontSize: isMobile ? 28 : 36, fontWeight: 800, color: NAVY, marginBottom: 2 }}>
+                {statVals[idx]}
+              </div>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── CURATED TRENDING GETAWAYS ── */}
+      <section style={{ maxWidth: 1100, margin: "64px auto 80px", padding: "0 24px" }}>
+        <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 24, fontWeight: 800, color: NAVY, marginBottom: 8 }}>Trending Getaways</h2>
+        <p style={{ color: "#64748b", fontSize: 15, marginBottom: 24 }}>Wholesale member rooms locked at bulk execution contract values.</p>
+        
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(6,1fr)", gap: 16 }}>
+          {DESTINATIONS.map((d, i) => (
+            <div key={i} onClick={() => { setDestination(d.city); setActiveCity(d.city); }} style={{ cursor: "pointer" }}>
+              <div style={{ position: "relative", height: 140, borderRadius: 12, background: "#cbd5e1", marginBottom: 8, overflow: "hidden" }}>
+                {d.badge && (
+                  <span style={{ position: "absolute", top: 8, left: 8, background: d.badgeColor, color: d.badgeText, fontSize: 10, fontWeight: 700, padding: "3px 6px", borderRadius: 4, zIndex: 2 }}>
+                    {d.badge}
+                  </span>
+                )}
+                <div style={{ width: "100%", height: "100%", background: `linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,0.6) 100%)`, position: "absolute", inset: 0, zIndex: 1 }} />
+              </div>
+              <div style={{ fontWeight: 600, fontSize: 15, color: NAVY }}>{d.city}</div>
+              <div style={{ fontSize: 13, color: "#64748b" }}>{d.flag} {d.country}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── DEALS MARKETPLACE GRID ── */}
+      <section style={{ maxWidth: 1100, margin: "0 auto 100px", padding: "0 24px" }}>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 24, fontWeight: 800, color: NAVY, marginBottom: 4 }}>Explore Live Price Drops</h2>
+          <p style={{ color: "#64748b", fontSize: 15 }}>Real-time benchmarking against public standard configurations.</p>
+        </div>
+
+        {/* Filters Navbar Row */}
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 12, marginBottom: 24 }}>
+          {CITY_FILTERS.map(f => (
+            <button key={f} onClick={() => setActiveCity(f)} style={{ background: activeCity === f ? NAVY : "#f1f5f9", color: activeCity === f ? "#fff" : "#475569", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+              {f}
+            </button>
+          ))}
+        </div>
+
+        {/* Hotels Cards Grid Wrapper */}
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 30 }}>
+          {hotels.map((h, i) => (
+            <div key={i} className="hotel-card" style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
+              <div style={{ position: "relative", height: 200, background: "#cbd5e1" }}>
+                <div style={{ position: "absolute", top: 12, left: 12, display: "flex", flexDirection: "column", gap: 6, zIndex: 2 }}>
+                  {h.badges.map(([lbl, styleKey]) => (
+                    <span key={lbl} style={{ background: BADGE_STYLES[styleKey]?.bg || "#475569", color: BADGE_STYLES[styleKey]?.color || "#fff", fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, textTransform: "uppercase" }}>
+                      {lbl}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              
+              <div style={{ padding: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, color: NAVY }}>{h.name}</h3>
+                  <div style={{ color: "#f59e0b", fontSize: 13, fontWeight: 600 }}>★ {h.stars}</div>
+                </div>
+                <div style={{ fontSize: 13, color: "#64748b", marginBottom: 12 }}>📍 {h.loc} · <span style={{ fontWeight: 500, color: NAVY }}>{h.rating}</span></div>
+                
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
+                  {h.tags.map(t => <span key={t} style={{ background: "#f1f5f9", color: "#475569", fontSize: 12, padding: "3px 8px", borderRadius: 6, fontWeight: 500 }}>{t}</span>)}
+                </div>
+
+                <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <span style={{ fontSize: 13, color: "#94a3b8", textDecoration: "line-through", marginRight: 6 }}>{h.was}</span>
+                    <span style={{ fontSize: 20, fontWeight: 800, color: B }}>{h.now}</span>
+                  </div>
+                  <div style={{ background: "#dcfce7", color: "#15803d", padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
+                    {h.save}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
