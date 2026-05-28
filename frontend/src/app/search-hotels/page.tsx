@@ -314,12 +314,30 @@ export default function SearchHotelsPage() {
     .cal-range-end { background: ${B}; color: #fff; border-radius: 0 50% 50% 0; }
     .cal-disabled { color: #cbd5e1; cursor: not-allowed; }
     .cal-today { font-weight: 700; color: ${B}; }
+    /* Bottom sheet overlay */
+    .bottom-sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 8888; animation: fadeOverlay 0.2s ease; }
+    .bottom-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 20px 20px 0 0; z-index: 9999; padding: 0 0 32px; animation: slideUp 0.28s cubic-bezier(0.32,0.72,0,1); max-height: 90vh; overflow-y: auto; }
+    @keyframes fadeOverlay { from{opacity:0} to{opacity:1} }
+    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+    /* PWA splash screen */
+    #pwa-splash { position: fixed; inset: 0; background: linear-gradient(160deg,#0c1f5c 0%,#1447b8 100%); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; animation: splashFade 0.5s ease 1.8s forwards; }
+    @keyframes splashFade { to { opacity: 0; pointer-events: none; visibility: hidden; } }
+    .splash-logo { font-family: 'Sora',sans-serif; font-weight: 800; font-size: 48px; color: #fff; animation: splashPop 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.3s both; }
+    .splash-dot { color: #FCD34D; }
+    .splash-sub { color: rgba(255,255,255,0.6); font-size: 14px; animation: splashPop 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.5s both; }
+    @keyframes splashPop { from{opacity:0;transform:scale(0.7)} to{opacity:1;transform:scale(1)} }
   `;
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, overflowX: "hidden" }}>
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
+
+      {/* PWA SPLASH SCREEN — shows for 1.8s on app open, then fades */}
+      <div id="pwa-splash">
+        <div className="splash-logo">rebuq<span className="splash-dot">.</span></div>
+        <div className="splash-sub">Hotel Price Protection</div>
+      </div>
 
       {/* NAV */}
       <nav style={{ position: "sticky", top: 0, zIndex: 200, background: "rgba(255,255,255,0.97)", backdropFilter: "blur(12px)", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
@@ -393,8 +411,8 @@ export default function SearchHotelsPage() {
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: isMobile ? "auto" : 72 }}>
 
             {/* ── DESTINATION ── */}
-            <div className="search-field" style={{ padding: isMobile ? "14px 16px" : "0 24px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", borderRadius: isMobile ? "16px 16px 0 0" : "16px 0 0 16px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Destination or hotel</div>
+            <div className="search-field" style={{ padding: isMobile ? "12px 16px" : "0 24px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", borderRadius: isMobile ? "16px 16px 0 0" : "16px 0 0 16px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>Destination or hotel</div>
               <input
                 type="text"
                 placeholder="Where to? e.g. Dubai, UAE"
@@ -402,16 +420,17 @@ export default function SearchHotelsPage() {
                 onChange={e => { setDestination(e.target.value); setShowSuggestions(true); setSearchError(""); }}
                 onFocus={() => setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 15, fontWeight: 600, color: NAVY, background: "transparent" }}
+                style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: isMobile ? 16 : 15, fontWeight: 500, color: NAVY, background: "transparent", padding: 0 }}
               />
               {showSuggestions && destination.length > 0 && (
-                <div style={{ position: "absolute", top: "100%", left: 0, width: 320, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 300, maxHeight: 240, overflowY: "auto" as const, marginTop: 4 }}>
+                <div style={{ position: "absolute", top: "100%", left: 0, width: isMobile ? "calc(100vw - 24px)" : 320, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 9999, maxHeight: 240, overflowY: "auto" as const, marginTop: 4 }}>
                   {DESTINATIONS.filter(d => `${d.city}, ${d.country}`.toLowerCase().includes(destination.toLowerCase())).map((d, i) => (
                     <div key={i} onMouseDown={() => { setDestination(`${d.city}, ${d.country}`); setShowSuggestions(false); }}
-                      style={{ padding: "11px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: NAVY, borderBottom: "1px solid #f8fafc" }}
+                      style={{ padding: "12px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontSize: 14, color: NAVY, borderBottom: "1px solid #f8fafc" }}
                       onMouseOver={e => (e.currentTarget.style.background = "#f0f7ff")}
                       onMouseOut={e => (e.currentTarget.style.background = "#fff")}>
-                      <span style={{ fontSize: 18 }}>{d.flag}</span>{d.city}, {d.country}
+                      <span style={{ fontSize: 20 }}>{d.flag}</span>
+                      <div><div style={{ fontWeight: 600 }}>{d.city}</div><div style={{ fontSize: 12, color: "#64748b" }}>{d.country}</div></div>
                     </div>
                   ))}
                   {DESTINATIONS.filter(d => `${d.city}, ${d.country}`.toLowerCase().includes(destination.toLowerCase())).length === 0 && (
@@ -421,25 +440,36 @@ export default function SearchHotelsPage() {
               )}
             </div>
 
-            {/* ── CHECK-IN ── */}
-            <div
-              className="search-field"
-              style={{ padding: isMobile ? "14px 16px" : "0 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", cursor: "pointer", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkin" ? "#f0f7ff" : "transparent" }}
-              onClick={() => { setCalMode("checkin"); setCalOpen(true); setCalYear(today.getFullYear()); setCalMonth(today.getMonth()); }}
-            >
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-in</div>
-              <div style={{ fontSize: checkIn ? 15 : 14, fontWeight: checkIn ? 700 : 400, color: checkIn ? NAVY : "#94a3b8" }}>{checkIn ? formatDate(checkIn) : "Add date"}</div>
-            </div>
-
-            {/* ── CHECK-OUT ── */}
-            <div
-              className="search-field"
-              style={{ padding: isMobile ? "14px 16px" : "0 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", cursor: "pointer", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkout" ? "#f0f7ff" : "transparent" }}
-              onClick={() => { setCalMode("checkout"); setCalOpen(true); setCalYear(today.getFullYear()); setCalMonth(today.getMonth()); }}
-            >
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-out</div>
-              <div style={{ fontSize: checkOut ? 15 : 14, fontWeight: checkOut ? 700 : 400, color: checkOut ? NAVY : "#94a3b8" }}>{checkOut ? formatDate(checkOut) : "Add date"}</div>
-            </div>
+            {/* ── CHECK-IN + CHECK-OUT — side by side on mobile ── */}
+            {isMobile ? (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: "1px solid #f1f5f9" }}>
+                <div className="search-field" style={{ padding: "12px 16px", borderRight: "1px solid #f1f5f9", cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkin" ? "#f0f7ff" : "transparent" }}
+                  onClick={() => { setCalMode("checkin"); setCalOpen(true); setCalYear(today.getFullYear()); setCalMonth(today.getMonth()); }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>Check-in</div>
+                  <div style={{ fontSize: 14, fontWeight: checkIn ? 600 : 400, color: checkIn ? NAVY : "#94a3b8" }}>{checkIn ? formatDate(checkIn) : "Add date"}</div>
+                </div>
+                <div className="search-field" style={{ padding: "12px 16px", cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkout" ? "#f0f7ff" : "transparent" }}
+                  onClick={() => { setCalMode("checkout"); setCalOpen(true); setCalYear(today.getFullYear()); setCalMonth(today.getMonth()); }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>Check-out</div>
+                  <div style={{ fontSize: 14, fontWeight: checkOut ? 600 : 400, color: checkOut ? NAVY : "#94a3b8" }}>{checkOut ? formatDate(checkOut) : "Add date"}</div>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* ── CHECK-IN desktop ── */}
+                <div className="search-field" style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", cursor: "pointer", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkin" ? "#f0f7ff" : "transparent" }}
+                  onClick={() => { setCalMode("checkin"); setCalOpen(true); setCalYear(today.getFullYear()); setCalMonth(today.getMonth()); }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-in</div>
+                  <div style={{ fontSize: checkIn ? 15 : 14, fontWeight: checkIn ? 700 : 400, color: checkIn ? NAVY : "#94a3b8" }}>{checkIn ? formatDate(checkIn) : "Add date"}</div>
+                </div>
+                {/* ── CHECK-OUT desktop ── */}
+                <div className="search-field" style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", cursor: "pointer", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkout" ? "#f0f7ff" : "transparent" }}
+                  onClick={() => { setCalMode("checkout"); setCalOpen(true); setCalYear(today.getFullYear()); setCalMonth(today.getMonth()); }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-out</div>
+                  <div style={{ fontSize: checkOut ? 15 : 14, fontWeight: checkOut ? 700 : 400, color: checkOut ? NAVY : "#94a3b8" }}>{checkOut ? formatDate(checkOut) : "Add date"}</div>
+                </div>
+              </>
+            )}
 
             {/* ── CUSTOM CALENDAR POPUP — spans under checkin+checkout columns ── */}
             {calOpen && (
@@ -513,16 +543,15 @@ export default function SearchHotelsPage() {
             )}
 
             {/* ── ROOMS & GUESTS ── */}
-            <div ref={guestPanelRef} style={{ padding: isMobile ? "14px 16px" : "0 20px", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", cursor: "pointer", overflow: "visible", display: "flex", flexDirection: "column", justifyContent: "center" }} onClick={() => setGuestPanelOpen(!guestPanelOpen)}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Rooms &amp; Guests</div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: NAVY, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div ref={guestPanelRef} style={{ padding: isMobile ? "12px 16px" : "0 20px", borderBottom: "none", position: "relative", cursor: "pointer", overflow: "visible", display: "flex", flexDirection: "column", justifyContent: "center" }} onClick={() => setGuestPanelOpen(!guestPanelOpen)}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>Rooms &amp; Guests</div>
+              <div style={{ fontSize: isMobile ? 14 : 15, fontWeight: 600, color: NAVY, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span>{guestSummary()}</span>
-                <span style={{ fontSize: 10, color: "#64748b", marginLeft: 4 }}>▼</span>
+                <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: 4 }}>▼</span>
               </div>
-
-              {/* Guest Panel — opens DOWNWARD below the search bar */}
-              {guestPanelOpen && (
-                <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: isMobile ? "auto" : 0, left: isMobile ? "-8px" : "auto", width: isMobile ? "calc(100vw - 24px)" : 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 20 }}>
+              {/* Desktop only dropdown */}
+              {!isMobile && guestPanelOpen && (
+                <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 20 }}>
                   {[
                     { label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 },
                     { label: "Adults", sub: "Age 13+", key: "adults" as keyof GuestState, min: 1, max: 16 },
@@ -534,61 +563,34 @@ export default function SearchHotelsPage() {
                         {item.sub && <div style={{ fontSize: 12, color: "#94a3b8" }}>{item.sub}</div>}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <button className="guest-btn" disabled={(guests[item.key] as number) <= item.min}
-                          onClick={() => updateGuests(item.key, Math.max(item.min, (guests[item.key] as number) - 1))}>−</button>
+                        <button className="guest-btn" disabled={(guests[item.key] as number) <= item.min} onClick={e => { e.stopPropagation(); updateGuests(item.key, Math.max(item.min, (guests[item.key] as number) - 1)); }}>−</button>
                         <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" as const }}>{guests[item.key]}</span>
-                        <button className="guest-btn" disabled={(guests[item.key] as number) >= item.max}
-                          onClick={() => updateGuests(item.key, Math.min(item.max, (guests[item.key] as number) + 1))}>+</button>
+                        <button className="guest-btn" disabled={(guests[item.key] as number) >= item.max} onClick={e => { e.stopPropagation(); updateGuests(item.key, Math.min(item.max, (guests[item.key] as number) + 1)); }}>+</button>
                       </div>
                     </div>
                   ))}
-
                   {guests.children > 0 && (
                     <div style={{ marginTop: 14 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>Age of children at check-in</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>Age of children at check-in</div>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                         {guests.childAges.map((age, idx) => (
                           <div key={idx}>
                             <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>Child {idx + 1}</div>
-                            <select value={age} onChange={e => updateChildAge(idx, parseInt(e.target.value))}
-                              style={{ width: "100%", padding: "8px 10px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontFamily: "inherit", fontSize: 13, color: NAVY, background: "#f8fafc", outline: "none", cursor: "pointer" }}>
-                              {Array.from({ length: 13 }, (_, i) => (
-                                <option key={i} value={i}>{i === 0 ? "Under 1" : `${i} year${i > 1 ? "s" : ""}`}</option>
-                              ))}
+                            <select value={age} onChange={e => updateChildAge(idx, parseInt(e.target.value))} style={{ width: "100%", padding: "8px 10px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontFamily: "inherit", fontSize: 13, color: NAVY, background: "#f8fafc", outline: "none" }}>
+                              {Array.from({ length: 13 }, (_, i) => <option key={i} value={i}>{i === 0 ? "Under 1" : `${i} year${i > 1 ? "s" : ""}`}</option>)}
                             </select>
                           </div>
                         ))}
                       </div>
-                      <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>Children aged 0–12 are considered children</div>
                     </div>
                   )}
-
-                  <button onClick={() => setGuestPanelOpen(false)} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 16 }}>
-                    Done
-                  </button>
+                  <button onClick={() => setGuestPanelOpen(false)} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 16 }}>Done</button>
                 </div>
               )}
             </div>
 
-            {/* ── SEARCH BUTTON — yellow, matching "perfect stay" color ── */}
-            <button
-              className="search-btn-y"
-              onClick={handleSearch}
-              style={{
-                background: YELLOW,
-                color: "#1a1a1a",
-                border: "none",
-                padding: isMobile ? "16px 20px" : "0 40px",
-                fontSize: 16,
-                fontWeight: 800,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                borderRadius: isMobile ? "0 0 16px 16px" : "0 16px 16px 0",
-                width: isMobile ? "100%" : "auto",
-                whiteSpace: "nowrap" as const,
-                minWidth: isMobile ? "auto" : 130,
-              }}
-            >
+            {/* ── SEARCH BUTTON ── */}
+            <button className="search-btn-y" onClick={handleSearch} style={{ background: YELLOW, color: "#1a1a1a", border: "none", padding: isMobile ? "18px 20px" : "0 40px", fontSize: 17, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", borderRadius: isMobile ? "0 0 16px 16px" : "0 16px 16px 0", width: isMobile ? "100%" : "auto", whiteSpace: "nowrap" as const, minWidth: isMobile ? "auto" : 130 }}>
               Search
             </button>
           </div>
@@ -605,6 +607,56 @@ export default function SearchHotelsPage() {
         {/* Spacer so hero gives room for the search bar overhang */}
         <div style={{ height: isMobile ? 48 : 56 }} />
       </section>
+
+      {/* MOBILE BOTTOM SHEET for guests — rendered at root level so it's truly full screen */}
+      {isMobile && guestPanelOpen && (
+        <>
+          <div className="bottom-sheet-overlay" onClick={() => setGuestPanelOpen(false)} />
+          <div className="bottom-sheet">
+            <div style={{ display: "flex", justifyContent: "center", padding: "14px 0 8px" }}>
+              <div style={{ width: 40, height: 4, background: "#e2e8f0", borderRadius: 4 }} />
+            </div>
+            <div style={{ padding: "4px 24px 0", fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 700, color: NAVY, marginBottom: 4 }}>Rooms &amp; Guests</div>
+            <div style={{ padding: "0 24px" }}>
+              {[
+                { label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 },
+                { label: "Adults", sub: "Age 13+", key: "adults" as keyof GuestState, min: 1, max: 16 },
+                { label: "Children", sub: "Age 0–12", key: "children" as keyof GuestState, min: 0, max: 8 },
+              ].map(item => (
+                <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 0", borderBottom: "1px solid #f1f5f9" }}>
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: NAVY }}>{item.label}</div>
+                    <div style={{ fontSize: 13, color: "#94a3b8" }}>{item.sub}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <button className="guest-btn" style={{ width: 40, height: 40, fontSize: 22 }} disabled={(guests[item.key] as number) <= item.min}
+                      onClick={() => updateGuests(item.key, Math.max(item.min, (guests[item.key] as number) - 1))}>−</button>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: NAVY, minWidth: 28, textAlign: "center" as const }}>{guests[item.key]}</span>
+                    <button className="guest-btn" style={{ width: 40, height: 40, fontSize: 22 }} disabled={(guests[item.key] as number) >= item.max}
+                      onClick={() => updateGuests(item.key, Math.min(item.max, (guests[item.key] as number) + 1))}>+</button>
+                  </div>
+                </div>
+              ))}
+              {guests.children > 0 && (
+                <div style={{ marginTop: 14, marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>Age of children at check-in</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {guests.childAges.map((age, idx) => (
+                      <div key={idx}>
+                        <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>Child {idx + 1}</div>
+                        <select value={age} onChange={e => updateChildAge(idx, parseInt(e.target.value))} style={{ width: "100%", padding: "10px 12px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontFamily: "inherit", fontSize: 14, color: NAVY, background: "#f8fafc", outline: "none" }}>
+                          {Array.from({ length: 13 }, (_, i) => <option key={i} value={i}>{i === 0 ? "Under 1" : `${i} year${i > 1 ? "s" : ""}`}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button onClick={() => setGuestPanelOpen(false)} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 12, padding: "16px", fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 20 }}>Done</button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* STATS BAR — extra top padding absorbs the search bar overhang */}
       <div style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", paddingTop: isMobile ? 48 : 56 }} ref={statsRef}>
