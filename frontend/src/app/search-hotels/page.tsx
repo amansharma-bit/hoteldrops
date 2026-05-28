@@ -128,6 +128,13 @@ function formatDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 }
+function toDateStr(y: number, m: number, d: number): string {
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+function getDaysInMonth(y: number, m: number): number { return new Date(y, m + 1, 0).getDate(); }
+function getFirstDow(y: number, m: number): number { return new Date(y, m, 1).getDay(); }
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DOWS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 export default function SearchHotelsPage() {
   const router = useRouter();
@@ -139,6 +146,13 @@ export default function SearchHotelsPage() {
   const [guests, setGuests] = useState<GuestState>({ rooms: 1, adults: 2, children: 0, childAges: [] });
   const [guestPanelOpen, setGuestPanelOpen] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  // Calendar state
+  const today = new Date();
+  const [calOpen, setCalOpen] = useState(false);
+  const [calMode, setCalMode] = useState<"checkin"|"checkout">("checkin"); // which field is being picked
+  const [calYear, setCalYear] = useState(today.getFullYear());
+  const [calMonth, setCalMonth] = useState(today.getMonth()); // left month
+  const calRef = useRef<HTMLDivElement>(null);
   const [activeCity, setActiveCity] = useState("All Hotels");
   const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
@@ -148,8 +162,6 @@ export default function SearchHotelsPage() {
   const statsRef = useRef<HTMLDivElement>(null);
   const statsAnimated = useRef(false);
   const guestPanelRef = useRef<HTMLDivElement>(null);
-  const checkInRef = useRef<HTMLInputElement>(null);
-  const checkOutRef = useRef<HTMLInputElement>(null);
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -166,6 +178,9 @@ export default function SearchHotelsPage() {
     const handler = (e: MouseEvent) => {
       if (guestPanelRef.current && !guestPanelRef.current.contains(e.target as Node)) {
         setGuestPanelOpen(false);
+      }
+      if (calRef.current && !calRef.current.contains(e.target as Node)) {
+        setCalOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -203,23 +218,22 @@ export default function SearchHotelsPage() {
     return () => observer.disconnect();
   }, []);
 
-  // ── FIX: removed showPicker() auto-jump — that was causing calendar month
-  //        navigation to jump to the check-out picker ────────────────────────
-  const handleCheckInChange = (val: string) => {
-    setCheckIn(val);
+  // Calendar day click — auto-advances from check-in to check-out
+  const handleDayClick = (dateStr: string) => {
     setSearchError("");
-    if (checkOut && checkOut <= val) {
-      const next = new Date(val);
-      next.setDate(next.getDate() + 1);
-      setCheckOut(next.toISOString().split("T")[0]);
+    if (calMode === "checkin") {
+      setCheckIn(dateStr);
+      setCheckOut(""); // reset checkout when checkin changes
+      setCalMode("checkout"); // auto-advance to checkout
+    } else {
+      if (dateStr <= checkIn) return; // can't pick before check-in
+      setCheckOut(dateStr);
+      setCalOpen(false); // close after both picked
     }
   };
 
-  const handleCheckOutChange = (val: string) => {
-    if (checkIn && val <= checkIn) return;
-    setCheckOut(val);
-    setSearchError("");
-  };
+  const handleCheckInChange = (val: string) => { setCheckIn(val); setSearchError(""); };
+  const handleCheckOutChange = (val: string) => { if (checkIn && val <= checkIn) return; setCheckOut(val); setSearchError(""); };
 
   const updateGuests = (key: keyof GuestState, val: number) => {
     setGuests(prev => {
@@ -292,6 +306,14 @@ export default function SearchHotelsPage() {
     .search-field:hover { background: #f8fafc; }
     .search-btn-y:hover { background: #e6b800 !important; }
     input[type=date] { position: absolute; opacity: 0; pointer-events: none; top: 0; left: 0; width: 1px; height: 1px; }
+    .cal-day { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; transition: all 0.1s; margin: 1px auto; }
+    .cal-day:hover:not(.cal-disabled):not(.cal-selected) { background: #e0e7ff; color: ${B}; }
+    .cal-selected { background: ${B}; color: #fff !important; font-weight: 700; }
+    .cal-in-range { background: #dbeafe; color: ${B}; border-radius: 0; }
+    .cal-range-start { background: ${B}; color: #fff; border-radius: 50% 0 0 50%; }
+    .cal-range-end { background: ${B}; color: #fff; border-radius: 0 50% 50% 0; }
+    .cal-disabled { color: #cbd5e1; cursor: not-allowed; }
+    .cal-today { font-weight: 700; color: ${B}; }
   `;
 
   return (
@@ -402,42 +424,93 @@ export default function SearchHotelsPage() {
             {/* ── CHECK-IN ── */}
             <div
               className="search-field"
-              style={{ padding: isMobile ? "14px 16px" : "0 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", cursor: "pointer", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center" }}
-              onClick={() => { try { checkInRef.current?.showPicker(); } catch (e) { checkInRef.current?.focus(); } }}
+              style={{ padding: isMobile ? "14px 16px" : "0 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", cursor: "pointer", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkin" ? "#f0f7ff" : "transparent" }}
+              onClick={() => { setCalMode("checkin"); setCalOpen(true); setCalYear(today.getFullYear()); setCalMonth(today.getMonth()); }}
             >
               <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-in</div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: checkIn ? NAVY : "#94a3b8" }}>
-                {checkIn ? formatDate(checkIn) : "Add date"}
-              </div>
-              {/* Hidden native date input — invisible but functional */}
-              <input
-                ref={checkInRef}
-                type="date"
-                value={checkIn}
-                min={new Date().toISOString().split("T")[0]}
-                onChange={e => handleCheckInChange(e.target.value)}
-              />
+              <div style={{ fontSize: checkIn ? 15 : 14, fontWeight: checkIn ? 700 : 400, color: checkIn ? NAVY : "#94a3b8" }}>{checkIn ? formatDate(checkIn) : "Add date"}</div>
             </div>
 
             {/* ── CHECK-OUT ── */}
             <div
               className="search-field"
-              style={{ padding: isMobile ? "14px 16px" : "0 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", cursor: "pointer", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center" }}
-              onClick={() => { try { checkOutRef.current?.showPicker(); } catch (e) { checkOutRef.current?.focus(); } }}
+              style={{ padding: isMobile ? "14px 16px" : "0 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", cursor: "pointer", position: "relative", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkout" ? "#f0f7ff" : "transparent" }}
+              onClick={() => { setCalMode("checkout"); setCalOpen(true); setCalYear(today.getFullYear()); setCalMonth(today.getMonth()); }}
             >
               <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-out</div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: checkOut ? NAVY : "#94a3b8" }}>
-                {checkOut ? formatDate(checkOut) : "Add date"}
-              </div>
-              {/* Hidden native date input */}
-              <input
-                ref={checkOutRef}
-                type="date"
-                value={checkOut}
-                min={checkIn || new Date().toISOString().split("T")[0]}
-                onChange={e => handleCheckOutChange(e.target.value)}
-              />
+              <div style={{ fontSize: checkOut ? 15 : 14, fontWeight: checkOut ? 700 : 400, color: checkOut ? NAVY : "#94a3b8" }}>{checkOut ? formatDate(checkOut) : "Add date"}</div>
             </div>
+
+            {/* ── CUSTOM CALENDAR POPUP — spans under checkin+checkout columns ── */}
+            {calOpen && (
+              <div ref={calRef} onClick={e => e.stopPropagation()} style={{
+                position: "absolute",
+                top: "calc(100% + 10px)",
+                left: isMobile ? 0 : "34%",
+                width: isMobile ? "calc(100vw - 16px)" : 680,
+                background: "#fff",
+                border: "1.5px solid #e2e8f0",
+                borderRadius: 16,
+                boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+                zIndex: 9999,
+                padding: 24,
+              }}>
+                {/* Header */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                  <button onClick={() => { const d = new Date(calYear, calMonth - 1); setCalYear(d.getFullYear()); setCalMonth(d.getMonth()); }}
+                    style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
+                  <div style={{ display: "flex", gap: 24, flex: 1, justifyContent: "space-around" }}>
+                    {[0, 1].map((offset) => {
+                      if (isMobile && offset === 1) return null;
+                      const md = new Date(calYear, calMonth + offset);
+                      const y = md.getFullYear(); const m = md.getMonth();
+                      const daysInMonth = getDaysInMonth(y, m);
+                      const firstDow = getFirstDow(y, m);
+                      const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
+                      return (
+                        <div key={offset} style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: 15, color: NAVY, textAlign: "center", marginBottom: 12 }}>{MONTHS[m]} {y}</div>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+                            {DOWS.map(dw => <div key={dw} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, color: "#94a3b8", paddingBottom: 6 }}>{dw}</div>)}
+                            {Array.from({ length: firstDow }).map((_, i) => <div key={`e${i}`} />)}
+                            {Array.from({ length: daysInMonth }).map((_, i) => {
+                              const day = i + 1;
+                              const ds = toDateStr(y, m, day);
+                              const isDisabled = ds < todayStr;
+                              const isInRange = !!(checkIn && checkOut && ds > checkIn && ds < checkOut);
+                              const isStart = ds === checkIn && !!checkOut;
+                              const isEnd = ds === checkOut;
+                              const isSelected = ds === checkIn || ds === checkOut;
+                              const isToday = ds === todayStr;
+                              let cls = "cal-day";
+                              if (isDisabled) cls += " cal-disabled";
+                              else if (isStart) cls += " cal-range-start";
+                              else if (isEnd) cls += " cal-range-end";
+                              else if (isSelected) cls += " cal-selected";
+                              else if (isInRange) cls += " cal-in-range";
+                              else if (isToday) cls += " cal-today";
+                              return (
+                                <div key={day} className={cls} onClick={() => !isDisabled && handleDayClick(ds)}>{day}</div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <button onClick={() => { const d = new Date(calYear, calMonth + 1); setCalYear(d.getFullYear()); setCalMonth(d.getMonth()); }}
+                    style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
+                </div>
+                {/* Footer hint */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: 14, marginTop: 4 }}>
+                  <div style={{ fontSize: 13, color: "#64748b" }}>
+                    {calMode === "checkin" ? "Select check-in date" : "Select check-out date"}
+                    {checkIn && checkOut && <span style={{ color: "#16a34a", marginLeft: 8, fontWeight: 600 }}>✓ {formatDate(checkIn)} → {formatDate(checkOut)}</span>}
+                  </div>
+                  <button onClick={() => { setCheckIn(""); setCheckOut(""); }} style={{ background: "none", border: "none", fontSize: 13, color: "#94a3b8", cursor: "pointer", fontFamily: "inherit" }}>Clear</button>
+                </div>
+              </div>
+            )}
 
             {/* ── ROOMS & GUESTS ── */}
             <div ref={guestPanelRef} style={{ padding: isMobile ? "14px 16px" : "0 20px", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", cursor: "pointer", overflow: "visible", display: "flex", flexDirection: "column", justifyContent: "center" }} onClick={() => setGuestPanelOpen(!guestPanelOpen)}>
