@@ -339,7 +339,7 @@ export default function SearchHotelsPage() {
       )}
 
       {/* HERO */}
-      <section style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)", padding: isMobile ? "48px 0 0" : "72px 0 0", textAlign: "center", position: "relative", overflow: "visible" }}>
+      <section style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)", padding: isMobile ? "48px 0 0" : "72px 0 0", textAlign: "center", position: "relative", overflow: "visible", zIndex: 1 }}>
 
         <div style={{ padding: isMobile ? "0 20px" : "0 40px" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
@@ -447,9 +447,9 @@ export default function SearchHotelsPage() {
                 <span style={{ fontSize: 10, color: "#64748b", marginLeft: 4 }}>▼</span>
               </div>
 
-              {/* Guest Panel — opens UPWARD so it never goes off screen */}
+              {/* Guest Panel — opens DOWNWARD below the search bar */}
               {guestPanelOpen && (
-                <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: "calc(100% + 10px)", right: isMobile ? "auto" : 0, left: isMobile ? "-8px" : "auto", width: isMobile ? "calc(100vw - 24px)" : 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 -8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 20 }}>
+                <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: isMobile ? "auto" : 0, left: isMobile ? "-8px" : "auto", width: isMobile ? "calc(100vw - 24px)" : 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 20 }}>
                   {[
                     { label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 },
                     { label: "Adults", sub: "Age 13+", key: "adults" as keyof GuestState, min: 1, max: 16 },
