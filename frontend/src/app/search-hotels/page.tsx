@@ -34,7 +34,7 @@ const DESTINATIONS = [
   { flag: "🇦🇪", city: "Dubai", country: "UAE", img: "/dubai.jpg", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
   { flag: "🇮🇳", city: "New Delhi", country: "India", img: "/newdelhi.jpg", badge: "Member Deal", badgeColor: "#1447b8", badgeText: "#fff" },
   { flag: "🇸🇬", city: "Singapore", country: "Southeast Asia", img: "/singapore.jpg" },
-  { flag: "🇮🇳", city: "Goa", country: "India", img: "/goa.jgp.avif", badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
+  { flag: "🇮🇳", city: "Goa", country: "India", img: "/goa.jpg", badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
   { flag: "🇮🇩", city: "Bali", country: "Indonesia", img: "/bali.jpg" },
   { flag: "🇮🇳", city: "Mumbai", country: "India", img: "/mumbai.jpg" },
 ];
@@ -409,7 +409,7 @@ export default function SearchHotelsPage() {
 
               {/* Guest Panel Dropdown */}
               {guestPanelOpen && (
-                <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: isMobile ? "calc(100vw - 40px)" : 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 16px 48px rgba(0,0,0,0.15)", zIndex: 300, padding: 20 }}>
+                <div onClick={e => e.stopPropagation()} style={{ position: "fixed", top: "auto", left: "auto", width: isMobile ? "calc(100vw - 40px)" : 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 16px 48px rgba(0,0,0,0.2)", zIndex: 9999, padding: 20, marginTop: 8 }}>
 
                   {/* Rooms */}
                   {[
@@ -505,7 +505,7 @@ export default function SearchHotelsPage() {
               onClick={() => { setActiveCity(d.city); setDestination(`${d.city}, ${d.country}`); document.getElementById("hotels-section")?.scrollIntoView({ behavior: "smooth" }); }}
               style={{ borderRadius: 14, overflow: "hidden", position: "relative", cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", transition: "transform .25s", height: isMobile ? 140 : 200 }}
               onMouseOver={e => (e.currentTarget.style.transform = "translateY(-4px)")} onMouseOut={e => (e.currentTarget.style.transform = "none")}>
-              <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={e => { (e.target as HTMLImageElement).src = `https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80&fit=crop`; }} />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 55%)" }} />
               {d.badge && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, padding: "3px 9px", borderRadius: 6, background: d.badgeColor, color: d.badgeText }}>{d.badge}</span>}
               <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
