@@ -107,7 +107,6 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
 };
 
 const CITY_FILTERS = ["All Hotels", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai"];
-const SORTS = ["↓ Savings", "★ Rating", "₹ Price"];
 const STATS = [
   { id: 0, target: 4200, prefix: "", suffix: "+", label: "Member deals live right now" },
   { id: 1, target: 18, prefix: "₹", suffix: "Cr", label: "Saved for members" },
@@ -133,7 +132,6 @@ export default function SearchHotelsPage() {
   const [guestPanelOpen, setGuestPanelOpen] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeCity, setActiveCity] = useState("All Hotels");
-  const [activeSort, setActiveSort] = useState(0);
   const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
   const [statVals, setStatVals] = useState(STATS.map(s => `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
@@ -331,8 +329,8 @@ export default function SearchHotelsPage() {
       )}
 
       {/* HERO */}
-      <section style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)", padding: isMobile ? "48px 20px 64px" : "72px 40px 96px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 70% 30%,rgba(255,255,255,0.05) 0%,transparent 60%)" }} />
+      <section style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)", padding: isMobile ? "48px 20px 64px" : "72px 40px 96px", textAlign: "center", position: "relative", overflow: "visible" }}>
+
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const, position: "relative" }}>
           ✦ Exclusive Member Deals
         </div>
@@ -521,20 +519,9 @@ export default function SearchHotelsPage() {
       <div id="hotels-section" style={{ background: "#f8fafc", padding: isMobile ? "50px 0" : "70px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 20px" : "0 40px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Member exclusive rates</p>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap" as const, gap: 16 }}>
-            <div>
-              <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Member Exclusive Hotels</h2>
-              <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Members save an average of <strong>₹24,600</strong> on these properties.</p>
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
-              <span style={{ fontSize: 13, color: "#64748b" }}>Sort</span>
-              {SORTS.map((s, i) => (
-                <button key={i} onClick={() => setActiveSort(i)}
-                  style={{ border: `1.5px solid ${activeSort === i ? NAVY : "#e2e8f0"}`, background: activeSort === i ? NAVY : "#fff", color: activeSort === i ? "#fff" : NAVY, fontSize: 12.5, fontWeight: 600, padding: "6px 16px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit" }}>
-                  {s}
-                </button>
-              ))}
-            </div>
+          <div style={{ marginBottom: 24 }}>
+            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Member Exclusive Hotels</h2>
+            <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Members save an average of <strong>₹24,600</strong> on these properties.</p>
           </div>
 
           {/* CITY TABS */}
