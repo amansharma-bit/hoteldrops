@@ -31,86 +31,70 @@ const TICKER_ITEMS = [
 ];
 
 const DESTINATIONS = [
-  { flag: "🇦🇪", city: "Dubai", country: "UAE", img: "https://images.pexels.com/photos/33720952/pexels-photo-33720952.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop&h=500", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
-  { flag: "🇮🇳", city: "New Delhi", country: "India", img: "https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop&h=500", badge: "Member Deal", badgeColor: "#1447b8", badgeText: "#fff" },
-  { flag: "🇸🇬", city: "Singapore", country: "Southeast Asia", img: "https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop&h=500" },
-  { flag: "🇮🇳", city: "Goa", country: "India", img: "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop&h=500", badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
-  { flag: "🇮🇩", city: "Bali", country: "Indonesia", img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=85&fit=crop" },
-  { flag: "🇮🇳", city: "Mumbai", country: "India", img: "https://images.pexels.com/photos/2034335/pexels-photo-2034335.jpeg?auto=compress&cs=tinysrgb&w=800&fit=crop&h=500" },
+  { flag: "🇦🇪", city: "Dubai", country: "UAE", img: "/dubai.jpg", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
+  { flag: "🇮🇳", city: "New Delhi", country: "India", img: "/newdelhi.jpg", badge: "Member Deal", badgeColor: "#1447b8", badgeText: "#fff" },
+  { flag: "🇸🇬", city: "Singapore", country: "Southeast Asia", img: "/singapore.jpg" },
+  { flag: "🇮🇳", city: "Goa", country: "India", img: "/goa.jgp.avif", badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
+  { flag: "🇮🇩", city: "Bali", country: "Indonesia", img: "/bali.jpg" },
+  { flag: "🇮🇳", city: "Mumbai", country: "India", img: "/mumbai.jpg" },
 ];
 
 const HOTELS_BY_CITY: Record<string, Array<{name:string;loc:string;stars:number;rating:string;tags:string[];was:string;now:string;save:string;badges:[string,string][];img:string}>> = {
   "All Hotels": [
-    { name: "Atlantis The Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark", "Beach", "Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending", "trending"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/33720952/pexels-photo-33720952.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Soneva Fushi", loc: "Maldives", stars: 5, rating: "4.9 (5.1k)", tags: ["Overwater", "Private pool", "Butler"], was: "₹1,70,000", now: "₹1,24,000", save: "Save ₹46,000", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/1287460/pexels-photo-1287460.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Capella Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.8 (2.1k)", tags: ["River view", "Pool", "Fine dining"], was: "₹26,600", now: "₹18,200", save: "Save ₹8,400", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=85&fit=crop" },
-    { name: "Four Seasons Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view", "Spa", "Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending", "trending"], ["↓ 3.5% Off", "off"]], img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=85&fit=crop" },
-    { name: "Marina Bay Sands", loc: "Singapore", stars: 5, rating: "4.7 (19.1k)", tags: ["Infinity pool", "SkyPark", "Casino"], was: "₹47,000", now: "₹34,600", save: "Save ₹12,400", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600&q=85&fit=crop" },
-    { name: "The Ritz Paris", loc: "Paris, France", stars: 5, rating: "4.8 (4.2k)", tags: ["Fine dining", "Spa", "Concierge"], was: "₹74,000", now: "₹52,000", save: "Save ₹22,000", badges: [["Best Value", "best"], ["↓ 15% Off", "off"]], img: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=85&fit=crop" },
+    { name: "Atlantis The Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark", "Beach", "Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending", "trending"], ["⚡ AI Watching", "watching"]], img: "/atlantisthepalmdubai.jpg" },
+    { name: "Four Seasons Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view", "Spa", "Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending", "trending"], ["↓ 3.5% Off", "off"]], img: "/FourSeasonsbali.jpg" },
+    { name: "Marina Bay Sands", loc: "Singapore", stars: 5, rating: "4.7 (19.1k)", tags: ["Infinity pool", "SkyPark", "Casino"], was: "₹47,000", now: "₹34,600", save: "Save ₹12,400", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: "/marinabaysandssingapore.jpg" },
+    { name: "The Leela Palace", loc: "New Delhi, India", stars: 5, rating: "4.9 (8.2k)", tags: ["Pool", "Spa", "Fine dining"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "/theleelapalace.jpg" },
+    { name: "Taj Mahal Palace", loc: "Mumbai, India", stars: 5, rating: "4.9 (22.4k)", tags: ["Gateway of India", "Heritage", "Sea view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "/tajmahalpalacemumbai.jpg" },
+    { name: "The Leela Goa", loc: "Goa, India", stars: 5, rating: "4.8 (12.1k)", tags: ["Beach", "Lagoon", "Golf"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "/leelagoa.jpg" },
   ],
   "Dubai": [
-    { name: "Atlantis The Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark", "Beach", "Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending", "trending"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/33720952/pexels-photo-33720952.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Burj Al Arab", loc: "Dubai, UAE", stars: 5, rating: "4.8 (12.3k)", tags: ["Iconic", "Private beach", "Helipad"], was: "₹1,20,000", now: "₹84,000", save: "Save ₹36,000", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Four Seasons DIFC", loc: "Dubai, UAE", stars: 5, rating: "4.7 (6.2k)", tags: ["City view", "Spa", "Pool"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Best Value", "best"], ["↓ 3% Off", "off"]], img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop" },
-    { name: "Jumeirah Al Qasr", loc: "Dubai, UAE", stars: 5, rating: "4.6 (8.9k)", tags: ["Beach", "Madinat view", "Pool"], was: "₹44,000", now: "₹31,800", save: "Save ₹12,200", badges: [["Trending", "trending"], ["↓ 5% Off", "off"]], img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop" },
-    { name: "Address Downtown", loc: "Dubai, UAE", stars: 5, rating: "4.7 (14.2k)", tags: ["Burj view", "Rooftop pool", "Metro"], was: "₹52,000", now: "₹37,400", save: "Save ₹14,600", badges: [["⚡ AI Watching", "watching"], ["↓ 6% Off", "off"]], img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop" },
-    { name: "W Dubai Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (9.1k)", tags: ["Palm view", "Beach", "Nightlife"], was: "₹35,000", now: "₹24,500", save: "Save ₹10,500", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-  ],
-  "Maldives": [
-    { name: "Soneva Fushi", loc: "Maldives", stars: 5, rating: "4.9 (5.1k)", tags: ["Overwater", "Private pool", "Butler"], was: "₹1,70,000", now: "₹1,24,000", save: "Save ₹46,000", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/1287460/pexels-photo-1287460.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Gili Lankanfushi", loc: "Maldives", stars: 5, rating: "4.9 (3.2k)", tags: ["Overwater", "No shoes", "Organic"], was: "₹1,40,000", now: "₹98,000", save: "Save ₹42,000", badges: [["Luxury", "luxury"], ["↓ 12% Off", "off"]], img: "https://images.pexels.com/photos/28843967/pexels-photo-28843967.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "One&Only Reethi Rah", loc: "Maldives", stars: 5, rating: "4.8 (4.4k)", tags: ["Private island", "Water villas", "Spa"], was: "₹1,20,000", now: "₹88,000", save: "Save ₹32,000", badges: [["Best Value", "best"], ["⚡ AI Watching", "watching"]], img: "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=85&fit=crop" },
-    { name: "Six Senses Laamu", loc: "Maldives", stars: 5, rating: "4.9 (2.8k)", tags: ["Eco luxury", "Overwater", "Surf"], was: "₹1,10,000", now: "₹79,200", save: "Save ₹30,800", badges: [["Trending", "trending"], ["↓ 8% Off", "off"]], img: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=600&q=85&fit=crop" },
-    { name: "Cheval Blanc Randheli", loc: "Maldives", stars: 5, rating: "4.9 (1.9k)", tags: ["Private lagoon", "Butler", "Spa"], was: "₹2,00,000", now: "₹1,48,000", save: "Save ₹52,000", badges: [["Luxury", "luxury"], ["↓ 10% Off", "off"]], img: "https://images.unsplash.com/photo-1573843981267-be1999ff37cd?w=600&q=85&fit=crop" },
-    { name: "COMO Maalifushi", loc: "Maldives", stars: 5, rating: "4.7 (3.1k)", tags: ["Surf", "Wellness", "Overwater"], was: "₹95,000", now: "₹68,400", save: "Save ₹26,600", badges: [["Best Value", "best"], ["↓ 9% Off", "off"]], img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=85&fit=crop" },
-  ],
-  "Bangkok": [
-    { name: "Capella Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.8 (2.1k)", tags: ["River view", "Pool", "Fine dining"], was: "₹26,600", now: "₹18,200", save: "Save ₹8,400", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=600&q=85&fit=crop" },
-    { name: "Mandarin Oriental Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.9 (11.2k)", tags: ["Riverside", "Heritage", "Spa"], was: "₹48,000", now: "₹33,600", save: "Save ₹14,400", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/261102/pexels-photo-261102.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "The Peninsula Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.8 (8.4k)", tags: ["River view", "Pool", "Iconic"], was: "₹42,000", now: "₹29,400", save: "Save ₹12,600", badges: [["Trending", "trending"], ["↓ 5% Off", "off"]], img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop" },
-    { name: "Rosewood Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.7 (3.2k)", tags: ["Sky pool", "City view", "Modern"], was: "₹36,000", now: "₹25,200", save: "Save ₹10,800", badges: [["⚡ AI Watching", "watching"], ["↓ 6% Off", "off"]], img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop" },
-    { name: "Four Seasons Bangkok", loc: "Bangkok, Thailand", stars: 5, rating: "4.8 (4.6k)", tags: ["Riverside", "Spa", "Fine dining"], was: "₹44,000", now: "₹30,800", save: "Save ₹13,200", badges: [["Best Value", "best"], ["↓ 7% Off", "off"]], img: "https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop" },
-    { name: "Anantara Riverside", loc: "Bangkok, Thailand", stars: 5, rating: "4.6 (12.1k)", tags: ["Riverside", "Pool", "Spa"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Trending", "trending"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Atlantis The Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark", "Beach", "Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending", "trending"], ["⚡ AI Watching", "watching"]], img: "/atlantisthepalmdubai.jpg" },
+    { name: "Burj Al Arab", loc: "Dubai, UAE", stars: 5, rating: "4.8 (12.3k)", tags: ["Iconic", "Private beach", "Helipad"], was: "₹1,20,000", now: "₹84,000", save: "Save ₹36,000", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "/burjalarab.jpg" },
+    { name: "Four Seasons DIFC", loc: "Dubai, UAE", stars: 5, rating: "4.7 (6.2k)", tags: ["City view", "Spa", "Pool"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Best Value", "best"], ["↓ 3% Off", "off"]], img: "/fourseasonsdifc.jpg" },
+    { name: "Jumeirah Al Qasr", loc: "Dubai, UAE", stars: 5, rating: "4.6 (8.9k)", tags: ["Beach", "Madinat view", "Pool"], was: "₹44,000", now: "₹31,800", save: "Save ₹12,200", badges: [["Trending", "trending"], ["↓ 5% Off", "off"]], img: "/jumeirahalqasr.jpg" },
+    { name: "Address Downtown", loc: "Dubai, UAE", stars: 5, rating: "4.7 (14.2k)", tags: ["Burj view", "Rooftop pool", "Metro"], was: "₹52,000", now: "₹37,400", save: "Save ₹14,600", badges: [["⚡ AI Watching", "watching"], ["↓ 6% Off", "off"]], img: "/addressdowntown.jpg" },
+    { name: "W Dubai Palm", loc: "Dubai, UAE", stars: 5, rating: "4.5 (9.1k)", tags: ["Palm view", "Beach", "Nightlife"], was: "₹35,000", now: "₹24,500", save: "Save ₹10,500", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "/wdubaipalm.jpg" },
   ],
   "Bali": [
-    { name: "Four Seasons Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view", "Spa", "Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending", "trending"], ["↓ 3.5% Off", "off"]], img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&q=85&fit=crop" },
-    { name: "Viceroy Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.8 (4.2k)", tags: ["Valley view", "Private pool", "Villa"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "COMO Uma Ubud", loc: "Bali, Indonesia", stars: 5, rating: "4.7 (3.8k)", tags: ["Wellness", "Yoga", "Jungle"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop" },
-    { name: "Alila Villas Uluwatu", loc: "Bali, Indonesia", stars: 5, rating: "4.8 (5.1k)", tags: ["Clifftop", "Ocean view", "Pool"], was: "₹44,000", now: "₹30,800", save: "Save ₹13,200", badges: [["Trending", "trending"], ["↓ 6% Off", "off"]], img: "https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Bulgari Resort Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (2.4k)", tags: ["Cliffside", "Iconic", "Private beach"], was: "₹80,000", now: "₹56,000", save: "Save ₹24,000", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop" },
-    { name: "Amankila", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (1.8k)", tags: ["Terraced pools", "Ocean view", "Spa"], was: "₹68,000", now: "₹47,600", save: "Save ₹20,400", badges: [["Best Value", "best"], ["↓ 8% Off", "off"]], img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=85&fit=crop" },
+    { name: "Four Seasons Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view", "Spa", "Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending", "trending"], ["↓ 3.5% Off", "off"]], img: "/FourSeasonsbali.jpg" },
+    { name: "Viceroy Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.8 (4.2k)", tags: ["Valley view", "Private pool", "Villa"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "/viceroybali.jpg" },
+    { name: "COMO Uma Ubud", loc: "Bali, Indonesia", stars: 5, rating: "4.7 (3.8k)", tags: ["Wellness", "Yoga", "Jungle"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "/comoumaubud.jpg" },
+    { name: "Alila Villas Uluwatu", loc: "Bali, Indonesia", stars: 5, rating: "4.8 (5.1k)", tags: ["Clifftop", "Ocean view", "Pool"], was: "₹44,000", now: "₹30,800", save: "Save ₹13,200", badges: [["Trending", "trending"], ["↓ 6% Off", "off"]], img: "/alilavillasuluwatu.jpg" },
+    { name: "Bulgari Resort Bali", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (2.4k)", tags: ["Cliffside", "Iconic", "Private beach"], was: "₹80,000", now: "₹56,000", save: "Save ₹24,000", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "/BvlgariResortBali.jpg" },
+    { name: "Amankila", loc: "Bali, Indonesia", stars: 5, rating: "4.9 (1.8k)", tags: ["Terraced pools", "Ocean view", "Spa"], was: "₹68,000", now: "₹47,600", save: "Save ₹20,400", badges: [["Best Value", "best"], ["↓ 8% Off", "off"]], img: "/amankilabali.jpg" },
   ],
   "Singapore": [
-    { name: "Marina Bay Sands", loc: "Singapore", stars: 5, rating: "4.7 (19.1k)", tags: ["Infinity pool", "SkyPark", "Casino"], was: "₹47,000", now: "₹34,600", save: "Save ₹12,400", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=600&q=85&fit=crop" },
-    { name: "Capella Singapore", loc: "Singapore", stars: 5, rating: "4.9 (3.4k)", tags: ["Sentosa", "Heritage", "Pool"], was: "₹62,000", now: "₹43,400", save: "Save ₹18,600", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "The Fullerton Bay Hotel", loc: "Singapore", stars: 5, rating: "4.8 (7.2k)", tags: ["Marina view", "Rooftop bar", "Heritage"], was: "₹44,000", now: "₹30,800", save: "Save ₹13,200", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Mandarin Oriental Singapore", loc: "Singapore", stars: 5, rating: "4.7 (9.8k)", tags: ["Marina view", "Spa", "Pool"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Trending", "trending"], ["↓ 6% Off", "off"]], img: "https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop" },
-    { name: "Raffles Singapore", loc: "Singapore", stars: 5, rating: "4.8 (6.1k)", tags: ["Colonial", "Heritage", "Butler"], was: "₹72,000", now: "₹50,400", save: "Save ₹21,600", badges: [["Luxury", "luxury"], ["↓ 7% Off", "off"]], img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop" },
-    { name: "Andaz Singapore", loc: "Singapore", stars: 5, rating: "4.6 (4.2k)", tags: ["Rooftop", "Modern", "City view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/2034335/pexels-photo-2034335.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Marina Bay Sands", loc: "Singapore", stars: 5, rating: "4.7 (19.1k)", tags: ["Infinity pool", "SkyPark", "Casino"], was: "₹47,000", now: "₹34,600", save: "Save ₹12,400", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: "/marinabaysandssingapore.jpg" },
+    { name: "Capella Singapore", loc: "Singapore", stars: 5, rating: "4.9 (3.4k)", tags: ["Sentosa", "Heritage", "Pool"], was: "₹62,000", now: "₹43,400", save: "Save ₹18,600", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "/capellasingapore.jpg" },
+    { name: "The Fullerton Bay Hotel", loc: "Singapore", stars: 5, rating: "4.8 (7.2k)", tags: ["Marina view", "Rooftop bar", "Heritage"], was: "₹44,000", now: "₹30,800", save: "Save ₹13,200", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "/TheFullertonBayHotelSingapore.jpg" },
+    { name: "Mandarin Oriental", loc: "Singapore", stars: 5, rating: "4.7 (9.8k)", tags: ["Marina view", "Spa", "Pool"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Trending", "trending"], ["↓ 6% Off", "off"]], img: "/mandarinorientalsingapore.jpg" },
+    { name: "Raffles Singapore", loc: "Singapore", stars: 5, rating: "4.8 (6.1k)", tags: ["Colonial", "Heritage", "Butler"], was: "₹72,000", now: "₹50,400", save: "Save ₹21,600", badges: [["Luxury", "luxury"], ["↓ 7% Off", "off"]], img: "/rafflessingapore.jpg" },
+    { name: "Andaz Singapore", loc: "Singapore", stars: 5, rating: "4.6 (4.2k)", tags: ["Rooftop", "Modern", "City view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "/andazsingapore.jpg" },
   ],
   "New Delhi": [
-    { name: "The Leela Palace", loc: "New Delhi, India", stars: 5, rating: "4.9 (8.2k)", tags: ["Pool", "Spa", "Fine dining"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "The Oberoi New Delhi", loc: "New Delhi, India", stars: 5, rating: "4.8 (6.4k)", tags: ["Golf course view", "Spa", "Pool"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "ITC Maurya", loc: "New Delhi, India", stars: 5, rating: "4.7 (11.2k)", tags: ["Bukhara", "Pool", "Heritage"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Trending", "trending"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Taj Mahal Hotel", loc: "New Delhi, India", stars: 5, rating: "4.8 (14.1k)", tags: ["Heritage", "Pool", "Spa"], was: "₹26,000", now: "₹18,200", save: "Save ₹7,800", badges: [["Luxury", "luxury"], ["↓ 6% Off", "off"]], img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop" },
-    { name: "The Imperial", loc: "New Delhi, India", stars: 5, rating: "4.7 (9.8k)", tags: ["Colonial", "Pool", "Art collection"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.pexels.com/photos/2034335/pexels-photo-2034335.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Hyatt Regency Delhi", loc: "New Delhi, India", stars: 5, rating: "4.6 (18.4k)", tags: ["Pool", "Spa", "Multiple dining"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/261102/pexels-photo-261102.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "The Leela Palace", loc: "New Delhi, India", stars: 5, rating: "4.9 (8.2k)", tags: ["Pool", "Spa", "Fine dining"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "/theleelapalace.jpg" },
+    { name: "The Oberoi New Delhi", loc: "New Delhi, India", stars: 5, rating: "4.8 (6.4k)", tags: ["Golf course view", "Spa", "Pool"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "/oberoinewdelhi.jpg" },
+    { name: "ITC Maurya", loc: "New Delhi, India", stars: 5, rating: "4.7 (11.2k)", tags: ["Bukhara", "Pool", "Heritage"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Trending", "trending"], ["↓ 4% Off", "off"]], img: "/ITCmaurya.jpg" },
+    { name: "Taj Mahal Hotel", loc: "New Delhi, India", stars: 5, rating: "4.8 (14.1k)", tags: ["Heritage", "Pool", "Spa"], was: "₹26,000", now: "₹18,200", save: "Save ₹7,800", badges: [["Luxury", "luxury"], ["↓ 6% Off", "off"]], img: "/tajmahalnewdelhi.jpg" },
+    { name: "The Imperial", loc: "New Delhi, India", stars: 5, rating: "4.7 (9.8k)", tags: ["Colonial", "Pool", "Art collection"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "/theimperialnewdelhi.jpg" },
+    { name: "Hyatt Regency Delhi", loc: "New Delhi, India", stars: 5, rating: "4.6 (18.4k)", tags: ["Pool", "Spa", "Multiple dining"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: "/hyattregencynewdelhi.jpg" },
   ],
   "Goa": [
-    { name: "The Leela Goa", loc: "Goa, India", stars: 5, rating: "4.8 (12.1k)", tags: ["Beach", "Lagoon", "Golf"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/338504/pexels-photo-338504.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Taj Exotica Goa", loc: "Goa, India", stars: 5, rating: "4.7 (9.4k)", tags: ["Beach", "Spa", "Pool"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop" },
-    { name: "W Goa", loc: "Goa, India", stars: 5, rating: "4.6 (7.2k)", tags: ["Vagator", "Beach", "Nightlife"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Trending", "trending"], ["↓ 6% Off", "off"]], img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop" },
-    { name: "Park Hyatt Goa", loc: "Goa, India", stars: 5, rating: "4.7 (8.6k)", tags: ["Beach", "Pool", "Spa"], was: "₹16,000", now: "₹11,200", save: "Save ₹4,800", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=600&q=85&fit=crop" },
-    { name: "Alila Diwa Goa", loc: "Goa, India", stars: 5, rating: "4.6 (5.1k)", tags: ["Paddy field view", "Pool", "Spa"], was: "₹14,000", now: "₹9,800", save: "Save ₹4,200", badges: [["⚡ AI Watching", "watching"], ["↓ 3% Off", "off"]], img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop" },
-    { name: "Taj Fort Aguada", loc: "Goa, India", stars: 5, rating: "4.5 (14.2k)", tags: ["Heritage fort", "Beach", "Pool"], was: "₹15,000", now: "₹10,500", save: "Save ₹4,500", badges: [["Trending", "trending"], ["↓ 5% Off", "off"]], img: "https://images.pexels.com/photos/1287460/pexels-photo-1287460.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "The Leela Goa", loc: "Goa, India", stars: 5, rating: "4.8 (12.1k)", tags: ["Beach", "Lagoon", "Golf"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "/leelagoa.jpg" },
+    { name: "Taj Exotica Goa", loc: "Goa, India", stars: 5, rating: "4.7 (9.4k)", tags: ["Beach", "Spa", "Pool"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "/tajexoticagoa.jpg" },
+    { name: "W Goa", loc: "Goa, India", stars: 5, rating: "4.6 (7.2k)", tags: ["Vagator", "Beach", "Nightlife"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Trending", "trending"], ["↓ 6% Off", "off"]], img: "/wgoa.jpg" },
+    { name: "Park Hyatt Goa", loc: "Goa, India", stars: 5, rating: "4.7 (8.6k)", tags: ["Beach", "Pool", "Spa"], was: "₹16,000", now: "₹11,200", save: "Save ₹4,800", badges: [["Best Value", "best"], ["↓ 4% Off", "off"]], img: "/parkhyattgoa.jpg" },
+    { name: "Alila Diwa Goa", loc: "Goa, India", stars: 5, rating: "4.6 (5.1k)", tags: ["Paddy field view", "Pool", "Spa"], was: "₹14,000", now: "₹9,800", save: "Save ₹4,200", badges: [["⚡ AI Watching", "watching"], ["↓ 3% Off", "off"]], img: "/aliladiwagoa.jpg" },
+    { name: "Taj Fort Aguada", loc: "Goa, India", stars: 5, rating: "4.5 (14.2k)", tags: ["Heritage fort", "Beach", "Pool"], was: "₹15,000", now: "₹10,500", save: "Save ₹4,500", badges: [["Trending", "trending"], ["↓ 5% Off", "off"]], img: "/tajfortaguada.jpg" },
   ],
   "Mumbai": [
-    { name: "Taj Mahal Palace", loc: "Mumbai, India", stars: 5, rating: "4.9 (22.4k)", tags: ["Gateway of India", "Heritage", "Sea view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "https://images.pexels.com/photos/2034335/pexels-photo-2034335.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "The Oberoi Mumbai", loc: "Mumbai, India", stars: 5, rating: "4.8 (8.2k)", tags: ["Sea view", "Spa", "Pool"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "Four Seasons Mumbai", loc: "Mumbai, India", stars: 5, rating: "4.7 (6.8k)", tags: ["Worli sea link view", "Spa", "Pool"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Trending", "trending"], ["↓ 6% Off", "off"]], img: "https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop" },
-    { name: "St Regis Mumbai", loc: "Mumbai, India", stars: 5, rating: "4.8 (9.1k)", tags: ["Sky high pool", "City view", "Butler"], was: "₹26,000", now: "₹18,200", save: "Save ₹7,800", badges: [["Luxury", "luxury"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "ITC Grand Central", loc: "Mumbai, India", stars: 5, rating: "4.6 (7.4k)", tags: ["Parel", "Pool", "Spa"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "https://images.pexels.com/photos/1268855/pexels-photo-1268855.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
-    { name: "JW Marriott Mumbai", loc: "Mumbai, India", stars: 5, rating: "4.7 (16.2k)", tags: ["Juhu beach", "Pool", "Spa"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: "https://images.pexels.com/photos/1134176/pexels-photo-1134176.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" },
+    { name: "Taj Mahal Palace", loc: "Mumbai, India", stars: 5, rating: "4.9 (22.4k)", tags: ["Gateway of India", "Heritage", "Sea view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Luxury", "luxury"], ["⚡ AI Watching", "watching"]], img: "/tajmahalpalacemumbai.jpg" },
+    { name: "The Oberoi Mumbai", loc: "Mumbai, India", stars: 5, rating: "4.8 (8.2k)", tags: ["Sea view", "Spa", "Pool"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "/oberoimumbai.jpg" },
+    { name: "Four Seasons Mumbai", loc: "Mumbai, India", stars: 5, rating: "4.7 (6.8k)", tags: ["Worli sea link view", "Spa", "Pool"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Trending", "trending"], ["↓ 6% Off", "off"]], img: "/fourseasonsmumbai.jpg" },
+    { name: "St Regis Mumbai", loc: "Mumbai, India", stars: 5, rating: "4.8 (9.1k)", tags: ["Sky high pool", "City view", "Butler"], was: "₹26,000", now: "₹18,200", save: "Save ₹7,800", badges: [["Luxury", "luxury"], ["↓ 4% Off", "off"]], img: "/stregismumbai.jpg" },
+    { name: "ITC Grand Central", loc: "Mumbai, India", stars: 5, rating: "4.6 (7.4k)", tags: ["Parel", "Pool", "Spa"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["Best Value", "best"], ["↓ 5% Off", "off"]], img: "/itcgrandcentral.jpg" },
+    { name: "JW Marriott Mumbai", loc: "Mumbai, India", stars: 5, rating: "4.7 (16.2k)", tags: ["Juhu beach", "Pool", "Spa"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["⚡ AI Watching", "watching"], ["↓ 4% Off", "off"]], img: "/jwmarriottmumbai.jpg" },
   ],
 };
 
@@ -123,18 +107,7 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
 };
 
 const CITY_FILTERS = ["All Hotels", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai"];
-const PILLS = ["🇦🇪 Dubai, UAE","🇮🇳 New Delhi, India","🇸🇬 Singapore","🇮🇳 Goa, India","🇮🇩 Bali, Indonesia","🇮🇳 Mumbai, India"];
-const PILL_VALUES: Record<string, string> = {
-  "🇦🇪 Dubai, UAE": "Dubai, UAE",
-  "🇮🇳 New Delhi, India": "New Delhi, India",
-  "🇸🇬 Singapore": "Singapore",
-  "🇮🇳 Goa, India": "Goa, India",
-  "🇮🇩 Bali, Indonesia": "Bali, Indonesia",
-  "🇮🇳 Mumbai, India": "Mumbai, India",
-};
-
-const SORTS = ["↓ Savings","★ Rating","₹ Price"];
-
+const SORTS = ["↓ Savings", "★ Rating", "₹ Price"];
 const STATS = [
   { id: 0, target: 4200, prefix: "", suffix: "+", label: "Member deals live right now" },
   { id: 1, target: 18, prefix: "₹", suffix: "Cr", label: "Saved for members" },
@@ -142,11 +115,36 @@ const STATS = [
   { id: 3, target: 500000, prefix: "", suffix: "+", label: "Hotels in our network" },
 ];
 
+interface GuestState {
+  rooms: number;
+  adults: number;
+  children: number;
+  childAges: number[];
+}
+
 export default function SearchHotelsPage() {
   const router = useRouter();
   const isMobile = useIsMobile();
-  const [destination, setDestination] = useState("");
   const [user, setUser] = useState<{ name: string } | null>(null);
+  const [destination, setDestination] = useState("");
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  const [guests, setGuests] = useState<GuestState>({ rooms: 1, adults: 2, children: 0, childAges: [] });
+  const [guestPanelOpen, setGuestPanelOpen] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeCity, setActiveCity] = useState("All Hotels");
+  const [activeSort, setActiveSort] = useState(0);
+  const [tickerIdx, setTickerIdx] = useState(0);
+  const [tickerVisible, setTickerVisible] = useState(true);
+  const [statVals, setStatVals] = useState(STATS.map(s => `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const statsRef = useRef<HTMLDivElement>(null);
+  const statsAnimated = useRef(false);
+  const guestPanelRef = useRef<HTMLDivElement>(null);
+  const checkInRef = useRef<HTMLInputElement>(null);
+  const checkOutRef = useRef<HTMLInputElement>(null);
+  const searchBoxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -156,28 +154,23 @@ export default function SearchHotelsPage() {
       }
     });
   }, []);
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [guests, setGuests] = useState("2 Adults");
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [activeCity, setActiveCity] = useState("All Hotels");
-  const [activeSort, setActiveSort] = useState(0);
-  const [activePill, setActivePill] = useState(-1);
-  const [tickerIdx, setTickerIdx] = useState(0);
-  const [tickerVisible, setTickerVisible] = useState(true);
-  const [statVals, setStatVals] = useState(STATS.map(s => `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
-  const [menuOpen, setMenuOpen] = useState(false);
-  const statsRef = useRef<HTMLDivElement>(null);
-  const statsAnimated = useRef(false);
+
+  // Close guest panel on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (guestPanelRef.current && !guestPanelRef.current.contains(e.target as Node)) {
+        setGuestPanelOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // Ticker rotation
   useEffect(() => {
     const interval = setInterval(() => {
       setTickerVisible(false);
-      setTimeout(() => {
-        setTickerIdx(prev => (prev + 1) % TICKER_ITEMS.length);
-        setTickerVisible(true);
-      }, 400);
+      setTimeout(() => { setTickerIdx(prev => (prev + 1) % TICKER_ITEMS.length); setTickerVisible(true); }, 400);
     }, 4000);
     return () => clearInterval(interval);
   }, []);
@@ -192,11 +185,7 @@ export default function SearchHotelsPage() {
           const step = (ts: number) => {
             if (!start) start = ts;
             const p = Math.min((ts - start) / 1200, 1);
-            setStatVals(prev => {
-              const next = [...prev];
-              next[i] = `${s.prefix}${Math.floor(p * s.target).toLocaleString("en-IN")}${s.suffix}`;
-              return next;
-            });
+            setStatVals(prev => { const next = [...prev]; next[i] = `${s.prefix}${Math.floor(p * s.target).toLocaleString("en-IN")}${s.suffix}`; return next; });
             if (p < 1) requestAnimationFrame(step);
           };
           requestAnimationFrame(step);
@@ -210,7 +199,9 @@ export default function SearchHotelsPage() {
 
   const handleCheckInChange = (val: string) => {
     setCheckIn(val);
-    setTimeout(() => { try { (document.getElementById("checkout-input") as HTMLInputElement)?.showPicker(); } catch(e) {} }, 100);
+    setSearchError("");
+    // Auto-focus checkout
+    setTimeout(() => { try { checkOutRef.current?.showPicker(); } catch(e) {} }, 100);
     if (checkOut && checkOut <= val) {
       const next = new Date(val);
       next.setDate(next.getDate() + 1);
@@ -221,30 +212,84 @@ export default function SearchHotelsPage() {
   const handleCheckOutChange = (val: string) => {
     if (checkIn && val <= checkIn) return;
     setCheckOut(val);
+    setSearchError("");
+  };
+
+  const updateGuests = (key: keyof GuestState, val: number) => {
+    setGuests(prev => {
+      const next = { ...prev, [key]: val };
+      if (key === "children") {
+        // Adjust childAges array
+        if (val > prev.childAges.length) {
+          next.childAges = [...prev.childAges, ...Array(val - prev.childAges.length).fill(2)];
+        } else {
+          next.childAges = prev.childAges.slice(0, val);
+        }
+      }
+      return next;
+    });
+  };
+
+  const updateChildAge = (idx: number, age: number) => {
+    setGuests(prev => {
+      const ages = [...prev.childAges];
+      ages[idx] = age;
+      return { ...prev, childAges: ages };
+    });
+  };
+
+  const guestSummary = () => {
+    const parts = [`${guests.rooms} room${guests.rooms > 1 ? "s" : ""}`, `${guests.adults} adult${guests.adults > 1 ? "s" : ""}`];
+    if (guests.children > 0) parts.push(`${guests.children} child${guests.children > 1 ? "ren" : ""}`);
+    return parts.join(" · ");
   };
 
   const requireAuth = async (action: () => void) => {
     const { data } = await supabase.auth.getSession();
-    if (data.session) {
-      action();
-    } else {
-      router.push(`/signin?redirect=/search-hotels`);
-    }
+    if (data.session) { action(); } else { router.push(`/signin?redirect=/search-hotels`); }
   };
 
   const handleSearch = () => {
-    if (!destination) return;
+    setSearchError("");
+    if (!destination) { setSearchError("Please enter a destination or hotel name"); return; }
+    if (!checkIn) { setSearchError("Please select a check-in date"); return; }
+    if (!checkOut) { setSearchError("Please select a check-out date"); return; }
     requireAuth(() => {
-      router.push(`/search?destination=${encodeURIComponent(destination)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests}`);
+      const params = new URLSearchParams({
+        destination,
+        checkIn,
+        checkOut,
+        adults: String(guests.adults),
+        rooms: String(guests.rooms),
+        children: String(guests.children),
+        ...(guests.childAges.length > 0 ? { childAges: guests.childAges.join(",") } : {}),
+      });
+      router.push(`/search?${params.toString()}`);
     });
   };
 
   const ticker = TICKER_ITEMS[tickerIdx];
   const hotels = HOTELS_BY_CITY[activeCity] || HOTELS_BY_CITY["All Hotels"];
 
+  const CSS = `
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .sora { font-family: 'Sora', sans-serif; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    .ticker-visible { animation: fadeIn 0.4s ease forwards; }
+    .ticker-hidden { opacity: 0; }
+    input[type=date]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; }
+    .hotel-card { transition: transform .2s; }
+    .hotel-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+    .guest-btn { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid #e2e8f0; background: #fff; font-size: 18; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; transition: all .15s; }
+    .guest-btn:hover:not(:disabled) { border-color: ${B}; color: ${B}; }
+    .guest-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  `;
+
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, WebkitFontSmoothing: "antialiased", overflowX: "hidden" }}>
-      <style dangerouslySetInnerHTML={{ __html: "\n                * { box-sizing: border-box; margin: 0; padding: 0; }\n        .sora { font-family: 'Sora', sans-serif; }\n        @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }\n        @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }\n        .ticker-visible { animation: fadeIn 0.4s ease forwards; }\n        .ticker-hidden { opacity: 0; }\n        input[type=date]::-webkit-calendar-picker-indicator { opacity: 0.5; cursor: pointer; }\n      " }} />
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, overflowX: "hidden" }}>
+      <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
       {/* NAV */}
       <nav style={{ position: "sticky", top: 0, zIndex: 200, background: "rgba(255,255,255,0.97)", backdropFilter: "blur(12px)", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
@@ -257,14 +302,14 @@ export default function SearchHotelsPage() {
         )}
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           {!isMobile && (user ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href="/dashboard"}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
               <div style={{ width: 32, height: 32, borderRadius: "50%", background: B, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
               <span style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{user.name.split(" ")[0]}</span>
             </div>
           ) : (
-            <button onClick={() => window.location.href="/signin"} style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>Sign in</button>
+            <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>Sign in</button>
           ))}
-          {!isMobile && <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Check my booking</button>}
+          {!isMobile && <button onClick={() => router.push("/")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Check my booking</button>}
           {isMobile && (
             <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
               <span style={{ display: "block", width: 22, height: 2, background: NAVY, transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px, 5px)" : "none" }} />
@@ -280,37 +325,20 @@ export default function SearchHotelsPage() {
         <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 199, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
           <button onClick={() => { router.push("/#how"); setMenuOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>How it works</button>
           <button onClick={() => { router.push("/search-hotels"); setMenuOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
-          <button style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Sign in</button>
-          <button onClick={() => { router.push("/upload"); setMenuOpen(false); }} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12 }}>Check my booking — it&apos;s free</button>
+          <button onClick={() => window.location.href = "/signin"} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Sign in</button>
+          <button onClick={() => { router.push("/"); setMenuOpen(false); }} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12 }}>Check my booking — it&apos;s free</button>
         </div>
       )}
 
       {/* HERO */}
       <section style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)", padding: isMobile ? "48px 20px 64px" : "72px 40px 96px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 70% 30%,rgba(255,255,255,0.05) 0%,transparent 60%)" }} />
-
-        {/* BADGE */}
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const, position: "relative" }}>
-          ✦ Curated Member Deals
+          ✦ Exclusive Member Deals
         </div>
-
-        {/* HEADLINE */}
         <h1 className="sora" style={{ fontSize: isMobile ? 34 : 60, fontWeight: 800, color: "#fff", lineHeight: 1.08, marginBottom: 18, position: "relative", maxWidth: 760, margin: "0 auto 18px" }}>
           Find your <span style={{ color: "#FCD34D" }}>perfect stay</span>
         </h1>
-
-        {/* LIVE RATES LINE */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: isMobile ? 12 : 20, marginBottom: 16, position: "relative", flexWrap: "wrap" as const }}>
-          {["Members Only", "Direct Rates", "No Middleman"].map((item, i) => (
-            <span key={i} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>
-              {i > 0 && <span style={{ color: "rgba(255,255,255,0.3)" }}>·</span>}
-              {i === 0 && <span style={{ width: 6, height: 6, background: "#4ade80", borderRadius: "50%", display: "inline-block", animation: "pulse 1.5s infinite" }} />}
-              {item}
-            </span>
-          ))}
-        </div>
-
-        {/* SUBHEAD */}
         <p style={{ fontSize: isMobile ? 15 : 16.5, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.7, position: "relative" }}>
           500,000+ exclusive deals across the globe for members only.
         </p>
@@ -320,67 +348,130 @@ export default function SearchHotelsPage() {
           <span style={{ width: 8, height: 8, background: "#4ade80", borderRadius: "50%", flexShrink: 0, animation: "pulse 1.5s infinite" }} />
           <span className={tickerVisible ? "ticker-visible" : "ticker-hidden"} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const, justifyContent: "center" }}>
             <span style={{ fontWeight: 600, color: "#FCD34D" }}>{ticker.name}</span>
-            <span style={{ color: "rgba(255,255,255,0.7)" }}>accessed a member rate on</span>
+            <span style={{ color: "rgba(255,255,255,0.7)" }}>saved on</span>
             <span style={{ fontWeight: 600 }}>{ticker.hotel}</span>
-            <span style={{ color: "#4ade80", fontWeight: 700 }}>— {ticker.saved} below OTA</span>
+            <span style={{ color: "#4ade80", fontWeight: 700 }}>— {ticker.saved}</span>
             <span style={{ background: "rgba(255,255,255,0.15)", fontSize: 11, padding: "2px 8px", borderRadius: 6, color: "rgba(255,255,255,0.7)" }}>{ticker.time}</span>
           </span>
         </div>
 
         {/* SEARCH BOX */}
-        <div style={{ background: "#fff", borderRadius: 16, padding: isMobile ? "16px" : "20px 24px", maxWidth: 900, margin: "0 auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1.2fr 1.2fr 0.8fr auto", gap: 0, position: "relative" }}>
-          <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Destination or Hotel</label>
-            <input type="text" placeholder="Where to? e.g. Dubai, UAE" value={destination}
-              onChange={e => { setDestination(e.target.value); setShowSuggestions(true); }}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-              style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent" }} />
-            {showSuggestions && destination.length > 0 && (
-              <div style={{ position: "absolute", top: "100%", left: 0, width: 320, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 200, maxHeight: 240, overflowY: "auto" as const, marginTop: 4 }}>
-                {DESTINATIONS.filter(d => `${d.city}, ${d.country}`.toLowerCase().includes(destination.toLowerCase()) || d.city.toLowerCase().includes(destination.toLowerCase())).map((d, i) => (
-                  <div key={i} onMouseDown={() => { setDestination(`${d.city}, ${d.country}`); setShowSuggestions(false); }}
-                    style={{ padding: "11px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: NAVY, borderBottom: "1px solid #f8fafc" }}
-                    onMouseOver={e => (e.currentTarget.style.background = "#f0f7ff")}
-                    onMouseOut={e => (e.currentTarget.style.background = "#fff")}>
-                    <span style={{ fontSize: 18 }}>{d.flag}</span>{d.city}, {d.country}
-                  </div>
-                ))}
-                {DESTINATIONS.filter(d => `${d.city}, ${d.country}`.toLowerCase().includes(destination.toLowerCase()) || d.city.toLowerCase().includes(destination.toLowerCase())).length === 0 && (
-                  <div style={{ padding: "12px 16px", fontSize: 13, color: "#94a3b8" }}>No destinations found</div>
-                )}
-              </div>
-            )}
-          </div>
-          <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-in</label>
-            <input type="date" value={checkIn} onChange={e => handleCheckInChange(e.target.value)}
-              style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent" }} />
-          </div>
-          <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-out</label>
-            <input id="checkout-input" type="date" value={checkOut} min={checkIn || undefined} onChange={e => handleCheckOutChange(e.target.value)}
-              style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent" }} />
-          </div>
-          <div style={{ padding: isMobile ? "10px 0" : "8px 16px", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Guests</label>
-            <select value={guests} onChange={e => setGuests(e.target.value)} style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 500, color: NAVY, background: "transparent", cursor: "pointer" }}>
-              {["1 Adult", "2 Adults", "3 Adults", "4 Adults"].map(o => <option key={o}>{o}</option>)}
-            </select>
-          </div>
-          <button onClick={handleSearch} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 22px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginLeft: isMobile ? 0 : 12, marginTop: isMobile ? 12 : 0, whiteSpace: "nowrap" as const, width: isMobile ? "100%" : "auto" }}>
-            🔍 Search
-          </button>
-        </div>
+        <div ref={searchBoxRef} style={{ background: "#fff", borderRadius: 16, maxWidth: 960, margin: "0 auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", position: "relative" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1.2fr 1.2fr 1.4fr auto", gap: 0 }}>
+            {/* Destination */}
+            <div style={{ padding: isMobile ? "14px 16px" : "14px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Destination or Hotel</div>
+              <input type="text" placeholder="Where to? e.g. Dubai, UAE" value={destination}
+                onChange={e => { setDestination(e.target.value); setShowSuggestions(true); setSearchError(""); }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: NAVY, background: "transparent" }} />
+              {showSuggestions && destination.length > 0 && (
+                <div style={{ position: "absolute", top: "100%", left: 0, width: 320, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 300, maxHeight: 240, overflowY: "auto" as const, marginTop: 4 }}>
+                  {DESTINATIONS.filter(d => `${d.city}, ${d.country}`.toLowerCase().includes(destination.toLowerCase())).map((d, i) => (
+                    <div key={i} onMouseDown={() => { setDestination(`${d.city}, ${d.country}`); setShowSuggestions(false); }}
+                      style={{ padding: "11px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontSize: 14, color: NAVY, borderBottom: "1px solid #f8fafc" }}
+                      onMouseOver={e => (e.currentTarget.style.background = "#f0f7ff")}
+                      onMouseOut={e => (e.currentTarget.style.background = "#fff")}>
+                      <span style={{ fontSize: 18 }}>{d.flag}</span>{d.city}, {d.country}
+                    </div>
+                  ))}
+                  {DESTINATIONS.filter(d => `${d.city}, ${d.country}`.toLowerCase().includes(destination.toLowerCase())).length === 0 && (
+                    <div style={{ padding: "12px 16px", fontSize: 13, color: "#94a3b8" }}>No destinations found</div>
+                  )}
+                </div>
+              )}
+            </div>
 
-        {/* DEST PILLS */}
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 20, flexWrap: "wrap" as const, position: "relative" }}>
-          {PILLS.map((p, i) => (
-            <button key={i} onClick={() => { setActivePill(i); setDestination(PILL_VALUES[p] || p); }}
-              style={{ background: activePill === i ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.85)", fontSize: 12.5, fontWeight: 500, padding: "5px 14px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit" }}>
-              {p}
+            {/* Check-in */}
+            <div style={{ padding: isMobile ? "14px 16px" : "14px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-in</div>
+              <input ref={checkInRef} type="date" value={checkIn} min={new Date().toISOString().split("T")[0]}
+                onChange={e => handleCheckInChange(e.target.value)}
+                style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: checkIn ? NAVY : "#94a3b8", background: "transparent" }} />
+            </div>
+
+            {/* Check-out */}
+            <div style={{ padding: isMobile ? "14px 16px" : "14px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Check-out</div>
+              <input ref={checkOutRef} type="date" value={checkOut} min={checkIn || new Date().toISOString().split("T")[0]}
+                onChange={e => handleCheckOutChange(e.target.value)}
+                style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: checkOut ? NAVY : "#94a3b8", background: "transparent" }} />
+            </div>
+
+            {/* Guests — Booking.com style dropdown */}
+            <div ref={guestPanelRef} style={{ padding: isMobile ? "14px 16px" : "14px 20px", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", cursor: "pointer" }} onClick={() => setGuestPanelOpen(!guestPanelOpen)}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Rooms & Guests</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span>{guestSummary()}</span>
+                <span style={{ fontSize: 10, color: "#64748b", marginLeft: 4 }}>▼</span>
+              </div>
+
+              {/* Guest Panel Dropdown */}
+              {guestPanelOpen && (
+                <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: isMobile ? "calc(100vw - 40px)" : 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 16px 48px rgba(0,0,0,0.15)", zIndex: 300, padding: 20 }}>
+
+                  {/* Rooms */}
+                  {[
+                    { label: "Rooms", sub: "", key: "rooms" as keyof GuestState, min: 1, max: 4 },
+                    { label: "Adults", sub: "Age 13+", key: "adults" as keyof GuestState, min: 1, max: 16 },
+                    { label: "Children", sub: "Age 0–12", key: "children" as keyof GuestState, min: 0, max: 8 },
+                  ].map(item => (
+                    <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid #f1f5f9" }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{item.label}</div>
+                        {item.sub && <div style={{ fontSize: 12, color: "#94a3b8" }}>{item.sub}</div>}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <button className="guest-btn" disabled={(guests[item.key] as number) <= item.min}
+                          onClick={() => updateGuests(item.key, Math.max(item.min, (guests[item.key] as number) - 1))}>−</button>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" as const }}>{guests[item.key]}</span>
+                        <button className="guest-btn" disabled={(guests[item.key] as number) >= item.max}
+                          onClick={() => updateGuests(item.key, Math.min(item.max, (guests[item.key] as number) + 1))}>+</button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Child ages */}
+                  {guests.children > 0 && (
+                    <div style={{ marginTop: 14 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 10 }}>Age of children at check-in</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        {guests.childAges.map((age, idx) => (
+                          <div key={idx}>
+                            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>Child {idx + 1}</div>
+                            <select value={age} onChange={e => updateChildAge(idx, parseInt(e.target.value))}
+                              style={{ width: "100%", padding: "8px 10px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontFamily: "inherit", fontSize: 13, color: NAVY, background: "#f8fafc", outline: "none", cursor: "pointer" }}>
+                              {Array.from({ length: 13 }, (_, i) => (
+                                <option key={i} value={i}>{i === 0 ? "Under 1" : `${i} year${i > 1 ? "s" : ""}`}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>Children aged 0–12 are considered children</div>
+                    </div>
+                  )}
+
+                  <button onClick={() => setGuestPanelOpen(false)} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 16 }}>
+                    Done
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Search button */}
+            <button onClick={handleSearch} style={{ background: B, color: "#fff", border: "none", padding: isMobile ? "14px" : "0 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", borderRadius: isMobile ? "0 0 16px 16px" : "0 16px 16px 0", width: isMobile ? "100%" : "auto" }}>
+              🔍 Search
             </button>
-          ))}
+          </div>
+
+          {/* Validation error */}
+          {searchError && (
+            <div style={{ padding: "10px 20px", background: "#fef2f2", borderTop: "1px solid #fecaca", borderRadius: "0 0 16px 16px", fontSize: 13, color: "#dc2626", display: "flex", alignItems: "center", gap: 6 }}>
+              ⚠️ {searchError}
+            </div>
+          )}
         </div>
       </section>
 
@@ -398,17 +489,16 @@ export default function SearchHotelsPage() {
 
       {/* TOP DESTINATIONS */}
       <div style={{ padding: isMobile ? "50px 20px" : "70px 40px", maxWidth: 1100, margin: "0 auto" }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Member Exclusive Rates</p>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Explore by destination</p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28, flexWrap: "wrap" as const, gap: 12 }}>
           <div>
-            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Curated for rebuq members</h2>
+            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Top Destinations</h2>
             <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Handpicked destinations with rates unavailable anywhere else.</p>
           </div>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "#16a34a" }}>
             <span style={{ width: 7, height: 7, background: "#16a34a", borderRadius: "50%", display: "inline-block", animation: "pulse 1.5s infinite" }} /> Live rates
           </span>
         </div>
-
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 14 }}>
           {DESTINATIONS.map((d, i) => (
             <div key={i}
@@ -425,16 +515,15 @@ export default function SearchHotelsPage() {
             </div>
           ))}
         </div>
-        <p style={{ textAlign: "center", marginTop: 24, fontSize: 14, color: B, fontWeight: 600, cursor: "pointer" }}>Don&apos;t see your destination? Search any city or hotel →</p>
       </div>
 
-      {/* HOTELS */}
+      {/* MEMBER EXCLUSIVE HOTELS */}
       <div id="hotels-section" style={{ background: "#f8fafc", padding: isMobile ? "50px 0" : "70px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 20px" : "0 40px" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Member Exclusive Rates</p>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Member exclusive rates</p>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap" as const, gap: 16 }}>
             <div>
-              <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Curated for rebuq members</h2>
+              <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Member Exclusive Hotels</h2>
               <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Members save an average of <strong>₹24,600</strong> on these properties.</p>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
@@ -448,7 +537,7 @@ export default function SearchHotelsPage() {
             </div>
           </div>
 
-          {/* CITY FILTER TABS */}
+          {/* CITY TABS */}
           <div style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto", paddingBottom: 4 }}>
             {CITY_FILTERS.map((f) => (
               <button key={f} onClick={() => setActiveCity(f)}
@@ -460,11 +549,11 @@ export default function SearchHotelsPage() {
 
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20 }}>
             {hotels.map((h, i) => (
-              <div key={i} onClick={() => requireAuth(() => router.push(`/hotel/372446?checkIn=${checkIn || "2026-08-11"}&checkOut=${checkOut || "2026-08-13"}&adults=${guests || "2"}`))}
-                style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1.5px solid #e2e8f0", cursor: "pointer", transition: "transform .2s" }}
-                onMouseOver={e => (e.currentTarget.style.transform = "translateY(-4px)")} onMouseOut={e => (e.currentTarget.style.transform = "none")}>
+              <div key={i} className="hotel-card"
+                onClick={() => requireAuth(() => router.push(`/hotel/372446?checkIn=${checkIn || "2026-08-11"}&checkOut=${checkOut || "2026-08-13"}&adults=${guests.adults}&rooms=${guests.rooms}`))}
+                style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1.5px solid #e2e8f0", cursor: "pointer" }}>
                 <div style={{ height: 190, position: "relative", overflow: "hidden" }}>
-                  <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.3s" }} />
                   <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                     {h.badges.map(([label, type]) => {
                       const s = BADGE_STYLES[type] || BADGE_STYLES.luxury;
@@ -495,8 +584,9 @@ export default function SearchHotelsPage() {
           </div>
 
           <div style={{ textAlign: "center", marginTop: 36 }}>
-            <button onClick={handleSearch} style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-              ↓ Explore more member deals
+            <button onClick={() => searchBoxRef.current?.scrollIntoView({ behavior: "smooth" })}
+              style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              ↑ Search for more hotels
             </button>
           </div>
         </div>
@@ -515,31 +605,12 @@ export default function SearchHotelsPage() {
             <p style={{ fontSize: 14.5, color: "rgba(255,255,255,0.7)", lineHeight: 1.7, marginBottom: 28 }}>
               Upload your booking voucher. We&apos;ll monitor the rate 24/7 and WhatsApp you the moment it drops.
             </p>
-            <div style={{ display: "flex", gap: 28 }}>
-              {[["₹18Cr+", "Total saved"], ["12,000+", "Members"], ["28%", "Avg drop"]].map(([n, l]) => (
-                <div key={l}>
-                  <div className="sora" style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>{n}</div>
-                  <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.6)" }}>{l}</div>
-                </div>
-              ))}
-            </div>
           </div>
           <div style={{ background: "#fff", borderRadius: 16, padding: 28, boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#eff6ff", color: B, fontSize: 10.5, fontWeight: 700, padding: "3px 10px", borderRadius: 6, marginBottom: 16, letterSpacing: "0.06em", textTransform: "uppercase" as const }}>
-              📤 Upload your voucher
-            </div>
             <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 5 }}>Already booked? Check for a drop</div>
             <div style={{ fontSize: 12.5, color: "#64748b", marginBottom: 16 }}>Takes 30 seconds. We handle the rest.</div>
-            <div style={{ display: "flex", gap: 7, marginBottom: 16, flexWrap: "wrap" as const }}>
-              {["Booking.com", "Agoda", "MakeMyTrip"].map(o => (
-                <span key={o} style={{ background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 7, padding: "4px 10px", fontSize: 11.5, fontWeight: 500, color: NAVY }}>{o}</span>
-              ))}
-            </div>
-            <button onClick={() => router.push("/upload")} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 13, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>
+            <button onClick={() => router.push("/")} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 13, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>
               Upload my booking →
-            </button>
-            <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ width: "100%", background: "transparent", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 10, padding: 11, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-              Search member deals instead
             </button>
             <div style={{ textAlign: "center", fontSize: 11.5, color: "#64748b", marginTop: 10 }}>Free to check · Pay only if we save you money</div>
           </div>
@@ -567,18 +638,7 @@ export default function SearchHotelsPage() {
             </div>
           </div>
           <div style={{ borderTop: "1px solid #1e293b", paddingTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" as const, gap: 12 }}>
-            <span style={{ fontSize: 12.5, color: "#475569" }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <a href="https://twitter.com/rebuq" target="_blank" rel="noopener noreferrer" style={{ width: 32, height: 32, borderRadius: "50%", background: "#1e293b", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="#94a3b8"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.261 5.632 5.903-5.632zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
-              </a>
-              <a href="https://linkedin.com/company/rebuq" target="_blank" rel="noopener noreferrer" style={{ width: 32, height: 32, borderRadius: "50%", background: "#1e293b", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="#94a3b8"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
-              </a>
-              <a href="https://instagram.com/rebuq" target="_blank" rel="noopener noreferrer" style={{ width: 32, height: 32, borderRadius: "50%", background: "#1e293b", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="#94a3b8"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" /></svg>
-              </a>
-            </div>
+            <span style={{ fontSize: 12.5, color: "#475569" }}>© 2026 rebuq. All rights reserved.</span>
           </div>
         </div>
       </footer>
