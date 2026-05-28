@@ -356,7 +356,7 @@ export default function SearchHotelsPage() {
         </div>
 
         {/* SEARCH BOX */}
-        <div ref={searchBoxRef} style={{ background: "#fff", borderRadius: 16, maxWidth: 960, margin: "0 auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", position: "relative" }}>
+        <div ref={searchBoxRef} style={{ background: "#fff", borderRadius: 16, maxWidth: 960, margin: "0 auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", position: "relative", overflow: "visible" }}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1.2fr 1.2fr 1.4fr auto", gap: 0 }}>
             {/* Destination */}
             <div style={{ padding: isMobile ? "14px 16px" : "14px 20px", borderRight: isMobile ? "none" : "1px solid #e2e8f0", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative" }}>
@@ -400,7 +400,7 @@ export default function SearchHotelsPage() {
             </div>
 
             {/* Guests — Booking.com style dropdown */}
-            <div ref={guestPanelRef} style={{ padding: isMobile ? "14px 16px" : "14px 20px", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", cursor: "pointer" }} onClick={() => setGuestPanelOpen(!guestPanelOpen)}>
+            <div ref={guestPanelRef} style={{ padding: isMobile ? "14px 16px" : "14px 20px", borderBottom: isMobile ? "1px solid #f1f5f9" : "none", position: "relative", cursor: "pointer", overflow: "visible" }} onClick={() => setGuestPanelOpen(!guestPanelOpen)}>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Rooms & Guests</div>
               <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span>{guestSummary()}</span>
@@ -409,7 +409,7 @@ export default function SearchHotelsPage() {
 
               {/* Guest Panel Dropdown */}
               {guestPanelOpen && (
-                <div onClick={e => e.stopPropagation()} style={{ position: "fixed", top: "auto", left: "auto", width: isMobile ? "calc(100vw - 40px)" : 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 16px 48px rgba(0,0,0,0.2)", zIndex: 9999, padding: 20, marginTop: 8 }}>
+                <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 8px)", right: isMobile ? "auto" : 0, left: isMobile ? 0 : "auto", width: isMobile ? "calc(100vw - 40px)" : 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 16px 48px rgba(0,0,0,0.2)", zIndex: 9999, padding: 20 }}>
 
                   {/* Rooms */}
                   {[
