@@ -664,8 +664,10 @@ export default function Home() {
         </div>
       )}
 
+      {/* NAV + HERO */}
+      <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)" }}>
       {/* NAV */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
+      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
         <a href="/" style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none", flexShrink: 0 }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
         {!isMobile && (
           <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
@@ -676,10 +678,7 @@ export default function Home() {
                 <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user.name.split(" ")[0]}</span>
               </div>
             ) : (
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", background: "none", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: "7px 16px" }}>Sign in</button>
-                <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: "#1447b8", background: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontFamily: "inherit", padding: "7px 16px" }}>Sign up</button>
-              </div>
+              <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Log in / Sign up</button>
             )}
           </div>
         )}
@@ -703,7 +702,7 @@ export default function Home() {
       )}
 
       {/* HERO */}
-      <section style={{ textAlign: "center", padding: isMobile ? "60px 20px 50px" : "90px 24px 70px", background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)" }}>
+      <section style={{ textAlign: "center", padding: isMobile ? "60px 20px 50px" : "90px 24px 70px", background: "transparent" }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 100, marginBottom: 28, letterSpacing: "0.04em", textTransform: "uppercase", border: "1px solid rgba(255,255,255,0.2)" }}>✦ AI-Powered · Watches 24×7</div>
         <h1 className="sora" style={{ fontSize: isMobile ? 36 : 64, fontWeight: 800, lineHeight: 1.1, color: "#fff", maxWidth: 760, margin: "0 auto 20px" }}>
           Your hotel price just dropped. <span style={{ color: "#FCD34D" }}>Did you notice?</span>
@@ -718,7 +717,9 @@ export default function Home() {
         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
       </section>
 
-      {/* CAROUSEL */}
+      </div>
+
+            {/* CAROUSEL */}
       <div id="deals" style={{ padding: isMobile ? "40px 0" : "20px 0 60px" }}>
         <div style={{ textAlign: "center", padding: isMobile ? "0 20px 20px" : "0 40px 28px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 12 }}>Real savings · Verified drops</p>
