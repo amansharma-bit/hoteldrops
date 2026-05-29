@@ -435,7 +435,7 @@ export default function AdminPage() {
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", border: "none", background: section === item.key ? "#eff6ff" : "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: section === item.key ? 600 : 400, color: section === item.key ? B : "#475569", borderBottom: i < SIDEBAR_ITEMS.length - 1 ? "1px solid #f8fafc" : "none", borderLeft: section === item.key ? `3px solid ${B}` : "3px solid transparent" }}>
                 <Ico d={item.icon} size={15} color={section === item.key ? B : "#94a3b8"} />
                 {item.label}
-                <Ico d={ICONS.arrow} size={13} color="#cbd5e1" style={{ marginLeft: "auto" }} />
+                <span style={{ marginLeft: "auto" }}><Ico d={ICONS.arrow} size={13} color="#cbd5e1" /></span>
               </button>
             ))}
           </div>
