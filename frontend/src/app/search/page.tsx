@@ -293,7 +293,6 @@ function SearchResults() {
   const [hotelSearch, setHotelSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
-  const [user, setUser] = useState<{ name: string } | null>(null);
 
   // Mobile overlay states
   const [showCal, setShowCal] = useState(false);
