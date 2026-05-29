@@ -665,32 +665,31 @@ export default function Home() {
       )}
 
       {/* NAV */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
-        <a href="/" style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none" }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
+      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
+        <a href="/" style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none", flexShrink: 0 }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
         {!isMobile && (
-          <ul style={{ display: "flex", gap: 32, listStyle: "none" }}>
-            <li><button onClick={() => scrollTo("how")} style={{ fontSize: 14, color: "rgba(255,255,255,0.65)", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>How it works</button></li>
-            <li><button onClick={() => window.location.href = "/search-hotels"} style={{ fontSize: 14, color: "#FCD34D", background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Exclusive Member Deals</button></li>
-          </ul>
+          <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+            <button onClick={() => window.location.href = "/search-hotels"} style={{ fontSize: 14, color: "#FCD34D", background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Exclusive Member Deals</button>
+            {user ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user.name.split(" ")[0]}</span>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", background: "none", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: "7px 16px" }}>Sign in</button>
+                <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: "#1447b8", background: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontFamily: "inherit", padding: "7px 16px" }}>Sign up</button>
+              </div>
+            )}
+          </div>
         )}
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          {!isMobile && (user ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user.name.split(" ")[0]}</span>
-            </div>
-          ) : (
-            <button style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: "8px 12px", borderRadius: 8 }} onClick={() => window.location.href = "/signin"}>Sign in</button>
-          ))}
-
-          {isMobile && (
-            <button onClick={() => setShowMenu(!showMenu)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
-              <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s" }} />
-              <span style={{ display: "block", width: 22, height: 2, background: showMenu ? "transparent" : "rgba(255,255,255,0.8)", transition: "all 0.2s" }} />
-              <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: showMenu ? "rotate(-45deg) translate(5px, -5px)" : "none" }} />
-            </button>
-          )}
-        </div>
+        {isMobile && (
+          <button onClick={() => setShowMenu(!showMenu)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+            <span style={{ display: "block", width: 22, height: 2, background: showMenu ? "transparent" : "rgba(255,255,255,0.8)", transition: "all 0.2s" }} />
+            <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: showMenu ? "rotate(45deg) translate(5px,5px)" : "none" }} />
+            <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: showMenu ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
+          </button>
+        )}
       </nav>
 
       {/* MOBILE MENU */}
@@ -712,11 +711,11 @@ export default function Home() {
         <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 36px", lineHeight: 1.7 }}>
           Booked a hotel? rebuq watches the price 24/7 after you pay. When it drops, we alert you instantly — you rebook and pocket the difference. Free to check.
         </p>
-        <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" as const, marginTop: 14 }}>
-          <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "11px 22px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore exclusive member deals →</button>
+        <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" as const }}>
+          <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
+          <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore exclusive member deals →</button>
         </div>
-        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 14 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
       </section>
 
       {/* CAROUSEL */}
