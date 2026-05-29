@@ -214,7 +214,7 @@ export default function Home() {
   }, []);
 
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-  const scrollCarousel = (dir: number) => setCarouselPos(prev => Math.max(0, Math.min(MAX_POS, prev + dir)));
+  const scrollCarousel = (dir: number) => setCarouselPos(prev => (prev + dir + CARDS.length * 2) % (CARDS.length * 2));
 
   async function doScan() {
     if (!file) return;
@@ -710,12 +710,7 @@ export default function Home() {
         <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 100, padding: "6px 16px", marginBottom: 22, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.85)", textTransform: "uppercase" as const }}>
           ✦ AI-Powered · Watches 24×7
         </div>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 100, padding: "7px 18px", marginBottom: 30, fontSize: 13, color: "rgba(255,255,255,0.8)" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ade80", display: "inline-block", animation: "pulse 1.5s infinite", flexShrink: 0 }} />
-          <strong style={{ color: "#fff" }}>Priya S.</strong>&nbsp;saved on Atlantis The Palm, Dubai —&nbsp;
-          <span style={{ color: "#FCD34D", fontWeight: 700 }}>₹22,400</span>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: 100, marginLeft: 4 }}>4 min ago</span>
-        </div>
+
         <h1 className="sora" style={{ fontSize: isMobile ? 38 : 60, fontWeight: 800, color: "#fff", lineHeight: 1.06, marginBottom: 20 }}>
           Your hotel price just dropped.<br /><span style={{ color: "#FCD34D" }}>Did you notice?</span>
         </h1>
@@ -734,6 +729,50 @@ export default function Home() {
           Free to check · No app needed · WhatsApp alerts · Zero-risk pricing
         </div>
       </section>
+
+      {/* HOTEL CAROUSEL */}
+      <div style={{ background: "#fff", padding: isMobile ? "40px 0 32px" : "56px 0 48px" }}>
+        <div style={{ textAlign: "center", padding: isMobile ? "0 20px 20px" : "0 40px 24px" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 12 }}>Real savings · Verified drops</div>
+          <h2 className="sora" style={{ fontSize: isMobile ? 24 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>rebuq members saved on these hotels</h2>
+        </div>
+        <div style={{ overflow: "hidden", padding: isMobile ? "0 16px" : "0 40px" }}
+          onTouchStart={e => { const t = e.touches[0]; (e.currentTarget as any)._touchStartX = t.clientX; }}
+          onTouchEnd={e => {
+            const startX = (e.currentTarget as any)._touchStartX;
+            const diff = startX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 50) scrollCarousel(diff > 0 ? 1 : -1);
+          }}>
+          <div style={{ display: "flex", gap: 16, transform: `translateX(-${carouselPos * (CARD_WIDTH + 16)}px)`, transition: "transform 0.4s cubic-bezier(.4,0,.2,1)" }}>
+            {[...CARDS, ...CARDS].map((c, i) => (
+              <div key={i} style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative" as const, height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
+                <img src={c.img} alt={c.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.3s ease" }} />
+                <div style={{ position: "absolute" as const, inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.62) 0%, transparent 60%)" }} />
+                <div style={{ position: "absolute" as const, bottom: 14, left: 14, color: "#fff" }}>
+                  <span style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, display: "block" }}>{c.price}</span>
+                  <span style={{ fontSize: 12, opacity: 0.85 }}>{c.name}</span>
+                </div>
+                <div style={{ position: "absolute" as const, top: 12, right: 12, background: "#16a34a", color: "#fff", fontSize: 13, fontWeight: 700, padding: "4px 10px", borderRadius: 8 }}>{c.pct}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
+          <button onClick={() => scrollCarousel(-1)} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
+          <div style={{ display: "flex", gap: 6 }}>
+            {Array.from({ length: CARDS.length }, (_, i) => (
+              <div key={i} onClick={() => setCarouselPos(i)} style={{ width: i === (carouselPos % CARDS.length) ? 20 : 8, height: 8, borderRadius: 100, background: i === (carouselPos % CARDS.length) ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />
+            ))}
+          </div>
+          <button onClick={() => scrollCarousel(1)} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
+        </div>
+        <div style={{ textAlign: "center", marginTop: 16 }}>
+          <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "none", border: "1.5px solid #e2e8f0", color: NAVY, borderRadius: 10, padding: "10px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+            Explore all member deals →
+          </button>
+        </div>
+      </div>
+
 
       {/* STATS */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", borderBottom: "1px solid #e2e8f0" }}>
