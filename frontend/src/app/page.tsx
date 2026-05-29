@@ -128,6 +128,8 @@ export default function Home() {
   // ── Modal state ────────────────────────────────────────────────────────
   const [modalOpen, setModalOpen]     = useState(false);
   const [uploadStep, setUploadStep]   = useState<1 | 2 | 'blocked'>(1);
+  const [blockInfo, setBlockInfo]     = useState<{reason:string;message?:string}|null>(null);
+  const [warnings, setWarnings]       = useState<Record<string,any>>({});
   const [file, setFile]               = useState<File | null>(null);
   const [dragActive, setDragActive]   = useState(false);
   const [scanning, setScanning]       = useState(false);
@@ -180,13 +182,8 @@ export default function Home() {
   });
 
   const openModal = () => {
-    setModalOpen(true);
-    setUploadStep(1);
-    setFile(null);
-    setExtracted(null);
-    setPhone('');
-    setEmailVal('');
-    setSubmitError('');
+    setModalOpen(true); setUploadStep(1); setFile(null); setExtracted(null);
+    setPhone(''); setEmailVal(''); setSubmitError(''); setBlockInfo(null); setWarnings({});
   };
 
   const closeModal = () => {
@@ -226,43 +223,37 @@ export default function Home() {
     let i = 0; setScanMsg(msgs[0]);
     const interval = setInterval(() => { i++; if (i < msgs.length) setScanMsg(msgs[i]); }, 900);
     try {
-      const base64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.readAsDataURL(file);
-      });
-      const contentBlock = file.type.startsWith('image/')
-        ? { type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } }
-        : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } };
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const formData = new FormData();
+      formData.append('voucher', file);
+      const res = await fetch('https://hoteldrops-production-9107.up.railway.app/api/voucher/extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || '', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1500, messages: [{ role: 'user', content: [contentBlock, { type: 'text', text: EXTRACTION_PROMPT }] }] })
+        body: formData,
       });
-      if (!res.ok) throw new Error('API error');
-      const data = await res.json();
-      const text = data.content[0].text.trim().replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(text);
-      const RATES: Record<string, number> = { EUR: 112, USD: 84, GBP: 107, AED: 22.8, THB: 2.3, SGD: 62, AMD: 0.21, MYR: 18, IDR: 0.005, JPY: 0.56, KRW: 0.063, TRY: 2.5, SAR: 22.4, OMR: 218, BHD: 223, QAR: 23.1, MXN: 4.2, ZAR: 4.5, EGP: 1.7, NPR: 0.63, LKR: 0.26, MUR: 1.9 };
-      const rate = RATES[parsed.currency_original] || 1;
-      if (parsed.currency_original && parsed.currency_original !== 'INR' && rate !== 1) {
-        if (parsed.original_price)       parsed.original_price       = Math.round(parsed.original_price       * rate);
-        if (parsed.total_price_paid)     parsed.total_price_paid     = Math.round(parsed.total_price_paid     * rate);
-        if (parsed.price_per_night)      parsed.price_per_night      = Math.round(parsed.price_per_night      * rate);
-        if (parsed.cancellation_penalty) parsed.cancellation_penalty = Math.round(parsed.cancellation_penalty * rate);
-      }
-      if (!parsed.total_nights && parsed.check_in && parsed.check_out) {
-        parsed.total_nights = Math.round((new Date(parsed.check_out).getTime() - new Date(parsed.check_in).getTime()) / 86400000);
-      }
-      if (!parsed.total_price_paid) parsed.total_price_paid = parsed.original_price || 0;
+      const json = await res.json();
       clearInterval(interval);
-      setExtracted({ ...emptyExtracted(), ...parsed });
-      if (parsed.cancellation_policy === 'non-refundable') setUploadStep('blocked');
-      else setUploadStep(2);
+      if (!json.success && json.blocked) {
+        setBlockInfo({ reason: json.blockReason, message: json.message });
+        if (json.data) setExtracted({ ...emptyExtracted(), ...json.data });
+        else setExtracted(emptyExtracted());
+        setUploadStep('blocked');
+        setScanning(false);
+        return;
+      }
+      const data = json.data;
+      setExtracted({ ...emptyExtracted(), ...data });
+      setWarnings(json.warnings || {});
+      if (data.cancellation_policy === 'non-refundable') {
+        setBlockInfo({ reason: 'non_refundable' });
+        setUploadStep('blocked');
+      } else {
+        setUploadStep(2);
+      }
     } catch {
       clearInterval(interval);
       setExtracted(emptyExtracted());
-      setUploadStep(2);
+      setWarnings({});
+      setBlockInfo({ reason: 'network_error', message: 'Could not reach the server. Please enter your booking details manually.' });
+      setUploadStep('blocked');
     }
     setScanning(false);
   }
@@ -275,16 +266,23 @@ export default function Home() {
     if (!extracted?.check_in)         { setSubmitError('Please enter check-in date'); return; }
     if (!extracted?.check_out)        { setSubmitError('Please enter check-out date'); return; }
     if (!extracted?.total_price_paid) { setSubmitError('Please enter the total price you paid'); return; }
-    if (extracted?.cancellation_policy === 'non-refundable') { setUploadStep('blocked'); return; }
+    if (extracted?.cancellation_policy === 'non-refundable') {
+      setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return;
+    }
     setLoading(true);
     try {
       const res = await fetch('https://hoteldrops-production-9107.up.railway.app/api/voucher/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...extracted, phone, email: emailVal }),
+        body: JSON.stringify({ ...extracted, phone: phone.startsWith('+') ? phone : `+91${phone}`, email: emailVal }),
       });
       const json = await res.json();
-      if (json.blocked && json.reason === 'non_refundable') { setUploadStep('blocked'); return; }
+      if (json.blocked && json.reason === 'non_refundable') {
+        setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return;
+      }
+      if (json.reason === 'duplicate') {
+        setBlockInfo({ reason: 'duplicate', message: json.message }); setUploadStep('blocked'); return;
+      }
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to submit');
       sessionStorage.setItem('rebuq_booking', JSON.stringify({ extracted, bookingId: json.booking_id }));
       router.push('/upload');
@@ -402,25 +400,156 @@ export default function Home() {
             )}
 
             {/* BLOCKED */}
-            {uploadStep === 'blocked' && extracted && (
+                        {uploadStep === 'blocked' && (
               <div style={{ padding: '24px' }}>
-                <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 14, padding: 24, marginBottom: 20 }}>
-                  <div style={{ fontSize: 28, marginBottom: 12 }}>🔒</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#dc2626', marginBottom: 8 }}>This booking is non-refundable.</div>
-                  <p style={{ fontSize: 13, color: '#b91c1c', lineHeight: 1.7 }}>
-                    Even if the price drops, you can&apos;t cancel — so there&apos;s nothing to save. rebuq works best with refundable bookings. Flexible rates often cost a little more upfront but rebuq regularly finds drops of <strong>₹10,000–₹40,000</strong>.
-                  </p>
-                </div>
-                <button onClick={() => { setUploadStep(1); setFile(null); setExtracted(null); }} style={{ width: '100%', background: B, color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Try a different booking
-                </button>
+
+                {blockInfo?.reason === 'non_refundable' && (
+                  <div>
+                    <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                      <div style={{ fontSize: 28, marginBottom: 12 }}>🔒</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#dc2626', marginBottom: 8 }}>This booking is non-refundable.</div>
+                      <p style={{ fontSize: 13, color: '#b91c1c', lineHeight: 1.7 }}>
+                        Even if the price drops, you cannot cancel to rebook and save. rebuq works best with flexible rates.
+                        Next time, book a cancellable rate — rebuq regularly finds drops of Rs.10,000–Rs.40,000.
+                      </p>
+                    </div>
+                    <button onClick={() => { setUploadStep(1); setFile(null); setExtracted(null); setBlockInfo(null); }}
+                      style={{ width: '100%', background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Try a different booking
+                    </button>
+                  </div>
+                )}
+
+                {blockInfo?.reason === 'not_hotel' && (
+                  <div>
+                    <div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                      <div style={{ fontSize: 28, marginBottom: 12 }}>📄</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8 }}>This does not look like a hotel booking.</div>
+                      <p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>
+                        Please upload a hotel booking confirmation — not a flight ticket, train ticket, restaurant receipt, or other document.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => { setUploadStep(1); setFile(null); setBlockInfo(null); }}
+                        style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Upload a hotel voucher</button>
+                      <button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }}
+                        style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
+                    </div>
+                  </div>
+                )}
+
+                {(blockInfo?.reason === 'poor_quality' || blockInfo?.reason === 'parse_error') && (
+                  <div>
+                    <div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                      <div style={{ fontSize: 28, marginBottom: 12 }}>🔍</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#0369a1', marginBottom: 8 }}>We could not read your voucher clearly.</div>
+                      <p style={{ fontSize: 13, color: '#0c4a6e', lineHeight: 1.7 }}>This happens with blurry screenshots, dark mode images, or password-protected PDFs.</p>
+                      <div style={{ marginTop: 12, fontSize: 13, color: '#0369a1' }}>
+                        <strong>Try:</strong>
+                        <ul style={{ marginTop: 6, paddingLeft: 20, lineHeight: 2 }}>
+                          <li>Take a fresh screenshot of your booking confirmation email</li>
+                          <li>Download the PDF from the OTA app and upload that</li>
+                          <li>Remove any password from the PDF first</li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => { setUploadStep(1); setFile(null); setBlockInfo(null); }}
+                        style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
+                      <button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }}
+                        style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
+                    </div>
+                  </div>
+                )}
+
+                {blockInfo?.reason === 'checkin_passed' && (
+                  <div>
+                    <div style={{ background: '#f1f5f9', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                      <div style={{ fontSize: 28, marginBottom: 12 }}>📅</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>Check-in date has already passed.</div>
+                      <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7 }}>
+                        Your stay has already started or ended. rebuq tracks prices before check-in.
+                        For future bookings, upload right after you book!
+                      </p>
+                    </div>
+                    <button onClick={() => { setUploadStep(1); setFile(null); setExtracted(null); setBlockInfo(null); }}
+                      style={{ width: '100%', background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Track a future booking
+                    </button>
+                  </div>
+                )}
+
+                {blockInfo?.reason === 'duplicate' && (
+                  <div>
+                    <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                      <div style={{ fontSize: 28, marginBottom: 12 }}>✅</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#166534', marginBottom: 8 }}>Already tracking this booking!</div>
+                      <p style={{ fontSize: 13, color: '#15803d', lineHeight: 1.7 }}>
+                        We are already watching this booking for price drops. You will get a WhatsApp alert the moment we find a lower price.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => { setUploadStep(1); setFile(null); setExtracted(null); setBlockInfo(null); }}
+                        style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Track another booking</button>
+                      <button onClick={closeModal}
+                        style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Got it</button>
+                    </div>
+                  </div>
+                )}
+
+                {blockInfo?.reason === 'network_error' && (
+                  <div>
+                    <div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                      <div style={{ fontSize: 28, marginBottom: 12 }}>⚠️</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8 }}>Connection issue</div>
+                      <p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>{blockInfo.message || 'Could not reach the server. Please try again or enter details manually.'}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => { setUploadStep(1); setFile(null); setBlockInfo(null); }}
+                        style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
+                      <button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }}
+                        style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
+                    </div>
+                  </div>
+                )}
+
               </div>
             )}
 
             {/* STEP 2 — Confirm */}
             {uploadStep === 2 && extracted && (
               <div style={{ padding: '24px' }}>
-                {file && (
+                {warnings.partialExtraction && (
+                  <div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}>
+                    ⚠️ <strong>Partial read</strong> — We could not read all fields. Please check and fill in missing details.
+                  </div>
+                )}
+                {warnings.multiHotel && (
+                  <div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}>
+                    🏨 <strong>Multiple hotels detected</strong> — We extracted the first hotel only. Upload each booking separately.
+                  </div>
+                )}
+                {warnings.checkInSoon && (
+                  <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#c2410c' }}>
+                    ⏰ <strong>Check-in very soon</strong> — Your check-in is {warnings.checkInSoonDays === 0 ? 'today' : 'tomorrow'}. We will scan immediately but the window to rebook is tight.
+                  </div>
+                )}
+                {warnings.payAtProperty && (
+                  <div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#0369a1' }}>
+                    💳 <strong>Pay at property detected</strong> — You have not paid yet so amount shows Rs.0. We will still track the rate.
+                  </div>
+                )}
+                {warnings.unknownPolicy && (
+                  <div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}>
+                    ❓ <strong>Cancellation policy unclear</strong> — Please select your policy below so we track correctly.
+                  </div>
+                )}
+                {warnings.currencyConverted && (
+                  <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#166534' }}>
+                    💱 <strong>Currency converted</strong> — Original was in {warnings.originalCurrency}, converted to INR. Please verify the amount.
+                  </div>
+                )}
+                                {file && (
                   <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#166534' }}>
                     <span style={{ fontSize: 16 }}>✨</span>
                     <span><strong>AI extracted successfully</strong> — verify and correct anything that looks wrong.</span>
