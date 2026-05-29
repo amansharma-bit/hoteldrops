@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 const API = "https://hoteldrops-production.up.railway.app/api/hotels";
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 const B = "#1447b8";
 const NAVY = "#0f172a";
 const YELLOW = "#FCD34D";
