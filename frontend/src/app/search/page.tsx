@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 
 const API = "https://hoteldrops-production.up.railway.app/api/hotels";
 const supabase = createClient(
@@ -16,6 +17,15 @@ const YELLOW = "#FCD34D";
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        const meta = data.user.user_metadata;
+        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member" });
+      }
+    });
+  }, []);
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check(); window.addEventListener("resize", check);
@@ -282,6 +292,7 @@ function SearchResults() {
   const [page, setPage] = useState(1);
   const [hotelSearch, setHotelSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string } | null>(null);
   const [user, setUser] = useState<{ name: string } | null>(null);
 
   // Mobile overlay states
