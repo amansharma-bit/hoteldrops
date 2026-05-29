@@ -31,8 +31,21 @@ const RATES_TO_INR = {
 const EXTRACTION_PROMPT = `You are a hotel booking voucher parser for rebuq, an Indian travel price-tracking service.
 
 FIRST — determine if this document is a hotel booking confirmation/voucher.
-If it is NOT a hotel booking (e.g. flight ticket, train ticket, selfie, random photo, restaurant receipt, car rental, visa document, event ticket, insurance policy, bank statement), respond with ONLY:
+Look for: hotel name, check-in date, check-out date, room type, booking reference.
+If ANY of these are missing AND the document is clearly not a hotel booking, respond with ONLY:
 {"document_type": "not_hotel", "reason": "brief reason why"}
+
+Examples that are NOT hotel bookings — always return not_hotel for these:
+- Photos of people, selfies, portraits
+- Flight tickets or boarding passes
+- Train/bus tickets
+- Restaurant receipts
+- Car rental confirmations
+- Visa documents or passports
+- Event tickets
+- Insurance policies
+- Bank statements
+- Random photos of objects, places, food
 
 If it IS a hotel booking, extract ALL fields below.
 Respond ONLY with a valid JSON object. No markdown, no code fences, no explanation.
@@ -131,7 +144,7 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
     const response = await axios.post(
       'https://api.anthropic.com/v1/messages',
       {
-        model:      'claude-sonnet-4-5-20251001',
+        model:      'claude-sonnet-4-5',
         max_tokens: 1500,
         messages:   [{ role: 'user', content: buildClaudeContent(base64Data, mimeType) }]
       },
