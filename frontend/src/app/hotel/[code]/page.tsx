@@ -129,7 +129,6 @@ function HotelDetailContent() {
   const [editRooms, setEditRooms] = useState("1");
   const [editChildren, setEditChildren] = useState("0");
   const [guestDropOpen, setGuestDropOpen] = useState(false);
-  const guestRef = useRef<HTMLDivElement>(null);
 
   // Sync edit fields when URL params change
   useEffect(() => { setEditCheckIn(checkIn); }, [checkIn]);
@@ -300,7 +299,7 @@ function HotelDetailContent() {
             <input type="date" value={editCheckOut} onChange={e => setEditCheckOut(e.target.value)} min={editCheckIn || undefined}
               style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: NAVY, background: "transparent", width: "100%" }} />
           </div>
-          <div ref={guestRef} style={{ flex: 1, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0, position: "relative", cursor: "pointer" }}
+          <div style={{ flex: 1, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0, position: "relative", cursor: "pointer" }}
             onClick={() => setGuestDropOpen(p => !p)}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Rooms & Guests</div>
             <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, display: "flex", alignItems: "center", gap: 4 }}>
@@ -309,15 +308,15 @@ function HotelDetailContent() {
             </div>
             {guestDropOpen && (
               <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 300, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, boxShadow: "0 8px 32px rgba(0,0,0,0.14)", zIndex: 9999, padding: 16 }}>
-                {([["Rooms", "1", "4", editRooms, setEditRooms], ["Adults", "1", "16", editAdults, setEditAdults], ["Children", "0", "8", editChildren, setEditChildren]] as [string,string,string,string,React.Dispatch<React.SetStateAction<string>>][]).map(([label, mn, mx, val, setVal]) => (
+                {([["Rooms","1","4",editRooms,setEditRooms],["Adults","1","16",editAdults,setEditAdults],["Children","0","8",editChildren,setEditChildren]] as [string,string,string,string,Function][]).map(([label,mn,mx,val,setVal]) => (
                   <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{label}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <button disabled={parseInt(val) <= parseInt(mn)} onClick={e => { e.stopPropagation(); setVal(p => String(Math.max(parseInt(mn), parseInt(p) - 1))); }}
-                        style={{ width: 32, height: 32, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: parseInt(val) <= parseInt(mn) ? 0.3 : 1 }}>−</button>
+                      <button disabled={parseInt(val as string) <= parseInt(mn)} onClick={e => { e.stopPropagation(); (setVal as Function)(p => String(Math.max(parseInt(mn), parseInt(p as string) - 1))); }}
+                        style={{ width: 32, height: 32, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: parseInt(val as string) <= parseInt(mn) ? 0.3 : 1, fontFamily: "inherit" }}>−</button>
                       <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" as const }}>{val}</span>
-                      <button disabled={parseInt(val) >= parseInt(mx)} onClick={e => { e.stopPropagation(); setVal(p => String(Math.min(parseInt(mx), parseInt(p) + 1))); }}
-                        style={{ width: 32, height: 32, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: parseInt(val) >= parseInt(mx) ? 0.3 : 1 }}>+</button>
+                      <button disabled={parseInt(val as string) >= parseInt(mx)} onClick={e => { e.stopPropagation(); (setVal as Function)(p => String(Math.min(parseInt(mx), parseInt(p as string) + 1))); }}
+                        style={{ width: 32, height: 32, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: parseInt(val as string) >= parseInt(mx) ? 0.3 : 1, fontFamily: "inherit" }}>+</button>
                     </div>
                   </div>
                 ))}
