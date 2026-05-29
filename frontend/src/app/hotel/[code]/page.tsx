@@ -406,7 +406,6 @@ function HotelDetailContent() {
         )}
 
       </div>
-      </div>
       <div style={W}>
         {/* BREADCRUMB */}
         <div style={{ padding: "12px 0", fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
