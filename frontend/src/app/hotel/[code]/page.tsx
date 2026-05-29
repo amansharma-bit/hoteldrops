@@ -241,30 +241,24 @@ function HotelDetailContent() {
       )}
 
       {/* NAV */}
-      <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", height: 60, position: "sticky", top: 0, zIndex: 300 }}>
-        <div style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
-          <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
-          {!isMobile && (
-            <ul style={{ display: "flex", gap: 28, listStyle: "none" }}>
-              <li><a href="/#how" style={{ fontSize: 14, color: "#64748b", textDecoration: "none", fontWeight: 500 }}>How it works</a></li>
-              <li><a href="/search-hotels" style={{ fontSize: 14, color: B, textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a></li>
-            </ul>
-          )}
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            {!isMobile && user && (
+      <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", height: 60, position: "sticky", top: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
+        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: NAVY, textDecoration: "none", flexShrink: 0 }}>rebuq<span style={{ color: B }}>.</span></a>
+        {!isMobile && (
+          <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+            <a href="/search-hotels" style={{ fontSize: 14, color: B, textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a>
+            {user ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
                 <div style={{ width: 32, height: 32, borderRadius: "50%", background: B, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
                 <span style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{user.name.split(" ")[0]}</span>
               </div>
+            ) : (
+              <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Log in / Sign up</button>
             )}
-            {!isMobile && !user && (
-              <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>Sign in</button>
-            )}
-            <button onClick={() => router.push("/")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-              {isMobile ? "Check booking" : "Check my booking"}
-            </button>
           </div>
-        </div>
+        )}
+        {isMobile && (
+          <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: B, background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Log in</button>
+        )}
       </nav>
 
       {/* OFFER BANNER — shown only when coming from price drop alert */}
@@ -309,8 +303,8 @@ function HotelDetailContent() {
               {["1", "2", "3", "4"].map(n => <option key={n} value={n}>{n} Adults</option>)}
             </select>
           </div>
-          <button onClick={() => router.push("/search?destination=" + encodeURIComponent(hotel.city) + "&checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults)}
-            style={{ background: B, color: "#fff", border: "none", padding: "0 28px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+          <button onClick={() => router.push("/search?destination=" + encodeURIComponent(hotel.city) + "&checkIn=" + editCheckIn + "&checkOut=" + editCheckOut + "&adults=" + editAdults)}
+            style={{ background: "#FCD34D", color: "#1a1a1a", border: "none", padding: "0 28px", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
             Search
           </button>
         </div>
