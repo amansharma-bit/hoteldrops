@@ -199,8 +199,8 @@ export default function Dashboard() {
     </div>
   );
 
-  const Card = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-    <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, ...style }}>{children}</div>
+  const Card = ({ children, style, className }: { children: React.ReactNode; style?: React.CSSProperties; className?: string }) => (
+    <div className={className} style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, ...style }}>{children}</div>
   );
 
   return (
