@@ -18,15 +18,6 @@ const YELLOW = "#FCD34D";
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        const meta = data.user.user_metadata;
-        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member" });
-      }
-    });
-  }, []);
-
-  useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check(); window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -293,6 +284,15 @@ function SearchResults() {
   const [hotelSearch, setHotelSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        const meta = data.user.user_metadata;
+        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member" });
+      }
+    });
+  }, []);
 
   // Mobile overlay states
   const [showCal, setShowCal] = useState(false);
