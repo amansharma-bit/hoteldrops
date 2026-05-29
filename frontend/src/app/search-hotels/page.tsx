@@ -403,8 +403,10 @@ export default function SearchHotelsPage() {
         </div>
       )}
 
+      {/* NAV + HERO */}
+      <div style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)" }}>
       {/* NAV */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 200, background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
+      <nav style={{ position: "sticky", top: 0, zIndex: 200, background: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
         <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none", flexShrink: 0 }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
         {!isMobile && (
           <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
@@ -436,7 +438,7 @@ export default function SearchHotelsPage() {
       )}
 
       {/* HERO */}
-      <section style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)", padding: isMobile ? "48px 0 0" : "72px 0 0", textAlign: "center", position: "relative", overflow: "visible", zIndex: 1 }}>
+      <section style={{ background: "transparent", padding: isMobile ? "48px 0 0" : "72px 0 0", textAlign: "center", position: "relative", overflow: "visible", zIndex: 1 }}>
         <div style={{ padding: isMobile ? "0 20px" : "0 40px" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
             ✦ Exclusive Member Deals
@@ -612,7 +614,9 @@ export default function SearchHotelsPage() {
         <div style={{ height: isMobile ? 48 : 56 }} />
       </section>
 
-      {/* STATS */}
+      </div>
+
+            {/* STATS */}
       <div style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", paddingTop: isMobile ? 48 : 56 }} ref={statsRef}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "20px" : "26px 40px", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)" }}>
           {STATS.map((s, i) => (
