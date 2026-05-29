@@ -313,7 +313,7 @@ export default function Dashboard() {
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 20px", border: "none", background: section === item.key ? "#eff6ff" : "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: section === item.key ? 600 : 400, color: section === item.key ? B : "#1e293b", borderLeft: section === item.key ? `3px solid ${B}` : "3px solid transparent" }}>
                   <Icon d={item.icon} size={16} color={section === item.key ? B : "#64748b"} />
                   {item.label}
-                  <Icon d={ICONS.arrow} size={14} color="#cbd5e1" style={{ marginLeft: "auto" }} />
+                  <span style={{ marginLeft: "auto" }}><Icon d={ICONS.arrow} size={14} color="#cbd5e1" /></span>
                 </button>
               ))}
               <button onClick={async () => { await supabase.auth.signOut(); router.push("/"); }} className="nav-item"
