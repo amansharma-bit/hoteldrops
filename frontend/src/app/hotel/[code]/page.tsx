@@ -283,8 +283,8 @@ function HotelDetailContent() {
       )}
 
       {/* SEARCH BAR */}
-      <div ref={refSearchBar} style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 32px", position: "sticky", top: offerId && saving ? 120 : 60, zIndex: 250, overflow: "visible" }}>
-        <div style={{ display: "flex", alignItems: "stretch", border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "visible", background: "#fff" }}>
+      <div ref={refSearchBar} style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 32px", position: "sticky", top: offerId && saving ? 120 : 60, zIndex: 250 }}>
+        <div style={{ display: "flex", alignItems: "stretch", border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
           <div style={{ flex: 2.5, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or Hotel</div>
             <div style={{ ...inp }}>{hotel.name}</div>
@@ -308,19 +308,28 @@ function HotelDetailContent() {
             </div>
             {guestDropOpen && (
               <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 300, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, boxShadow: "0 8px 32px rgba(0,0,0,0.14)", zIndex: 9999, padding: 16 }}>
-                {([["Rooms","1","4",editRooms,setEditRooms],["Adults","1","16",editAdults,setEditAdults],["Children","0","8",editChildren,setEditChildren]] as [string,string,string,string,Function][]).map(([label,mn,mx,val,setVal]) => (
+                {([
+                  ["Rooms", "Minimum 1", "1", "4", editRooms, setEditRooms],
+                  ["Adults", "13 years & above", "1", "16", editAdults, setEditAdults],
+                  ["Children", "0–12 years", "0", "8", editChildren, setEditChildren]
+                ] as [string,string,string,string,string,Function][]).map(([label,sub,mn,mx,val,setVal]) => (
                   <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{label}</div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{label}</div>
+                      <div style={{ fontSize: 12, color: "#94a3b8" }}>{sub}</div>
+                    </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <button disabled={parseInt(val as string) <= parseInt(mn)} onClick={e => { e.stopPropagation(); (setVal as Function)(p => String(Math.max(parseInt(mn), parseInt(p as string) - 1))); }}
+                      <button disabled={parseInt(val as string) <= parseInt(mn)} onClick={e => { e.stopPropagation(); (setVal as Function)((p: string) => String(Math.max(parseInt(mn), parseInt(p) - 1))); }}
                         style={{ width: 32, height: 32, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: parseInt(val as string) <= parseInt(mn) ? 0.3 : 1, fontFamily: "inherit" }}>−</button>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" as const }}>{val}</span>
-                      <button disabled={parseInt(val as string) >= parseInt(mx)} onClick={e => { e.stopPropagation(); (setVal as Function)(p => String(Math.min(parseInt(mx), parseInt(p as string) + 1))); }}
+                      <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" as const }}>{parseInt(val as string)}</span>
+                      <button disabled={parseInt(val as string) >= parseInt(mx)} onClick={e => { e.stopPropagation(); (setVal as Function)((p: string) => String(Math.min(parseInt(mx), parseInt(p) + 1))); }}
                         style={{ width: 32, height: 32, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: parseInt(val as string) >= parseInt(mx) ? 0.3 : 1, fontFamily: "inherit" }}>+</button>
                     </div>
                   </div>
                 ))}
                 <button onClick={() => setGuestDropOpen(false)} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12 }}>Done</button>
+              </div>
+            )}or: "pointer", fontFamily: "inherit", marginTop: 12 }}>Done</button>
               </div>
             )}
           </div>
