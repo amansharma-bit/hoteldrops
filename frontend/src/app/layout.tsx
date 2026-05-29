@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import PwaSplash from "./PwaSplash";
 
 export const metadata: Metadata = {
   title: "rebuq — Hotel Price Protection for Indian Travelers",
@@ -75,6 +76,7 @@ export default function RootLayout({
         <link rel="apple-touch-startup-image" href="/apple-touch-icon.png" />
       </head>
       <body className="antialiased">
+        <PwaSplash />
         {children}
         <script
           dangerouslySetInnerHTML={{
