@@ -129,6 +129,9 @@ function HotelDetailContent() {
   const [editRooms, setEditRooms] = useState("1");
   const [editChildren, setEditChildren] = useState("0");
   const [guestDropOpen, setGuestDropOpen] = useState(false);
+  const [calOpen, setCalOpen] = useState(false);
+  const [calMode, setCalMode] = useState<"checkin"|"checkout">("checkin");
+  const [calMonthOffset, setCalMonthOffset] = useState(0);
 
   // Sync edit fields when URL params change
   useEffect(() => { setEditCheckIn(checkIn); }, [checkIn]);
@@ -283,63 +286,127 @@ function HotelDetailContent() {
       )}
 
       {/* SEARCH BAR */}
-      <div ref={refSearchBar} style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 32px", position: "sticky", top: offerId && saving ? 120 : 60, zIndex: 250 }}>
-        <div style={{ display: "flex", alignItems: "stretch", border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
-          <div style={{ flex: 2.5, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or Hotel</div>
-            <div style={{ ...inp }}>{hotel.name}</div>
+      <div ref={refSearchBar} style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "10px 32px", position: "sticky", top: offerId && saving ? 120 : 60, zIndex: 250, overflow: "visible" }}>
+        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: 72, overflow: "visible", position: "relative" }}>
+
+          {/* Hotel name — read only */}
+          <div style={{ padding: "0 24px", borderRight: "1px solid #e2e8f0", borderRadius: "16px 0 0 16px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or Hotel</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: NAVY }}>{hotel.name}</div>
           </div>
-          <div style={{ flex: 1.2, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
-            <input type="date" value={editCheckIn} onChange={e => setEditCheckIn(e.target.value)}
-              style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: NAVY, background: "transparent", width: "100%" }} />
+
+          {/* Check-in */}
+          <div style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer" }}
+            onClick={() => { setCalMode("checkin"); setCalOpen(true); }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
+            <div style={{ fontSize: editCheckIn ? 15 : 14, fontWeight: editCheckIn ? 700 : 400, color: editCheckIn ? NAVY : "#94a3b8" }}>{editCheckIn ? formatDate(editCheckIn) : "Add date"}</div>
           </div>
-          <div style={{ flex: 1.2, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-out</div>
-            <input type="date" value={editCheckOut} onChange={e => setEditCheckOut(e.target.value)} min={editCheckIn || undefined}
-              style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: NAVY, background: "transparent", width: "100%" }} />
+
+          {/* Check-out */}
+          <div style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer" }}
+            onClick={() => { setCalMode("checkout"); setCalOpen(true); }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-out</div>
+            <div style={{ fontSize: editCheckOut ? 15 : 14, fontWeight: editCheckOut ? 700 : 400, color: editCheckOut ? NAVY : "#94a3b8" }}>{editCheckOut ? formatDate(editCheckOut) : "Add date"}</div>
           </div>
-          <div style={{ flex: 1, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0, position: "relative", cursor: "pointer" }}
+
+          {/* Rooms & Guests */}
+          <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", cursor: "pointer" }}
             onClick={() => setGuestDropOpen(p => !p)}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Rooms & Guests</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, display: "flex", alignItems: "center", gap: 4 }}>
-              <span>{editRooms} Room{parseInt(editRooms) > 1 ? "s" : ""} · {editAdults} Adult{parseInt(editAdults) > 1 ? "s" : ""}{parseInt(editChildren) > 0 ? ` · ${editChildren} Child${parseInt(editChildren) > 1 ? "ren" : ""}` : ""}</span>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Rooms &amp; Guests</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: NAVY, display: "flex", alignItems: "center", gap: 4 }}>
+              <span>{editRooms} Room{parseInt(editRooms) > 1 ? "s" : ""} · {parseInt(editAdults)} Adult{parseInt(editAdults) > 1 ? "s" : ""}{parseInt(editChildren) > 0 ? ` · ${editChildren} Child${parseInt(editChildren) > 1 ? "ren" : ""}` : ""}</span>
               <span style={{ fontSize: 9, color: "#94a3b8" }}>▼</span>
             </div>
             {guestDropOpen && (
-              <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 300, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, boxShadow: "0 8px 32px rgba(0,0,0,0.14)", zIndex: 9999, padding: 16 }}>
-                {([
-                  ["Rooms", "Minimum 1", "1", "4", editRooms, setEditRooms],
-                  ["Adults", "13 years & above", "1", "16", editAdults, setEditAdults],
-                  ["Children", "0–12 years", "0", "8", editChildren, setEditChildren]
-                ] as [string,string,string,string,string,Function][]).map(([label,sub,mn,mx,val,setVal]) => (
-                  <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{label}</div>
-                      <div style={{ fontSize: 12, color: "#94a3b8" }}>{sub}</div>
-                    </div>
+              <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 320, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 20 }}>
+                {[
+                  { label: "Rooms", sub: "Minimum 1", min: 1, max: 4, val: parseInt(editRooms), setVal: (v: number) => setEditRooms(String(v)) },
+                  { label: "Adults", sub: "Age 13+", min: 1, max: 16, val: parseInt(editAdults), setVal: (v: number) => setEditAdults(String(v)) },
+                  { label: "Children", sub: "Age 0–12", min: 0, max: 8, val: parseInt(editChildren), setVal: (v: number) => setEditChildren(String(v)) },
+                ].map(item => (
+                  <div key={item.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0", borderBottom: "1px solid #f1f5f9" }}>
+                    <div><div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{item.label}</div><div style={{ fontSize: 12, color: "#94a3b8" }}>{item.sub}</div></div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <button disabled={parseInt(val as string) <= parseInt(mn)} onClick={e => { e.stopPropagation(); (setVal as Function)((p: string) => String(Math.max(parseInt(mn), parseInt(p) - 1))); }}
-                        style={{ width: 32, height: 32, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: parseInt(val as string) <= parseInt(mn) ? 0.3 : 1, fontFamily: "inherit" }}>−</button>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" as const }}>{parseInt(val as string)}</span>
-                      <button disabled={parseInt(val as string) >= parseInt(mx)} onClick={e => { e.stopPropagation(); (setVal as Function)((p: string) => String(Math.min(parseInt(mx), parseInt(p) + 1))); }}
-                        style={{ width: 32, height: 32, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: parseInt(val as string) >= parseInt(mx) ? 0.3 : 1, fontFamily: "inherit" }}>+</button>
+                      <button disabled={item.val <= item.min} onClick={e => { e.stopPropagation(); item.setVal(Math.max(item.min, item.val - 1)); }}
+                        style={{ width: 32, height: 32, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: item.val <= item.min ? 0.3 : 1, fontFamily: "inherit" }}>−</button>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" as const }}>{item.val}</span>
+                      <button disabled={item.val >= item.max} onClick={e => { e.stopPropagation(); item.setVal(Math.min(item.max, item.val + 1)); }}
+                        style={{ width: 32, height: 32, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: item.val >= item.max ? 0.3 : 1, fontFamily: "inherit" }}>+</button>
                     </div>
                   </div>
                 ))}
                 <button onClick={() => setGuestDropOpen(false)} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12 }}>Done</button>
               </div>
-            )}or: "pointer", fontFamily: "inherit", marginTop: 12 }}>Done</button>
-              </div>
             )}
           </div>
+
+          {/* Search button */}
           <button onClick={() => { setGuestDropOpen(false); router.push("/search?destination=" + encodeURIComponent(hotel.city) + "&checkIn=" + editCheckIn + "&checkOut=" + editCheckOut + "&adults=" + editAdults + "&rooms=" + editRooms + "&children=" + editChildren); }}
-            style={{ background: "#FCD34D", color: "#1a1a1a", border: "none", padding: "0 28px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "'Sora',sans-serif", borderRadius: "0 12px 12px 0", flexShrink: 0, whiteSpace: "nowrap" as const }}>
+            style={{ background: "#FCD34D", color: "#1a1a1a", border: "none", padding: "0 28px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "'Sora',sans-serif", borderRadius: "0 16px 16px 0", flexShrink: 0, whiteSpace: "nowrap" as const }}>
             Search
           </button>
-        </div>
-      </div>
 
+        </div>
+
+        {/* Desktop calendar */}
+        {calOpen && (
+          <div onClick={() => setCalOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 9998 }} />
+        )}
+        {calOpen && (
+          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: "32px", width: 620, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,0.16)", zIndex: 9999, padding: 22 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <button onClick={() => setCalMonthOffset(p => Math.max(0, p - 1))} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#64748b" }}>‹</button>
+              <span style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 15, color: NAVY }}>
+                {calMode === "checkin" ? "Select check-in date" : "Select check-out date"}
+              </span>
+              <button onClick={() => setCalMonthOffset(p => p + 1)} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#64748b" }}>›</button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+              {[0, 1].map(offset => {
+                const d = new Date(new Date().getFullYear(), new Date().getMonth() + calMonthOffset + offset);
+                const year = d.getFullYear(); const month = d.getMonth();
+                const days = new Date(year, month + 1, 0).getDate();
+                const firstDow = new Date(year, month, 1).getDay();
+                const todayStr = new Date().toISOString().split("T")[0];
+                const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+                return (
+                  <div key={offset}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: NAVY, textAlign: "center", marginBottom: 12 }}>{MONTHS[month]} {year}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
+                      {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => <div key={d} style={{ textAlign: "center", fontSize: 11, color: "#94a3b8", paddingBottom: 8 }}>{d}</div>)}
+                      {Array.from({ length: firstDow }).map((_, i) => <div key={`e${i}`} />)}
+                      {Array.from({ length: days }).map((_, i) => {
+                        const day = i + 1;
+                        const ds = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+                        const isDisabled = ds < todayStr;
+                        const isStart = ds === editCheckIn;
+                        const isEnd = ds === editCheckOut;
+                        const isInRange = !!(editCheckIn && editCheckOut && ds > editCheckIn && ds < editCheckOut);
+                        let bg = "transparent"; let clr = isDisabled ? "#cbd5e1" : NAVY; let br = "50%";
+                        if (isStart || isEnd) { bg = B; clr = "#fff"; }
+                        else if (isInRange) { bg = "#dbeafe"; clr = B; br = "0"; }
+                        return (
+                          <div key={day} onClick={() => {
+                            if (isDisabled) return;
+                            if (calMode === "checkin") { setEditCheckIn(ds); setEditCheckOut(""); setCalMode("checkout"); }
+                            else { if (ds <= editCheckIn) return; setEditCheckOut(ds); setCalOpen(false); }
+                          }} style={{ height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: bg, color: clr, borderRadius: br, fontSize: 13, cursor: isDisabled ? "not-allowed" : "pointer", opacity: isDisabled ? 0.35 : 1 }}>{day}</div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+              <button onClick={() => { setEditCheckIn(""); setEditCheckOut(""); setCalMode("checkin"); }} style={{ background: "none", border: "none", fontSize: 13, color: "#94a3b8", cursor: "pointer", fontFamily: "inherit" }}>Clear dates</button>
+            </div>
+          </div>
+        )}
+
+      </div>
+      </div>
       <div style={W}>
         {/* BREADCRUMB */}
         <div style={{ padding: "12px 0", fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
