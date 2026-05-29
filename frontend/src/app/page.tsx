@@ -293,10 +293,10 @@ export default function Home() {
   }
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 16, lineHeight: 1.6, WebkitFontSmoothing: "antialiased", overflowX: "hidden", maxWidth: "100vw" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", overflowX: "hidden", maxWidth: "100vw" }}>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
@@ -305,12 +305,11 @@ export default function Home() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
         @keyframes slideUp { from { opacity:0; transform: translateY(24px); } to { opacity:1; transform: translateY(0); } }
-        .hotel-card-img { transition: transform 0.3s ease; }
-        .hotel-card:hover .hotel-card-img { transform: scale(1.04); }
+        .btn-hover:hover { transform: translateY(-1px); transition: transform 0.15s; }
         input:focus, select:focus { border-color: ${B} !important; box-shadow: 0 0 0 3px rgba(20,71,184,0.08); }
       `}</style>
 
-      {/* ── SCANNING OVERLAY ── */}
+      {/* SCANNING OVERLAY */}
       {scanning && (
         <div style={{ position: 'fixed', inset: 0, background: B, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
           <div style={{ width: 52, height: 52, border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -320,6 +319,8 @@ export default function Home() {
       )}
 
       {/* ── UPLOAD MODAL ── */}
+      
+      {/* UPLOAD MODAL */}
       {modalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', animation: 'fadeIn 0.2s ease' }}>
           {/* Backdrop */}
@@ -664,25 +665,26 @@ export default function Home() {
         </div>
       )}
 
+
       {/* NAV */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(10px)", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
-        <a href="/" style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
+      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "#fff", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
+        <a href="/" style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
         {!isMobile && (
-          <ul style={{ display: "flex", gap: 32, listStyle: "none" }}>
-            <li><button onClick={() => scrollTo("how")} style={{ fontSize: 14, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>How it works</button></li>
-            <li><button onClick={() => window.location.href = "/search-hotels"} style={{ fontSize: 14, color: B, background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Exclusive Member Deals</button></li>
-          </ul>
+          <div style={{ display: "flex", gap: 32 }}>
+            <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })} style={{ fontSize: 14, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>How it works</button>
+            <button onClick={() => window.location.href = "/search-hotels"} style={{ fontSize: 14, color: B, background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Exclusive Member Deals</button>
+          </div>
         )}
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           {!isMobile && (user ? (
             <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
               <div style={{ width: 32, height: 32, borderRadius: "50%", background: B, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
               <span style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{user.name.split(" ")[0]}</span>
             </div>
           ) : (
-            <button style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: "8px 12px", borderRadius: 8 }} onClick={() => window.location.href = "/signin"}>Sign in</button>
+            <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 13, color: "#475569", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 500, padding: "8px 14px" }}>Sign in</button>
           ))}
-          {!isMobile && <button onClick={openModal} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>Check my booking</button>}
+          {!isMobile && <button onClick={openModal} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Check my booking</button>}
           {isMobile && (
             <button onClick={() => setShowMenu(!showMenu)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
               <span style={{ display: "block", width: 22, height: 2, background: showMenu ? "transparent" : NAVY, transition: "all 0.2s" }} />
@@ -696,230 +698,163 @@ export default function Home() {
       {/* MOBILE MENU */}
       {isMobile && showMenu && (
         <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 99, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={() => { scrollTo("how"); setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>How it works</button>
-          <button onClick={() => { window.location.href = "/search-hotels"; }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
+          <button onClick={() => { document.getElementById("how")?.scrollIntoView({ behavior: "smooth" }); setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>How it works</button>
+          <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
           <button onClick={() => { window.location.href = "/signin"; setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Sign in</button>
-          <button onClick={() => { openModal(); setShowMenu(false); }} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12, textAlign: "center" }}>Check my booking — it&apos;s free</button>
+          <button onClick={() => { openModal(); setShowMenu(false); }} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12 }}>Check my booking — it's free</button>
         </div>
       )}
 
       {/* HERO */}
-      <section style={{ textAlign: "center", padding: isMobile ? "60px 20px 50px" : "90px 24px 70px", background: "linear-gradient(180deg, #f0f6ff 0%, #ffffff 100%)" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#e0edff", color: B, fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 100, marginBottom: 28, letterSpacing: "0.04em", textTransform: "uppercase" }}>✦ AI-Powered · Watches 24×7</div>
-        <h1 className="sora" style={{ fontSize: isMobile ? 36 : 64, fontWeight: 800, lineHeight: 1.1, color: NAVY, maxWidth: 760, margin: "0 auto 20px" }}>
-          Your hotel price just dropped. <span style={{ color: B }}>Did you notice?</span>
+      <section style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)", padding: isMobile ? "56px 20px 64px" : "72px 40px 80px", textAlign: "center" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 100, padding: "6px 16px", marginBottom: 22, fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.85)", textTransform: "uppercase" as const }}>
+          ✦ AI-Powered · Watches 24×7
+        </div>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 100, padding: "7px 18px", marginBottom: 30, fontSize: 13, color: "rgba(255,255,255,0.8)" }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ade80", display: "inline-block", animation: "pulse 1.5s infinite", flexShrink: 0 }} />
+          <strong style={{ color: "#fff" }}>Priya S.</strong>&nbsp;saved on Atlantis The Palm, Dubai —&nbsp;
+          <span style={{ color: "#FCD34D", fontWeight: 700 }}>₹22,400</span>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.08)", padding: "2px 8px", borderRadius: 100, marginLeft: 4 }}>4 min ago</span>
+        </div>
+        <h1 className="sora" style={{ fontSize: isMobile ? 38 : 60, fontWeight: 800, color: "#fff", lineHeight: 1.06, marginBottom: 20 }}>
+          Your hotel price just dropped.<br /><span style={{ color: "#FCD34D" }}>Did you notice?</span>
         </h1>
-        <p style={{ fontSize: 17, color: "#64748b", maxWidth: 520, margin: "0 auto 36px", lineHeight: 1.7 }}>
-          Booked a hotel? rebuq watches the price 24/7 after you pay. When it drops, we alert you instantly — you rebook and pocket the difference. Free to check.
+        <p style={{ fontSize: isMobile ? 15 : 17, color: "rgba(255,255,255,0.7)", maxWidth: 520, margin: "0 auto 36px", lineHeight: 1.75 }}>
+          Booked a hotel? rebuq watches the price 24/7 after you pay. When it drops, we alert you instantly on WhatsApp — you rebook and pocket the difference.
         </p>
-        <button onClick={openModal} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
-        <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 14 }}>Real savings · Verified drops</p>
-      </section>
-
-      {/* CAROUSEL */}
-      <div id="deals" style={{ padding: isMobile ? "40px 0" : "20px 0 60px" }}>
-        <div style={{ textAlign: "center", padding: isMobile ? "0 20px 20px" : "0 40px 28px" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 12 }}>Real savings · Verified drops</p>
-          <h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>rebuq members saved on these hotels</h2>
-        </div>
-        <div style={{ overflow: "hidden", padding: isMobile ? "0 16px" : "0 40px" }}
-          onTouchStart={e => { const t = e.touches[0]; (e.currentTarget as any)._touchStartX = t.clientX; }}
-          onTouchEnd={e => {
-            const startX = (e.currentTarget as any)._touchStartX;
-            const endX = e.changedTouches[0].clientX;
-            const diff = startX - endX;
-            if (Math.abs(diff) > 50) { scrollCarousel(diff > 0 ? 1 : -1); }
-          }}>
-          <div style={{ display: "flex", gap: 16, transform: `translateX(-${carouselPos * (CARD_WIDTH + 16)}px)`, transition: "transform 0.4s cubic-bezier(.4,0,.2,1)" }}>
-            {CARDS.map((c, i) => (
-              <div key={i} className="hotel-card" style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
-                <img src={c.img} alt={c.name} className="hotel-card-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.62) 0%, transparent 60%)" }} />
-                <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
-                  <span style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, display: "block" }}>{c.price}</span>
-                  <span style={{ fontSize: 12, opacity: 0.85 }}>{c.name}</span>
-                </div>
-                <div style={{ position: "absolute", top: 12, right: 12, background: "#16a34a", color: "#fff", fontSize: 13, fontWeight: 700, padding: "4px 10px", borderRadius: 8 }}>{c.pct}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
-          <button onClick={() => scrollCarousel(-1)} disabled={carouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos === 0 ? 0.4 : 1 }}>‹</button>
-          <div style={{ display: "flex", gap: 6 }}>
-            {Array.from({ length: CARDS.length - VISIBLE + 1 }, (_, i) => (
-              <div key={i} onClick={() => setCarouselPos(i)} style={{ width: i === carouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === carouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />
-            ))}
-          </div>
-          <button onClick={() => scrollCarousel(1)} disabled={carouselPos >= MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos >= MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos >= MAX_POS ? 0.4 : 1 }}>›</button>
-        </div>
-        <div style={{ textAlign: "center", marginTop: 16 }}>
-          <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "none", border: "1.5px solid #e2e8f0", color: NAVY, borderRadius: 10, padding: "10px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-            Explore all member deals →
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" as const, marginBottom: 18 }}>
+          <button onClick={openModal} className="btn-hover" style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            Check my booking — it's free
+          </button>
+          <button onClick={() => document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })} style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+            ▶ See how it works
           </button>
         </div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", letterSpacing: "0.02em" }}>
+          Free to check · No app needed · WhatsApp alerts · Zero-risk pricing
+        </div>
+      </section>
+
+      {/* STATS */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", borderBottom: "1px solid #e2e8f0" }}>
+        {[
+          { num: "₹18Cr+", label: "Total saved for members" },
+          { num: "12,000+", label: "Indian travelers saving" },
+          { num: "28%", label: "Avg price drop caught" },
+          { num: "₹24K", label: "Avg saving per booking" },
+        ].map((s, i) => (
+          <div key={i} style={{ padding: isMobile ? "18px 12px" : "24px 16px", textAlign: "center", borderRight: i < 3 ? "1px solid #e2e8f0" : "none", borderBottom: isMobile && i < 2 ? "1px solid #e2e8f0" : "none" }}>
+            <div className="sora" style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: NAVY, marginBottom: 4 }}>{s.num}</div>
+            <div style={{ fontSize: 12, color: "#94a3b8" }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* SOCIAL PROOF BAR */}
+      <div style={{ background: "#f8fafc", padding: isMobile ? "12px 20px" : "12px 40px", display: "flex", alignItems: "center", gap: 16, borderBottom: "1px solid #e2e8f0", overflowX: "auto" as const, flexWrap: isMobile ? "nowrap" as const : "wrap" as const }}>
+        {[
+          { name: "Priya S.", hotel: "Taj Dubai", amt: "₹24,000" },
+          { name: "Amit K.", hotel: "Hyatt Bali", amt: "₹18,400" },
+          { name: "Neha R.", hotel: "Marriott Bangkok", amt: "₹11,200" },
+          { name: "Rahul M.", hotel: "Park Hyatt Maldives", amt: "₹31,600" },
+        ].map((s, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
+            {i > 0 && <div style={{ width: 1, height: 16, background: "#e2e8f0", flexShrink: 0 }} />}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#475569" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#16a34a", display: "inline-block", flexShrink: 0 }} />
+              <strong style={{ color: NAVY }}>{s.name}</strong>&nbsp;saved on {s.hotel}&nbsp;
+              <span style={{ background: "#f0fdf4", color: "#16a34a", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100 }}>{s.amt}</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* HOW IT WORKS */}
-      <div id="how" style={{ padding: isMobile ? "60px 20px" : "80px 40px", maxWidth: 1100, margin: "0 auto" }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 14, textAlign: "center" }}>How it works</p>
-        <h2 className="sora" style={{ fontSize: isMobile ? 28 : 46, fontWeight: 800, color: NAVY, textAlign: "center", lineHeight: 1.15 }}>Three steps. Zero effort.</h2>
-        <p style={{ fontSize: 16, color: "#64748b", textAlign: "center", marginTop: 12 }}>Upload once. We watch forever. You save when the price drops.</p>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "200px 1fr", gap: 40, marginTop: 60, alignItems: "flex-start" }}>
-          <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column" }}>
-            {["Upload", "Watch", "Save"].map((s, i) => (
-              <button key={i} onClick={() => setActiveStep(i)} style={{ padding: "16px 20px", cursor: "pointer", borderLeft: isMobile ? "none" : `3px solid ${activeStep === i ? B : "#e2e8f0"}`, color: activeStep === i ? B : "#64748b", fontWeight: 600, fontSize: 15, background: "none", border: "none", fontFamily: "inherit", textAlign: "left" as const }}>{s}</button>
-            ))}
-          </div>
-          <div style={{ background: "#f8fafc", borderRadius: 14, padding: 32, boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#e0edff", color: B, fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, marginBottom: 12 }}>✦ AI-powered</div>
-            <p style={{ color: "#64748b", fontSize: 15, marginBottom: 24, lineHeight: 1.7 }}>
-              {activeStep === 0 && "Upload your hotel booking confirmation — any PDF, screenshot or email. Our AI reads the hotel, dates, and price in seconds. No manual entry needed."}
-              {activeStep === 1 && "rebuq's AI engine checks your hotel price every 6 hours — day and night. We track flash sales, last-minute drops, and OTA-specific discounts you'd never catch manually."}
-              {activeStep === 2 && "The moment we find a drop, you get a WhatsApp alert with a direct rebooking link. Cancel your old booking, rebook at the new rate, pocket the difference."}
-            </p>
-            <div style={{ background: "#fff", borderRadius: 12, padding: 20, boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                <span>Live Price Tracker</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#16a34a" }}>
-                  <span style={{ width: 7, height: 7, background: "#16a34a", borderRadius: "50%", display: "inline-block", animation: "pulse 1.5s infinite" }} />Monitoring
-                </span>
-              </div>
-              {[["MakeMyTrip", "₹41,200", "₹41,000", false], ["Booking.com", "₹41,200", "₹39,400", true], ["Agoda", "₹53,300", "₹53,300", false]].map(([site, orig, curr, drop], i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < 2 ? "1px solid #e2e8f0" : "none", fontSize: 14 }}>
-                  <span style={{ color: "#64748b" }}>{site}</span>
-                  <span style={{ textDecoration: "line-through", color: "#94a3b8", fontSize: 13 }}>{orig}</span>
-                  <span style={{ fontWeight: 700, color: NAVY }}>{curr}</span>
-                  {drop ? <span style={{ background: "#dcfce7", color: "#16a34a", fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 6 }}>↓₹1,800</span> : <span style={{ background: "#f1f5f9", color: "#64748b", fontSize: 12, padding: "2px 8px", borderRadius: 6 }}>—</span>}
-                </div>
-              ))}
+      <section id="how" style={{ background: "#f8fafc", padding: isMobile ? "48px 20px" : "64px 40px" }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: B, textTransform: "uppercase" as const, textAlign: "center", marginBottom: 10 }}>How it works</div>
+        <h2 className="sora" style={{ fontSize: isMobile ? 26 : 32, fontWeight: 800, color: NAVY, textAlign: "center", marginBottom: 32 }}>Three steps. Zero effort.</h2>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 16, maxWidth: 960, margin: "0 auto" }}>
+          {[
+            { n: "1", title: "Upload your voucher", body: "Any hotel confirmation — PDF, screenshot or email. Our AI reads your hotel, dates and price in seconds. No manual entry needed." },
+            { n: "2", title: "We watch 24/7", body: "rebuq checks your hotel price every 6 hours across Booking.com, Agoda, MakeMyTrip and 20+ OTAs — day and night." },
+            { n: "3", title: "You save on WhatsApp", body: "The moment a drop is found, you get an instant WhatsApp alert with a direct rebooking link. Rebook in under 10 minutes." },
+          ].map((s, i) => (
+            <div key={i} style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, padding: 24 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: B, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 800, color: "#fff", marginBottom: 14 }}>{s.n}</div>
+              <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 8 }}>{s.title}</div>
+              <div style={{ fontSize: 13.5, color: "#64748b", lineHeight: 1.65 }}>{s.body}</div>
             </div>
-            <button onClick={openModal} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "11px 22px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 20 }}>Start for free</button>
-          </div>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* STATS */}
-      <div id="results" style={{ background: "#f8fafc", padding: isMobile ? "60px 20px" : "80px 40px" }} ref={statsRef}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 14, textAlign: "center" }}>Real Results</p>
-          <h2 className="sora" style={{ fontSize: isMobile ? 28 : 46, fontWeight: 800, color: NAVY, textAlign: "center", lineHeight: 1.15 }}>₹18 crore saved. And counting.</h2>
-          <p style={{ fontSize: 16, color: "#64748b", textAlign: "center", marginTop: 12 }}>12,000+ Indian travelers are already saving on their hotel bookings.</p>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 24, marginTop: 48 }}>
-            {statValues.map((s, i) => (
-              <div key={i} style={{ background: "#fff", borderRadius: 14, padding: "28px 24px", textAlign: "center", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
-                <div className="sora" style={{ fontSize: 36, fontWeight: 800, color: NAVY }}>{s.prefix}{s.val.toLocaleString("en-IN")}{s.suffix}</div>
-                <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>{STATS[i].label}</div>
+      {/* TESTIMONIALS */}
+      <section style={{ background: "#fff", padding: isMobile ? "48px 20px" : "64px 40px", borderTop: "1px solid #e2e8f0" }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: B, textTransform: "uppercase" as const, textAlign: "center", marginBottom: 10 }}>Real savings</div>
+        <h2 className="sora" style={{ fontSize: isMobile ? 26 : 32, fontWeight: 800, color: NAVY, textAlign: "center", marginBottom: 32 }}>What our members say</h2>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 18, maxWidth: 960, margin: "0 auto" }}>
+          {[
+            { initials: "PS", name: "Priya Sharma", role: "Product Manager, Bengaluru", saved: "₹24,000", text: "Booked a resort in Maldives and forgot about it. rebuq caught a ₹24,000 drop 3 weeks later. The WhatsApp alert was so clear — I rebooked in 10 minutes." },
+            { initials: "RM", name: "Rahul Mehta", role: "Startup Founder, Mumbai", saved: "₹80,000+", text: "I travel every month for work. rebuq has saved me over ₹80,000 this year alone. It's the smartest thing I've added to my travel routine." },
+            { initials: "AK", name: "Ananya Krishnan", role: "Travel Blogger, Chennai", saved: "₹22,400", text: "Found a ₹22,400 drop in 4 hours — that's how fast rebuq caught a sudden drop in my Dubai booking. This should be mandatory for every traveler." },
+          ].map((t, i) => (
+            <div key={i} style={{ border: "1.5px solid #e2e8f0", borderRadius: 16, padding: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg, ${B}, #60a5fa)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>{t.initials}</div>
+                <div><div style={{ fontWeight: 600, fontSize: 14, color: NAVY }}>{t.name}</div><div style={{ fontSize: 12, color: "#64748b" }}>{t.role}</div></div>
               </div>
-            ))}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20, marginTop: 32 }}>
-            {TESTIMONIALS.map((t, i) => (
-              <div key={i} style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 24, boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg, ${B}, #60a5fa)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>{t.initials}</div>
-                  <div><div style={{ fontWeight: 600, fontSize: 14, color: NAVY }}>{t.name}</div><div style={{ fontSize: 12, color: "#64748b" }}>{t.role}</div></div>
-                </div>
-                <div className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 8 }}>{t.saved}</div>
-                <div style={{ fontSize: 13.5, color: "#64748b", lineHeight: 1.65 }}>&quot;{t.text}&quot;</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* QUOTE BANNER */}
-      <div style={{ background: NAVY, padding: isMobile ? "50px 20px" : "70px 40px", textAlign: "center" }}>
-        <div className="sora" style={{ fontSize: isMobile ? 22 : 38, fontWeight: 700, color: "#fff", maxWidth: 720, margin: "0 auto 20px", lineHeight: 1.25 }}>&quot;This should be mandatory for every Indian traveler who books hotels online.&quot;</div>
-        <div style={{ fontSize: 13, color: "#94a3b8", letterSpacing: "0.05em", textTransform: "uppercase" }}>— Ananya Krishnan · Travel Blogger, Chennai</div>
-      </div>
-
-      {/* FEATURES */}
-      <div id="why" style={{ padding: isMobile ? "60px 20px" : "80px 40px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 14, textAlign: "center" }}>Why rebuq</p>
-          <h2 className="sora" style={{ fontSize: isMobile ? 28 : 46, fontWeight: 800, color: NAVY, textAlign: "center", lineHeight: 1.15 }}>Built for travelers who hate leaving money on the table.</h2>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 20, marginTop: 48 }}>
-            <div style={{ borderRadius: 14, padding: 28, border: "1.5px solid #e2e8f0", background: "#f8fafc", gridColumn: isMobile ? "auto" : "1/-1", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 32, alignItems: "center" }}>
-              <div>
-                <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", padding: "3px 10px", borderRadius: 100, marginBottom: 12, background: "#e0edff", color: B }}>Continuous</span>
-                <h3 className="sora" style={{ fontSize: 18, fontWeight: 700, color: NAVY, marginBottom: 10 }}>AI that never sleeps</h3>
-                <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.65 }}>Our monitoring AI checks your hotel price every 6 hours — through the night, through weekends.</p>
-                <div className="sora" style={{ fontSize: 42, fontWeight: 800, color: B, marginTop: 16 }}>+4,200</div>
-                <div style={{ fontSize: 13, color: "#64748b" }}>Price drops found this month alone</div>
-              </div>
-              <div style={{ background: "#eff6ff", borderRadius: 12, padding: 28, textAlign: "center" }}>
-                <div className="sora" style={{ fontWeight: 700, fontSize: 22, color: B }}>24/7 Watching</div>
-                <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>Every 6 hours. Day &amp; night.</div>
-              </div>
+              <div className="sora" style={{ fontSize: 24, fontWeight: 800, color: NAVY, marginBottom: 8 }}>{t.saved}</div>
+              <div style={{ fontSize: 13.5, color: "#64748b", lineHeight: 1.65 }}>&quot;{t.text}&quot;</div>
             </div>
-            {[
-              { badge: "Instant", badgeBg: "#dcfce7", badgeColor: "#166634", title: "WhatsApp alerts", text: "The moment we find a drop, you get a WhatsApp message with a direct rebooking link — no app to install." },
-              { badge: "Full Coverage", badgeBg: "#fee2e2", badgeColor: "#991b1b", title: "All major OTAs", text: "MakeMyTrip, Booking.com, Agoda, Goibibo, Hotels.com — we watch them all so you don't have to." },
-              { badge: "Zero Risk", badgeBg: "#fef9c3", badgeColor: "#854d0e", title: "Zero-risk pricing", text: "Free to check. We take a small success fee only if we actually save you money." },
-              { badge: "Fast · 6hr avg", badgeBg: "#f3e8ff", badgeColor: "#7c3aed", title: "Catches drops fast", text: "Average time to find a significant price drop: under 6 hours." },
-            ].map((f, i) => (
-              <div key={i} style={{ borderRadius: 14, padding: 28, border: "1.5px solid #e2e8f0", background: "#f8fafc" }}>
-                <span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", padding: "3px 10px", borderRadius: 100, marginBottom: 12, background: f.badgeBg, color: f.badgeColor }}>{f.badge}</span>
-                <h3 className="sora" style={{ fontSize: 18, fontWeight: 700, color: NAVY, marginBottom: 10 }}>{f.title}</h3>
-                <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.65 }}>{f.text}</p>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
-      </div>
+      </section>
 
       {/* FAQ */}
-      <div style={{ background: "#f8fafc", padding: isMobile ? "60px 20px" : "80px 40px" }}>
+      <section style={{ background: "#f8fafc", padding: isMobile ? "48px 20px" : "64px 40px" }}>
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 14 }}>FAQ</p>
-          <h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY }}>Common questions</h2>
-          <div style={{ marginTop: 36 }}>
-            {FAQS.map((f, i) => (
-              <div key={i} style={{ background: "#fff", borderRadius: 12, marginBottom: 12, border: "1.5px solid #e2e8f0", overflow: "hidden" }}>
-                <button onClick={() => setOpenFaq(openFaq === i ? -1 : i)} style={{ width: "100%", padding: "20px 24px", fontWeight: 600, fontSize: 15, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", color: NAVY, background: "none", border: "none", fontFamily: "inherit", textAlign: "left" }}>
-                  {f.q}<span style={{ fontSize: 20, color: "#64748b", transform: openFaq === i ? "rotate(45deg)" : "none", transition: "transform 0.25s", flexShrink: 0 }}>+</span>
-                </button>
-                {openFaq === i && <div style={{ padding: "0 24px 20px", fontSize: 14.5, color: "#64748b", lineHeight: 1.7 }}>{f.a}</div>}
-              </div>
-            ))}
-          </div>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: B, textTransform: "uppercase" as const, marginBottom: 10 }}>FAQ</div>
+          <h2 className="sora" style={{ fontSize: isMobile ? 24 : 32, fontWeight: 800, color: NAVY, marginBottom: 32 }}>Common questions</h2>
+          {[
+            { q: "Is rebuq really free to check?", a: "Yes — uploading your booking and letting rebuq monitor it is completely free. We only charge a small success fee when we actually save you money. If the price doesn't drop, you pay nothing." },
+            { q: "Which OTAs and hotel chains do you support?", a: "We support MakeMyTrip, Booking.com, Agoda, Goibibo, Expedia, Hotels.com, and over 50 direct hotel websites. We're constantly adding new sources." },
+            { q: "How do I rebook once you find a drop?", a: "We send you a WhatsApp alert with a direct link to the lower-priced booking. Cancel your old booking (most are free to cancel), rebook at the new rate, and pocket the difference. The whole process usually takes under 10 minutes." },
+            { q: "What if I have a non-refundable booking?", a: "rebuq works best with refundable bookings. If your booking is non-refundable, we'll let you know when you upload — and suggest booking a flexible rate next time so you can benefit from price drops." },
+          ].map((f, i) => (
+            <div key={i} style={{ background: "#fff", borderRadius: 12, marginBottom: 12, border: "1.5px solid #e2e8f0", overflow: "hidden" }}>
+              <button onClick={() => setOpenFaq(openFaq === i ? -1 : i)} style={{ width: "100%", padding: "20px 24px", fontWeight: 600, fontSize: 15, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", color: NAVY, background: "none", border: "none", fontFamily: "inherit", textAlign: "left" as const }}>
+                {f.q}<span style={{ fontSize: 20, color: "#64748b", transform: openFaq === i ? "rotate(45deg)" : "none", transition: "transform 0.25s", flexShrink: 0 }}>+</span>
+              </button>
+              {openFaq === i && <div style={{ padding: "0 24px 20px", fontSize: 14.5, color: "#64748b", lineHeight: 1.7 }}>{f.a}</div>}
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* CTA BOTTOM */}
-      <div style={{ background: "linear-gradient(135deg, #1d4ed8 0%, #1447b8 100%)", padding: isMobile ? "60px 20px" : "80px 40px", textAlign: "center" }}>
-        <div style={{ display: "inline-block", background: "rgba(255,255,255,0.2)", color: "#fff", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", padding: "4px 14px", borderRadius: 100, marginBottom: 24 }}>Free to check</div>
-        <h2 className="sora" style={{ fontSize: isMobile ? 28 : 46, fontWeight: 800, color: "#fff", maxWidth: 600, margin: "0 auto 16px", lineHeight: 1.15 }}>Your next hotel booking could cost less. Let&apos;s find out.</h2>
-        <p style={{ fontSize: 16, color: "rgba(255,255,255,0.75)", maxWidth: 480, margin: "0 auto 36px" }}>Upload your booking confirmation in 30 seconds. We watch and alert you the moment it drops.</p>
-        <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-          <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "13px 26px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Upload my booking now ↗</button>
-          <button onClick={() => scrollTo("how")} style={{ background: "transparent", color: "#fff", border: "1.5px solid rgba(255,255,255,0.5)", borderRadius: 10, padding: "13px 26px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>▶ See how it works</button>
-        </div>
-      </div>
+      {/* BOTTOM CTA */}
+      <section style={{ background: NAVY, padding: isMobile ? "56px 20px" : "72px 40px", textAlign: "center" }}>
+        <h2 className="sora" style={{ fontSize: isMobile ? 28 : 38, fontWeight: 800, color: "#fff", marginBottom: 14, lineHeight: 1.2 }}>
+          Your next hotel booking could cost less.<br />Let&apos;s find out.
+        </h2>
+        <p style={{ fontSize: 16, color: "rgba(255,255,255,0.55)", marginBottom: 32, maxWidth: 480, marginLeft: "auto", marginRight: "auto" }}>
+          Upload your booking confirmation in 30 seconds. We watch and alert you the moment it drops.
+        </p>
+        <button onClick={openModal} style={{ background: "#FCD34D", color: NAVY, border: "none", borderRadius: 10, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          Upload my booking now →
+        </button>
+      </section>
 
       {/* FOOTER */}
-      <footer style={{ background: NAVY, padding: isMobile ? "40px 20px 24px" : "48px 40px 32px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
-            <div>
-              <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 10 }}>rebuq<span style={{ color: B }}>.</span></div>
-              <p style={{ fontSize: 13.5, color: "#94a3b8", maxWidth: 260, lineHeight: 1.6 }}>AI-powered hotel price monitoring for Indian travelers. Never overpay for a hotel again.</p>
-            </div>
-            <div style={{ display: "flex", gap: isMobile ? 28 : 48, flexDirection: isMobile ? "column" : "row" }}>
-              {[{ title: "Product", links: ["How it works", "Results", "Why rebuq", "Exclusive Member Deals"] }, { title: "Company", links: ["About", "Privacy", "Terms"] }].map(col => (
-                <div key={col.title}>
-                  <h4 style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b", marginBottom: 14 }}>{col.title}</h4>
-                  {col.links.map(l => <a key={l} href="#" style={{ display: "block", fontSize: 14, color: "#94a3b8", textDecoration: "none", marginBottom: 10 }}>{l}</a>)}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
-            <span style={{ fontSize: 13, color: "#475569" }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
-          </div>
+      <footer style={{ background: NAVY, borderTop: "1px solid #1e293b", padding: isMobile ? "32px 20px" : "36px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" as const, gap: 16 }}>
+        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 18, color: "#fff", textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" as const }}>
+          {["Privacy Policy", "Terms of Service", "Contact"].map(l => (
+            <a key={l} href="#" style={{ fontSize: 13, color: "#64748b", textDecoration: "none" }}>{l}</a>
+          ))}
         </div>
+        <span style={{ fontSize: 12, color: "#334155" }}>© 2026 rebuq. All rights reserved.</span>
       </footer>
+
     </div>
   );
 }
