@@ -332,10 +332,17 @@ export default function Home() {
             <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky' as const, top: 0, background: '#fff', zIndex: 10, borderRadius: isMobile ? '20px 20px 0 0' : '16px 16px 0 0' }}>
               <div>
                 <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 17, fontWeight: 700, color: NAVY }}>
-                  {uploadStep === 1 ? '📎 Upload your voucher' : uploadStep === 2 ? '✏️ Confirm booking details' : '🔒 Non-refundable booking'}
+                  {uploadStep === 1 ? '📎 Upload your voucher' : uploadStep === 2 ? '✏️ Confirm booking details' : 
+                    blockInfo?.reason === 'non_refundable' ? '🔒 Non-refundable booking' :
+                    blockInfo?.reason === 'not_hotel' ? '📄 Not a hotel booking' :
+                    blockInfo?.reason === 'poor_quality' || blockInfo?.reason === 'parse_error' ? '🔍 Could not read voucher' :
+                    blockInfo?.reason === 'checkin_passed' ? '📅 Check-in already passed' :
+                    blockInfo?.reason === 'duplicate' ? '✅ Already tracking' :
+                    blockInfo?.reason === 'network_error' ? '⚠️ Connection issue' :
+                    '⚠️ We need your attention'}
                 </div>
                 <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-                  {uploadStep === 1 ? 'Free price check — 30 seconds' : uploadStep === 2 ? 'Review and correct anything that looks wrong' : ''}
+                  {uploadStep === 1 ? 'Free price check — 30 seconds' : uploadStep === 2 ? 'Review and correct anything that looks wrong' : uploadStep === 'blocked' ? '' : ''}
                 </div>
               </div>
               <button onClick={closeModal} style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#64748b', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
@@ -407,7 +414,7 @@ export default function Home() {
                   <div>
                     <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 14, padding: 24, marginBottom: 20 }}>
                       <div style={{ fontSize: 28, marginBottom: 12 }}>🔒</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#dc2626', marginBottom: 8 }}>This booking is non-refundable.</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#dc2626', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>This booking is non-refundable.</div>
                       <p style={{ fontSize: 13, color: '#b91c1c', lineHeight: 1.7 }}>
                         Even if the price drops, you cannot cancel to rebook and save. rebuq works best with flexible rates.
                         Next time, book a cancellable rate — rebuq regularly finds drops of Rs.10,000–Rs.40,000.
@@ -424,7 +431,7 @@ export default function Home() {
                   <div>
                     <div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 14, padding: 24, marginBottom: 20 }}>
                       <div style={{ fontSize: 28, marginBottom: 12 }}>📄</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8 }}>This does not look like a hotel booking.</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>This does not look like a hotel booking.</div>
                       <p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>
                         Please upload a hotel booking confirmation — not a flight ticket, train ticket, restaurant receipt, or other document.
                       </p>
@@ -442,7 +449,7 @@ export default function Home() {
                   <div>
                     <div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 14, padding: 24, marginBottom: 20 }}>
                       <div style={{ fontSize: 28, marginBottom: 12 }}>🔍</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#0369a1', marginBottom: 8 }}>We could not read your voucher clearly.</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#0369a1', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>We could not read your voucher clearly.</div>
                       <p style={{ fontSize: 13, color: '#0c4a6e', lineHeight: 1.7 }}>This happens with blurry screenshots, dark mode images, or password-protected PDFs.</p>
                       <div style={{ marginTop: 12, fontSize: 13, color: '#0369a1' }}>
                         <strong>Try:</strong>
@@ -466,7 +473,7 @@ export default function Home() {
                   <div>
                     <div style={{ background: '#f1f5f9', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: 24, marginBottom: 20 }}>
                       <div style={{ fontSize: 28, marginBottom: 12 }}>📅</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>Check-in date has already passed.</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>Check-in date has already passed.</div>
                       <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7 }}>
                         Your stay has already started or ended. rebuq tracks prices before check-in.
                         For future bookings, upload right after you book!
@@ -483,7 +490,7 @@ export default function Home() {
                   <div>
                     <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 14, padding: 24, marginBottom: 20 }}>
                       <div style={{ fontSize: 28, marginBottom: 12 }}>✅</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#166534', marginBottom: 8 }}>Already tracking this booking!</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#166534', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>Already tracking this booking!</div>
                       <p style={{ fontSize: 13, color: '#15803d', lineHeight: 1.7 }}>
                         We are already watching this booking for price drops. You will get a WhatsApp alert the moment we find a lower price.
                       </p>
@@ -501,7 +508,7 @@ export default function Home() {
                   <div>
                     <div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 14, padding: 24, marginBottom: 20 }}>
                       <div style={{ fontSize: 28, marginBottom: 12 }}>⚠️</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8 }}>Connection issue</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>Connection issue</div>
                       <p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>{blockInfo.message || 'Could not reach the server. Please try again or enter details manually.'}</p>
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
