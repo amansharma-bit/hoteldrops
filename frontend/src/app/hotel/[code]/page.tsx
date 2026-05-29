@@ -283,8 +283,8 @@ function HotelDetailContent() {
       )}
 
       {/* SEARCH BAR */}
-      <div ref={refSearchBar} style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 32px", position: "sticky", top: offerId && saving ? 120 : 60, zIndex: 250 }}>
-        <div style={{ display: "flex", alignItems: "stretch", border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+      <div ref={refSearchBar} style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 32px", position: "sticky", top: offerId && saving ? 120 : 60, zIndex: 250, overflow: "visible" }}>
+        <div style={{ display: "flex", alignItems: "stretch", border: "1.5px solid #e2e8f0", borderRadius: 12, overflow: "visible", background: "#fff" }}>
           <div style={{ flex: 2.5, padding: "10px 16px", borderRight: "1px solid #e2e8f0", minWidth: 0 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or Hotel</div>
             <div style={{ ...inp }}>{hotel.name}</div>
