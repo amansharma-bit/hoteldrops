@@ -299,14 +299,14 @@ function HotelDetailContent() {
           <div style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer" }}
             onClick={() => { setCalMode("checkin"); setCalOpen(true); }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
-            <div style={{ fontSize: editCheckIn ? 15 : 14, fontWeight: editCheckIn ? 700 : 400, color: editCheckIn ? NAVY : "#94a3b8" }}>{editCheckIn ? formatDate(editCheckIn) : "Add date"}</div>
+            <div style={{ fontSize: editCheckIn ? 15 : 14, fontWeight: editCheckIn ? 700 : 400, color: editCheckIn ? NAVY : "#94a3b8" }}>{editCheckIn ? new Date(editCheckIn + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }) : "Add date"}</div>
           </div>
 
           {/* Check-out */}
           <div style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer" }}
             onClick={() => { setCalMode("checkout"); setCalOpen(true); }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-out</div>
-            <div style={{ fontSize: editCheckOut ? 15 : 14, fontWeight: editCheckOut ? 700 : 400, color: editCheckOut ? NAVY : "#94a3b8" }}>{editCheckOut ? formatDate(editCheckOut) : "Add date"}</div>
+            <div style={{ fontSize: editCheckOut ? 15 : 14, fontWeight: editCheckOut ? 700 : 400, color: editCheckOut ? NAVY : "#94a3b8" }}>{editCheckOut ? new Date(editCheckOut + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }) : "Add date"}</div>
           </div>
 
           {/* Rooms & Guests */}
