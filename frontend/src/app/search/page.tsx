@@ -277,6 +277,7 @@ function SearchResults() {
   const [page, setPage] = useState(1);
   const [hotelSearch, setHotelSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string } | null>(null);
 
   // Mobile overlay states
   const [showCal, setShowCal] = useState(false);
@@ -305,6 +306,15 @@ function SearchResults() {
   }, []);
 
   // Close desktop popups on outside click
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        const meta = data.user.user_metadata;
+        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member" });
+      }
+    });
+  }, []);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (desktopCalRef.current && !desktopCalRef.current.contains(e.target as Node)) setDesktopCalOpen(false);
@@ -536,7 +546,14 @@ function SearchResults() {
         {!isMobile && (
           <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
             <a href="/search-hotels" style={{ fontSize: 14, color: B, textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a>
-            <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Log in / Sign up</button>
+            {user ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: B, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
+                <span style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{user.name.split(" ")[0]}</span>
+              </div>
+            ) : (
+              <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Log in / Sign up</button>
+            )}
           </div>
         )}
         {isMobile && (
