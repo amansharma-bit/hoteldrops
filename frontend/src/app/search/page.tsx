@@ -531,25 +531,28 @@ function SearchResults() {
       )}
 
       {/* ── NAV ── */}
-      <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: isMobile ? "0 20px" : "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 300 }}>
-        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
+      <nav style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)", padding: isMobile ? "0 20px" : "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 300 }}>
+        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none", flexShrink: 0 }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
         {!isMobile && (
-          <ul style={{ display: "flex", gap: 32, listStyle: "none" }}>
-            <li><a href="/#how" style={{ fontSize: 14, color: "#64748b", textDecoration: "none", fontWeight: 500 }}>How it works</a></li>
-            <li><a href="/search-hotels" style={{ fontSize: 14, color: B, textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a></li>
-          </ul>
+          <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+            <a href="/search-hotels" style={{ fontSize: 14, color: "#FCD34D", textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a>
+            {user ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user.name.split(" ")[0]}</span>
+              </div>
+            ) : (
+              <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Log in / Sign up</button>
+            )}
+          </div>
         )}
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {!isMobile && <button style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit" }}>Sign in</button>}
-          {!isMobile && <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Check my booking</button>}
-          {isMobile && (
-            <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
-              <span style={{ display: "block", width: 22, height: 2, background: NAVY, transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px,5px)" : "none" }} />
-              <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : NAVY, transition: "all 0.2s" }} />
-              <span style={{ display: "block", width: 22, height: 2, background: NAVY, transition: "all 0.2s", transform: menuOpen ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
-            </button>
-          )}
-        </div>
+        {isMobile && (
+          <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+            <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px,5px)" : "none" }} />
+            <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : "rgba(255,255,255,0.8)", transition: "all 0.2s" }} />
+            <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: menuOpen ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
+          </button>
+        )}
       </nav>
 
       {isMobile && menuOpen && (
@@ -580,7 +583,7 @@ function SearchResults() {
 
       {/* ── DESKTOP SEARCH BAR ── */}
       {!isMobile && (
-        <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)", borderBottom: "none", padding: "10px 32px", position: "sticky", top: 60, zIndex: 200 }}>
+        <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "10px 32px", position: "sticky", top: 60, zIndex: 200 }}>
           <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.3fr auto", alignItems: "stretch", height: 64, overflow: "visible", position: "relative", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
 
             {/* Destination */}
@@ -634,7 +637,7 @@ function SearchResults() {
             </div>
 
             {/* Search button */}
-            <button onClick={handleNewSearch} style={{ background: B, color: "#fff", border: "none", padding: "0 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", borderRadius: "0 12px 12px 0", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" as const }}>
+            <button onClick={handleNewSearch} style={{ background: "#fff", color: "#FCD34D", border: "none", padding: "0 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", borderRadius: "0 12px 12px 0", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" as const }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               Search
             </button>
