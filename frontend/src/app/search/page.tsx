@@ -580,7 +580,7 @@ function SearchResults() {
 
       {/* ── DESKTOP SEARCH BAR ── */}
       {!isMobile && (
-        <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "10px 32px", position: "sticky", top: 60, zIndex: 200 }}>
+        <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)", borderBottom: "none", padding: "10px 32px", position: "sticky", top: 60, zIndex: 200 }}>
           <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.3fr auto", alignItems: "stretch", height: 64, overflow: "visible", position: "relative", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
 
             {/* Destination */}
