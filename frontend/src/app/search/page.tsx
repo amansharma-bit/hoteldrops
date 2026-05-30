@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
 
 const API = "https://hoteldrops-production.up.railway.app/api/hotels";
 const supabase = createClient(
@@ -186,6 +185,31 @@ function CalendarScreen({
           <button onClick={() => { if (ci && co) { onSelect(ci, co); onClose(); } }} style={{ background: ci && co ? YELLOW : "#e2e8f0", color: ci && co ? "#1a1a1a" : "#94a3b8", border: "none", borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 700, cursor: ci && co ? "pointer" : "default" }}>Select</button>
         </div>
       </div>
+
+      {/* FOOTER */}
+      {!isMobile && (
+        <footer style={{ background: NAVY, padding: "48px 40px 32px" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap" as const }}>
+              <div>
+                <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 10 }}>rebuq<span style={{ color: B }}>.</span></div>
+                <p style={{ fontSize: 13.5, color: "#94a3b8", maxWidth: 260, lineHeight: 1.6 }}>AI-powered hotel price monitoring for Indian travelers. Never overpay for a hotel again.</p>
+              </div>
+              <div style={{ display: "flex", gap: 48 }}>
+                {[{ title: "Product", links: ["How it works", "Results", "Why rebuq", "Exclusive Member Deals"] }, { title: "Company", links: ["About", "Privacy", "Terms"] }].map(col => (
+                  <div key={col.title}>
+                    <h4 style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "#64748b", marginBottom: 14 }}>{col.title}</h4>
+                    {col.links.map(l => <a key={l} href="#" style={{ display: "block", fontSize: 14, color: "#94a3b8", textDecoration: "none", marginBottom: 10 }}>{l}</a>)}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24 }}>
+              <span style={{ fontSize: 13, color: "#475569" }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
+            </div>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }
@@ -284,15 +308,6 @@ function SearchResults() {
   const [hotelSearch, setHotelSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        const meta = data.user.user_metadata;
-        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member" });
-      }
-    });
-  }, []);
 
   // Mobile overlay states
   const [showCal, setShowCal] = useState(false);
@@ -662,7 +677,8 @@ function SearchResults() {
             </div>
 
             {/* Search button */}
-            <button onClick={handleNewSearch} style={{ background: "#FCD34D", color: "#1a1a1a", border: "none", padding: "0 28px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "'Sora',sans-serif", borderRadius: "0 12px 12px 0", whiteSpace: "nowrap" as const }}>
+            <button onClick={handleNewSearch} style={{ background: "#FCD34D", color: "#1a1a1a", border: "none", padding: "0 28px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", borderRadius: "0 12px 12px 0", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" as const }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               Search
             </button>
 
