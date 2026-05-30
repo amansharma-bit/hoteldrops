@@ -303,9 +303,7 @@ function CheckoutContent() {
           </div>
         </div>
       </div>
-    </div>
-
-      {/* FOOTER */}
+    {/* FOOTER */}
       <footer style={{ background: NAVY, padding: "48px 40px 32px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap" as const }}>
@@ -327,6 +325,7 @@ function CheckoutContent() {
           </div>
         </div>
       </footer>
+    </div>
   );
 }
 
