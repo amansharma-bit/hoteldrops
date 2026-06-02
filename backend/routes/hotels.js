@@ -2,37 +2,6 @@ const express = require('express')
 const router  = express.Router()
 const { searchHotels, getDestinationCode, getHotelContent, getHotelRooms } = require('../utils/hotelbeds')
 
-const PHOTO_BASE = 'https://photos.hotelbeds.com/giata/xl'
-
-const HOTEL_CACHE = {
-  "372446": {
-    code: 372446,
-    name: { content: "Damac Maison Dubai Mall Street" },
-    description: { content: "Set in the heart of the bustling Burj Area of Dubai, this exclusive private luxury aparthotel offers sumptuous city living with upmarket service and privacy." },
-    country: { code: "AE", description: { content: "United Arab Emirates" } },
-    destination: { code: "DXB", name: { content: "Dubai" } },
-    coordinates: { longitude: 55.283775, latitude: 25.195252 },
-    category: { description: { content: "5 STARS" } },
-    chain: { description: { content: "Damac Hotels & Resorts Management LLC" } },
-    address: { content: "Mohammed Bin Rashid Boulevard, Downtown" },
-    city: { content: "DUBAI" },
-    boards: [
-      { code: "BB", description: { content: "BED AND BREAKFAST" } },
-      { code: "SC", description: { content: "SELF CATERING" } },
-      { code: "HB", description: { content: "HALF BOARD" } },
-      { code: "RO", description: { content: "ROOM ONLY" } }
-    ],
-    rooms: [
-      { roomCode: "SUI.B2", description: "SUITE TWO BEDROOMS", type: { description: { content: "SUITE" } }, characteristic: { description: { content: "TWO BEDROOMS" } }, maxAdults: 8, maxPax: 8, roomFacilities: [], roomStays: [] },
-      { roomCode: "DBL.DX", description: "DOUBLE DELUXE", type: { description: { content: "DOUBLE" } }, characteristic: { description: { content: "DELUXE" } }, maxAdults: 2, maxPax: 2, roomFacilities: [], roomStays: [] },
-    ],
-    facilities: [],
-    images: [
-      { type: { code: "GEN" }, path: "37/372446/372446a_hb_a_001.jpg", visualOrder: 1 },
-    ]
-  }
-}
-
 // GET /api/hotels/search
 router.get('/search', async (req, res) => {
   try {
@@ -52,28 +21,10 @@ router.get('/search', async (req, res) => {
       rooms: parseInt(rooms), maxHotels: 40,
     })
 
-    const hotelsWithImages = await Promise.all(
-      hotels.map(async (hotel) => {
-        try {
-          const content = await getHotelContent(hotel.code)
-          const images = (content?.images || [])
-            .filter(img => img.type?.code === 'GEN')
-            .sort((a, b) => a.visualOrder - b.visualOrder)
-          const firstImage = images[0]
-          return {
-            ...hotel,
-            imageUrl: firstImage ? `${PHOTO_BASE}/${firstImage.path}` : null,
-            address: content?.address?.content || null,
-            chain: content?.chain?.description?.content || null,
-          }
-        } catch {
-          return hotel
-        }
-      })
-    )
-
+    // LiteAPI already returns name, imageUrl, address, chain in searchHotels()
+    // No need to call getHotelContent() again — that was a Hotelbeds-era pattern
     console.log(`✅ Found ${hotels.length} hotels`)
-    res.json({ hotels: { hotels: hotelsWithImages, total: hotels.length, checkIn, checkOut } })
+    res.json({ hotels: { hotels, total: hotels.length, checkIn, checkOut } })
   } catch (err) {
     console.error('❌ Search error:', err.message)
     res.status(500).json({ error: err.message })
@@ -92,34 +43,21 @@ router.get('/:code', async (req, res) => {
 
     console.log(`🏨 Hotel detail: ${code} | ${checkIn} → ${checkOut}`)
 
-    let content
-    try {
-      content = await getHotelContent(code)
-    } catch (e) {
-      console.error('Content fetch error:', e.message)
-      if (HOTEL_CACHE[code]) {
-        console.log('Using cached data for hotel', code)
-        content = HOTEL_CACHE[code]
-      } else {
-        return res.status(503).json({ error: 'Hotel data temporarily unavailable. Please try again in a few minutes.' })
-      }
-    }
+    const content = await getHotelContent(code)
 
     if (!content) {
       return res.status(404).json({ error: 'Hotel not found' })
     }
 
-    const allImages = (content.images || []).sort((a, b) => a.visualOrder - b.visualOrder)
-    const generalImages = allImages
-      .filter(img => ['GEN', 'COM', 'PIS', 'TER', 'BAR', 'RES'].includes(img.type?.code))
-      .map(img => ({ url: `${PHOTO_BASE}/${img.path}`, type: img.type?.description?.content || 'General' }))
+    // Images — LiteAPI returns full URLs directly (isFullUrl: true)
+    const generalImages = (content.images || [])
+      .sort((a, b) => a.visualOrder - b.visualOrder)
+      .map(img => ({
+        url: img.path,   // already a full URL from LiteAPI
+        type: img.type?.description?.content || 'General'
+      }))
 
-    const roomImages = {}
-    allImages.filter(img => img.type?.code === 'HAB' && img.roomCode).forEach(img => {
-      if (!roomImages[img.roomCode]) roomImages[img.roomCode] = []
-      roomImages[img.roomCode].push(`${PHOTO_BASE}/${img.path}`)
-    })
-
+    // Facilities
     const facilityGroups = { general: [], sports: [], wellness: [], dining: [], connectivity: [] }
     const groupMap = { 70: 'general', 73: 'sports', 74: 'wellness', 71: 'dining', 80: 'dining' }
     ;(content.facilities || []).forEach(f => {
@@ -130,14 +68,13 @@ router.get('/:code', async (req, res) => {
       }
     })
 
-    const EUR_TO_INR = 112
+    const USD_TO_INR = 84
     const nights = Math.max(1, Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000))
 
+    // Get room prices
     const roomPrices = {}
     let lowestPrice = null
     let lowestTotal = null
-
-    await new Promise(r => setTimeout(r, 500))
 
     try {
       const hotelRooms = await getHotelRooms({
@@ -169,8 +106,8 @@ router.get('/:code', async (req, res) => {
           }
           if (bestPrice < minPrice) {
             minPrice = bestPrice
-            lowestPrice = Math.round(bestPrice * EUR_TO_INR / nights)
-            lowestTotal = Math.round(bestPrice * EUR_TO_INR)
+            lowestPrice = Math.round(bestPrice * USD_TO_INR / nights)
+            lowestTotal = Math.round(bestPrice * USD_TO_INR)
           }
         }
       }
@@ -180,26 +117,16 @@ router.get('/:code', async (req, res) => {
 
     const roomList = (content.rooms || []).slice(0, 15).map(room => {
       const priceInfo = roomPrices[room.roomCode]
-      const sizeFacility = (room.roomFacilities || []).find(f => f.facilityCode === 295)
-      const bedroomsFacility = (room.roomFacilities || []).find(f => f.facilityCode === 298)
-      const balconyFacility = (room.roomFacilities || []).find(f => f.facilityCode === 230)
-      const bedStay = (room.roomStays || []).find(s => s.stayType === 'BED')
-      const bedType = bedStay?.roomStayFacilities?.[0]?.description?.content || null
-      const amenities = (room.roomFacilities || [])
-        .filter(f => f.indLogic === true && f.description?.content)
-        .map(f => f.description.content.trim())
-        .slice(0, 8)
-
-      const pricePerNight = priceInfo ? Math.round(priceInfo.price * EUR_TO_INR / nights) : null
-      const totalPrice = priceInfo ? Math.round(priceInfo.price * EUR_TO_INR) : null
+      const pricePerNight = priceInfo ? Math.round(priceInfo.price * USD_TO_INR / nights) : null
+      const totalPrice = priceInfo ? Math.round(priceInfo.price * USD_TO_INR) : null
 
       let cancellation = null
       if (priceInfo?.cancellationPolicies?.length) {
         const policy = priceInfo.cancellationPolicies[0]
         cancellation = {
           type: priceInfo.rateType === 'RECHECK' ? 'free' : 'non-refundable',
-          from: policy.dateFrom || null,
-          penalty: policy.amount ? Math.round(policy.amount * EUR_TO_INR) : null,
+          from: policy.dateFrom || policy.cancelTime || null,
+          penalty: policy.amount ? Math.round(policy.amount * USD_TO_INR) : null,
         }
       }
 
@@ -210,12 +137,12 @@ router.get('/:code', async (req, res) => {
         characteristic: room.characteristic?.description?.content,
         maxAdults: room.maxAdults,
         maxPax: room.maxPax,
-        size: sizeFacility?.number || null,
-        bedrooms: bedroomsFacility?.number || null,
-        hasBalcony: balconyFacility?.indLogic === true,
-        bedType,
-        amenities,
-        images: roomImages[room.roomCode] || Object.values(roomImages)[0] || [],
+        size: null,
+        bedrooms: null,
+        hasBalcony: false,
+        bedType: null,
+        amenities: [],
+        images: generalImages.slice(0, 3).map(i => i.url),
         pricePerNight,
         totalPrice,
         boardCode: priceInfo?.boardCode || null,
@@ -226,12 +153,6 @@ router.get('/:code', async (req, res) => {
       }
     })
 
-    const checkInFacility = (content.facilities || []).find(f => f.facilityCode === 260 && f.facilityGroupCode === 70)
-    const checkOutFacility = (content.facilities || []).find(f => f.facilityCode === 390 && f.facilityGroupCode === 70)
-    const distances = (content.facilities || [])
-      .filter(f => f.facilityGroupCode === 40 && f.distance)
-      .map(f => ({ label: f.description?.content, distance: f.distance }))
-    const interestPoints = (content.interestPoints || []).map(p => ({ name: p.poiName, distance: parseInt(p.distance) }))
     const boards = (content.boards || []).map(b => ({ code: b.code, name: b.description?.content }))
 
     res.json({
@@ -246,16 +167,16 @@ router.get('/:code', async (req, res) => {
         city: content.city?.content,
         country: content.country?.description?.content,
         coordinates: content.coordinates,
-        checkInTime: checkInFacility?.timeFrom?.slice(0,5) || '15:00',
-        checkOutTime: checkOutFacility?.timeFrom?.slice(0,5) || '12:00',
-        totalRooms: (content.facilities || []).find(f => f.facilityCode === 70 && f.facilityGroupCode === 10)?.number,
-        floors: (content.facilities || []).find(f => f.facilityCode === 50 && f.facilityGroupCode === 10)?.number,
+        checkInTime: '15:00',
+        checkOutTime: '12:00',
+        totalRooms: null,
+        floors: null,
         images: generalImages,
         rooms: roomList,
         facilityGroups,
         boards,
-        distances,
-        interestPoints,
+        distances: [],
+        interestPoints: [],
         lowestPriceINR: lowestPrice,
         lowestTotalINR: lowestTotal,
         nights,
