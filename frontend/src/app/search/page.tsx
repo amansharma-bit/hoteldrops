@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 
 const API = "https://hoteldrops-production.up.railway.app/api/hotels";
 const supabase = createClient(
