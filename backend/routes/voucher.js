@@ -450,9 +450,8 @@ function getTwilioClient() {
 async function sendWhatsApp(to, body) {
   const client    = getTwilioClient()
   const formatted = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:+91${to}`
-  const from = process.env.TWILIO_WHATSAPP_FROM
-    ? `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`
-    : 'whatsapp:+14155238886'
+  const rawFrom = process.env.TWILIO_WHATSAPP_FROM || '+14155238886'
+  const from = rawFrom.startsWith('whatsapp:') ? rawFrom : `whatsapp:${rawFrom}`
   const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Twilio timeout')), 10000))
   await Promise.race([
     client.messages.create({ from, to: formatted, body }),
