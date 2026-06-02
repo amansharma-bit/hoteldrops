@@ -200,31 +200,34 @@ const emailTemplates = {
   },
 
   bookingReceived({ name, booking }) {
+    const fmt = (d) => { try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) } catch(e) { return d } }
+    const children = booking.children?.length ? booking.children.map(a=>`${a} yrs`).join(', ') : 'None'
+    const cancelLine = booking.cancellationDeadline
+      ? `Free cancel until ${fmt(booking.cancellationDeadline)}`
+      : 'Refundable'
     return {
-      subject: `Booking received — we're watching your ${booking.hotelName} stay`,
+      subject: `Your ${booking.hotelName} booking is being tracked — rebuq`,
       html: base(`
-        ${hero("Booking received. We're watching.", "We'll alert you the moment the price drops.")}
+        ${hero("We're watching your booking.", "You'll hear from us the moment the price drops.")}
         ${body(`
           ${para(`Hi ${name},`)}
-          ${para("We've successfully received your hotel booking and our system is now monitoring the rate every 6 hours. If the price drops, we'll send you a WhatsApp with everything you need to secure the lower rate.")}
+          ${para("Your booking has been added to rebuq. We're monitoring the rate and will alert you instantly if the price drops for the same room and meal plan.")}
           ${infoTable([
             ["Hotel",             booking.hotelName],
             ["Location",          booking.city],
-            ["Check-in",          booking.checkinDate],
-            ["Check-out",         booking.checkoutDate],
-            ["Nights",            `${booking.nights} nights`],
-            ["Room type",         booking.roomType],
+            ["Check-in",          fmt(booking.checkinDate)],
+            ["Check-out",         fmt(booking.checkoutDate)],
+            ["Room",              booking.roomType || '—'],
             ["Adults",            booking.adults],
-            ["Children",          booking.children?.length ? booking.children.map(a=>`${a}yrs`).join(', ') : 'None'],
-            ["Amount paid",       `${booking.currency} ${booking.amountPaid.toLocaleString()}`],
+            ["Children",          children],
+            ["Total paid",        `₹${Number(booking.amountPaid).toLocaleString('en-IN')}`],
             ["Booked on",         booking.otaName || '—'],
             ["Booking reference", booking.bookingRef || '—'],
-            ["Rate type",         "Refundable ✓"],
-            ["Monitoring",        "Active — checking every 6 hours"],
+            ["Cancellation",      cancelLine],
           ])}
           ${para("What happens next?", { bold: true, color: NAVY })}
-          ${para("The moment we find a lower rate for the same hotel, same room, same dates — we'll send you a WhatsApp with the hotel page link. You choose your room and board preference, cancel your existing booking, and rebook at the lower price.")}
-          ${para("The saving is yours. We just find it.", { color: G600 })}
+          ${para("The moment we find a lower rate for the same hotel, room, and dates — we'll send you a WhatsApp with a direct link to rebook. Cancel your existing booking, rebook at the lower rate, and keep the difference.")}
+          ${para("The saving is yours to keep. We just find it.", { color: G600 })}
         `)}
       `)
     }
