@@ -225,7 +225,7 @@ export default function Home() {
     try {
       const formData = new FormData();
       formData.append('voucher', file);
-      const res = await fetch('https://hoteldrops-production-9107.up.railway.app/api/voucher/extract', {
+      const res = await fetch('https://hoteldrops-production-7e5a.up.railway.app/api/voucher/extract', {
         method: 'POST',
         body: formData,
       });
@@ -271,7 +271,7 @@ export default function Home() {
     }
     setLoading(true);
     try {
-      const res = await fetch('https://hoteldrops-production-9107.up.railway.app/api/voucher/submit', {
+      const res = await fetch('https://hoteldrops-production-7e5a.up.railway.app/api/voucher/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...extracted, phone: phone.startsWith('+') ? phone : `+91${phone}`, email: emailVal }),
