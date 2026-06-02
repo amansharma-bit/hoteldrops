@@ -9,7 +9,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const API = "https://hoteldrops-production-9107.up.railway.app/api/hotels";
+const API = "https://hoteldrops-production-7e5a.up.railway.app/api/hotels";
 const B = "#1447b8";
 const NAVY = "#0f172a";
 
