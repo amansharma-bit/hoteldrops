@@ -97,6 +97,18 @@ function getDestinationCode(cityName) {
   return DESTINATION_MAP[key] ? key : null
 }
 
+// Extract best image URL from a hotel object (handles multiple possible field names)
+function extractImageUrl(hotelObj) {
+  if (!hotelObj) return null
+  // main_photo is returned in the hotels[] array of rates response
+  if (hotelObj.main_photo) return hotelObj.main_photo
+  // hotelImages is returned in /data/hotel endpoint
+  if (hotelObj.hotelImages && hotelObj.hotelImages.length > 0) return hotelObj.hotelImages[0].url
+  // images array fallback
+  if (hotelObj.images && hotelObj.images.length > 0) return hotelObj.images[0].url || hotelObj.images[0]
+  return null
+}
+
 async function searchHotels({ destination, checkIn, checkOut, adults = 2, children = 0, rooms = 1, maxHotels = 40 }) {
   const cacheKey = `search:${destination}:${checkIn}:${checkOut}:${adults}:${children}:${rooms}`
   const cached = cacheGet(cacheKey)
@@ -129,12 +141,24 @@ async function searchHotels({ destination, checkIn, checkOut, adults = 2, childr
       throw new Error(`LiteAPI ${res.status}: ${JSON.stringify(res.data).slice(0, 200)}`)
     }
 
-    const ratesList = res.data.data || []      // array of { hotelId, roomTypes }
-    const hotelsList = res.data.hotels || []   // array of { id, name, main_photo, address, rating }
+    // Log full structure of first item to understand response shape
+    const rawData = res.data
+    console.log('🔍 Response keys:', Object.keys(rawData))
+    if (rawData.hotels && rawData.hotels[0]) {
+      console.log('🔍 hotels[0] keys:', Object.keys(rawData.hotels[0]))
+      console.log('🔍 hotels[0] sample:', JSON.stringify(rawData.hotels[0]).slice(0, 400))
+    }
+    if (rawData.data && rawData.data[0]) {
+      console.log('🔍 data[0] keys:', Object.keys(rawData.data[0]))
+    }
 
-    // Build a lookup map from hotelId → hotel info
+    const ratesList = rawData.data || []
+    const hotelsList = rawData.hotels || []
+
+    // Build lookup map hotelId → hotel info
     const hotelInfoMap = {}
     for (const h of hotelsList) {
+      // LiteAPI uses 'id' in hotels array
       hotelInfoMap[h.id] = h
     }
 
@@ -147,14 +171,14 @@ async function searchHotels({ destination, checkIn, checkOut, adults = 2, childr
 
       return {
         code: h.hotelId,
-        name: info.name || h.hotelId,               // real hotel name from hotels array
+        name: info.name || h.name || 'Hotel',
         city: dest.city,
         stars: info.starRating ? Math.round(parseFloat(info.starRating)) : 5,
         minRate: minRateUSD ? Math.round(minRateUSD * USD_TO_INR) : 0,
         maxRate: null,
         currency: 'INR',
         address: info.address || null,
-        imageUrl: info.main_photo || null,           // real photo URL
+        imageUrl: extractImageUrl(info),   // extracts from main_photo, hotelImages, or images
         chain: info.chainName || null,
         rating: info.rating || null,
         rooms: h.roomTypes || [],
@@ -163,7 +187,9 @@ async function searchHotels({ destination, checkIn, checkOut, adults = 2, childr
     })
 
     cacheSet(cacheKey, hotels, TTL_SEARCH)
-    console.log(`✅ Found ${hotels.length} hotels, ${hotelsList.length} with hotel info`)
+    console.log(`✅ Found ${hotels.length} hotels`)
+    console.log(`🖼️ Hotels with images: ${hotels.filter(h => h.imageUrl).length}`)
+    console.log(`📛 Hotels with names: ${hotels.filter(h => h.name && h.name !== 'Hotel').length}`)
     return hotels
   } catch (err) {
     console.error('❌ LiteAPI search error:', err.message)
@@ -185,29 +211,32 @@ async function getHotelContent(hotelCode) {
     const hotel = res.data.data || null
     if (!hotel) return null
 
+    // hotelImages is the correct field per docs: [{ url, caption, order }]
+    const images = (hotel.hotelImages || hotel.images || []).map((img, i) => ({
+      type: { code: 'GEN', description: { content: img.caption || 'General' } },
+      path: img.url || img,
+      visualOrder: img.order || i + 1,
+      isFullUrl: true,
+    }))
+
     const content = {
       code: hotel.id || hotelCode,
       name: { content: hotel.name },
       description: { content: hotel.hotelDescription || '' },
       category: { description: { content: hotel.starRating ? `${hotel.starRating} STARS` : '' } },
       chain: { description: { content: hotel.chainName || '' } },
-      address: { content: hotel.address?.streetAddress || hotel.address || '' },
-      city: { content: hotel.address?.city || '' },
-      country: { description: { content: hotel.address?.countryName || '' } },
+      address: { content: hotel.address || '' },
+      city: { content: hotel.city || '' },
+      country: { description: { content: hotel.country || '' } },
       coordinates: { latitude: hotel.location?.latitude, longitude: hotel.location?.longitude },
-      images: (hotel.hotelImages || hotel.images || []).map((img, i) => ({
-        type: { code: 'GEN', description: { content: 'General' } },
-        path: img.url || img,
-        visualOrder: i + 1,
-        isFullUrl: true,
-      })),
-      facilities: (hotel.facilities || []).map(f => ({
+      images,
+      facilities: (hotel.hotelFacilities || []).map(f => ({
         facilityGroupCode: 70,
-        description: { content: f.name || f },
+        description: { content: typeof f === 'string' ? f : f.name },
         indLogic: true,
       })),
-      rooms: (hotel.roomTypes || []).map(r => ({
-        roomCode: r.roomTypeId || r.id || r.code,
+      rooms: (hotel.rooms || []).map(r => ({
+        roomCode: r.id || r.roomTypeId,
         description: r.name,
         type: { description: { content: r.type || 'Room' } },
         characteristic: { description: { content: r.name || '' } },
@@ -255,7 +284,7 @@ async function getHotelRooms({ hotelCode, checkIn, checkOut, adults = 2, childre
 
     const roomList = (hotelData.roomTypes || []).map(rt => ({
       code: rt.roomTypeId || rt.offerId || rt.code,
-      name: rt.name || rt.rates?.[0]?.name || 'Room',
+      name: rt.rates?.[0]?.name || rt.name || 'Room',
       rates: (rt.rates || []).map(rate => ({
         rateKey: rate.offerId || rt.offerId,
         net: parseFloat(rate.retailRate?.total?.[0]?.amount || 0),
