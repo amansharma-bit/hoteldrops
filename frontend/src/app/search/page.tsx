@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
-const API = "https://hoteldrops-production-9107.up.railway.app/api/hotels";
+const API = "https://hoteldrops-production-7e5a.up.railway.app/api/hotels";
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
