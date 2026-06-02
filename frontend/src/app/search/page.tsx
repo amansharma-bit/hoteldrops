@@ -459,8 +459,10 @@ function SearchResults() {
         @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
         @keyframes slideInRight { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
         .hotel-card-mobile { background: #fff; border-radius: 16px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); cursor: pointer; }
-        .hotel-card-desktop { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; margin-bottom: 16px; display: grid; grid-template-columns: 260px 1fr; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.07); transition: box-shadow .2s, transform .2s; cursor: pointer; }
+        .hotel-card-desktop { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; margin-bottom: 16px; display: grid; grid-template-columns: 280px 1fr; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.07); transition: box-shadow .2s, transform .2s; cursor: pointer; min-height: 220px; }
         .hotel-card-desktop:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.12); transform: translateY(-2px); }
+        .hotel-card-desktop .card-img-wrap { position: relative; width: 280px; min-height: 220px; overflow: hidden; flex-shrink: 0; }
+        .hotel-card-desktop .card-img-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
         .sfield-d { cursor: pointer; transition: background 0.15s; }
         .sfield-d:hover { background: rgba(0,0,0,0.02); }
         .fav-btn { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; background: rgba(255,255,255,0.95); border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); transition: transform 0.15s; }
@@ -794,7 +796,8 @@ function SearchResults() {
               <div key={String(hotel.code)} className="hotel-card-mobile"
                 onClick={() => router.push(`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}`)}>
                 <div style={{ position: "relative", height: 200 }}>
-                  <img src={getImg(hotel, globalIdx)} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <img src={getImg(hotel, globalIdx)} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMGS[globalIdx % FALLBACK_IMGS.length]; }} />
                   <button className="fav-btn" onClick={e => { e.stopPropagation(); setFavorites(prev => { const n = new Set(prev); n.has(hotel.code) ? n.delete(hotel.code) : n.add(hotel.code); return n; }); }}
                     style={{ color: isFav ? "#ef4444" : "#94a3b8" }}>{isFav ? "♥" : "♡"}</button>
                   {price > 0 && <div style={{ position: "absolute", top: 12, left: 12, background: "#dcfce7", color: "#16a34a", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 6 }}>{discount}% off</div>}
@@ -837,8 +840,9 @@ function SearchResults() {
             ) : (
               <div key={String(hotel.code)} className="hotel-card-desktop"
                 onClick={() => router.push(`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}`)}>
-                <div style={{ position: "relative", minHeight: 200 }}>
-                  <img src={getImg(hotel, globalIdx)} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", minHeight: 200 }} />
+                <div className="card-img-wrap">
+                  <img src={getImg(hotel, globalIdx)} alt={hotel.name}
+                    onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMGS[globalIdx % FALLBACK_IMGS.length]; }} />
                   <div style={{ position: "absolute", top: 10, left: 10, background: "rgba(255,255,255,0.95)", color: NAVY, fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 6 }}>↗ Trending</div>
                   <button className="fav-btn" onClick={e => { e.stopPropagation(); setFavorites(prev => { const n = new Set(prev); n.has(hotel.code) ? n.delete(hotel.code) : n.add(hotel.code); return n; }); }}
                     style={{ color: isFav ? "#ef4444" : "#94a3b8" }}>{isFav ? "♥" : "♡"}</button>
