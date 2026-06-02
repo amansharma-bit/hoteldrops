@@ -114,6 +114,7 @@ async function searchHotels({ destination, checkIn, checkOut, adults = 2, childr
     countryCode: dest.country,
     cityName: dest.city,
     limit: parseInt(maxHotels),
+    includeHotelData: true,
     occupancies: [{ rooms: parseInt(rooms), adults: parseInt(adults), children: children > 0 ? Array(parseInt(children)).fill(5) : [] }],
   }
 
