@@ -158,11 +158,12 @@ async function getHotelRooms({ hotelCode, checkIn, checkOut, adults = 2, childre
     const res = await apiPost(`${BASE_URL}/hotel-api/1.0/hotels`, body)
     if (res.status !== 200) throw new Error(`Rooms API ${res.status}`)
     const hotelData = (res.data.hotels?.hotels || [])[0] || null
-    if (hotelData) cacheSet(cacheKey, hotelData, TTL_ROOMS)
-    return hotelData
+    const roomList = hotelData?.rooms || []
+    if (roomList.length) cacheSet(cacheKey, roomList, TTL_ROOMS)
+    return roomList
   } catch (err) {
     console.warn(`⚠️ Rooms fetch failed for ${hotelCode}:`, err.message)
-    return null
+    return []
   }
 }
 
