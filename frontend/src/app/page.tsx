@@ -183,7 +183,7 @@ export default function Home() {
 
   const openModal = () => {
     setModalOpen(true); setUploadStep(1); setFile(null); setExtracted(null);
-    setPhone(''); setEmailVal(''); setSubmitError(''); setBlockInfo(null); setWarnings({});
+    setPhone(''); setEmailVal(''); setSubmitError(''); setBlockInfo(null); setWarnings({}); setLoading(false);
   };
 
   const closeModal = () => {
