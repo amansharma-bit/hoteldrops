@@ -11,7 +11,6 @@ function getHeaders() {
   }
 }
 
-// ── In-memory cache ───────────────────────────────────────────────────────────
 const cache = new Map()
 function cacheGet(key) {
   const e = cache.get(key)
@@ -126,34 +125,45 @@ async function searchHotels({ destination, checkIn, checkOut, adults = 2, childr
     })
 
     if (res.status !== 200) {
-      console.error('LiteAPI error:', JSON.stringify(res.data))
-      throw new Error(`LiteAPI ${res.status}: ${JSON.stringify(res.data)}`)
+      console.error('LiteAPI error:', JSON.stringify(res.data).slice(0, 300))
+      throw new Error(`LiteAPI ${res.status}: ${JSON.stringify(res.data).slice(0, 200)}`)
     }
 
-    const hotelList = res.data.data || []
+    const ratesList = res.data.data || []      // array of { hotelId, roomTypes }
+    const hotelsList = res.data.hotels || []   // array of { id, name, main_photo, address, rating }
+
+    // Build a lookup map from hotelId → hotel info
+    const hotelInfoMap = {}
+    for (const h of hotelsList) {
+      hotelInfoMap[h.id] = h
+    }
+
     const USD_TO_INR = 84
 
-    const hotels = hotelList.map(h => {
+    const hotels = ratesList.map(h => {
+      const info = hotelInfoMap[h.hotelId] || {}
       const firstRate = h.roomTypes?.[0]?.rates?.[0]
       const minRateUSD = firstRate ? parseFloat(firstRate.retailRate?.total?.[0]?.amount || 0) : 0
-      // Return minRate as a NUMBER in INR — frontend will use it directly
+
       return {
-        code: h.hotelId,           // string like "lp3803c"
-        name: h.name || 'Unknown Hotel',
+        code: h.hotelId,
+        name: info.name || h.hotelId,               // real hotel name from hotels array
         city: dest.city,
-        stars: h.starRating ? parseInt(h.starRating) : 5,
-        minRate: minRateUSD ? Math.round(minRateUSD * USD_TO_INR) : 0,  // NUMBER, already INR
+        stars: info.starRating ? Math.round(parseFloat(info.starRating)) : 5,
+        minRate: minRateUSD ? Math.round(minRateUSD * USD_TO_INR) : 0,
         maxRate: null,
         currency: 'INR',
-        address: h.address || null,
-        imageUrl: h.main_photo || null,
+        address: info.address || null,
+        imageUrl: info.main_photo || null,           // real photo URL
+        chain: info.chainName || null,
+        rating: info.rating || null,
         rooms: h.roomTypes || [],
-        reviews: h.guestReviews ? [{ rate: h.guestReviews.rating, reviewCount: h.guestReviews.reviewCount }] : [],
+        reviews: info.rating ? [{ rate: info.rating }] : [],
       }
     })
 
     cacheSet(cacheKey, hotels, TTL_SEARCH)
-    console.log(`✅ Found ${hotels.length} hotels`)
+    console.log(`✅ Found ${hotels.length} hotels, ${hotelsList.length} with hotel info`)
     return hotels
   } catch (err) {
     console.error('❌ LiteAPI search error:', err.message)
@@ -181,11 +191,11 @@ async function getHotelContent(hotelCode) {
       description: { content: hotel.hotelDescription || '' },
       category: { description: { content: hotel.starRating ? `${hotel.starRating} STARS` : '' } },
       chain: { description: { content: hotel.chainName || '' } },
-      address: { content: hotel.address?.streetAddress || '' },
+      address: { content: hotel.address?.streetAddress || hotel.address || '' },
       city: { content: hotel.address?.city || '' },
       country: { description: { content: hotel.address?.countryName || '' } },
       coordinates: { latitude: hotel.location?.latitude, longitude: hotel.location?.longitude },
-      images: (hotel.images || []).map((img, i) => ({
+      images: (hotel.hotelImages || hotel.images || []).map((img, i) => ({
         type: { code: 'GEN', description: { content: 'General' } },
         path: img.url || img,
         visualOrder: i + 1,
@@ -197,7 +207,7 @@ async function getHotelContent(hotelCode) {
         indLogic: true,
       })),
       rooms: (hotel.roomTypes || []).map(r => ({
-        roomCode: r.roomTypeId || r.code,
+        roomCode: r.roomTypeId || r.id || r.code,
         description: r.name,
         type: { description: { content: r.type || 'Room' } },
         characteristic: { description: { content: r.name || '' } },
@@ -229,6 +239,7 @@ async function getHotelRooms({ hotelCode, checkIn, checkOut, adults = 2, childre
     currency: 'USD',
     guestNationality: 'IN',
     hotelIds: [hotelCode],
+    includeHotelData: true,
     occupancies: [{ rooms: parseInt(rooms), adults: parseInt(adults), children: children > 0 ? Array(parseInt(children)).fill(5) : [] }],
   }
 
@@ -242,23 +253,19 @@ async function getHotelRooms({ hotelCode, checkIn, checkOut, adults = 2, childre
     const hotelData = (res.data.data || [])[0]
     if (!hotelData) return []
 
-    const USD_TO_INR = 84
     const roomList = (hotelData.roomTypes || []).map(rt => ({
-      code: rt.roomTypeId || rt.code,
-      name: rt.name,
-      rates: (rt.rates || []).map(rate => {
-        const amountUSD = parseFloat(rate.retailRate?.total?.[0]?.amount || 0)
-        return {
-          rateKey: rate.offerId || rate.rateId,
-          net: amountUSD,                        // raw USD — hotels.js route multiplies by EUR_TO_INR
-          boardCode: rate.boardCode || 'RO',
-          boardName: rate.boardName || 'Room Only',
-          cancellationPolicies: rate.cancellationPolicies || [],
-          rateType: rate.refundable ? 'RECHECK' : 'NREF',
-          paymentType: 'AT_WEB',
-          allotment: rate.availableRooms || 5,
-        }
-      })
+      code: rt.roomTypeId || rt.offerId || rt.code,
+      name: rt.name || rt.rates?.[0]?.name || 'Room',
+      rates: (rt.rates || []).map(rate => ({
+        rateKey: rate.offerId || rt.offerId,
+        net: parseFloat(rate.retailRate?.total?.[0]?.amount || 0),
+        boardCode: rate.boardCode || 'RO',
+        boardName: rate.boardName || 'Room Only',
+        cancellationPolicies: rate.cancellationPolicies?.cancelPolicyInfos || [],
+        rateType: rate.cancellationPolicies?.refundableTag === 'RFN' ? 'RECHECK' : 'NREF',
+        paymentType: 'AT_WEB',
+        allotment: 5,
+      }))
     }))
 
     if (roomList.length) cacheSet(cacheKey, roomList, TTL_ROOMS)
