@@ -77,6 +77,48 @@ const DESTINATION_CODES = {
   // Maldives
   'maldives':      'MLE',
   'male':          'MLE',
+  // Middle East
+  'riyadh':        'RUH',
+  'doha':          'DOH',
+  'muscat':        'MCT',
+  'kuwait':        'KWI',
+  'beirut':        'BEY',
+  'amman':         'AMM',
+  // Europe
+  'madrid':        'MAD',
+  'milan':         'MIL',
+  'venice':        'VCE',
+  'prague':        'PRG',
+  'vienna':        'VIE',
+  'zurich':        'ZRH',
+  'brussels':      'BRU',
+  'lisbon':        'LIS',
+  'athens':        'ATH',
+  'istanbul':      'IST',
+  // Africa
+  'cairo':         'CAI',
+  'marrakech':     'RAK',
+  'nairobi':       'NBO',
+  'cape town':     'CPT',
+  // Americas
+  'new york':      'NYC',
+  'los angeles':   'LAX',
+  'miami':         'MIA',
+  'cancun':        'CUN',
+  // East Asia
+  'tokyo':         'TYO',
+  'osaka':         'OSA',
+  'beijing':       'BJS',
+  'shanghai':      'SHA',
+  'hong kong':     'HKG',
+  'seoul':         'SEL',
+  // Australia
+  'sydney':        'SYD',
+  'melbourne':     'MEL',
+  // Armenia (for Yerevan bookings)
+  'yerevan':       'EVN',
+  // Sharjah
+  'sharjah':       'SHJ',
 }
 
 function getDestinationCode(cityName) {
@@ -106,7 +148,7 @@ async function searchHotels({ destination, checkIn, checkOut, adults = 2, childr
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt > 0) await new Promise(r => setTimeout(r, 500 * attempt))
     try {
-      const res = await fetch(`${BASE_URL}/hotel-api/1.0/hotels`, {
+      const res = await fetchWithTimeout(`${BASE_URL}/hotel-api/1.0/hotels`, {
         method:  'POST',
         headers: headers(),
         body:    JSON.stringify(body),
@@ -146,7 +188,7 @@ async function getHotelContent(hotelCode) {
 
   try {
     await new Promise(r => setTimeout(r, 200)) // rate limit guard
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `${BASE_URL}/hotel-content-api/1.0/hotels/${hotelCode}/details?language=ENG&useSecondaryLanguage=false`,
       { method: 'GET', headers: headers() }
     )
@@ -175,7 +217,7 @@ async function getHotelRooms({ hotelCode, checkIn, checkOut, adults = 2, childre
 
   try {
     await new Promise(r => setTimeout(r, 300))
-    const res = await fetch(`${BASE_URL}/hotel-api/1.0/hotels`, {
+    const res = await fetchWithTimeout(`${BASE_URL}/hotel-api/1.0/hotels`, {
       method:  'POST',
       headers: headers(),
       body:    JSON.stringify(body),
@@ -191,4 +233,65 @@ async function getHotelRooms({ hotelCode, checkIn, checkOut, adults = 2, childre
   }
 }
 
-module.exports = { getDestinationCode, searchHotels, getHotelContent, getHotelRooms }
+// ── Sleep helper ──────────────────────────────────────────────────────────────
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+// ── Find hotel code by name in a destination ─────────────────────────────────
+async function findHotelCode(hotelName, destCode) {
+  const cacheKey = `find:${destCode}:${hotelName.toLowerCase().trim()}`
+  const cached = cacheGet(cacheKey)
+  if (cached) return cached
+
+  try {
+    await sleep(300)
+    // Use hotel list API to search by destination, then fuzzy match by name
+    const res = await fetchWithTimeout(
+      `${BASE_URL}/hotel-content-api/1.0/hotels?destinationCode=${destCode}&language=ENG&useSecondaryLanguage=false&from=1&to=200`,
+      { method: 'GET', headers: headers() }
+    )
+    if (!res.ok) {
+      console.warn(`  ⚠️  Hotel list API ${res.status} for ${destCode}`)
+      return null
+    }
+    const data = await res.json()
+    const hotels = data.hotels || []
+
+    // Fuzzy match: normalize both names and find best match
+    const needle = hotelName.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim()
+    let bestCode = null
+    let bestScore = 0
+
+    for (const h of hotels) {
+      const haystack = (h.name?.content || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim()
+      // Exact match
+      if (haystack === needle) { bestCode = h.code; break }
+      // Contains match
+      const words = needle.split(' ').filter(w => w.length > 3)
+      const matches = words.filter(w => haystack.includes(w)).length
+      const score = matches / Math.max(words.length, 1)
+      if (score > bestScore && score >= 0.6) { bestScore = score; bestCode = h.code }
+    }
+
+    if (bestCode) cacheSet(cacheKey, bestCode, TTL_CONTENT)
+    return bestCode
+  } catch (err) {
+    console.warn(`  ⚠️  findHotelCode failed for ${hotelName}:`, err.message)
+    return null
+  }
+}
+
+// ── Fetch with timeout to avoid hanging ──────────────────────────────────────
+async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal })
+    return res
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+module.exports = { getDestinationCode, searchHotels, getHotelContent, getHotelRooms, findHotelCode, sleep }
