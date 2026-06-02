@@ -14,7 +14,6 @@ const B = "#1447b8";
 const NAVY = "#0f172a";
 const YELLOW = "#FCD34D";
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -47,13 +46,20 @@ const DOWS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Hotel {
-  code: number; name: string; stars: number; zone: { name: string };
-  minRate: number; currency: string; categoryName: string;
-  imageUrl?: string; address?: string; chain?: string; lowestPriceINR?: number;
+  code: string | number;   // LiteAPI returns string IDs like "lp3803c"
+  name: string;
+  stars: number;
+  zone?: { name: string };
+  minRate: number;         // already in INR as a number
+  currency: string;
+  categoryName?: string;
+  imageUrl?: string;
+  address?: string;
+  chain?: string;
+  lowestPriceINR?: number;
 }
 interface GuestState { rooms: number; adults: number; children: number; }
 
-// ── Static data ───────────────────────────────────────────────────────────────
 const FALLBACK_IMGS = [
   "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&q=85&fit=crop",
   "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop",
@@ -63,7 +69,6 @@ const FALLBACK_IMGS = [
   "https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=85&fit=crop",
 ];
 
-// Minimal amenity icons — just SVG path + label, no colored backgrounds (like Image 3)
 const AMENITY_ICONS: Record<string, string> = {
   "Free WiFi":       "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 16h2v-2h-2v2zm0-4h2V7h-2v7z",
   "Pool":            "M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 16c-3.86 0-7-3.14-7-7s3.14-7 7-7 7 3.14 7 7-3.14 7-7 7z",
@@ -78,7 +83,18 @@ const AMENITY_ICONS: Record<string, string> = {
 const FILTER_NAMES = ["Free Cancellation", "Free Breakfast", "Rated Exceptional (9+)", "Pool", "Private Beach", "Spa"];
 const FILTER_COUNTS = [309, 617, 190, 428, 124, 201];
 
-// ── Main export ───────────────────────────────────────────────────────────────
+// Convert hotel code (string or number) to a stable number for array indexing
+function codeToNum(code: string | number): number {
+  if (typeof code === 'number') return code;
+  // Hash the string to a stable number
+  let hash = 0;
+  for (let i = 0; i < code.length; i++) {
+    hash = ((hash << 5) - hash) + code.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
 export default function SearchPage() {
   return (
     <Suspense fallback={
@@ -93,7 +109,6 @@ export default function SearchPage() {
   );
 }
 
-// ── Calendar component ────────────────────────────────────────────────────────
 function CalendarScreen({
   checkIn, checkOut, onSelect, onClose
 }: {
@@ -186,34 +201,10 @@ function CalendarScreen({
           <button onClick={() => { if (ci && co) { onSelect(ci, co); onClose(); } }} style={{ background: ci && co ? YELLOW : "#e2e8f0", color: ci && co ? "#1a1a1a" : "#94a3b8", border: "none", borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 700, cursor: ci && co ? "pointer" : "default" }}>Select</button>
         </div>
       </div>
-
-      {/* FOOTER */}
-      <footer style={{ background: NAVY, padding: "48px 40px 32px" }}>
-          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap" as const }}>
-              <div>
-                <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 10 }}>rebuq<span style={{ color: B }}>.</span></div>
-                <p style={{ fontSize: 13.5, color: "#94a3b8", maxWidth: 260, lineHeight: 1.6 }}>AI-powered hotel price monitoring for Indian travelers. Never overpay for a hotel again.</p>
-              </div>
-              <div style={{ display: "flex", gap: 48 }}>
-                {[{ title: "Product", links: ["How it works", "Results", "Why rebuq", "Exclusive Member Deals"] }, { title: "Company", links: ["About", "Privacy", "Terms"] }].map(col => (
-                  <div key={col.title}>
-                    <h4 style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "#64748b", marginBottom: 14 }}>{col.title}</h4>
-                    {col.links.map(l => <a key={l} href="#" style={{ display: "block", fontSize: 14, color: "#94a3b8", textDecoration: "none", marginBottom: 10 }}>{l}</a>)}
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24 }}>
-              <span style={{ fontSize: 13, color: "#475569" }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
-            </div>
-          </div>
-      </footer>
     </div>
   );
 }
 
-// ── Guests screen ─────────────────────────────────────────────────────────────
 function GuestsScreen({
   guests, onSelect, onClose
 }: { guests: GuestState; onSelect: (g: GuestState) => void; onClose: () => void; }) {
@@ -257,7 +248,6 @@ function GuestsScreen({
   );
 }
 
-// ── Bottom sheet ──────────────────────────────────────────────────────────────
 function BottomSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <>
@@ -278,14 +268,12 @@ function BottomSheet({ title, onClose, children }: { title: string; onClose: () 
   );
 }
 
-// ── SearchResults ─────────────────────────────────────────────────────────────
 function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const isMobile = useIsMobile();
   const today = new Date();
 
-  // Search state — initialised from URL params
   const [destination, setDestination] = useState((searchParams.get("destination") || "Dubai").split(",")[0].trim());
   const [checkIn, setCheckIn] = useState(searchParams.get("checkIn") || "");
   const [checkOut, setCheckOut] = useState(searchParams.get("checkOut") || "");
@@ -295,12 +283,10 @@ function SearchResults() {
     children: parseInt(searchParams.get("children") || "0"),
   });
 
-  // UI state
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [total, setTotal] = useState(0);
-  const [favorites, setFavorites] = useState<Set<number>>(new Set());
+  const [favorites, setFavorites] = useState<Set<string | number>>(new Set());
   const [checkedFilters, setCheckedFilters] = useState<Set<number>>(new Set());
   const [sortBy, setSortBy] = useState("popularity");
   const [page, setPage] = useState(1);
@@ -308,12 +294,10 @@ function SearchResults() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<{ name: string } | null>(null);
 
-  // Mobile overlay states
   const [showCal, setShowCal] = useState(false);
   const [showGuests, setShowGuests] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<"filter"|"rating"|"price"|"sort"|null>(null);
 
-  // Desktop search bar states
   const [desktopCalOpen, setDesktopCalOpen] = useState(false);
   const [desktopCalMode, setDesktopCalMode] = useState<"checkin"|"checkout">("checkin");
   const [desktopCalOffset, setDesktopCalOffset] = useState(0);
@@ -322,19 +306,6 @@ function SearchResults() {
   const desktopCalRef = useRef<HTMLDivElement>(null);
   const desktopGuestRef = useRef<HTMLDivElement>(null);
 
-  // Unregister any old service workers that may be caching API calls
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        regs.forEach(reg => {
-          // Force update to pick up the new sw.js
-          reg.update();
-        });
-      });
-    }
-  }, []);
-
-  // Close desktop popups on outside click
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
@@ -365,7 +336,6 @@ function SearchResults() {
       const data = await res.json();
       if (data.hotels?.hotels) {
         setHotels(data.hotels.hotels);
-        setTotal(data.hotels.total || data.hotels.hotels.length);
       } else setError(data.error || "No hotels found for this destination.");
     } catch { setError("Could not connect to server. Please try again."); }
     setLoading(false);
@@ -373,17 +343,32 @@ function SearchResults() {
 
   useEffect(() => { fetchHotels(); }, []);
 
-  const EUR_TO_INR = 112;
+  // minRate is already INR per total stay from backend — divide by nights for per-night price
   const NIGHTS = checkIn && checkOut ? Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000)) : 1;
 
-  const priceINR = (hotel: Hotel) => hotel.lowestPriceINR || Math.round((hotel.minRate || 0) * EUR_TO_INR / NIGHTS);
-  const getRating = (code: number) => { const r = [9.1, 8.9, 9.4, 9.3, 8.7, 9.0, 8.8, 9.2]; return r[code % r.length]; };
+  // price per night in INR — minRate is already total INR
+  const priceINR = (hotel: Hotel): number => {
+    const raw = hotel.lowestPriceINR || hotel.minRate || 0;
+    return Math.round(parseFloat(String(raw)) / NIGHTS);
+  };
+
+  // Use string hash for stable random-looking but consistent values
+  const getRating = (code: string | number) => {
+    const n = codeToNum(code);
+    const r = [9.1, 8.9, 9.4, 9.3, 8.7, 9.0, 8.8, 9.2];
+    return r[n % r.length];
+  };
   const getRatingLabel = (r: number) => r >= 9 ? "Exceptional" : r >= 8.5 ? "Excellent" : "Very Good";
-  const getDiscount = (code: number) => { const d = [15, 12, 10, 8, 20, 18, 14, 22]; return d[code % d.length]; };
+  const getDiscount = (code: string | number) => {
+    const n = codeToNum(code);
+    const d = [15, 12, 10, 8, 20, 18, 14, 22];
+    return d[n % d.length];
+  };
   const getImg = (hotel: Hotel, idx: number) => hotel.imageUrl || FALLBACK_IMGS[idx % FALLBACK_IMGS.length];
-  const getAmenityKeys = (code: number) => {
+  const getAmenityKeys = (code: string | number) => {
+    const n = codeToNum(code);
     const all = Object.keys(AMENITY_ICONS);
-    const start = code % all.length;
+    const start = n % all.length;
     return [...all.slice(start), ...all.slice(0, start)].slice(0, 4);
   };
 
@@ -414,7 +399,6 @@ function SearchResults() {
 
   const guestSummary = (g: GuestState) => `${g.rooms} Room${g.rooms > 1 ? "s" : ""} · ${g.adults} Adult${g.adults > 1 ? "s" : ""}${g.children > 0 ? ` · ${g.children} Child${g.children > 1 ? "ren" : ""}` : ""}`;
 
-  // Desktop calendar day click
   const desktopDayClick = (ds: string) => {
     if (desktopCalMode === "checkin") {
       setCheckIn(ds); setCheckOut(""); setDesktopCalMode("checkout");
@@ -489,7 +473,6 @@ function SearchResults() {
         .cbx.on { background: ${B}; border-color: ${B}; color: #fff; }
       `}</style>
 
-      {/* ── MOBILE FULL SCREENS ── */}
       {isMobile && showCal && (
         <CalendarScreen checkIn={checkIn} checkOut={checkOut}
           onSelect={(ci, co) => { setCheckIn(ci); setCheckOut(co); }}
@@ -499,7 +482,6 @@ function SearchResults() {
         <GuestsScreen guests={guests} onSelect={setGuests} onClose={() => setShowGuests(false)} />
       )}
 
-      {/* ── MOBILE BOTTOM SHEETS ── */}
       {isMobile && mobileSheet === "filter" && (
         <BottomSheet title="Filters" onClose={() => setMobileSheet(null)}>
           <div style={{ marginBottom: 16 }}>
@@ -526,12 +508,6 @@ function SearchResults() {
                 <button key={i} style={{ border: "1.5px solid #e2e8f0", borderRadius: 100, padding: "8px 14px", fontSize: 13, background: "#fff", cursor: "pointer", fontFamily: "inherit", color: NAVY }}>{r}</button>
               ))}
             </div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 12 }}>Star Rating</div>
-            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
-              {["5 Star", "4 Star", "3 Star", "2 Star", "1 Star"].map((s, i) => (
-                <button key={i} style={{ border: "1.5px solid #e2e8f0", borderRadius: 100, padding: "8px 14px", fontSize: 13, background: "#fff", cursor: "pointer", fontFamily: "inherit", color: NAVY }}>{s}</button>
-              ))}
-            </div>
           </div>
         </BottomSheet>
       )}
@@ -539,8 +515,8 @@ function SearchResults() {
         <BottomSheet title="Price" onClose={() => setMobileSheet(null)}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Filter by Price</div>
-            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8, marginBottom: 20 }}>
-              {["₹0–₹1,000", "₹1,000–₹2,500", "₹2,500–₹4,000", "₹4,000–₹6,000", "₹6,000–₹10,000", "₹10,000+"].map((p, i) => (
+            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+              {["₹0–₹5,000", "₹5,000–₹10,000", "₹10,000–₹20,000", "₹20,000–₹40,000", "₹40,000+"].map((p, i) => (
                 <button key={i} style={{ border: "1.5px solid #e2e8f0", borderRadius: 100, padding: "8px 14px", fontSize: 13, background: "#fff", cursor: "pointer", fontFamily: "inherit", color: NAVY }}>{p}</button>
               ))}
             </div>
@@ -569,7 +545,7 @@ function SearchResults() {
         </BottomSheet>
       )}
 
-      {/* ── NAV ── */}
+      {/* NAV */}
       <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: isMobile ? "0 20px" : "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 300 }}>
         <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: NAVY, textDecoration: "none", flexShrink: 0 }}>rebuq<span style={{ color: B }}>.</span></a>
         {!isMobile && (
@@ -596,14 +572,13 @@ function SearchResults() {
 
       {isMobile && menuOpen && (
         <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 199, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={() => setMenuOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>How it works</button>
           <button onClick={() => router.push("/search-hotels")} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
-          <button style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Sign in</button>
+          <button onClick={() => window.location.href = "/signin"} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Sign in</button>
           <button onClick={() => router.push("/upload")} style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12 }}>Check my booking</button>
         </div>
       )}
 
-      {/* ── MOBILE STICKY SEARCH PILL ── */}
+      {/* MOBILE STICKY SEARCH PILL */}
       {isMobile && (
         <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "10px 16px", position: "sticky", top: 60, zIndex: 200, display: "flex", alignItems: "center", gap: 10 }}>
           <button onClick={() => router.back()} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#64748b", padding: 2, lineHeight: 1, flexShrink: 0 }}>←</button>
@@ -620,33 +595,25 @@ function SearchResults() {
         </div>
       )}
 
-      {/* ── DESKTOP SEARCH BAR ── */}
+      {/* DESKTOP SEARCH BAR */}
       {!isMobile && (
         <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "10px 32px", position: "sticky", top: 60, zIndex: 200 }}>
           <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.3fr auto", alignItems: "stretch", height: 64, overflow: "visible", position: "relative", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-
-            {/* Destination */}
             <div className="sfield-d" style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", borderRadius: "12px 0 0 12px" }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>Destination</div>
               <input value={desktopDestination} onChange={e => setDesktopDestination(e.target.value)}
                 style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 15, fontWeight: 600, color: NAVY, background: "transparent", padding: 0, width: "100%" }} />
             </div>
-
-            {/* Check-in */}
             <div className="sfield-d" style={{ padding: "0 18px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", background: desktopCalOpen && desktopCalMode === "checkin" ? "#f0f7ff" : "transparent" }}
               onClick={() => { setDesktopCalMode("checkin"); setDesktopCalOpen(true); setDesktopCalOffset(0); }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>Check-in</div>
               <div style={{ fontSize: 14, fontWeight: checkIn ? 600 : 400, color: checkIn ? NAVY : "#94a3b8" }}>{checkIn ? formatDate(checkIn) : "Add date"}</div>
             </div>
-
-            {/* Check-out */}
             <div className="sfield-d" style={{ padding: "0 18px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", background: desktopCalOpen && desktopCalMode === "checkout" ? "#f0f7ff" : "transparent" }}
               onClick={() => { setDesktopCalMode("checkout"); setDesktopCalOpen(true); setDesktopCalOffset(0); }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>Check-out</div>
               <div style={{ fontSize: 14, fontWeight: checkOut ? 600 : 400, color: checkOut ? NAVY : "#94a3b8" }}>{checkOut ? formatDate(checkOut) : "Add date"}</div>
             </div>
-
-            {/* Rooms & Guests */}
             <div ref={desktopGuestRef} className="sfield-d" style={{ padding: "0 18px", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}
               onClick={() => setDesktopGuestOpen(!desktopGuestOpen)}>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>Rooms & Guests</div>
@@ -674,14 +641,10 @@ function SearchResults() {
                 </div>
               )}
             </div>
-
-            {/* Search button */}
             <button onClick={handleNewSearch} style={{ background: "#FCD34D", color: "#1a1a1a", border: "none", padding: "0 28px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", borderRadius: "0 12px 12px 0", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" as const }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               Search
             </button>
-
-            {/* Desktop calendar popup */}
             {desktopCalOpen && (
               <div ref={desktopCalRef} onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", left: "28%", width: 620, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,0.16)", zIndex: 9999, padding: 22 }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
@@ -705,7 +668,7 @@ function SearchResults() {
         </div>
       )}
 
-      {/* ── OFFERS STRIP ── */}
+      {/* OFFERS STRIP */}
       <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: isMobile ? "8px 16px" : "8px 32px", display: "flex", gap: 10, overflowX: "auto" }}>
         {[
           { title: "Flat 15% off", desc: "on International Hotels with Yes Bank Cards" },
@@ -719,13 +682,12 @@ function SearchResults() {
         ))}
       </div>
 
-      {/* ── MAIN CONTENT ── */}
+      {/* MAIN CONTENT */}
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? "16px 16px 100px" : "20px 32px 60px", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "268px 1fr", gap: 22 }}>
 
-        {/* ── DESKTOP SIDEBAR ── */}
+        {/* DESKTOP SIDEBAR */}
         {!isMobile && (
           <div>
-            {/* Map */}
             <div style={{ background: "#eff6ff", borderRadius: 12, overflow: "hidden", marginBottom: 16, border: "1.5px solid #e2e8f0", cursor: "pointer" }}>
               <div style={{ height: 140, background: `linear-gradient(135deg,#1e3a8a,${B},#60a5fa)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
                 <div style={{ position: "absolute", inset: 0, opacity: 0.25, backgroundImage: "linear-gradient(rgba(255,255,255,0.15) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.15) 1px,transparent 1px)", backgroundSize: "36px 36px" }} />
@@ -733,17 +695,13 @@ function SearchResults() {
               </div>
               <div style={{ padding: "9px 14px", background: "#fff", textAlign: "center" as const, color: B, fontSize: 13, fontWeight: 600 }}>🗺 Explore on Map</div>
             </div>
-
-            {/* Filters */}
             <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #e2e8f0", padding: 18 }}>
               <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Filters</div>
-              {/* Hotel name search */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", marginBottom: 18 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input type="text" placeholder="Search by hotel name" value={hotelSearch} onChange={e => setHotelSearch(e.target.value)}
                   style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 13, color: NAVY, background: "transparent", width: "100%" }} />
               </div>
-              {/* Popular filters */}
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: NAVY, marginBottom: 10 }}>Most Popular</div>
                 {FILTER_NAMES.map((f, i) => (
@@ -757,7 +715,6 @@ function SearchResults() {
                   </div>
                 ))}
               </div>
-              {/* Price range */}
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: NAVY, marginBottom: 12 }}>Price per night</div>
                 <div style={{ position: "relative", height: 4, background: "#e2e8f0", borderRadius: 100, margin: "12px 0 6px" }}>
@@ -767,7 +724,6 @@ function SearchResults() {
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#64748b" }}><span>₹2,500</span><span>₹50,000+</span></div>
               </div>
-              {/* Star rating */}
               <div>
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: NAVY, marginBottom: 10 }}>Star Rating</div>
                 {[5, 4, 3, 2, 1].map(s => (
@@ -783,28 +739,17 @@ function SearchResults() {
           </div>
         )}
 
-        {/* ── RESULTS ── */}
+        {/* RESULTS */}
         <div>
-        {/* ── MOBILE HOTEL NAME SEARCH ── */}
-        {isMobile && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, padding: "10px 14px", marginBottom: 14 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              type="text"
-              placeholder="Search by hotel name..."
-              value={hotelSearch}
-              onChange={e => setHotelSearch(e.target.value)}
-              style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, color: NAVY, background: "transparent", width: "100%", fontWeight: hotelSearch ? 500 : 400 }}
-            />
-            {hotelSearch && (
-              <button onClick={() => setHotelSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
-            )}
-          </div>
-        )}
+          {isMobile && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, padding: "10px 14px", marginBottom: 14 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" placeholder="Search by hotel name..." value={hotelSearch} onChange={e => setHotelSearch(e.target.value)}
+                style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, color: NAVY, background: "transparent", width: "100%" }} />
+              {hotelSearch && <button onClick={() => setHotelSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>}
+            </div>
+          )}
 
-        {/* Results header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap" as const, gap: 8 }}>
             <div className="sora" style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: NAVY }}>
               Hotels in {destination}
@@ -821,7 +766,6 @@ function SearchResults() {
             )}
           </div>
 
-          {/* Loading */}
           {loading && (
             <div style={{ textAlign: "center", padding: "60px 0" }}>
               <div style={{ width: 36, height: 36, border: "3px solid #bfdbfe", borderTop: `3px solid ${B}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
@@ -829,7 +773,6 @@ function SearchResults() {
             </div>
           )}
 
-          {/* Error */}
           {error && !loading && (
             <div style={{ textAlign: "center", padding: "60px 0" }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🏨</div>
@@ -838,53 +781,41 @@ function SearchResults() {
             </div>
           )}
 
-          {/* Hotel cards */}
           {!loading && !error && paginatedHotels.map((hotel, idx) => {
             const rating = getRating(hotel.code);
             const discount = getDiscount(hotel.code);
             const price = priceINR(hotel);
-            const wasPrice = Math.round(price * (1 + discount / 100));
+            const wasPrice = price > 0 ? Math.round(price * (1 + discount / 100)) : 0;
             const amenityKeys = getAmenityKeys(hotel.code);
             const isFav = favorites.has(hotel.code);
             const globalIdx = (page - 1) * perPage + idx;
 
             return isMobile ? (
-              // ── MOBILE CARD ──
-              <div key={hotel.code} className="hotel-card-mobile"
+              <div key={String(hotel.code)} className="hotel-card-mobile"
                 onClick={() => router.push(`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}`)}>
-                {/* Photo */}
                 <div style={{ position: "relative", height: 200 }}>
                   <img src={getImg(hotel, globalIdx)} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                   <button className="fav-btn" onClick={e => { e.stopPropagation(); setFavorites(prev => { const n = new Set(prev); n.has(hotel.code) ? n.delete(hotel.code) : n.add(hotel.code); return n; }); }}
-                    style={{ color: isFav ? "#ef4444" : "#94a3b8" }}>
-                    {isFav ? "♥" : "♡"}
-                  </button>
+                    style={{ color: isFav ? "#ef4444" : "#94a3b8" }}>{isFav ? "♥" : "♡"}</button>
                   {price > 0 && <div style={{ position: "absolute", top: 12, left: 12, background: "#dcfce7", color: "#16a34a", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 6 }}>{discount}% off</div>}
                 </div>
-                {/* Info */}
                 <div style={{ padding: "14px 16px 16px" }}>
                   <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 3 }}>{hotel.name}</div>
                   <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>
-                    {hotel.zone?.name || hotel.address || "Dubai"} · {hotel.categoryName || `${hotel.stars || 5} Stars`}
+                    {hotel.zone?.name || hotel.address || destination} · {hotel.categoryName || `${hotel.stars || 5} Stars`}
                   </div>
-                  {/* Rating */}
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                     <span style={{ background: rating >= 9 ? B : "#0369a1", color: "#fff", fontSize: 12, fontWeight: 700, padding: "3px 8px", borderRadius: 6 }}>{rating.toFixed(1)}</span>
                     <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>{getRatingLabel(rating)}</span>
-                    <span style={{ fontSize: 12, color: "#64748b" }}>· {(1000 + hotel.code % 3000).toLocaleString()} ratings</span>
                   </div>
-                  {/* Amenities — minimal style like Image 3 */}
                   <div style={{ display: "flex", flexWrap: "wrap" as const, gap: "6px 16px", marginBottom: 12 }}>
                     {amenityKeys.map(key => (
                       <div key={key} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12.5, color: "#475569" }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d={AMENITY_ICONS[key]} />
-                        </svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={AMENITY_ICONS[key]} /></svg>
                         {key}
                       </div>
                     ))}
                   </div>
-                  {/* Price + CTA */}
                   <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
                     <div>
                       {price > 0 ? (
@@ -897,7 +828,6 @@ function SearchResults() {
                     </div>
                     <button style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "11px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Book Now</button>
                   </div>
-                  {/* Track price */}
                   <button onClick={e => { e.stopPropagation(); router.push("/upload"); }}
                     style={{ marginTop: 10, width: "100%", background: "#eff6ff", color: B, border: `1px solid #bfdbfe`, borderRadius: 8, padding: "9px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                     🔔 Track price drop
@@ -905,18 +835,13 @@ function SearchResults() {
                 </div>
               </div>
             ) : (
-              // ── DESKTOP CARD ──
-              <div key={hotel.code} className="hotel-card-desktop"
+              <div key={String(hotel.code)} className="hotel-card-desktop"
                 onClick={() => router.push(`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}`)}>
                 <div style={{ position: "relative", minHeight: 200 }}>
                   <img src={getImg(hotel, globalIdx)} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", minHeight: 200 }} />
-                  <div style={{ position: "absolute", top: 10, left: 10, background: "rgba(255,255,255,0.95)", color: NAVY, fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 6, display: "flex", alignItems: "center", gap: 4 }}>
-                    ↗ Trending
-                  </div>
+                  <div style={{ position: "absolute", top: 10, left: 10, background: "rgba(255,255,255,0.95)", color: NAVY, fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 6 }}>↗ Trending</div>
                   <button className="fav-btn" onClick={e => { e.stopPropagation(); setFavorites(prev => { const n = new Set(prev); n.has(hotel.code) ? n.delete(hotel.code) : n.add(hotel.code); return n; }); }}
-                    style={{ color: isFav ? "#ef4444" : "#94a3b8" }}>
-                    {isFav ? "♥" : "♡"}
-                  </button>
+                    style={{ color: isFav ? "#ef4444" : "#94a3b8" }}>{isFav ? "♥" : "♡"}</button>
                 </div>
                 <div style={{ padding: "18px 20px 18px 22px", display: "flex", flexDirection: "column" as const, justifyContent: "space-between" }}>
                   <div>
@@ -927,12 +852,11 @@ function SearchResults() {
                           <span style={{ color: "#f59e0b", fontSize: 12, marginLeft: 6 }}>{"★".repeat(Math.min(hotel.stars || 5, 5))}</span>
                         </div>
                         <div style={{ fontSize: 12.5, color: "#64748b", marginBottom: 10 }}>
-                          📍 {hotel.zone?.name || hotel.address || "Dubai"} · {hotel.categoryName || `${hotel.stars || 5} Stars`}
+                          📍 {hotel.zone?.name || hotel.address || destination} · {hotel.categoryName || `${hotel.stars || 5} Stars`}
                         </div>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                           <span style={{ background: rating >= 9 ? B : "#0369a1", color: "#fff", fontSize: 12.5, fontWeight: 700, padding: "3px 8px", borderRadius: 6 }}>{rating.toFixed(1)}</span>
                           <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>{getRatingLabel(rating)}</span>
-                          <span style={{ fontSize: 12, color: "#64748b" }}>· {(1000 + hotel.code % 3000).toLocaleString()} Ratings</span>
                         </div>
                       </div>
                       <div style={{ textAlign: "right" as const, flexShrink: 0 }}>
@@ -946,19 +870,16 @@ function SearchResults() {
                         ) : <div style={{ fontSize: 13, color: "#64748b" }}>Price on request</div>}
                       </div>
                     </div>
-                    {/* Amenities — minimal like Image 3 */}
                     <div style={{ display: "flex", flexWrap: "wrap" as const, gap: "6px 20px", marginBottom: 10 }}>
                       {amenityKeys.map(key => (
                         <div key={key} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12.5, color: "#475569" }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d={AMENITY_ICONS[key]} />
-                          </svg>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={AMENITY_ICONS[key]} /></svg>
                           {key}
                         </div>
                       ))}
                     </div>
                     <div style={{ fontSize: 12.5, color: "#64748b", lineHeight: 1.6 }}>
-                      • {hotel.chain ? `Part of ${hotel.chain}` : "Highly rated by guests"} · {hotel.zone?.name || "Central location"} · Great for business & leisure
+                      • {hotel.chain ? `Part of ${hotel.chain}` : "Highly rated by guests"} · {hotel.zone?.name || destination} · Great for business & leisure
                     </div>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
@@ -966,16 +887,13 @@ function SearchResults() {
                       style={{ display: "flex", alignItems: "center", gap: 6, background: "#eff6ff", color: B, border: `1px solid #bfdbfe`, borderRadius: 8, padding: "8px 14px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                       🔔 Track price
                     </button>
-                    <button style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "11px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                      Book Now
-                    </button>
+                    <button style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "11px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Book Now</button>
                   </div>
                 </div>
               </div>
             );
           })}
 
-          {/* Pagination */}
           {!loading && !error && totalPages > 1 && (
             <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 24 }}>
               {page > 1 && <button className="pg-btn" onClick={() => { setPage(p => p - 1); window.scrollTo({ top: 0, behavior: "smooth" }); }}>‹</button>}
@@ -990,7 +908,7 @@ function SearchResults() {
         </div>
       </div>
 
-      {/* ── MOBILE BOTTOM TAB BAR ── */}
+      {/* MOBILE BOTTOM TAB BAR */}
       {isMobile && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: "1px solid #e2e8f0", display: "flex", zIndex: 400, paddingBottom: "env(safe-area-inset-bottom)" }}>
           {[
