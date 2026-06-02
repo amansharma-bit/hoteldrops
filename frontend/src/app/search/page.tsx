@@ -188,8 +188,7 @@ function CalendarScreen({
       </div>
 
       {/* FOOTER */}
-      {!isMobile && (
-        <footer style={{ background: NAVY, padding: "48px 40px 32px" }}>
+      <footer style={{ background: NAVY, padding: "48px 40px 32px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap" as const }}>
               <div>
@@ -209,8 +208,7 @@ function CalendarScreen({
               <span style={{ fontSize: 13, color: "#475569" }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
             </div>
           </div>
-        </footer>
-      )}
+      </footer>
     </div>
   );
 }
