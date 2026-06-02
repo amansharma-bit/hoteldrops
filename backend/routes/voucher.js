@@ -364,7 +364,7 @@ router.post('/submit', async (req, res) => {
       .from('bookings').insert(buildBookingRow(data, 'tracking')).select().single()
     if (error) throw error
 
-    await sendTrackingStartedWhatsApp(phone, booking)
+    sendTrackingStartedWhatsApp(phone, booking).catch(e => console.error('WhatsApp failed:', e.message))
     res.json({ success: true, booking_id: booking.id })
 
     if (email && booking.email) {
@@ -444,13 +444,20 @@ function buildEmailPayload(booking) {
 const twilio = require('twilio')
 
 function getTwilioClient() {
-  return twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN)
+  return twilio(process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_TOKEN)
 }
 
 async function sendWhatsApp(to, body) {
   const client    = getTwilioClient()
   const formatted = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:+91${to}`
-  await client.messages.create({ from: 'whatsapp:+14155238886', to: formatted, body })
+  const from = process.env.TWILIO_WHATSAPP_FROM
+    ? `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`
+    : 'whatsapp:+14155238886'
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Twilio timeout')), 10000))
+  await Promise.race([
+    client.messages.create({ from, to: formatted, body }),
+    timeout
+  ])
 }
 
 async function sendNonRefundableWhatsApp(phone, data) {
