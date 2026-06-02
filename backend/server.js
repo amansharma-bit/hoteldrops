@@ -10,20 +10,34 @@ const adminRoutes   = require('./routes/admin')
 const hotelRoutes   = require('./routes/hotels')
 const voucherRoutes = require('./routes/voucher')
 const { runPriceTracker } = require('./jobs/priceTracker')
+
 const app = express()
+
+// ── CORS — must be before all routes ─────────────────────────────────────────
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200)
+  }
+  next()
+})
+
 app.use(cors({ origin: '*' }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+
 app.use('/api/bookings', bookingRoutes)
 app.use('/api/test',     testRoutes)
 app.use('/api/alerts',   alertRoutes)
 app.use('/api/admin',    adminRoutes)
 app.use('/api/hotels',   hotelRoutes)
 app.use('/api/voucher',  voucherRoutes)
+
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }))
 
-// Runs every 1 hour
 cron.schedule('0 * * * *', async () => {
   console.log('⏰ Running price tracker job...')
   try {
@@ -40,6 +54,7 @@ if (process.env.NODE_ENV === 'development') {
     try { await runPriceTracker() } catch(e) { console.error(e.message) }
   }, 10000)
 }
+
 const PORT = process.env.PORT || 4000
 app.listen(PORT, () => {
   console.log(`🏨 HotelDrops backend running on port ${PORT}`)
