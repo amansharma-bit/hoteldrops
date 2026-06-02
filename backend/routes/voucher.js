@@ -534,39 +534,36 @@ We'll alert you instantly if we find anything. Fingers crossed! 🤞
 }
 
 async function sendTrackingStartedWhatsApp(phone, booking) {
-  const nights   = booking.total_nights || '?'
-  const perNight = booking.price_per_night
-    ? `₹${Number(booking.price_per_night).toLocaleString('en-IN')}/night` : ''
+  const nights = booking.total_nights || '?'
+  const fmt = (d) => { try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) } catch { return d } }
+  const children = (booking.children_ages && booking.children_ages.length > 0)
+    ? booking.children_ages.map(a => a ? `${a} yrs` : 'infant').join(', ')
+    : 'None'
+  const cancelLine = (booking.cancellation_policy === 'free' && booking.cancellation_deadline)
+    ? `Free cancel until   ${fmt(booking.cancellation_deadline)}`
+    : booking.cancellation_policy === 'partial'
+    ? `Cancellation        Partial refund applies`
+    : `Cancellation        ${booking.cancellation_policy}`
+  const meal = booking.board_basis_label ? `\nMeal plan           ${booking.board_basis_label}` : ''
 
-  const cancelLine = (() => {
-    if (booking.cancellation_policy === 'free' && booking.cancellation_deadline) {
-      const d = new Date(booking.cancellation_deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-      return `⚠️ Free cancel until: *${d}*`
-    }
-    if (booking.cancellation_policy === 'partial') return `⚠️ Partial cancellation fees apply`
-    return `✅ Cancellation: ${booking.cancellation_policy}`
-  })()
-
-  const childrenLine = (booking.children_ages && booking.children_ages.length > 0)
-    ? `\n👶 Children: ${booking.children_ages.map(a => a ? `${a} yrs` : 'age TBD').join(', ')}` : ''
-  const mealLine = booking.board_basis_label ? `\n🍽️ ${booking.board_basis_label}` : ''
-
-  const msg = `✅ *rebuq is watching your booking!*
+  const msg = `Thank you for trusting rebuq with your booking.
 
 *${booking.hotel_name}*
-📍 ${booking.hotel_city}
-📅 ${booking.check_in} → ${booking.check_out} (${nights} nights)
-🛏️ ${booking.room_type || 'Standard Room'} · ${booking.num_rooms || 1} room(s)
-👤 ${booking.num_adults || 2} adults${childrenLine}${mealLine}
+${booking.hotel_city}
 
-💳 *Total paid: ₹${Number(booking.total_price_paid || booking.original_price).toLocaleString('en-IN')}*${perNight ? `\n📊 ${perNight}` : ''}
-
+Check-in    ${fmt(booking.check_in)}
+Check-out   ${fmt(booking.check_out)}
+Room        ${booking.room_type || 'Standard Room'}  ·  ${booking.num_rooms || 1} Room
+Adults      ${booking.num_adults || 2}
+Children    ${children}${meal}
+Total paid  ₹${Number(booking.total_price_paid || booking.original_price).toLocaleString('en-IN')}
 ${cancelLine}
 
-We'll check prices every 6 hours and alert you the moment it drops — for the *exact same room and meal plan*.
+We're watching the price around the clock. The moment it drops for the same room and meal plan, we'll send you a direct link to rebook and save the difference.
 
-Reply *STATUS* anytime to check your bookings.
-— Team rebuq 🏨`
+Questions? Chat with us by replying to this message.
+
+rebuq`
 
   try { await sendWhatsApp(phone, msg) }
   catch (e) { console.error('Tracking started WhatsApp failed:', e.message) }
