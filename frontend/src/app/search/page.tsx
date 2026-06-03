@@ -276,12 +276,20 @@ function MapView({ hotels, checkIn, checkOut, guests, onClose, onHotelClick }: {
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
+  const [mapSearch, setMapSearch] = useState("");
   const NIGHTS = checkIn && checkOut ? Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000)) : 1;
+
+  const hotelsWithCoords = hotels.filter(h => h.latitude && h.longitude);
+
+  // Filter hotels by map search
+  const filteredMapHotels = mapSearch.trim()
+    ? hotelsWithCoords.filter(h => h.name.toLowerCase().includes(mapSearch.toLowerCase()))
+    : hotelsWithCoords;
 
   useEffect(() => {
     if (!mapRef.current) return;
-    // Load Mapbox GL JS dynamically
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = "https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css";
@@ -293,8 +301,6 @@ function MapView({ hotels, checkIn, checkOut, guests, onClose, onHotelClick }: {
       const mapboxgl = (window as any).mapboxgl;
       mapboxgl.accessToken = MAPBOX_TOKEN;
 
-      // Find center from hotels with coordinates
-      const hotelsWithCoords = hotels.filter(h => h.latitude && h.longitude);
       const centerLng = hotelsWithCoords.length > 0
         ? hotelsWithCoords.reduce((s, h) => s + (h.longitude || 0), 0) / hotelsWithCoords.length
         : 55.2708;
@@ -308,64 +314,82 @@ function MapView({ hotels, checkIn, checkOut, guests, onClose, onHotelClick }: {
         center: [centerLng, centerLat],
         zoom: 12,
       });
-
       mapInstanceRef.current = map;
 
       map.on("load", () => {
-        // Add price pin markers for each hotel with coordinates
         hotelsWithCoords.forEach(hotel => {
           const pricePerNight = Math.round((hotel.minRate || 0) / NIGHTS);
           if (!pricePerNight) return;
 
           const el = document.createElement("div");
-          el.innerHTML = `<div style="
+          el.setAttribute("data-hotel-id", String(hotel.code));
+          el.innerHTML = `<div class="map-price-pin" style="
             background: ${B}; color: #fff; padding: 5px 10px; border-radius: 20px;
             font-family: Inter,sans-serif; font-size: 12px; font-weight: 700;
             white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-            border: 2px solid #fff; cursor: pointer;
-            transition: transform 0.15s, background 0.15s;
+            border: 2px solid #fff; cursor: pointer; transition: all 0.15s;
           ">₹${Math.round(pricePerNight).toLocaleString("en-IN")}</div>`;
-          el.style.cursor = "pointer";
 
           el.addEventListener("click", () => {
             setSelectedHotel(hotel);
-            // Highlight selected pin
-            document.querySelectorAll(".mapbox-price-pin").forEach((p: any) => {
-              p.style.background = B;
-            });
-            el.querySelector("div")!.style.background = NAVY;
+            document.querySelectorAll(".map-price-pin").forEach((p: any) => { p.style.background = B; p.style.transform = "scale(1)"; });
+            const pin = el.querySelector(".map-price-pin") as HTMLElement;
+            if (pin) { pin.style.background = NAVY; pin.style.transform = "scale(1.1)"; }
           });
-          el.querySelector("div")!.classList.add("mapbox-price-pin");
 
-          new mapboxgl.Marker({ element: el, anchor: "bottom" })
+          const marker = new mapboxgl.Marker({ element: el, anchor: "bottom" })
             .setLngLat([hotel.longitude!, hotel.latitude!])
             .addTo(map);
+          markersRef.current.push({ marker, hotel, el });
         });
       });
     };
     document.head.appendChild(script);
-
-    return () => {
-      if (mapInstanceRef.current) mapInstanceRef.current.remove();
-    };
+    return () => { if (mapInstanceRef.current) mapInstanceRef.current.remove(); };
   }, []);
 
-  const NIGHTS2 = checkIn && checkOut ? Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000)) : 1;
+  // Show/hide markers based on search
+  useEffect(() => {
+    markersRef.current.forEach(({ el, hotel }) => {
+      const visible = mapSearch.trim() === "" || hotel.name.toLowerCase().includes(mapSearch.toLowerCase());
+      el.style.display = visible ? "block" : "none";
+    });
+    // If search matches one hotel, fly to it
+    if (mapSearch.trim() && filteredMapHotels.length === 1 && mapInstanceRef.current) {
+      const h = filteredMapHotels[0];
+      mapInstanceRef.current.flyTo({ center: [h.longitude!, h.latitude!], zoom: 14, speed: 1.5 });
+      setSelectedHotel(h);
+    }
+  }, [mapSearch]);
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 8000, display: "flex", flexDirection: "column" }}>
       {/* Map header */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, zIndex: 1 }}>
-        <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 16, color: NAVY }}>
-          Hotels on Map <span style={{ fontSize: 13, fontWeight: 400, color: "#64748b", fontFamily: "Inter,sans-serif" }}>— {hotels.filter(h => h.latitude && h.longitude).length} pins</span>
+      <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "10px 20px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, zIndex: 1 }}>
+        {/* Search input */}
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "9px 14px" }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            type="text"
+            placeholder="Search hotel on map..."
+            value={mapSearch}
+            onChange={e => setMapSearch(e.target.value)}
+            style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, color: NAVY, background: "transparent", width: "100%", fontWeight: mapSearch ? 500 : 400 }}
+          />
+          {mapSearch && <button onClick={() => setMapSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>}
         </div>
-        <button onClick={onClose} style={{ background: NAVY, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" as const, flexShrink: 0 }}>
+          {filteredMapHotels.length} pins
+        </div>
+        <button onClick={onClose} style={{ background: NAVY, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" as const, flexShrink: 0 }}>
           ☰ View List
         </button>
       </div>
-      {/* Map container */}
+
+      {/* Map */}
       <div style={{ flex: 1, position: "relative" }}>
         <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
+
         {/* Selected hotel card */}
         {selectedHotel && (
           <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", width: "min(380px, 92vw)", background: "#fff", borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.2)", overflow: "hidden", zIndex: 10 }}>
@@ -376,12 +400,13 @@ function MapView({ hotels, checkIn, checkOut, guests, onClose, onHotelClick }: {
             <div style={{ padding: "14px 16px" }}>
               <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 15, color: NAVY, marginBottom: 4 }}>{selectedHotel.name}</div>
               <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>
-                {selectedHotel.stars ? "★".repeat(selectedHotel.stars) : ""} · {selectedHotel.address || ""}
+                {selectedHotel.stars ? <span style={{ color: "#f59e0b" }}>{"★".repeat(selectedHotel.stars)}</span> : null}
+                {selectedHotel.address ? ` · ${selectedHotel.address}` : ""}
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: NAVY, fontFamily: "'Sora',sans-serif" }}>
-                    {formatINR(Math.round((selectedHotel.minRate || 0) / NIGHTS2))}
+                    {formatINR(Math.round((selectedHotel.minRate || 0) / NIGHTS))}
                   </div>
                   <div style={{ fontSize: 11, color: "#64748b" }}>per night</div>
                 </div>
@@ -897,14 +922,59 @@ function SearchResults() {
             </div>
           </div>
 
-          {/* Auth banner if not logged in */}
+          {/* Auth gate overlay — shown when not logged in and hotels loaded */}
           {!user && !loading && hotels.length > 0 && (
-            <div onClick={() => setShowAuthModal(true)} style={{ background: "linear-gradient(135deg,#1447b8,#1e40af)", borderRadius: 12, padding: "16px 20px", marginBottom: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 4 }}>🔒 Sign in to unlock member rates</div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.8)" }}>Members save an average of ₹24,600 per booking. Sign in free with Google.</div>
+            <div style={{ position: "relative", marginBottom: 0 }}>
+              {/* Show first 2 hotel cards blurred */}
+              <div style={{ filter: "blur(4px)", pointerEvents: "none", userSelect: "none" as const }}>
+                {paginatedHotels.slice(0, 2).map((hotel, idx) => {
+                  const rating = hotel.rating || getRating(hotel.code);
+                  const discount = getDiscount(hotel.code);
+                  const price = priceINR(hotel);
+                  const wasPrice = price > 0 ? Math.round(price * (1 + discount / 100)) : 0;
+                  const globalIdx = (page - 1) * perPage + idx;
+                  return isMobile ? (
+                    <div key={String(hotel.code)} className="hotel-card-mobile">
+                      <div style={{ position: "relative", height: 200 }}>
+                        <img src={getImg(hotel, globalIdx)} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      </div>
+                      <div style={{ padding: "14px 16px 16px" }}>
+                        <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 3 }}>{hotel.name}</div>
+                        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>{hotel.address || destination}</div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: NAVY }}>{formatINR(price)}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={String(hotel.code)} className="hotel-card-desktop">
+                      <div className="card-img-wrap">
+                        <img src={getImg(hotel, globalIdx)} alt={hotel.name} onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMGS[globalIdx % FALLBACK_IMGS.length]; }} />
+                      </div>
+                      <div style={{ padding: "18px 22px", display: "flex", flexDirection: "column" as const, justifyContent: "space-between" }}>
+                        <div>
+                          <div className="sora" style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{hotel.name}</div>
+                          <div style={{ fontSize: 12.5, color: "#64748b", marginBottom: 10 }}>📍 {hotel.address || destination}</div>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: NAVY }}>{formatINR(price)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <button style={{ background: YELLOW, color: "#1a1a1a", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, flexShrink: 0 }}>Sign in →</button>
+              {/* Lock overlay */}
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(248,250,252,0.7)", backdropFilter: "blur(2px)", borderRadius: 12 }}>
+                <div onClick={() => setShowAuthModal(true)} style={{ background: "#fff", borderRadius: 20, padding: "32px 36px", textAlign: "center" as const, boxShadow: "0 16px 48px rgba(0,0,0,0.15)", cursor: "pointer", maxWidth: 380, width: "90%" }}>
+                  <div style={{ fontSize: 36, marginBottom: 12 }}>🔒</div>
+                  <div className="sora" style={{ fontSize: 20, fontWeight: 800, color: NAVY, marginBottom: 8 }}>Sign in to see member rates</div>
+                  <div style={{ fontSize: 14, color: "#64748b", marginBottom: 20, lineHeight: 1.6 }}>
+                    {hotels.length} hotels found in {destination}. Sign in free to unlock exclusive rates — members save avg ₹24,600 per booking.
+                  </div>
+                  <button style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, padding: "13px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: NAVY, marginBottom: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    Continue with Google — it&apos;s free
+                  </button>
+                  <div style={{ fontSize: 11, color: "#94a3b8" }}>No credit card · Cancel anytime</div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -925,8 +995,8 @@ function SearchResults() {
             </div>
           )}
 
-          {/* Hotel cards */}
-          {!loading && !error && paginatedHotels.map((hotel, idx) => {
+          {/* Hotel cards — only shown when logged in */}
+          {!loading && !error && user && paginatedHotels.map((hotel, idx) => {
             const rating = hotel.rating || getRating(hotel.code);
             const discount = getDiscount(hotel.code);
             const price = priceINR(hotel);
