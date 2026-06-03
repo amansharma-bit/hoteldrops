@@ -551,7 +551,7 @@ function SearchResults() {
     if (hotelSearch && !h.name.toLowerCase().includes(hotelSearch.toLowerCase())) return false;
     // Star filter — parse stars from stars field or categoryName
     if (filterStars.length > 0) {
-      const starVal = h.stars || (h.categoryName ? parseInt(h.categoryName) : 0);
+      const starVal = h.stars || 0;
       if (!filterStars.includes(starVal)) return false;
     }
     if (filterBreakfast && !h.hasBreakfast) return false;
