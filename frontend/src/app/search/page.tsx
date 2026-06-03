@@ -290,15 +290,10 @@ function MapView({ hotels, checkIn, checkOut, guests, onClose, onHotelClick }: {
 
   useEffect(() => {
     if (!mapRef.current) return;
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css";
-    document.head.appendChild(link);
 
-    const script = document.createElement("script");
-    script.src = "https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js";
-    script.onload = () => {
+    const initMap = () => {
       const mapboxgl = (window as any).mapboxgl;
+      if (!mapboxgl) return;
       mapboxgl.accessToken = MAPBOX_TOKEN;
 
       const centerLng = hotelsWithCoords.length > 0
@@ -312,11 +307,11 @@ function MapView({ hotels, checkIn, checkOut, guests, onClose, onHotelClick }: {
         container: mapRef.current,
         style: "mapbox://styles/mapbox/streets-v12",
         center: [centerLng, centerLat],
-        zoom: 12,
+        zoom: 11,
       });
       mapInstanceRef.current = map;
 
-      map.on("load", () => {
+      const addMarkers = () => {
         hotelsWithCoords.forEach(hotel => {
           const pricePerNight = Math.round((hotel.minRate || 0) / NIGHTS);
           if (!pricePerNight) return;
@@ -342,9 +337,37 @@ function MapView({ hotels, checkIn, checkOut, guests, onClose, onHotelClick }: {
             .addTo(map);
           markersRef.current.push({ marker, hotel, el });
         });
-      });
+      };
+
+      // Add markers after map loads
+      if (map.loaded()) addMarkers();
+      else map.on("load", addMarkers);
     };
+
+    // If Mapbox already loaded (e.g. second time opening map)
+    if ((window as any).mapboxgl) {
+      // Load CSS if not already loaded
+      if (!document.querySelector('link[href*="mapbox-gl"]')) {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = "https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css";
+        document.head.appendChild(link);
+      }
+      initMap();
+      return () => { if (mapInstanceRef.current) mapInstanceRef.current.remove(); };
+    }
+
+    // First load
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css";
+    document.head.appendChild(link);
+
+    const script = document.createElement("script");
+    script.src = "https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js";
+    script.onload = initMap;
     document.head.appendChild(script);
+
     return () => { if (mapInstanceRef.current) mapInstanceRef.current.remove(); };
   }, []);
 
@@ -390,6 +413,12 @@ function MapView({ hotels, checkIn, checkOut, guests, onClose, onHotelClick }: {
       <div style={{ flex: 1, position: "relative" }}>
         <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
 
+        {/* No coordinates warning */}
+        {hotelsWithCoords.length === 0 && (
+          <div style={{ position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)", background: "#fff", borderRadius: 10, padding: "10px 18px", fontSize: 13, color: "#64748b", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", zIndex: 10, whiteSpace: "nowrap" as const }}>
+            ⚠️ Location data loading — pins will appear after next search
+          </div>
+        )}
         {/* Selected hotel card */}
         {selectedHotel && (
           <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", width: "min(380px, 92vw)", background: "#fff", borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.2)", overflow: "hidden", zIndex: 10 }}>
@@ -520,7 +549,11 @@ function SearchResults() {
   // Apply filters
   const filteredHotels = hotels.filter(h => {
     if (hotelSearch && !h.name.toLowerCase().includes(hotelSearch.toLowerCase())) return false;
-    if (filterStars.length > 0 && !filterStars.includes(h.stars || 0)) return false;
+    // Star filter — parse stars from stars field or categoryName
+    if (filterStars.length > 0) {
+      const starVal = h.stars || (h.categoryName ? parseInt(h.categoryName) : 0);
+      if (!filterStars.includes(starVal)) return false;
+    }
     if (filterBreakfast && !h.hasBreakfast) return false;
     if (filterRefundable && h.isRefundable !== true) return false;
     if (filterRating !== null) { const r = h.rating || getRating(h.code); if (r < filterRating) return false; }
@@ -878,13 +911,29 @@ function SearchResults() {
         {/* DESKTOP SIDEBAR */}
         {!isMobile && (
           <div>
-            {/* Map */}
-            <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 16, border: "1.5px solid #e2e8f0", cursor: "pointer" }} onClick={() => setShowMap(true)}>
-              <div style={{ height: 140, background: `linear-gradient(135deg,#1e3a8a,${B},#60a5fa)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                <div style={{ position: "absolute", inset: 0, opacity: 0.2, backgroundImage: "linear-gradient(rgba(255,255,255,0.15) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.15) 1px,transparent 1px)", backgroundSize: "36px 36px" }} />
-                <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, fontWeight: 600, position: "relative" }}>🗺️ Map view</span>
+            {/* Map thumbnail */}
+            <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 16, border: "1.5px solid #e2e8f0", cursor: "pointer", position: "relative" }} onClick={() => setShowMap(true)}>
+              <img
+                src={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${
+                  hotels.find(h => h.longitude && h.latitude)
+                    ? `${hotels.find(h => h.longitude && h.latitude)!.longitude},${hotels.find(h => h.longitude && h.latitude)!.latitude},11`
+                    : "55.2708,25.2048,11"
+                }/268x140?access_token=${MAPBOX_TOKEN}`}
+                alt="Map"
+                style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
+                onError={e => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                  (e.target as HTMLImageElement).parentElement!.style.background = `linear-gradient(135deg,#1e3a8a,${B},#60a5fa)`;
+                }}
+              />
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 28, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                <div style={{ background: "rgba(255,255,255,0.92)", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 700, color: NAVY, boxShadow: "0 2px 8px rgba(0,0,0,0.15)", display: "flex", alignItems: "center", gap: 6 }}>
+                  🗺️ {hotels.filter(h => h.latitude && h.longitude).length || ""} hotels on map
+                </div>
               </div>
-              <div style={{ padding: "9px 14px", background: "#fff", textAlign: "center" as const, color: B, fontSize: 13, fontWeight: 600 }}>🗺 Explore on Map</div>
+              <div style={{ padding: "9px 14px", background: "#fff", textAlign: "center" as const, color: B, fontSize: 13, fontWeight: 700, borderTop: "1px solid #e2e8f0" }}>
+                📍 Explore on Map
+              </div>
             </div>
             {/* Filters */}
             <div style={{ background: "#fff", borderRadius: 12, border: "1.5px solid #e2e8f0", padding: 18 }}>
