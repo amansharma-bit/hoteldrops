@@ -9,9 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="rebuq Pitch">
   <meta name="theme-color" content="#0D1A30">
   <meta name="description" content="rebuq — Post-Booking Price tracker platform for hotel bookings. Series Seed 2026 Investment Proposal.">
-  <link rel="manifest" href="/manifest.json">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>rebuq — Investor Pitch 2026</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -78,7 +76,7 @@ body{background:var(--dark-bg);color:var(--foreground)}
 .nav-dash.dark{background:rgba(255,255,255,0.2)}
 .nav-dash.light{background:var(--border)}
 .nav-logo{
-  font-size:14px;font-weight:700;letter-spacing:-0.01em;
+  font-family:'Sora',sans-serif;font-size:14px;font-weight:800;letter-spacing:-0.01em;
 }
 .nav-logo.dark{color:rgba(255,255,255,0.9)}
 .nav-logo.light{color:var(--foreground)}
@@ -177,7 +175,7 @@ body{background:var(--dark-bg);color:var(--foreground)}
 .stat-big.dark-num{color:var(--foreground)}
 .stat-desc{font-size:13px;color:var(--muted);line-height:1.55;margin-top:8px}
 
-/* BULLET */
+/* OPTIMISTICET */
 .bullets{list-style:none;display:flex;flex-direction:column;gap:9px;margin-top:12px}
 .bullets li{font-size:13px;color:var(--muted);display:flex;align-items:flex-start;gap:9px;line-height:1.5}
 .bullets li::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--royal-blue);flex-shrink:0;margin-top:7px}
@@ -294,10 +292,10 @@ body.scroll-mode .slide{position:relative;min-height:100vh}
   z-index:200;
 }
 .website-nav .wn-logo{
-  font-size:16px;font-weight:700;color:var(--foreground);
+  font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:var(--foreground);
   letter-spacing:-0.02em;text-decoration:none;
 }
-.website-nav .wn-logo span{color:var(--royal-blue)}
+.website-nav .wn-logo span{color:#FCD34D}
 .website-nav .wn-links{
   display:flex;align-items:center;gap:32px;
 }
@@ -319,80 +317,6 @@ body.scroll-mode .slide{position:relative;min-height:100vh}
 .progress-bar{top:56px!important}
 .slide-viewport{top:56px!important;bottom:52px!important;position:fixed;left:0;right:0}
 .bottom-nav{bottom:0}
-
-/* ── MOBILE RESPONSIVE ── */
-@media (max-width: 768px) {
-  .top-nav { padding: 12px 16px !important; }
-  .wn-links { display: none !important; }
-  .wn-cta { display: none !important; }
-  
-  .slide-body { padding: 16px !important; }
-  .slide-body.top-align { padding: 16px !important; }
-  
-  .slide-title { font-size: 22px !important; }
-  .slide-sub { font-size: 12px !important; }
-  
-  .grid-2, .grid-3 { grid-template-columns: 1fr !important; gap: 10px !important; }
-  .split-wide { flex-direction: column !important; gap: 16px !important; }
-  
-  .card { padding: 14px !important; }
-  
-  .stat-big { font-size: 36px !important; }
-  
-  .year-card { padding: 14px !important; }
-  .year-num { font-size: 28px !important; }
-  
-  .mini-stat { padding: 0 !important; border: none !important; }
-  
-  /* Cover slide mobile */
-  #s0 h1 { font-size: 56px !important; }
-  #s0 .stat-big { font-size: 20px !important; }
-  
-  /* Bottom nav mobile */
-  .bottom-nav { padding: 8px 12px !important; font-size: 10px !important; }
-  .dot-nav { display: none !important; }
-  .scroll-btn { display: none !important; }
-
-  /* Stats grid in cards - stack on mobile */
-  [style*="grid-template-columns:1fr 1fr 1fr 1fr"] { 
-    grid-template-columns: 1fr 1fr !important; 
-    gap: 12px !important;
-  }
-  [style*="grid-template-columns:1fr 1fr 1fr"] { 
-    grid-template-columns: 1fr !important; 
-  }
-  [style*="grid-template-columns:1fr 1fr"] { 
-    grid-template-columns: 1fr !important; 
-  }
-
-  /* Hide dot grid decorations on mobile */
-  .noise-overlay { display: none !important; }
-
-  /* Competitive dark card */
-  .dark-card { padding: 14px !important; }
-
-  /* Pill tags wrap */
-  .pill { font-size: 9px !important; padding: 2px 8px !important; }
-
-  /* Bottom bar stats */
-  .bg-card [style*="grid-template-columns"] {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 12px !important;
-  }
-
-  /* Cover stats row */
-  #s0 [style*="grid-template-columns:1fr 1fr 1fr 1fr"] {
-    grid-template-columns: 1fr 1fr !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .slide-title { font-size: 18px !important; }
-  #s0 h1 { font-size: 42px !important; }
-  .stat-big { font-size: 28px !important; }
-  .year-num { font-size: 22px !important; }
-}
-
 </style>
 </head>
 <body>
@@ -437,10 +361,10 @@ body.scroll-mode .slide{position:relative;min-height:100vh}
 const SLIDES = [
   {
     id:'cover', title:'Cover', dark:true,
-    html:`<div class="slide dark-slide" id="s0" style="position:relative;overflow:hidden;display:flex;flex-direction:column;background:#0D1A30;height:100%">
+    html:`<div class="slide dark-slide" id="s0" style="position:relative;overflow:hidden;display:flex;flex-direction:column;background:linear-gradient(135deg,#0D1B6E 0%,#1535C9 45%,#2563EB 75%,#3B82F6 100%);height:100%">
 
       <!-- Grid texture -->
-      <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(59,91,219,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(59,91,219,0.07) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0"></div>
+      <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0"></div>
 
       <!-- Bottom gradient -->
       <div style="position:absolute;bottom:0;left:0;right:0;height:45%;background:linear-gradient(to bottom,transparent,rgba(20,40,90,0.3));pointer-events:none;z-index:0"></div>
@@ -462,18 +386,18 @@ const SLIDES = [
       <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 64px;position:relative;z-index:10;gap:20px">
         <!-- Giant headline -->
         <div style="display:flex;align-items:flex-end;gap:0;line-height:0.88">
-          <h1 style="font-size:clamp(96px,13vw,160px);font-weight:800;letter-spacing:-0.04em;color:#ffffff;margin:0;line-height:0.88">rebuq</h1><span style="font-size:clamp(96px,13vw,160px);font-weight:800;color:var(--royal-blue);line-height:0.88">.</span>
+          <h1 style="font-family:'Sora',sans-serif;font-size:clamp(96px,13vw,160px);font-weight:800;letter-spacing:-0.04em;color:#ffffff;margin:0;line-height:0.88">rebuq</h1><span style="font-size:clamp(96px,13vw,160px);font-weight:800;color:#FCD34D;line-height:0.88">.</span>
         </div>
 
         <!-- Tagline -->
         <p style="font-size:clamp(16px,1.6vw,20px);font-weight:300;line-height:1.6;color:rgba(255,255,255,0.55);max-width:640px;margin:0">
-          Post-Booking Price tracker platform for <strong style="color:rgba(255,255,255,0.9);font-weight:500">hotel bookings.</strong>
+          Post-Booking Price tracker platform for <span style="color:rgba(255,255,255,0.55)">hotel bookings.</span>
         </p>
 
         <!-- CTAs -->
         <div style="display:flex;gap:12px;align-items:center">
           <a href="https://www.rebuq.com" target="_blank" style="padding:12px 24px;background:var(--royal-blue);color:#fff;border:none;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center">Visit rebuq.com</a>
-          <button onclick="window.goTo(1)" style="padding:12px 24px;background:transparent;color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.18);border-radius:24px;font-size:13px;font-weight:500;cursor:pointer">View Pitch Deck →</button>
+          <button onclick="window.goTo(1)" style="padding:12px 24px;background:#FCD34D;color:#fff;border:1.5px solid #FCD34D;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer">View Pitch Deck →</button>
         </div>
       </div>
 
@@ -481,14 +405,14 @@ const SLIDES = [
       <div style="position:relative;z-index:10;padding:0 64px 68px">
         <div style="border-top:1px solid rgba(255,255,255,0.07);padding-top:24px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0">
           ${[
-            ['₹7,400','Avg Money Overpaid Per Booking'],
+            ['₹7,400','Avg potential saving available per booking'],
             ['13–27%','Hotel Price Fluctuation Post-Booking'],
             ['14% CAGR','Outbound 4/5-Star Booking Growth'],
             ['5.7M / yr','Eligible Premium Bookings — India'],
           ].map((s,i) => `
           <div style="${i>0?'border-left:1px solid rgba(255,255,255,0.08);padding-left:32px;':'padding-right:32px;'}">
-            <div style="font-size:clamp(20px,2.2vw,28px);font-weight:700;color:var(--royal-blue);letter-spacing:-0.02em">${s[0]}</div>
-            <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:4px;line-height:1.4">${s[1]}</div>
+            <div style="font-size:clamp(20px,2.2vw,28px);font-weight:700;color:#ffffff;letter-spacing:-0.02em">${s[0]}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.75);margin-top:4px;line-height:1.4">${s[1]}</div>
           </div>`).join('')}
         </div>
       </div>
@@ -502,7 +426,7 @@ const SLIDES = [
   {
     id:'problem', title:'The Problem', dark:false,
     html:`<div class="slide light-slide" id="s1">
-      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">02</span><div class="nav-dash light"></div><span>THE PROBLEM</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">02</span><div class="nav-dash light"></div><span>THE PROBLEM</span></div></div>
       <div class="slide-body top-align">
         <h2 class="slide-title" style="font-size:clamp(26px,3vw,36px);margin-bottom:24px;max-width:700px;line-height:1.2">You booked at the right price.<br>It dropped. <span style="color:var(--royal-blue)">You never knew.</span></h2>
         <div class="split-wide" style="gap:40px;align-items:center">
@@ -547,7 +471,7 @@ const SLIDES = [
   {
     id:'solution', title:'The Solution', dark:false,
     html:`<div class="slide light-slide" id="s2">
-      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">03</span><div class="nav-dash light"></div><span>THE SOLUTION</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">03</span><div class="nav-dash light"></div><span>THE SOLUTION</span></div></div>
       <div class="slide-body top-align">
         <h2 class="slide-title" style="font-size:clamp(24px,3vw,38px);margin-bottom:28px;max-width:800px;line-height:1.2">Three steps between your booking and your savings.<br><span style="color:var(--royal-blue)">You only do one of them.</span></h2>
         <div class="grid-3">
@@ -559,17 +483,17 @@ const SLIDES = [
                 <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Step 01</span>
               </div>
               <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em;color:var(--foreground)">Upload Your Booking</h3>
-              <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px">Forward your email confirmation, booking screenshot, or voucher on WhatsApp — or fill in details manually. AI parses it instantly.</p>
+              <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px">Upload your booking confirmation, take a photo of your voucher, or paste your hotel details. Our AI parses it instantly on the rebuq website or app.</p>
               <div style="height:1px;background:var(--border);margin-bottom:12px"></div>
               <ul class="bullets">
                 <li>Works with any booking format — Booking.com, Expedia, travel agents, or direct hotel</li>
                 <li>Only refundable bookings are enrolled — verified automatically</li>
-                <li>No app to install. No account setup. Live in under 60 seconds.</li>
+                <li>No app to install. No account setup. Ready in under 60 seconds.</li>
               </ul>
             </div>
             <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">
-              <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Onboarding time</span>
-              <span style="font-size:16px;font-weight:700;color:var(--foreground)">&lt;30s</span>
+              <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Upload time</span>
+              <span style="font-size:16px;font-weight:700;color:var(--foreground)">&lt;10s</span>
             </div>
           </div>
 
@@ -580,12 +504,12 @@ const SLIDES = [
                 <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Step 02</span>
               </div>
               <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em;color:var(--foreground)">We Monitor 24/7</h3>
-              <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px">Our AI checks rates across 50+ supplier APIs and 500k+ properties worldwide.</p>
+              <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px">Our AI monitors rates 24/7 across hundreds of thousands of properties worldwide.</p>
               <div style="height:1px;background:var(--border);margin-bottom:12px"></div>
               <ul class="bullets">
                 <li>Tracks the 13–27% price drops that happen post-booking</li>
                 <li>Refundability re-verified before triggering any alert or action</li>
-                <li>Access wholesale rates unavailable on any public booking platform</li>
+                <li>Access members-only rates unavailable on any public booking platform</li>
               </ul>
             </div>
             <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">
@@ -601,12 +525,12 @@ const SLIDES = [
                 <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)">Step 03</span>
               </div>
               <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em;color:var(--foreground)">You Get a Lower Price</h3>
-              <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px">The moment a lower rate is confirmed, you get an instant WhatsApp + email alert with the exact savings amount.</p>
+              <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:14px">The moment a lower rate is confirmed, you get an instant alert with the exact savings — and a direct link to rebook at the lower price.</p>
               <div style="height:1px;background:var(--border);margin-bottom:12px"></div>
               <ul class="bullets">
                 <li>One tap lands you directly on the booking page — no friction</li>
-                <li>Zero fee to the traveller — rebuq earns only from the spread</li>
-                <li>No app to install. Stays completely in your ecosystem.</li>
+                <li>Completely free for the traveller — always</li>
+                <li>No app to install. Works entirely within your existing ecosystem.</li>
               </ul>
             </div>
             <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">
@@ -622,7 +546,7 @@ const SLIDES = [
   {
         id:'tech', title:'Why Now', dark:false,
     html:`<div class="slide light-slide" id="s3">
-      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">04</span><div class="nav-dash light"></div><span>WHY NOW</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">04</span><div class="nav-dash light"></div><span>WHY NOW</span></div></div>
       <div class="slide-body top-align">
         <h2 class="slide-title" style="font-size:clamp(24px,3vw,38px);margin-bottom:6px;line-height:1.15">This wasn't possible 3 years ago.<br><span style="color:var(--royal-blue)">AI made it inevitable.</span></h2>
         <p class="slide-sub" style="margin-bottom:28px">The problem existed for decades. The tools to solve it — Vision AI, wholesale APIs, WhatsApp automation — only converged in the last 2 years. rebuq is built exactly at this inflection point.</p>
@@ -630,11 +554,11 @@ const SLIDES = [
         <div class="grid-3" style="margin-bottom:20px">
 
           <!-- Reason 1 -->
-          <div class="card" style="padding:24px">
+          <div class="card" style="padding:24px;display:flex;flex-direction:column">
             <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:8px">Vision AI crossed the threshold</div>
             <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">Frontier models like Anthropic Claude can now read any document — PDF, screenshot, WhatsApp forward — and extract structured data with 99%+ accuracy. Manual data entry is no longer needed. This unlocks onboarding that was previously impossible at scale.</p>
             <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto">
               <div style="background:var(--bg);border-radius:8px;padding:10px 12px">
                 <div style="font-size:16px;font-weight:700;color:var(--foreground)">99%+</div>
                 <div style="font-size:10px;color:var(--muted);margin-top:2px">Parsing accuracy</div>
@@ -647,11 +571,11 @@ const SLIDES = [
           </div>
 
           <!-- Reason 2 -->
-          <div class="card" style="padding:24px">
+          <div class="card" style="padding:24px;display:flex;flex-direction:column">
             <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:8px">Wholesale APIs went global</div>
             <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">50+ hotel wholesale networks now offer programmatic API access. Rate monitoring that once required a human calling wholesalers daily can now run automatically, continuously, across 500k+ properties simultaneously — at zero marginal cost.</p>
             <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto">
               <div style="background:var(--bg);border-radius:8px;padding:10px 12px">
                 <div style="font-size:16px;font-weight:700;color:var(--foreground)">50+</div>
                 <div style="font-size:10px;color:var(--muted);margin-top:2px">Supplier APIs</div>
@@ -664,11 +588,11 @@ const SLIDES = [
           </div>
 
           <!-- Reason 3 -->
-          <div class="card" style="padding:24px">
+          <div class="card" style="padding:24px;display:flex;flex-direction:column">
             <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:8px">WhatsApp became the layer</div>
             <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">India has 500M+ WhatsApp users. Travellers already live there. No app install, no new behaviour required — alerts and one-tap rebooks happen inside a channel people check 50x a day. Distribution with zero friction.</p>
             <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto">
               <div style="background:var(--bg);border-radius:8px;padding:10px 12px">
                 <div style="font-size:16px;font-weight:700;color:var(--foreground)">500M+</div>
                 <div style="font-size:10px;color:var(--muted);margin-top:2px">WhatsApp users in India</div>
@@ -697,7 +621,7 @@ const SLIDES = [
   {
     id:'market', title:'Market TAM / SAM / SOM', dark:false,
     html:`<div class="slide light-slide" id="s4">
-      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">05</span><div class="nav-dash light"></div><span>MARKET TAM / SAM / SOM</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">05</span><div class="nav-dash light"></div><span>MARKET TAM / SAM / SOM</span></div></div>
       <div class="slide-body top-align">
         <h2 class="slide-title">Market Sizing</h2>
         <p class="slide-sub">Indian 4 & 5-Star Refundable Hotel Bookings — Domestic + Outbound · Sources: Ministry of Tourism India, Hotelivate, TravClan, Prostay, KAYAK 2024, Research & Markets 2025</p>
@@ -728,15 +652,15 @@ const SLIDES = [
 
           <!-- SOM -->
           <div class="card" style="border:1px solid var(--royal-blue)">
-            <div class="stat-label" style="margin-bottom:8px">SOM — Serviceable Obtainable Market</div>
-            <div class="stat-big" style="font-size:36px">₹22.6 Cr</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:12px">3-year base case revenue</div>
+            <div class="stat-label" style="margin-bottom:8px">rebuq's 3-Year Target</div>
+            <div class="stat-big" style="font-size:36px">₹97.2 Cr</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:12px">3-year GMV target · Aug 2026–Dec 2028 · Expected case · ₹38k sell price</div>
             <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">
-              <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Stream 1 — Post-booking rebooking</span><span style="font-weight:600">₹15.19 Cr</span></div>
-              <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Stream 2 — Members direct booking</span><span style="font-weight:600">₹7.38 Cr</span></div>
-              <div style="padding:8px 12px;display:flex;justify-content:space-between;font-size:11px;background:rgba(59,91,219,0.04)"><span style="font-weight:600">71,138 bookings · 3 years</span><span style="font-weight:700;color:var(--royal-blue)">₹22.6 Cr</span></div>
+              <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Conservative · 18,868 bookings</span><span style="font-weight:600">₹71.7 Cr GMV</span></div>
+              <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Expected · 25,589 bookings</span><span style="font-weight:600">₹97.2 Cr GMV</span></div>
+              <div style="padding:8px 12px;display:flex;justify-content:space-between;font-size:11px;background:rgba(59,91,219,0.04)"><span style="font-weight:600">Optimistic · 28,710 bookings</span><span style="font-weight:700;color:var(--royal-blue)">₹109.1 Cr GMV</span></div>
             </div>
-            <div style="padding:8px 10px;background:rgba(59,91,219,0.06);border-radius:6px;font-size:10px;color:var(--royal-blue)">Bear ₹16.7 Cr · Base ₹22.6 Cr · Bull ₹28.95 Cr</div>
+            <div style="padding:8px 10px;background:rgba(59,91,219,0.06);border-radius:6px;font-size:10px;color:var(--royal-blue)">Gross revenue (base): ₹10.24 Cr · Net P&L (base): ₹2.29 Cr · Margin ₹4,000 · Traveller saves ₹2,000</div>
           </div>
         </div>
 
@@ -752,8 +676,8 @@ const SLIDES = [
               <div class="lbl">Post-booking rebooking (S1) + Members direct booking (S2) — both live</div>
             </div>
             <div class="mini-stat" style="padding-left:24px;border-left:1px solid var(--border)">
-              <div class="val">₹284.5 Cr</div>
-              <div class="lbl">Total GMV over 3 years · ₹40,000 avg booking · 71,138 bookings</div>
+              <div class="val">₹97.2 Cr</div>
+              <div class="lbl">3-year GMV target · Aug 2026–Dec 2028 · ₹38k sell price · 25,589 bookings</div>
             </div>
           </div>
         </div>
@@ -762,80 +686,80 @@ const SLIDES = [
   },
   {
     id:'economics', title:'Unit Economics', dark:false,
-    html:`<div class="slide light-slide" id="s5">
-      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">06</span><div class="nav-dash light"></div><span>UNIT ECONOMICS</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+    html:`<div class="slide light-slide" id="s6">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">06</span><div class="nav-dash light"></div><span>UNIT ECONOMICS</span></div></div>
       <div class="slide-body top-align">
         <h2 class="slide-title" style="margin-bottom:6px">Two Ways rebuq Makes <span style="color:var(--royal-blue)">Money</span></h2>
-        <p class="slide-sub" style="margin-bottom:20px">One principle across both — rebuq captures the spread. Traveller always pays <span style="color:var(--royal-blue);font-weight:500">less than OTA.</span> Zero fee, always.</p>
+        <p class="slide-sub" style="margin-bottom:20px">One principle across both — rebuq buys at ₹34,000 and sells at ₹38,000. Traveller always pays ₹2,000 less than OTA. Zero upfront fee.</p>
 
-        <div class="grid-2" style="margin-bottom:16px">
+        <div class="grid-2" style="margin-bottom:16px;gap:20px">
 
-          <!-- Stream 1: Post-Booking Price Drop -->
-          <div class="card" style="padding:22px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-              <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">Revenue Stream 01</div>
-              <div style="font-size:9px;padding:2px 10px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600">LIVE NOW</div>
+          <!-- Stream 1 -->
+          <div class="card" style="padding:24px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+              <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);background:rgba(59,91,219,0.08);padding:3px 10px;border-radius:4px">STREAM 01 · LIVE NOW</div>
             </div>
-            <h3 style="font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:10px">Post-Booking Price Drop</h3>
-            <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:16px">AI bots monitor live market rates across 50+ supplier APIs. When yield management cuts kick in post-booking, rebuq catches the drop, rebooks, and captures the spread above the new lower rate.</p>
-
-            <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px">
-              <div style="padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted)"><span>Example — ₹40,000 avg booking</span><span>INR</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">OTA rate paid at booking</span><span style="font-weight:500;text-decoration:line-through;color:var(--muted)">₹40,000</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">Wholesale cost to rebuq (85%)</span><span style="font-weight:600;color:#EF4444">₹34,000</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">rebuq sells to traveller at</span><span style="font-weight:600;color:var(--royal-blue)">₹37,900</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:13px;font-weight:700;border-bottom:1px solid var(--border);background:rgba(59,91,219,0.03)"><span>rebuq margin (65% take)</span><span style="color:var(--royal-blue)">₹3,900</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Traveller saves vs OTA</span><span style="font-weight:600;color:#166534">₹2,100 ✓</span></div>
+            <h3 style="font-size:18px;font-weight:700;margin-bottom:8px">Post-Booking Price Drop</h3>
+            <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">Traveller uploads their booking voucher. rebuq monitors rates 24/7. When a lower rate is found, rebuq rebooks and passes the full saving to the traveller.</p>
+            <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px">
+              <div style="padding:8px 14px;background:var(--bg);border-bottom:1px solid var(--border);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Example — ₹40,000 OTA booking</div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">OTA rate (what traveller paid)</span><span style="text-decoration:line-through;color:var(--muted)">₹40,000</span></div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Wholesale cost to rebuq</span><span style="font-weight:600">₹34,000</span></div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">rebuq sells to traveller at</span><span style="font-weight:600">₹38,000</span></div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px;background:rgba(59,91,219,0.04)"><span style="font-weight:600;color:var(--royal-blue)">rebuq gross margin</span><span style="font-weight:700;color:var(--royal-blue)">₹4,000</span></div>
+              <div style="padding:10px 14px;display:flex;justify-content:space-between;font-size:12px;background:#E8F5E9"><span style="font-weight:600;color:#166534">Traveller saves vs OTA</span><span style="font-weight:700;color:#166534">₹2,000 ✓</span></div>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px">
-              <span class="pill" style="font-size:10px">50+ supplier APIs</span>
-              <span class="pill" style="font-size:10px">500k+ properties</span>
-              <span class="pill" style="font-size:10px">WhatsApp alert</span>
-              <span class="pill" style="font-size:10px">1 tap to rebook</span>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <span class="pill">50+ supplier APIs</span>
+              <span class="pill">500k+ properties</span>
+              <span class="pill">WhatsApp alert</span>
+              <span class="pill">1 tap to rebook</span>
             </div>
           </div>
 
-          <!-- Stream 2: Members Direct Booking -->
-          <div class="card" style="padding:22px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-              <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">Revenue Stream 02</div>
-              <div style="font-size:9px;padding:2px 10px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600">LIVE NOW</div>
+          <!-- Stream 2 -->
+          <div class="card" style="padding:24px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+              <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);background:rgba(59,91,219,0.08);padding:3px 10px;border-radius:4px">STREAM 02 · LIVE NOW</div>
             </div>
-            <h3 style="font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:10px">Members-Only Direct Booking</h3>
-            <p style="font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:16px">500k+ exclusive pre-negotiated hotel deals at 12% below OTA rates — available only to rebuq members. rebuq earns a 12% commission per booking. Traveller always pays less than any public platform.</p>
-
-            <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px">
-              <div style="padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted)"><span>Example — ₹40,000 avg booking</span><span>INR</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">OTA public rate</span><span style="font-weight:500;text-decoration:line-through;color:var(--muted)">₹40,000</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">Wholesale cost to rebuq (85%)</span><span style="font-weight:600;color:#EF4444">₹34,000</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">rebuq member price (+12% on cost)</span><span style="font-weight:600;color:var(--royal-blue)">₹38,080</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:13px;font-weight:700;border-bottom:1px solid var(--border);background:rgba(59,91,219,0.03)"><span>rebuq margin (12% on cost)</span><span style="color:var(--royal-blue)">₹4,080</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Traveller saves vs OTA</span><span style="font-weight:600;color:#166534">₹1,920 ✓</span></div>
+            <h3 style="font-size:18px;font-weight:700;margin-bottom:8px">Members-Only Direct Booking</h3>
+            <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">rebuq members book hotels directly at exclusive members-only rates — unavailable on any public platform. Always priced below OTA. Free to join.</p>
+            <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px">
+              <div style="padding:8px 14px;background:var(--bg);border-bottom:1px solid var(--border);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted)">Example — ₹40,000 OTA booking</div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">OTA public rate</span><span style="text-decoration:line-through;color:var(--muted)">₹40,000</span></div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Wholesale cost to rebuq</span><span style="font-weight:600">₹34,000</span></div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">rebuq member price</span><span style="font-weight:600">₹38,000</span></div>
+              <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px;background:rgba(59,91,219,0.04)"><span style="font-weight:600;color:var(--royal-blue)">rebuq gross margin</span><span style="font-weight:700;color:var(--royal-blue)">₹4,000</span></div>
+              <div style="padding:10px 14px;display:flex;justify-content:space-between;font-size:12px;background:#E8F5E9"><span style="font-weight:600;color:#166534">Traveller saves vs OTA</span><span style="font-weight:700;color:#166534">₹2,000 ✓</span></div>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px">
-              <span class="pill" style="font-size:10px">500k+ hotels</span>
-              <span class="pill" style="font-size:10px">12% below OTA</span>
-              <span class="pill" style="font-size:10px">No app needed</span>
-              <span class="pill" style="font-size:10px">Members only</span>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <span class="pill">500k+ hotels</span>
+              <span class="pill">Always ₹2,000 below OTA</span>
+              <span class="pill">No app needed</span>
+              <span class="pill">Members only</span>
             </div>
           </div>
         </div>
 
         <!-- Bottom combined economics -->
-        <div class="card bg-card" style="padding:14px 20px">
-          <div style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Combined Unit Economics — Per Active Traveller / Year · Base Case Y2</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0">
+        <div class="card bg-card" style="padding:16px 24px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">Combined Unit Economics — Same Model Across Both Streams</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:0">
             <div class="mini-stat" style="padding-right:20px">
-              <div class="val" style="font-size:18px">2× avg</div>
-              <div class="lbl">Bookings per traveller per year</div>
+              <div class="val" style="font-size:18px">₹4,000</div>
+              <div class="lbl">Gross margin per booking · both streams</div>
             </div>
             <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
-              <div class="val" style="font-size:18px">₹3,927</div>
-              <div class="lbl">Blended avg margin per booking (Y2 base)</div>
+              <div class="val" style="font-size:18px">₹2,520</div>
+              <div class="lbl">Net per Visa2Fly / organic booking</div>
             </div>
             <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
-              <div class="val" style="font-size:18px">₹7,854</div>
-              <div class="lbl">Annual LTV per traveller (2 events × ₹3,927)</div>
+              <div class="val" style="font-size:18px">₹2,020</div>
+              <div class="lbl">Net per partner booking (₹500 payout)</div>
+            </div>
+            <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">₹2,000</div>
+              <div class="lbl">Traveller saves vs OTA · every booking</div>
             </div>
             <div class="mini-stat" style="padding-left:20px;border-left:1px solid var(--border)">
               <div class="val" style="font-size:18px">Zero</div>
@@ -849,10 +773,10 @@ const SLIDES = [
   {
     id:'competitive', title:'Competitive Alignment', dark:false,
     html:`<div class="slide light-slide" id="s8">
-      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">07</span><div class="nav-dash light"></div><span>COMPETITIVE ALIGNMENT</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">07</span><div class="nav-dash light"></div><span>COMPETITIVE ALIGNMENT</span></div></div>
       <div class="slide-body top-align">
         <h2 class="slide-title" style="font-size:clamp(24px,3vw,36px);margin-bottom:6px;line-height:1.2">Every existing player is structurally incentivised<br>to <span style="color:var(--royal-blue)">ignore your savings.</span></h2>
-        <p class="slide-sub" style="margin-bottom:24px">It's not a technology gap. It's an incentive gap. rebuq is the only player whose revenue is perfectly aligned with the traveller.</p>
+        <p class="slide-sub" style="margin-bottom:24px">It's not just a technology gap. It's an incentive gap. rebuq is the only player whose incentives are perfectly aligned with the traveller — and that's a structural moat no OTA can replicate.</p>
 
         <!-- 4 player cards -->
         <div class="grid-2" style="margin-bottom:16px;gap:14px">
@@ -863,7 +787,7 @@ const SLIDES = [
               <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(59,91,219,0.7)">Online Travel Agents (OTAs)</div>
               <div style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(239,68,68,0.2);color:#EF4444;font-weight:600">INCENTIVE: AGAINST YOU</div>
             </div>
-            <p style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.65;margin-bottom:12px">OTAs earn 10–20% commission on gross booking value. Every time a price drops and a traveller saves, the OTA earns less. They are mathematically incentivised to never alert you.</p>
+            <p style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.65;margin-bottom:12px">OTAs earn 10–15% commission on gross booking value. Every time a price drops and a traveller saves, the OTA earns less. They are mathematically incentivised to never alert you.</p>
             <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:12px">
               <div style="font-size:9px;color:rgba(59,91,219,0.7);font-weight:600;letter-spacing:0.08em;margin-bottom:8px">THE MATH</div>
               <div style="display:flex;justify-content:space-between;align-items:center">
@@ -913,10 +837,10 @@ const SLIDES = [
   {
     id:'gtm', title:'Go-To-Market', dark:false,
     html:`<div class="slide light-slide" id="s_gtm">
-      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">08</span><div class="nav-dash light"></div><span>GO-TO-MARKET</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">08</span><div class="nav-dash light"></div><span>GO-TO-MARKET</span></div></div>
       <div class="slide-body top-align">
-        <h2 class="slide-title" style="margin-bottom:6px">Zero paid acquisition.<br><span style="color:var(--royal-blue)">The audience already exists.</span></h2>
-        <p class="slide-sub" style="margin-bottom:24px">rebuq's distribution advantage is structural — not paid. Three channels that require zero cold outreach and near-zero CAC at launch.</p>
+        <h2 class="slide-title" style="margin-bottom:6px">Partner-led distribution.<br><span style="color:var(--royal-blue)">The audience already exists.</span></h2>
+        <p class="slide-sub" style="margin-bottom:24px">rebuq's distribution is embedded inside existing booking flows — three partner channels with structured CAC and zero cold outreach.</p>
 
         <div class="grid-3" style="margin-bottom:16px">
 
@@ -926,12 +850,12 @@ const SLIDES = [
               <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:6px">Channel 01 · Live Now</div>
               <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em">Visa2Fly Base</h3>
               <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
-              <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Aman's existing Visa2Fly customer base — premium Indian outbound travellers who already trust the brand, already book luxury hotels, and are already experiencing the exact problem rebuq solves. A single WhatsApp broadcast activates the first cohort.</p>
+              <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Visa2Fly's existing customer base — premium Indian outbound travellers who already book 4 and 5-star hotels and are experiencing the exact problem rebuq solves. rebuq surfaces at checkout — no cold outreach needed.</p>
               <ul class="bullets">
                 <li>Warm audience — zero cold outreach needed</li>
                 <li>Established trust — existing brand relationship</li>
                 <li>Day one activation — no ramp-up period</li>
-                <li>Zero CAC for the first 100+ profiles</li>
+                <li>Zero CAC</li>
               </ul>
             </div>
             <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">
@@ -940,15 +864,15 @@ const SLIDES = [
             </div>
           </div>
 
-          <!-- Channel 2: iXiGO -->
+          <!-- Channel 2: Niyo -->
           <div class="card" style="padding:24px;display:flex;flex-direction:column;justify-content:space-between">
             <div>
               <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:6px">Channel 02 · Phase 1</div>
-              <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em">iXiGO Partnership</h3>
+              <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em">Niyo Partnership</h3>
               <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
-              <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Strategic partnership with iXiGO — one of India's largest travel platforms. A post-booking integration surfaces rebuq to millions of active Indian travellers at exactly the right moment — right after they confirm a hotel booking.</p>
+              <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Niyo is India's leading travel neobank — 4M+ customers who use zero-forex cards for international travel. rebuq integrates post-booking, surfacing at exactly the moment a hotel is confirmed.</p>
               <ul class="bullets">
-                <li>Distribution at scale — millions of active travellers</li>
+                <li>Travel-first audience — 4M+ active international travellers</li>
                 <li>Post-booking trigger — perfect moment of relevance</li>
                 <li>Partnership-driven — no paid media required</li>
                 <li>Warm context — traveller just made a booking</li>
@@ -966,12 +890,12 @@ const SLIDES = [
               <div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:6px">Channel 03 · Ongoing</div>
               <h3 style="font-size:18px;font-weight:700;margin-bottom:10px;letter-spacing:-0.01em">Organic & Word of Mouth</h3>
               <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
-              <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Every traveller who saves ₹7,400 tells their network. Real savings stories shared in Indian travel WhatsApp groups, social media, and travel communities create organic pull that no paid campaign can replicate.</p>
+              <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">A traveller who just saved money on a hotel they already paid for doesn't stay quiet. That story travels — to family group chats, travel communities, office colleagues planning the same trip. rebuq's product is the campaign.</p>
               <ul class="bullets">
-                <li>Product-led growth — savings are inherently shareable</li>
-                <li>WhatsApp travel communities — high-intent audience</li>
-                <li>Real savings proof — builds trust organically</li>
-                <li>Self-reinforcing loop — more savers = more referrals</li>
+                <li>Savings are the referral — no incentive needed</li>
+                <li>Indian travel WhatsApp groups are high-trust, high-intent</li>
+                <li>Every rebook is social proof that spreads without a budget</li>
+                <li>Self-reinforcing — more savers = more referrals = more savers</li>
               </ul>
             </div>
             <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center">
@@ -1008,93 +932,90 @@ const SLIDES = [
   {
         id:'roadmap', title:'Roadmap', dark:false,
     html:`<div class="slide light-slide" id="s9">
-      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">09</span><div class="nav-dash light"></div><span>ROADMAP</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">09</span><div class="nav-dash light"></div><span>ROADMAP</span></div></div>
       <div class="slide-body top-align">
         <h2 class="slide-title" style="margin-bottom:6px">36-Month Execution Plan</h2>
-        <p class="slide-sub" style="margin-bottom:24px">Both revenue streams are live. Seed capital funds the team and scale — not the product build.</p>
+        <p class="slide-sub" style="margin-bottom:20px">Both revenue streams are live. Seed capital funds the team and scale — not the product build.</p>
 
         <div class="grid-3" style="margin-bottom:16px">
 
           <!-- Phase 1 -->
-          <div class="card" style="padding:24px;display:flex;flex-direction:column;justify-content:space-between">
+          <div class="card" style="padding:22px;display:flex;flex-direction:column;justify-content:space-between">
             <div>
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
                 <span style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">Phase 1</span>
                 <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600">AUG–DEC 2026</span>
               </div>
-              <h3 style="font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em">Validate the Core Loop</h3>
-              <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Both streams live. First paying cohort. Prove the model works at small scale before opening distribution.</p>
-              <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+              <h3 style="font-size:17px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em">Validate</h3>
+              <p style="font-size:11px;color:var(--muted);margin-bottom:14px">First paying cohort. Prove the model works before opening distribution.</p>
+              <div style="height:1px;background:var(--border);margin-bottom:12px"></div>
               <ul class="bullets">
-                <li>Onboard first 100 active profiles via Visa2Fly — zero CAC</li>
-                <li>Post-booking tracker + WhatsApp alert flow fully operational</li>
-                <li>Exclusive Members Deals section live and transacting</li>
-                <li>iXiGO partnership signed and integration underway</li>
-                <li>Vision AI parsing accuracy validated above 99%</li>
-                <li>First 50+ real savings events delivered to travellers</li>
+                <li>Visa2Fly activated — 90 bookings/month · zero CAC</li>
+                <li>ACKO live November 2026 — 160 bookings/month · ₹500 payout</li>
+                <li>rebuq Organic — 38 bookings/month</li>
+                <li>Post-booking tracker + WhatsApp alert flow live</li>
+                <li>Break-even achieved — November 2026</li>
               </ul>
             </div>
             <div style="margin-top:16px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-              <div style="padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em"><span>Revenue target</span><span>Bookings</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between">
-                <span style="font-size:16px;font-weight:700;color:var(--foreground)">₹28.4 Lakhs</span>
-                <span style="font-size:14px;font-weight:600;color:var(--muted)">1,575</span>
+              <div style="padding:7px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em"><span>Base Bookings</span><span>GMV</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:18px;font-weight:700;color:var(--foreground)">1,049</span>
+                <span style="font-size:13px;font-weight:600;color:var(--muted)">₹4.0 Cr</span>
               </div>
             </div>
           </div>
 
           <!-- Phase 2 -->
-          <div class="card" style="padding:24px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid var(--royal-blue)">
+          <div class="card" style="padding:22px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid var(--royal-blue)">
             <div>
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
                 <span style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">Phase 2</span>
-                <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600">JAN–DEC 2028</span>
+                <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600">JAN–DEC 2027</span>
               </div>
-              <h3 style="font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em">Scale Both Streams</h3>
-              <p style="font-size:11px;color:var(--muted);margin-bottom:14px">iXiGO integration live. Members Deals driving Stream 2 revenue from Jan. CTO and Head of Supply operational.</p>
-              <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+              <h3 style="font-size:17px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em">Scale</h3>
+              <p style="font-size:11px;color:var(--muted);margin-bottom:14px">All 4 channels live. B2B and B2E launched. Team expanded.</p>
+              <div style="height:1px;background:var(--border);margin-bottom:12px"></div>
               <ul class="bullets">
-                <li>iXiGO post-booking integration live — distribution at scale</li>
-                <li>Members-Only Deals fully open to all registered members</li>
-                <li>CTO hired — tech infrastructure scaled for volume</li>
-                <li>Head of Supply hired — supplier API network expanded</li>
-                <li>2,000+ active profiles under management</li>
-                <li>Both Stream 1 and Stream 2 running simultaneously</li>
+                <li>Niyo from April 2027 — 100 bookings/month added</li>
+                <li>B2B launched — travel agencies enrol client bookings</li>
+                <li>B2E launched — corporate travel desks as partners</li>
+                <li>+1 support + 1 tech hired · Salary + Tech ₹10.6L/month</li>
+                <li>Members Deals fully open to all registered members</li>
               </ul>
             </div>
             <div style="margin-top:16px;border:1px solid rgba(59,91,219,0.2);border-radius:8px;overflow:hidden">
-              <div style="padding:8px 12px;background:rgba(59,91,219,0.04);border-bottom:1px solid rgba(59,91,219,0.1);display:flex;justify-content:space-between;font-size:10px;color:var(--royal-blue);font-weight:600;text-transform:uppercase;letter-spacing:0.06em"><span>Revenue target</span><span>Bookings</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between">
-                <span style="font-size:16px;font-weight:700;color:var(--royal-blue)">₹5.43 Crore</span>
-                <span style="font-size:14px;font-weight:600;color:var(--royal-blue)">20,055</span>
+              <div style="padding:7px 12px;background:rgba(59,91,219,0.04);border-bottom:1px solid rgba(59,91,219,0.1);display:flex;justify-content:space-between;font-size:10px;color:var(--royal-blue);font-weight:600;text-transform:uppercase;letter-spacing:0.06em"><span>Base Bookings</span><span>GMV</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:18px;font-weight:700;color:var(--royal-blue)">7,590</span>
+                <span style="font-size:13px;font-weight:600;color:var(--royal-blue)">₹28.8 Cr</span>
               </div>
             </div>
           </div>
 
           <!-- Phase 3 -->
-          <div class="card" style="padding:24px;display:flex;flex-direction:column;justify-content:space-between">
+          <div class="card" style="padding:22px;display:flex;flex-direction:column;justify-content:space-between">
             <div>
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
                 <span style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue)">Phase 3</span>
                 <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600">JAN–DEC 2028</span>
               </div>
-              <h3 style="font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em">Full Platform · Series A Ready</h3>
-              <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Platform fully automated at scale. New distribution partnerships. Series A fundraise initiated on the back of proven revenue model.</p>
-              <div style="height:1px;background:var(--border);margin-bottom:14px"></div>
+              <h3 style="font-size:17px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em">Platform · Series A</h3>
+              <p style="font-size:11px;color:var(--muted);margin-bottom:14px">AI Camera Price Search launched. Pre-booking market unlocked.</p>
+              <div style="height:1px;background:var(--border);margin-bottom:12px"></div>
               <ul class="bullets">
-                <li>Expand distribution — new travel platform partnerships</li>
-                <li>Top 50 Indian outbound agencies onboarded</li>
-                <li>Members Deals catalogue expanded to 1M+ properties</li>
-                <li>20,000+ active profiles under management</li>
-                <li>Full automation — minimal manual intervention</li>
-                <li>Series A fundraise initiated — ₹16.86 Cr annual revenue</li>
+                <li style="font-weight:600;color:var(--royal-blue)">PWA camera — point at any OTA, get best price instantly via WhatsApp</li>
+                <li>Vision AI captures hotel, dates, guests from screen in &lt;5 seconds</li>
+                <li>Opens pre-booking comparison market — new revenue stream</li>
+                <li>Full team · Salary + Tech ₹16L/month</li>
+                <li>Series A fundraise initiated on proven model</li>
               </ul>
             </div>
             <div style="margin-top:16px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-              <div style="padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em"><span>Revenue target</span><span>Bookings</span></div>
-              <div style="padding:10px 12px;display:flex;justify-content:space-between">
-                <span style="font-size:16px;font-weight:700;color:var(--foreground)">₹16.86 Crore</span>
-                <span style="font-size:14px;font-weight:600;color:var(--muted)">49,508</span>
+              <div style="padding:7px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em"><span>Base Bookings</span><span>GMV</span></div>
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:18px;font-weight:700;color:var(--foreground)">16,950</span>
+                <span style="font-size:13px;font-weight:600;color:var(--muted)">₹64.4 Cr</span>
               </div>
             </div>
           </div>
@@ -1104,20 +1025,20 @@ const SLIDES = [
         <div class="card bg-card" style="padding:14px 24px">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0">
             <div class="mini-stat" style="padding-right:20px">
-              <div class="val" style="font-size:18px">Live now</div>
-              <div class="lbl">Both streams built — seed funds scale not product</div>
+              <div class="val" style="font-size:18px">Nov 2026</div>
+              <div class="lbl">Break-even — all 3 scenarios</div>
             </div>
             <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
-              <div class="val" style="font-size:18px">₹22.6 Cr</div>
-              <div class="lbl">3-year base case cumulative revenue</div>
+              <div class="val" style="font-size:18px">25,589</div>
+              <div class="lbl">3-year base case bookings</div>
             </div>
             <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
-              <div class="val" style="font-size:18px">71,138</div>
-              <div class="lbl">Total bookings processed over 36 months</div>
+              <div class="val" style="font-size:18px">₹97.2 Cr</div>
+              <div class="lbl">3-year base case GMV</div>
             </div>
             <div class="mini-stat" style="padding-left:20px;border-left:1px solid var(--border)">
-              <div class="val" style="font-size:18px">Series A</div>
-              <div class="lbl">Target raise initiation — end of Year 3</div>
+              <div class="val" style="font-size:18px">₹2.68 Cr</div>
+              <div class="lbl">Final cash balance · base case</div>
             </div>
           </div>
         </div>
@@ -1126,72 +1047,91 @@ const SLIDES = [
   },
   {
     id:'financials', title:'Financial Projections', dark:false,
-    html:`<div class="slide light-slide" id="s11">
-      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">12</span><div class="nav-dash light"></div><span>FINANCIAL PROJECTIONS</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+    html:`<div class="slide light-slide" id="s10">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">10</span><div class="nav-dash light"></div><span>FINANCIAL PROJECTIONS</span></div></div>
       <div class="slide-body top-align">
-        <h2 class="slide-title" style="font-size:32px;margin-bottom:4px">3-Year Revenue Projections</h2>
-        <p class="slide-sub" style="margin-bottom:20px">Base case: 15% avg price drop · 60%→65%→70% take-rate ramp · ₹40,000 avg booking · Go-live Aug 2026 · Two revenue streams</p>
+        <h2 class="slide-title" style="margin-bottom:4px">3-Year Revenue Projections</h2>
+        <p class="slide-sub" style="margin-bottom:20px">OTA ₹40,000 · rebuq sells ₹38,000 · Cost ₹34,000 · Margin ₹4,000 · Traveller saves ₹2,000 · GST 18% · CC 2% · Seed ₹90L · Salary + Tech: Y1 ₹7.95L → Y2 ₹9.34L → Y3 ₹11.61L/month</p>
 
         <div class="grid-3" style="margin-bottom:16px">
-          <!-- Y1 -->
-          <div class="year-card">
-            <div class="stat-label">Year 1 · Aug–Dec 2026 <span style="font-weight:400;color:var(--muted)">(5 months)</span></div>
-            <div class="year-num">₹28.4 Lakhs</div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Platform revenue · Both streams · Phase 1 validation</div>
-            <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
-            <div class="stat-label">Total bookings</div><div class="year-stat-val">1,575</div>
-            <div class="stat-label" style="margin-top:6px">Successful rebooks</div><div class="year-stat-val">788</div>
-            <div class="stat-label" style="margin-top:6px">Rev / booking (S1)</div><div class="year-stat-val">₹3,600 · Take 60%</div>
-            <div class="stat-label" style="margin-top:6px">GMV</div><div class="year-stat-val">₹6.3 Cr</div>
-          </div>
 
-          <!-- Y2 -->
-          <div class="year-card featured">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div class="stat-label">Year 2 · Jan–Dec 2027</div>
-              <span style="font-size:9px;background:rgba(255,255,255,0.2);color:#fff;padding:2px 8px;border-radius:4px;font-weight:600">Target</span>
+          <!-- Conservative -->
+          <div class="year-card" style="border-top:3px solid #cbd5e1">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div class="stat-label" style="color:#64748b">Conservative</div>
+              <div style="font-size:9px;padding:2px 8px;border-radius:4px;background:#FFEBEE;color:#64748b;font-weight:600"style="color:#64748b">CONSERVATIVE</div>
             </div>
-            <div class="year-num">₹5.43 Crore</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:12px">S1 ₹3.99 Cr + S2 ₹1.44 Cr</div>
-            <div style="height:1px;background:rgba(255,255,255,0.2);margin-bottom:10px"></div>
-            <div class="stat-label">Total bookings</div><div class="year-stat-val">20,055</div>
-            <div class="stat-label" style="margin-top:6px">Direct bookings (S2)</div><div class="year-stat-val">3,006 · 15% mix</div>
-            <div class="stat-label" style="margin-top:6px">Blended rev / booking</div><div class="year-stat-val">₹2,709</div>
-            <div class="stat-label" style="margin-top:6px">GMV</div><div class="year-stat-val">₹80.2 Cr</div>
+            <div class="year-num" style="color:#475569">18,868</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px">bookings over 3 years</div>
+            <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
+            <div class="stat-label">Y1 Bookings (Aug–Dec 2026)</div><div class="year-stat-val">881</div>
+            <div class="stat-label" style="margin-top:6px">Y2 Bookings (Jan–Dec 2027)</div><div class="year-stat-val">5,663</div>
+            <div class="stat-label" style="margin-top:6px">Y3 Bookings (Jan–Dec 2028)</div><div class="year-stat-val">12,324</div>
+            <div class="stat-label" style="margin-top:6px">3-Year GMV</div><div class="year-stat-val">₹71.7 Cr</div>
+            <div style="margin-top:12px;padding:10px;background:#FFEBEE;border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:11px;font-weight:600;color:#64748b">Final Cash (Dec 2028)</span>
+              <span style="font-size:16px;font-weight:700;color:#475569">₹1.70 Cr</span>
+            </div>
           </div>
 
-          <!-- Y3 -->
-          <div class="year-card">
-            <div class="stat-label">Year 3 · Jan–Dec 2028</div>
-            <div class="year-num">₹16.86 Crore</div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:12px">S1 ₹10.92 Cr + S2 ₹5.94 Cr</div>
+          <!-- Expected -->
+          <div class="year-card featured">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div class="stat-label" style="color:rgba(255,255,255,0.7)">Expected</div>
+              <div style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.2);color:#fff;font-weight:600">★ TARGET</div>
+            </div>
+            <div class="year-num">25,589</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:12px">bookings over 3 years</div>
+            <div style="height:1px;background:rgba(255,255,255,0.2);margin-bottom:10px"></div>
+            <div class="stat-label">Y1 Bookings (Aug–Dec 2026)</div><div class="year-stat-val">1,049</div>
+            <div class="stat-label" style="margin-top:6px">Y2 Bookings (Jan–Dec 2027)</div><div class="year-stat-val">7,590</div>
+            <div class="stat-label" style="margin-top:6px">Y3 Bookings (Jan–Dec 2028)</div><div class="year-stat-val">16,950</div>
+            <div class="stat-label" style="margin-top:6px">3-Year GMV</div><div class="year-stat-val">₹97.2 Cr</div>
+            <div style="margin-top:12px;padding:10px;background:rgba(255,255,255,0.15);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:11px;font-weight:600;color:#fff">Final Cash (Dec 2028)</span>
+              <span style="font-size:16px;font-weight:700;color:#fff">₹3.19 Cr</span>
+            </div>
+          </div>
+
+          <!-- Optimistic -->
+          <div class="year-card" style="border-top:3px solid #2E7D32">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div class="stat-label" style="color:#2E7D32">Optimistic</div>
+              <div style="font-size:9px;padding:2px 8px;border-radius:4px;background:#E8F5E9;color:#2E7D32;font-weight:600">OPTIMISTIC</div>
+            </div>
+            <div class="year-num" style="color:#2E7D32">28,710</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px">bookings over 3 years</div>
             <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
-            <div class="stat-label">Total bookings</div><div class="year-stat-val">49,508</div>
-            <div class="stat-label" style="margin-top:6px">Direct bookings (S2)</div><div class="year-stat-val">12,377 · 25% mix</div>
-            <div class="stat-label" style="margin-top:6px">Blended rev / booking</div><div class="year-stat-val">₹3,405</div>
-            <div class="stat-label" style="margin-top:6px">GMV</div><div class="year-stat-val">₹198 Cr</div>
+            <div class="stat-label">Y1 Bookings (Aug–Dec 2026)</div><div class="year-stat-val">1,164</div>
+            <div class="stat-label" style="margin-top:6px">Y2 Bookings (Jan–Dec 2027)</div><div class="year-stat-val">8,499</div>
+            <div class="stat-label" style="margin-top:6px">Y3 Bookings (Jan–Dec 2028)</div><div class="year-stat-val">19,047</div>
+            <div class="stat-label" style="margin-top:6px">3-Year GMV</div><div class="year-stat-val">₹109.1 Cr</div>
+            <div style="margin-top:12px;padding:10px;background:#E8F5E9;border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:11px;font-weight:600;color:#2E7D32">Final Cash (Dec 2028)</span>
+              <span style="font-size:16px;font-weight:700;color:#2E7D32">₹3.90 Cr</span>
+            </div>
           </div>
         </div>
 
-        <!-- 3-year summary -->
-        <div class="card bg-card" style="padding:16px 24px">
-          <div style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px">3-Year Cumulative — Bear ₹16.7 Cr · <span style="color:var(--royal-blue)">Base ₹22.6 Cr</span> · Bull ₹29.0 Cr</div>
+        <!-- Bottom summary -->
+        <div class="card bg-card" style="padding:14px 24px">
+          <div style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px">All scenarios — Break-even November 2026 · Seed ₹90 Lakhs · 4 channels by Dec 2026</div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0">
-            <div style="padding-right:20px">
-              <div style="font-size:20px;font-weight:700;color:var(--royal-blue)">₹22.6 Cr</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px">Total rebuq revenue · base case</div>
+            <div class="mini-stat" style="padding-right:20px">
+              <div class="val" style="font-size:18px">Nov 2026</div>
+              <div class="lbl">Break-even — all 3 scenarios</div>
             </div>
-            <div style="padding:0 20px;border-left:1px solid var(--border)">
-              <div style="font-size:20px;font-weight:700;color:var(--foreground)">₹284.5 Cr</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px">Total GMV — all sales processed</div>
+            <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">18,868–28,710</div>
+              <div class="lbl">3-year bookings range Conservative → Optimistic</div>
             </div>
-            <div style="padding:0 20px;border-left:1px solid var(--border)">
-              <div style="font-size:20px;font-weight:700;color:var(--foreground)">71,138</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px">Total bookings processed · 3 years</div>
+            <div class="mini-stat" style="padding:0 20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">₹71.7–₹109.1 Cr</div>
+              <div class="lbl">3-year GMV range Conservative → Optimistic</div>
             </div>
-            <div style="padding-left:20px;border-left:1px solid var(--border)">
-              <div style="font-size:20px;font-weight:700;color:#166534">₹14.4 Cr</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:2px">Total traveller savings · base case</div>
+            <div class="mini-stat" style="padding-left:20px;border-left:1px solid var(--border)">
+              <div class="val" style="font-size:18px">₹4,000</div>
+              <div class="lbl">Net margin per booking · cost ₹34k · sell ₹38k · traveller saves ₹2k</div>
             </div>
           </div>
         </div>
@@ -1199,9 +1139,507 @@ const SLIDES = [
     </div>`
   },
   {
+    id:'scenarios', title:'Financial Scenarios', dark:false,
+    html:`<div class="slide light-slide" id="s_scenarios">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">11</span><div class="nav-dash light"></div><span>FINANCIAL SCENARIOS</span></div></div>
+      <div class="slide-body top-align">
+        <h2 class="slide-title" style="margin-bottom:4px">The model holds in every scenario.</h2>
+        <p class="slide-sub" style="margin-bottom:16px">Margin ₹4,000 · GST 18% · CC 2% · Seed ₹90L · Salary + Tech: Y1 ₹7.95L → Y2 ₹9.34L → Y3 ₹11.61L/month</p>
+
+        <!-- Tabs -->
+        <div style="display:flex;gap:10px;margin-bottom:18px">
+          <button onclick="switchTab('conservative')" id="tab-conservative" style="padding:9px 22px;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid #cbd5e1;background:#475569;color:#fff;font-family:inherit;transition:all 0.2s">Conservative</button>
+          <button onclick="switchTab('expected')" id="tab-expected" style="padding:9px 22px;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--border);background:var(--white);color:var(--muted);font-family:inherit;transition:all 0.2s">Expected</button>
+          <button onclick="switchTab('optimistic')" id="tab-optimistic" style="padding:9px 22px;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--border);background:var(--white);color:var(--muted);font-family:inherit;transition:all 0.2s">Optimistic</button>
+        </div>
+
+        <!-- ── CONSERVATIVE (RED) ── -->
+        <div id="panel-conservative" style="display:block">
+          <div class="grid-3" style="margin-bottom:14px">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div class="grid-2" style="gap:10px">
+                <div class="card" style="padding:16px;border-top:3px solid #cbd5e1">
+                  <div class="stat-label" style="margin-bottom:6px;color:#64748b">3-Yr Bookings</div>
+                  <div style="font-size:26px;font-weight:700;color:#64748b;letter-spacing:-0.02em">18,868</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">3 channels</div>
+                </div>
+                <div class="card" style="padding:16px;border-top:3px solid #cbd5e1">
+                  <div class="stat-label" style="margin-bottom:6px;color:#64748b">3-Yr GMV</div>
+                  <div style="font-size:26px;font-weight:700;color:#64748b;letter-spacing:-0.02em">₹71.7 Cr</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">@ ₹38k sell price</div>
+                </div>
+                <div class="card" style="padding:16px;border-top:3px solid #cbd5e1">
+                  <div class="stat-label" style="margin-bottom:6px">Final Cash</div>
+                  <div style="font-size:26px;font-weight:700;color:var(--foreground);letter-spacing:-0.02em">₹1.70 Cr</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">End Dec 2028</div>
+                </div>
+                <div class="card" style="padding:16px;border-top:3px solid #cbd5e1">
+                  <div class="stat-label" style="margin-bottom:6px">Break-even</div>
+                  <div style="font-size:20px;font-weight:700;color:var(--foreground)">Nov 2026</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">Month 4</div>
+                </div>
+              </div>
+              <div class="card" style="padding:16px">
+                <div class="stat-label" style="margin-bottom:12px">Year-by-Year Bookings</div>
+                <div style="margin-bottom:10px">
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Y1 Aug–Dec 2026</span><span style="font-weight:600">881 <span style="color:var(--muted);font-weight:400">(~6/day)</span></span></div>
+                  <div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:7%;background:#475569;border-radius:3px"></div></div>
+                </div>
+                <div style="margin-bottom:10px">
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Y2 Jan–Dec 2027</span><span style="font-weight:600">5,663 <span style="color:var(--muted);font-weight:400">(~16/day)</span></span></div>
+                  <div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:46%;background:#475569;border-radius:3px"></div></div>
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Y3 Jan–Dec 2028</span><span style="font-weight:600">12,324 <span style="color:var(--muted);font-weight:400">(~34/day)</span></span></div>
+                  <div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:100%;background:#475569;border-radius:3px"></div></div>
+                </div>
+              </div>
+              <div class="card bg-card" style="padding:14px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;text-align:center">
+                  <div><div style="font-size:15px;font-weight:700;color:var(--foreground)">Nov 2026</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Break-even</div></div>
+                  <div style="border-left:1px solid var(--border)"><div style="font-size:15px;font-weight:700;color:var(--foreground)">₹65.3L</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Min cash (Sep 2027)</div></div>
+                  <div style="border-left:1px solid var(--border)"><div style="font-size:15px;font-weight:700;color:var(--foreground)">8.8 mo</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Runway (Dec 2028)</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="padding:20px">
+              <div class="stat-label" style="margin-bottom:16px">Channel Assumptions</div>
+              <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:700">Visa2Fly</div><div style="font-size:10px;padding:3px 10px;border-radius:10px;background:#E8F5E9;color:#166534;font-weight:600">LIVE AUG 2026</div></div>
+                <div style="font-size:12px;color:var(--muted)">1,800 visits × 5% = 90/month · ₹0 CAC</div>
+              </div>
+              <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:700">ACKO</div><div style="font-size:10px;padding:3px 10px;border-radius:10px;background:#E8F5E9;color:#166534;font-weight:600">LIVE NOV 2026</div></div>
+                <div style="font-size:12px;color:var(--muted)">10,000 policies × 1.6% = 160/month · ₹500 payout</div>
+              </div>
+              <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:700">Niyo</div><div style="font-size:10px;padding:3px 10px;border-radius:10px;background:#f8fafc;color:#64748b;font-weight:600">NOT IN THIS CASE</div></div>
+                <div style="font-size:12px;color:var(--muted)">Added in Expected and Optimistic from Apr 2027</div>
+              </div>
+              <div style="padding:12px 0">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:700">rebuq Organic</div><div style="font-size:10px;padding:3px 10px;border-radius:10px;background:#E8F5E9;color:#166534;font-weight:600">LIVE AUG 2026</div></div>
+                <div style="font-size:12px;color:var(--muted)">1% CTB · 38/month</div>
+              </div>
+            </div>
+            <div class="card" style="padding:20px">
+              <div class="stat-label" style="margin-bottom:16px">3-Year P&L Waterfall</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">Gross Revenue</span><span style="font-weight:700;color:var(--royal-blue)">₹7.55 Cr</span></div><div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:100%;background:var(--royal-blue);border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— GST 18%</span><span style="color:#64748b">-₹1.36 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:18%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— CC 2%</span><span style="color:#64748b">-₹1.51 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:20%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— Partner Payouts</span><span style="color:#64748b">-₹0.42 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:6%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div style="border-top:1px solid var(--border);padding-top:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">Net Revenue</span><span style="font-weight:700;color:#166534">₹4.24 Cr</span></div><div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:57%;background:#2E7D32;border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— Salary + Tech</span><span style="color:#64748b">-₹1.61 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:21%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— GTM Variable</span><span style="color:#64748b">-₹0.37 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:5%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div style="margin-top:4px;padding:12px;background:#f8fafc;border-radius:8px;border:1px solid #FFCDD2">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:13px;font-weight:700">NET PROFIT</span><span style="font-size:18px;font-weight:700;color:#166534">₹80.1L</span></div>
+                  <div style="height:6px;background:var(--border);border-radius:3px"><div style="height:100%;width:30%;background:#475569;border-radius:3px"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── EXPECTED (BLUE) ── -->
+        <div id="panel-expected" style="display:none">
+          <div class="grid-3" style="margin-bottom:14px">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div class="grid-2" style="gap:10px">
+                <div class="card" style="padding:16px;border-top:3px solid var(--royal-blue)">
+                  <div class="stat-label" style="margin-bottom:6px;color:var(--royal-blue)">3-Yr Bookings</div>
+                  <div style="font-size:26px;font-weight:700;color:var(--royal-blue);letter-spacing:-0.02em">25,589</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">4 channels</div>
+                </div>
+                <div class="card" style="padding:16px;border-top:3px solid var(--royal-blue)">
+                  <div class="stat-label" style="margin-bottom:6px;color:var(--royal-blue)">3-Yr GMV</div>
+                  <div style="font-size:26px;font-weight:700;color:var(--royal-blue);letter-spacing:-0.02em">₹97.2 Cr</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">@ ₹38k sell price</div>
+                </div>
+                <div class="card" style="padding:16px;border-top:3px solid var(--royal-blue)">
+                  <div class="stat-label" style="margin-bottom:6px">Final Cash</div>
+                  <div style="font-size:26px;font-weight:700;color:var(--foreground);letter-spacing:-0.02em">₹3.19 Cr</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">End Dec 2028</div>
+                </div>
+                <div class="card" style="padding:16px;border-top:3px solid var(--royal-blue)">
+                  <div class="stat-label" style="margin-bottom:6px">Break-even</div>
+                  <div style="font-size:20px;font-weight:700;color:var(--foreground)">Nov 2026</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">Month 4</div>
+                </div>
+              </div>
+              <div class="card" style="padding:16px">
+                <div class="stat-label" style="margin-bottom:12px">Year-by-Year Bookings</div>
+                <div style="margin-bottom:10px">
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Y1 Aug–Dec 2026</span><span style="font-weight:600">1,049 <span style="color:var(--muted);font-weight:400">(~7/day)</span></span></div>
+                  <div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:6%;background:var(--royal-blue);border-radius:3px"></div></div>
+                </div>
+                <div style="margin-bottom:10px">
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Y2 Jan–Dec 2027</span><span style="font-weight:600">7,590 <span style="color:var(--muted);font-weight:400">(~21/day)</span></span></div>
+                  <div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:45%;background:var(--royal-blue);border-radius:3px"></div></div>
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Y3 Jan–Dec 2028</span><span style="font-weight:600">16,950 <span style="color:var(--muted);font-weight:400">(~46/day)</span></span></div>
+                  <div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:100%;background:var(--royal-blue);border-radius:3px"></div></div>
+                </div>
+              </div>
+              <div class="card bg-card" style="padding:14px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;text-align:center">
+                  <div><div style="font-size:15px;font-weight:700;color:var(--foreground)">Nov 2026</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Break-even</div></div>
+                  <div style="border-left:1px solid var(--border)"><div style="font-size:15px;font-weight:700;color:var(--foreground)">₹81.6L</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Min cash (Mar 2027)</div></div>
+                  <div style="border-left:1px solid var(--border)"><div style="font-size:15px;font-weight:700;color:var(--foreground)">19.8 mo</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Runway (Dec 2028)</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="padding:20px">
+              <div class="stat-label" style="margin-bottom:16px">Channel Assumptions</div>
+              <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:700">Visa2Fly</div><div style="font-size:10px;padding:3px 10px;border-radius:10px;background:#E8F5E9;color:#166534;font-weight:600">LIVE AUG 2026</div></div>
+                <div style="font-size:12px;color:var(--muted)">1,000 visits × 9% = 90/month · ₹0 CAC</div>
+              </div>
+              <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:700">ACKO</div><div style="font-size:10px;padding:3px 10px;border-radius:10px;background:#E8F5E9;color:#166534;font-weight:600">LIVE NOV 2026</div></div>
+                <div style="font-size:12px;color:var(--muted)">10,000 visits × 1.6% = 160/month · ₹500 payout</div>
+              </div>
+              <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:700">Niyo</div><div style="font-size:10px;padding:3px 10px;border-radius:10px;background:#E3F2FD;color:#1565C0;font-weight:600">FROM APR 2027</div></div>
+                <div style="font-size:12px;color:var(--muted)">100/month · ₹500 payout · 5%/10% seasonal</div>
+              </div>
+              <div style="padding:12px 0">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:700">rebuq Organic</div><div style="font-size:10px;padding:3px 10px;border-radius:10px;background:#E8F5E9;color:#166534;font-weight:600">LIVE AUG 2026</div></div>
+                <div style="font-size:12px;color:var(--muted)">1.25% CTB · 38/month · GTM ₹1,600/booking</div>
+              </div>
+            </div>
+            <div class="card" style="padding:20px">
+              <div class="stat-label" style="margin-bottom:16px">3-Year P&L Waterfall</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">Gross Revenue</span><span style="font-weight:700;color:var(--royal-blue)">₹10.24 Cr</span></div><div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:100%;background:var(--royal-blue);border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— GST 18%</span><span style="color:#64748b">-₹1.84 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:18%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— CC 2%</span><span style="color:#64748b">-₹2.05 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:20%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— Partner Payouts</span><span style="color:#64748b">-₹0.71 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:7%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div style="border-top:1px solid var(--border);padding-top:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">Net Revenue</span><span style="font-weight:700;color:#166534">₹5.70 Cr</span></div><div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:55%;background:#2E7D32;border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— Salary + Tech</span><span style="color:#64748b">-₹1.61 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:16%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— GTM Variable</span><span style="color:#64748b">-₹0.26 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:3%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div style="margin-top:4px;padding:12px;background:rgba(59,91,219,0.06);border-radius:8px;border:1px solid rgba(59,91,219,0.2)">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:13px;font-weight:700">NET PROFIT</span><span style="font-size:18px;font-weight:700;color:var(--royal-blue)">₹2.29 Cr</span></div>
+                  <div style="height:6px;background:var(--border);border-radius:3px"><div style="height:100%;width:37%;background:var(--royal-blue);border-radius:3px"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── OPTIMISTIC (GREEN) ── -->
+        <div id="panel-optimistic" style="display:none">
+          <div class="grid-3" style="margin-bottom:14px">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div class="grid-2" style="gap:10px">
+                <div class="card" style="padding:16px;border-top:3px solid #2E7D32">
+                  <div class="stat-label" style="margin-bottom:6px;color:#2E7D32">3-Yr Bookings</div>
+                  <div style="font-size:26px;font-weight:700;color:#2E7D32;letter-spacing:-0.02em">28,710</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">4 channels</div>
+                </div>
+                <div class="card" style="padding:16px;border-top:3px solid #2E7D32">
+                  <div class="stat-label" style="margin-bottom:6px;color:#2E7D32">3-Yr GMV</div>
+                  <div style="font-size:26px;font-weight:700;color:#2E7D32;letter-spacing:-0.02em">₹109.1 Cr</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">@ ₹38k sell price</div>
+                </div>
+                <div class="card" style="padding:16px;border-top:3px solid #2E7D32">
+                  <div class="stat-label" style="margin-bottom:6px">Final Cash</div>
+                  <div style="font-size:26px;font-weight:700;color:var(--foreground);letter-spacing:-0.02em">₹3.39 Cr</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">End Dec 2028</div>
+                </div>
+                <div class="card" style="padding:16px;border-top:3px solid #2E7D32">
+                  <div class="stat-label" style="margin-bottom:6px">Break-even</div>
+                  <div style="font-size:20px;font-weight:700;color:var(--foreground)">Nov 2026</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:2px">Month 4</div>
+                </div>
+              </div>
+              <div class="card" style="padding:16px">
+                <div class="stat-label" style="margin-bottom:12px">Year-by-Year Bookings</div>
+                <div style="margin-bottom:10px">
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Y1 Aug–Dec 2026</span><span style="font-weight:600">1,164 <span style="color:var(--muted);font-weight:400">(~8/day)</span></span></div>
+                  <div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:6%;background:#2E7D32;border-radius:3px"></div></div>
+                </div>
+                <div style="margin-bottom:10px">
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Y2 Jan–Dec 2027</span><span style="font-weight:600">8,499 <span style="color:var(--muted);font-weight:400">(~23/day)</span></span></div>
+                  <div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:45%;background:#2E7D32;border-radius:3px"></div></div>
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Y3 Jan–Dec 2028</span><span style="font-weight:600">19,047 <span style="color:var(--muted);font-weight:400">(~52/day)</span></span></div>
+                  <div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:100%;background:#2E7D32;border-radius:3px"></div></div>
+                </div>
+              </div>
+              <div class="card bg-card" style="padding:14px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;text-align:center">
+                  <div><div style="font-size:15px;font-weight:700;color:var(--foreground)">Nov 2026</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Break-even</div></div>
+                  <div style="border-left:1px solid var(--border)"><div style="font-size:15px;font-weight:700;color:var(--foreground)">₹8.4 Cr</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Min cash</div></div>
+                  <div style="border-left:1px solid var(--border)"><div style="font-size:15px;font-weight:700;color:var(--foreground)">25.1 mo</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Runway (Dec 2028)</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="padding:20px">
+              <div class="stat-label" style="margin-bottom:16px">Channel Assumptions</div>
+              <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:700">Visa2Fly</div><div style="font-size:10px;padding:3px 10px;border-radius:10px;background:#E8F5E9;color:#166534;font-weight:600">LIVE AUG 2026</div></div>
+                <div style="font-size:12px;color:var(--muted)">1,000 visits × 10% = 100/month · ₹0 CAC</div>
+              </div>
+              <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:700">ACKO</div><div style="font-size:10px;padding:3px 10px;border-radius:10px;background:#E8F5E9;color:#166534;font-weight:600">LIVE NOV 2026</div></div>
+                <div style="font-size:12px;color:var(--muted)">10,000 visits × 1.7% = 170/month · ₹500 payout</div>
+              </div>
+              <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:700">Niyo</div><div style="font-size:10px;padding:3px 10px;border-radius:10px;background:#E3F2FD;color:#1565C0;font-weight:600">FROM APR 2027</div></div>
+                <div style="font-size:12px;color:var(--muted)">125/month · ₹500 payout · 5%/10% seasonal</div>
+              </div>
+              <div style="padding:12px 0">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:13px;font-weight:700">rebuq Organic</div><div style="font-size:10px;padding:3px 10px;border-radius:10px;background:#E8F5E9;color:#166534;font-weight:600">LIVE AUG 2026</div></div>
+                <div style="font-size:12px;color:var(--muted)">1.5% CTB · 45/month · GTM ₹1,333/booking</div>
+              </div>
+            </div>
+            <div class="card" style="padding:20px">
+              <div class="stat-label" style="margin-bottom:16px">3-Year P&L Waterfall</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">Gross Revenue</span><span style="font-weight:700;color:var(--royal-blue)">₹11.48 Cr</span></div><div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:100%;background:var(--royal-blue);border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— GST 18%</span><span style="color:#64748b">-₹2.07 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:18%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— CC 2%</span><span style="color:#64748b">-₹2.30 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:20%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— Partner Payouts</span><span style="color:#64748b">-₹0.83 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:7%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div style="border-top:1px solid var(--border);padding-top:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">Net Revenue</span><span style="font-weight:700;color:#166534">₹6.28 Cr</span></div><div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:55%;background:#2E7D32;border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— Salary + Tech</span><span style="color:#64748b">-₹1.61 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:14%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted);padding-left:10px">— GTM Variable</span><span style="color:#64748b">-₹0.21 Cr</span></div><div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:2%;background:#FFAB40;border-radius:3px"></div></div></div>
+                <div style="margin-top:4px;padding:12px;background:#E8F5E9;border-radius:8px;border:1px solid #C8E6C9">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:13px;font-weight:700">NET PROFIT</span><span style="font-size:18px;font-weight:700;color:#2E7D32">₹4.46 Cr</span></div>
+                  <div style="height:6px;background:var(--border);border-radius:3px"><div style="height:100%;width:39%;background:#2E7D32;border-radius:3px"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  }
+  ,{
+    id:'fin_dashboard', title:'Financial Dashboard', dark:false,
+    html:`<div class="slide light-slide" id="s_findash">
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">12</span><div class="nav-dash light"></div><span>FINANCIAL DASHBOARD</span></div></div>
+      <div class="slide-body top-align">
+
+        <h2 class="slide-title" style="font-size:clamp(22px,2.6vw,32px);margin-bottom:4px">Numbers that work in every scenario.</h2>
+        <p class="slide-sub" style="margin-bottom:18px">OTA &#x20B9;40k &rarr; rebuq sells &#x20B9;38k &rarr; margin &#x20B9;4k &nbsp;&middot;&nbsp; Seed &#x20B9;90L &nbsp;&middot;&nbsp; Break-even Month 4</p>
+
+        <!-- KPI strip -->
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px">
+          <div class="card" style="padding:14px 12px;border-top:3px solid var(--royal-blue)">
+            <div class="stat-label">Seed Ask</div>
+            <div style="font-size:26px;font-weight:700;color:var(--royal-blue);letter-spacing:-0.02em;line-height:1.1;margin:4px 0">&#x20B9;90L</div>
+            <div style="font-size:10px;color:var(--muted)">One-time raise</div>
+          </div>
+          <div class="card" style="padding:14px 12px;border-top:3px solid var(--royal-blue)">
+            <div class="stat-label">3Y GMV</div>
+            <div style="font-size:26px;font-weight:700;color:var(--royal-blue);letter-spacing:-0.02em;line-height:1.1;margin:4px 0">&#x20B9;97.2Cr</div>
+            <div style="font-size:10px;color:var(--muted)">Expected case</div>
+          </div>
+          <div class="card" style="padding:14px 12px;border-top:3px solid #166534">
+            <div class="stat-label">3Y Net Profit</div>
+            <div style="font-size:26px;font-weight:700;color:#166534;letter-spacing:-0.02em;line-height:1.1;margin:4px 0">&#x20B9;2.29Cr</div>
+            <div style="font-size:10px;color:var(--muted)">After all costs</div>
+          </div>
+          <div class="card" style="padding:14px 12px;border-top:3px solid #166534">
+            <div class="stat-label">Final Cash</div>
+            <div style="font-size:26px;font-weight:700;color:#166534;letter-spacing:-0.02em;line-height:1.1;margin:4px 0">&#x20B9;3.19Cr</div>
+            <div style="font-size:10px;color:var(--muted)">Dec 2028 &middot; Expected</div>
+          </div>
+          <div class="card" style="padding:14px 12px;border-top:3px solid #D97706">
+            <div class="stat-label">Break-even</div>
+            <div style="font-size:22px;font-weight:700;color:#D97706;letter-spacing:-0.02em;line-height:1.1;margin:4px 0">Nov 2026</div>
+            <div style="font-size:10px;color:var(--muted)">Month 4 &middot; all scenarios</div>
+          </div>
+          <div class="card" style="padding:14px 12px;border-top:3px solid var(--foreground)">
+            <div class="stat-label">3Y Bookings</div>
+            <div style="font-size:26px;font-weight:700;color:var(--foreground);letter-spacing:-0.02em;line-height:1.1;margin:4px 0">25,589</div>
+            <div style="font-size:10px;color:var(--muted)">Expected &middot; 4 channels</div>
+          </div>
+        </div>
+
+        <!-- Row 2: Unit economics + Scenario cards -->
+        <div style="display:grid;grid-template-columns:1.15fr 0.85fr;gap:14px;margin-bottom:14px">
+
+          <!-- Unit economics -->
+          <div class="card" style="padding:16px 18px">
+            <div class="section-header" style="margin-bottom:12px"><span class="section-num">Unit Economics</span> &mdash; per booking</div>
+            <div style="display:flex;align-items:center;gap:0;margin-bottom:10px">
+              <div style="flex:1;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--muted)">&#x20B9;40,000</div><div style="font-size:9px;color:var(--muted);margin-top:2px">OTA Rate</div></div>
+              <div style="color:#D1D5DB;font-size:11px;padding:0 5px">&rarr;</div>
+              <div style="flex:1;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--royal-blue)">&#x20B9;38,000</div><div style="font-size:9px;color:var(--muted);margin-top:2px">rebuq Sells</div></div>
+              <div style="color:#D1D5DB;font-size:11px;padding:0 5px">&minus;</div>
+              <div style="flex:1;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--muted)">&#x20B9;34,000</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Cost</div></div>
+              <div style="color:#D1D5DB;font-size:11px;padding:0 5px">=</div>
+              <div style="flex:1;text-align:center;background:rgba(59,91,219,0.05);border-radius:6px;padding:5px 0"><div style="font-size:14px;font-weight:700;color:var(--foreground)">&#x20B9;4,000</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Gross Margin</div></div>
+            </div>
+            <div style="height:1px;background:var(--border);margin-bottom:10px"></div>
+            <div style="display:flex;align-items:center;gap:0;margin-bottom:10px">
+              <div style="flex:1;text-align:center"><div style="font-size:13px;font-weight:600;color:var(--foreground)">&#x20B9;4,000</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Gross margin</div></div>
+              <div style="color:#D1D5DB;font-size:11px;padding:0 5px">&minus;</div>
+              <div style="flex:1;text-align:center"><div style="font-size:13px;font-weight:600;color:#EF4444">&#x20B9;720</div><div style="font-size:9px;color:var(--muted);margin-top:2px">GST 18%</div></div>
+              <div style="color:#D1D5DB;font-size:11px;padding:0 5px">&minus;</div>
+              <div style="flex:1;text-align:center"><div style="font-size:13px;font-weight:600;color:#EF4444">&#x20B9;760</div><div style="font-size:9px;color:var(--muted);margin-top:2px">CC 2%</div></div>
+              <div style="color:#D1D5DB;font-size:11px;padding:0 5px">=</div>
+              <div style="flex:1;text-align:center;background:rgba(22,101,52,0.06);border-radius:6px;padding:5px 0"><div style="font-size:14px;font-weight:700;color:#166534">&#x20B9;2,520</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Own channel</div></div>
+              <div style="color:#D1D5DB;font-size:11px;padding:0 5px">&middot;</div>
+              <div style="flex:1;text-align:center;background:rgba(46,125,50,0.04);border-radius:6px;padding:5px 0"><div style="font-size:14px;font-weight:700;color:#2E7D32">&#x20B9;2,020</div><div style="font-size:9px;color:var(--muted);margin-top:2px">Partner channel</div></div>
+            </div>
+            <div style="padding:8px 12px;background:var(--bg);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:11px;color:var(--muted)">Traveller saves vs OTA public rate</span>
+              <span style="font-size:14px;font-weight:700;color:var(--royal-blue)">&#x20B9;2,000 per booking</span>
+            </div>
+          </div>
+
+          <!-- Scenario 3-col cards -->
+          <div class="card" style="padding:16px 18px">
+            <div class="section-header" style="margin-bottom:12px"><span class="section-num">Scenario</span> outcomes</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+              <div style="background:#FFEBEE;border-radius:8px;padding:10px 8px;border-top:2px solid #C62828">
+                <div style="font-size:8px;font-weight:700;color:#C62828;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Conservative</div>
+                <div style="font-size:15px;font-weight:700;color:var(--foreground)">18,868</div>
+                <div style="font-size:9px;color:var(--muted)">bookings</div>
+                <div style="height:1px;background:rgba(198,40,40,0.15);margin:6px 0"></div>
+                <div style="font-size:13px;font-weight:700;color:#C62828">&#x20B9;71.7Cr</div>
+                <div style="font-size:9px;color:var(--muted)">GMV</div>
+                <div style="margin-top:5px;font-size:12px;font-weight:600;color:var(--foreground)">&#x20B9;1.70Cr</div>
+                <div style="font-size:9px;color:var(--muted)">final cash</div>
+              </div>
+              <div style="background:rgba(59,91,219,0.05);border-radius:8px;padding:10px 8px;border-top:2px solid var(--royal-blue)">
+                <div style="font-size:8px;font-weight:700;color:var(--royal-blue);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Expected &#9733;</div>
+                <div style="font-size:15px;font-weight:700;color:var(--foreground)">25,589</div>
+                <div style="font-size:9px;color:var(--muted)">bookings</div>
+                <div style="height:1px;background:rgba(59,91,219,0.15);margin:6px 0"></div>
+                <div style="font-size:13px;font-weight:700;color:var(--royal-blue)">&#x20B9;97.2Cr</div>
+                <div style="font-size:9px;color:var(--muted)">GMV</div>
+                <div style="margin-top:5px;font-size:12px;font-weight:600;color:var(--foreground)">&#x20B9;3.19Cr</div>
+                <div style="font-size:9px;color:var(--muted)">final cash</div>
+              </div>
+              <div style="background:#E8F5E9;border-radius:8px;padding:10px 8px;border-top:2px solid #2E7D32">
+                <div style="font-size:8px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Optimistic</div>
+                <div style="font-size:15px;font-weight:700;color:var(--foreground)">28,710</div>
+                <div style="font-size:9px;color:var(--muted)">bookings</div>
+                <div style="height:1px;background:rgba(46,125,50,0.15);margin:6px 0"></div>
+                <div style="font-size:13px;font-weight:700;color:#2E7D32">&#x20B9;109.1Cr</div>
+                <div style="font-size:9px;color:var(--muted)">GMV</div>
+                <div style="margin-top:5px;font-size:12px;font-weight:600;color:var(--foreground)">&#x20B9;3.90Cr</div>
+                <div style="font-size:9px;color:var(--muted)">final cash</div>
+              </div>
+            </div>
+            <div style="background:var(--bg);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:11px;color:var(--muted)">Break-even &mdash; all 3 scenarios</span>
+              <span style="font-size:13px;font-weight:700;color:var(--foreground)">November 2026</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: Cash milestones + Annual P&L bars -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+          <!-- Cash milestones -->
+          <div class="card" style="padding:16px 18px">
+            <div class="section-header" style="margin-bottom:12px"><span class="section-num">Cash balance</span> &mdash; Expected case milestones</div>
+            <div style="margin-bottom:9px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:700;color:#3B5BDB;min-width:60px">Aug 2026</span><span style="font-size:11px;color:var(--muted)">Seed deployed</span></div>
+                <span style="font-size:12px;font-weight:700;color:var(--foreground)">&#x20B9;8.47Cr</span>
+              </div>
+              <div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:100%;background:#3B5BDB;border-radius:3px;opacity:0.7"></div></div>
+            </div>
+            <div style="margin-bottom:9px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:700;color:#D97706;min-width:60px">Nov 2026</span><span style="font-size:11px;color:var(--muted)">Break-even achieved</span></div>
+                <span style="font-size:12px;font-weight:700;color:var(--foreground)">&#x20B9;7.27Cr</span>
+              </div>
+              <div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:86%;background:#D97706;border-radius:3px;opacity:0.7"></div></div>
+            </div>
+            <div style="margin-bottom:9px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:700;color:#EF4444;min-width:60px">Mar 2027</span><span style="font-size:11px;color:var(--muted)">Min cash point</span></div>
+                <span style="font-size:12px;font-weight:700;color:var(--foreground)">&#x20B9;81.6L</span>
+              </div>
+              <div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:10%;background:#EF4444;border-radius:3px;opacity:0.7"></div></div>
+            </div>
+            <div style="margin-bottom:9px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:700;color:#166534;min-width:60px">Dec 2027</span><span style="font-size:11px;color:var(--muted)">Y2 closes profitable</span></div>
+                <span style="font-size:12px;font-weight:700;color:var(--foreground)">&#x20B9;1.14Cr</span>
+              </div>
+              <div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:13%;background:#166534;border-radius:3px;opacity:0.7"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:700;color:#2E7D32;min-width:60px">Dec 2028</span><span style="font-size:11px;color:var(--muted)">Final balance &middot; 19.8mo runway</span></div>
+                <span style="font-size:12px;font-weight:700;color:var(--foreground)">&#x20B9;3.19Cr</span>
+              </div>
+              <div style="height:5px;background:var(--bg);border-radius:3px"><div style="height:100%;width:32%;background:#2E7D32;border-radius:3px;opacity:0.8"></div></div>
+            </div>
+          </div>
+
+          <!-- Annual P&L bars -->
+          <div class="card" style="padding:16px 18px">
+            <div class="section-header" style="margin-bottom:12px"><span class="section-num">Annual P&amp;L</span> &mdash; Expected case</div>
+            <div style="font-size:9px;font-weight:700;color:var(--royal-blue);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;margin-top:2px">Y1 &middot; Aug&ndash;Dec 2026</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <div style="font-size:10px;color:var(--muted);min-width:110px">Gross Revenue</div>
+              <div style="flex:1;height:5px;background:var(--bg);border-radius:2px"><div style="height:100%;width:42%;background:var(--royal-blue);border-radius:2px;opacity:0.5"></div></div>
+              <div style="font-size:10px;font-weight:600;color:var(--foreground);min-width:54px;text-align:right">&#x20B9;41.96L</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <div style="font-size:10px;color:var(--muted);min-width:110px">Less: All costs</div>
+              <div style="flex:1;height:5px;background:var(--bg);border-radius:2px"><div style="height:100%;width:86%;background:#FECACA;border-radius:2px"></div></div>
+              <div style="font-size:10px;font-weight:600;color:#EF4444;min-width:54px;text-align:right">&minus;&#x20B9;60.19L</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <div style="font-size:10px;font-weight:700;color:#EF4444;min-width:110px">NET P&amp;L</div>
+              <div style="flex:1;height:5px;background:var(--bg);border-radius:2px"><div style="height:100%;width:18%;background:#EF4444;border-radius:2px;opacity:0.6"></div></div>
+              <div style="font-size:10px;font-weight:700;color:#EF4444;min-width:54px;text-align:right">&minus;&#x20B9;18.39L</div>
+            </div>
+            <div style="font-size:9px;font-weight:700;color:var(--royal-blue);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Y2 &middot; Jan&ndash;Dec 2027</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <div style="font-size:10px;color:var(--muted);min-width:110px">Net Revenue</div>
+              <div style="flex:1;height:5px;background:var(--bg);border-radius:2px"><div style="height:100%;width:56%;background:var(--royal-blue);border-radius:2px;opacity:0.5"></div></div>
+              <div style="font-size:10px;font-weight:600;color:var(--foreground);min-width:54px;text-align:right">&#x20B9;168.9L</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <div style="font-size:10px;color:var(--muted);min-width:110px">Less: All costs</div>
+              <div style="flex:1;height:5px;background:var(--bg);border-radius:2px"><div style="height:100%;width:42%;background:#FECACA;border-radius:2px"></div></div>
+              <div style="font-size:10px;font-weight:600;color:#EF4444;min-width:54px;text-align:right">&minus;&#x20B9;126.9L</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <div style="font-size:10px;font-weight:700;color:#166534;min-width:110px">NET P&amp;L</div>
+              <div style="flex:1;height:5px;background:var(--bg);border-radius:2px"><div style="height:100%;width:14%;background:#166534;border-radius:2px;opacity:0.8"></div></div>
+              <div style="font-size:10px;font-weight:700;color:#166534;min-width:54px;text-align:right">+&#x20B9;42.1L</div>
+            </div>
+            <div style="font-size:9px;font-weight:700;color:var(--royal-blue);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">Y3 &middot; Jan&ndash;Dec 2028</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <div style="font-size:10px;color:var(--muted);min-width:110px">Net Revenue</div>
+              <div style="flex:1;height:5px;background:var(--bg);border-radius:2px"><div style="height:100%;width:100%;background:var(--royal-blue);border-radius:2px;opacity:0.5"></div></div>
+              <div style="font-size:10px;font-weight:600;color:var(--foreground);min-width:54px;text-align:right">&#x20B9;375.9L</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <div style="font-size:10px;color:var(--muted);min-width:110px">Less: All costs</div>
+              <div style="flex:1;height:5px;background:var(--bg);border-radius:2px"><div style="height:100%;width:45%;background:#FECACA;border-radius:2px"></div></div>
+              <div style="font-size:10px;font-weight:600;color:#EF4444;min-width:54px;text-align:right">&minus;&#x20B9;170.7L</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:10px;font-weight:700;color:#166534;min-width:110px">NET P&amp;L</div>
+              <div style="flex:1;height:5px;background:var(--bg);border-radius:2px"><div style="height:100%;width:55%;background:#166534;border-radius:2px;opacity:0.8"></div></div>
+              <div style="font-size:10px;font-weight:700;color:#166534;min-width:54px;text-align:right">+&#x20B9;205.2L</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>`
+  }
+
+  ,
+  {
     id:'leadership', title:'Leadership', dark:false,
     html:`<div class="slide light-slide" id="s10">
-      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">10</span><div class="nav-dash light"></div><span>LEADERSHIP</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">12</span><div class="nav-dash light"></div><span>LEADERSHIP</span></div></div>
       <div class="slide-body top-align">
         <h2 class="slide-title">Founding Team</h2>
         <p class="slide-sub" style="margin-bottom:20px">Domain expertise, industry relationships, and first-hand knowledge of the problem</p>
@@ -1215,16 +1653,16 @@ const SLIDES = [
               <div style="width:44px;height:44px;border-radius:10px;background:var(--royal-blue);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">AS</div>
               <div>
                 <div style="font-size:15px;font-weight:700;color:var(--foreground)">Aman Sharma</div>
-                <div style="font-size:11px;color:var(--muted)">Founder & CEO · SVP, Visa2Fly</div>
+                <div style="font-size:11px;color:var(--muted)">Founder, rebuq.com · SVP, Visa2Fly</div>
               </div>
             </div>
             <div style="font-size:9px;padding:2px 10px;border-radius:4px;background:rgba(59,91,219,0.08);color:var(--royal-blue);font-weight:600;display:inline-block;margin-bottom:12px">FOUNDER</div>
-            <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Built and scaled Visa2Fly — an established Indian outbound travel platform — giving rebuq direct access to the premium traveller segment from day one. Deep expertise across luxury travel distribution, wholesale supplier networks, and the exact problem rebuq solves.</p>
+            <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Two decades building and running travel operations at scale — WNS (British Airways), IGT, Ebookers (Expedia Group), and Travix.com (Trip.com Group). Currently SVP Operations at Visa2Fly. rebuq is built from the inside of the problem — by someone who has lived it across every layer of the travel stack.</p>
             <div style="display:flex;flex-wrap:wrap;gap:6px">
-              <span class="pill" style="font-size:10px">Visa2Fly SVP</span>
-              <span class="pill" style="font-size:10px">Travel Distribution</span>
-              <span class="pill" style="font-size:10px">Wholesale Networks</span>
-              <span class="pill" style="font-size:10px">HNI Sales</span>
+              <span class="pill" style="font-size:10px">WNS · British Airways</span>
+              <span class="pill" style="font-size:10px">Ebookers · Expedia Group</span>
+              <span class="pill" style="font-size:10px">Travix · Trip.com Group</span>
+              <span class="pill" style="font-size:10px">Visa2Fly</span>
             </div>
           </div>
 
@@ -1243,6 +1681,7 @@ const SLIDES = [
               <span class="pill" style="font-size:10px">CEO Visa2Fly</span>
               <span class="pill" style="font-size:10px">Ex iXiGO</span>
               <span class="pill" style="font-size:10px">Ex MobiKwik</span>
+              <span class="pill" style="font-size:10px">Ex Zomato</span>
             </div>
           </div>
 
@@ -1259,7 +1698,7 @@ const SLIDES = [
             <p style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px">Founder, GRNConnect.com — one of Asia's largest wholesale hotel distribution networks. Direct supply-side relationship giving rebuq access to net rates unavailable on any consumer platform.</p>
             <div style="display:flex;flex-wrap:wrap;gap:6px">
               <span class="pill" style="font-size:10px">Founder GRNConnect</span>
-              <span class="pill" style="font-size:10px">Wholesale Supply</span>
+              <span class="pill" style="font-size:10px">Industry Veteran</span>
               <span class="pill" style="font-size:10px">Hotel Networks</span>
             </div>
           </div>
@@ -1291,7 +1730,7 @@ const SLIDES = [
   {
     id:'ask', title:'The Ask', dark:false,
     html:`<div class="slide light-slide" id="s12">
-      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">12</span><div class="nav-dash light"></div><span>THE ASK</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
+      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">13</span><div class="nav-dash light"></div><span>THE ASK</span></div></div>
       <div class="slide-body top-align">
         <h2 class="slide-title" style="margin-bottom:6px">Seed Investment Request</h2>
         <p class="slide-sub" style="margin-bottom:24px">The product is built. Both streams are live. This raise funds the team and scale — not the build.</p>
@@ -1304,70 +1743,111 @@ const SLIDES = [
             <!-- Amount -->
             <div class="card" style="padding:22px">
               <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Raising</div>
-              <div style="font-size:48px;font-weight:800;color:var(--foreground);letter-spacing:-0.03em;line-height:1">₹1.5 <span style="font-size:28px">Crore</span></div>
+              <div style="font-size:48px;font-weight:800;color:var(--foreground);letter-spacing:-0.03em;line-height:1">₹90 <span style="font-size:28px">Lakhs</span></div>
               <div style="font-size:12px;color:var(--muted);margin-top:6px">Series Seed — 2026 Institutional Round</div>
               <div style="height:1px;background:var(--border);margin:14px 0"></div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                <div><div style="font-size:18px;font-weight:700;color:var(--foreground)">19 months</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Full runway at ₹7.75L/month burn</div></div>
-                <div><div style="font-size:18px;font-weight:700;color:var(--foreground)">Phase 1+2</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Covers validation and scale phases</div></div>
+                <div>
+                  <div style="font-size:18px;font-weight:700;color:var(--foreground)">Nov 2026</div>
+                  <div style="font-size:10px;color:var(--muted);margin-top:2px">Break-even month — all scenarios</div>
+                </div>
+                <div>
+                  <div style="font-size:18px;font-weight:700;color:var(--foreground)">19.8 months</div>
+                  <div style="font-size:10px;color:var(--muted);margin-top:2px">Runway at Dec 2028 (Expected)</div>
+                </div>
               </div>
             </div>
 
-            <!-- Milestone -->
+            <!-- Milestones -->
             <div class="card" style="padding:22px;background:rgba(59,91,219,0.04);border:1px solid rgba(59,91,219,0.15)">
               <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--royal-blue);margin-bottom:12px">What This Unlocks</div>
-              ${[
-                ['1,575 bookings', 'Phase 1 target — both streams validated'],
-                ['iXiGO live', 'Distribution partnership operational'],
-                ['2 key hires', 'CTO + Head of Supply onboarded'],
-                ['Series A ready', 'End of Phase 2 — ₹5.43 Cr annual revenue'],
-              ].map(m => `
               <div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">
                 <div style="width:6px;height:6px;border-radius:50%;background:var(--royal-blue);flex-shrink:0;margin-top:5px"></div>
-                <div><div style="font-size:12px;font-weight:600;color:var(--foreground)">${m[0]}</div><div style="font-size:11px;color:var(--muted)">${m[1]}</div></div>
-              </div>`).join('')}
+                <div><div style="font-size:12px;font-weight:600">881 bookings — Year 1</div><div style="font-size:11px;color:var(--muted)">Visa2Fly + ACKO + Organic · 3 channels live</div></div>
+              </div>
+              <div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--royal-blue);flex-shrink:0;margin-top:5px"></div>
+                <div><div style="font-size:12px;font-weight:600">Niyo from Apr 2027</div><div style="font-size:11px;color:var(--muted)">4th channel adds 100–125 bookings/month</div></div>
+              </div>
+              <div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--royal-blue);flex-shrink:0;margin-top:5px"></div>
+                <div><div style="font-size:12px;font-weight:600">Team scaled in Y2</div><div style="font-size:11px;color:var(--muted)">+1 support · +1 tech · Salary ₹10L/month</div></div>
+              </div>
+              <div style="display:flex;align-items:start;gap:10px">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--royal-blue);flex-shrink:0;margin-top:5px"></div>
+                <div><div style="font-size:12px;font-weight:600">Series A ready — end Y3</div><div style="font-size:11px;color:var(--muted)">Conservative ₹1.70 Cr · Expected ₹3.19 Cr final cash</div></div>
+              </div>
             </div>
           </div>
 
           <!-- RIGHT: Capital allocation -->
           <div class="card" style="padding:22px">
-            <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:16px">Capital Allocation — Monthly Burn ₹7.75 Lakhs</div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:16px">Capital Allocation — Cost Structure by Year</div>
 
-            ${[
-              { label: 'Salaries', sub: 'CTO, Head of Supply + existing team', amount: '₹6,00,000', pct: 77, color: 'var(--royal-blue)' },
-              { label: 'GTM Spend', sub: 'Visa2Fly activation, iXiGO integration, community', amount: '₹1,00,000', pct: 13, color: '#6B7AE8' },
-              { label: 'Infrastructure & Tech', sub: 'Cloud, APIs, Twilio, Anthropic, monitoring', amount: '₹50,000', pct: 6, color: '#9BA8F0' },
-              { label: 'Legal & Compliance', sub: 'Structuring, data privacy, contracts', amount: '₹25,000', pct: 3, color: '#C5CCFA' },
-            ].map(item => `
+            <!-- Y1 -->
             <div style="margin-bottom:16px">
+              <div style="font-size:11px;font-weight:700;color:var(--royal-blue);margin-bottom:10px;padding:4px 10px;background:rgba(59,91,219,0.06);border-radius:6px;display:inline-block">Y1 Aug–Dec 2026 · ₹7,95,000/month fixed</div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                <div>
-                  <div style="font-size:13px;font-weight:600;color:var(--foreground)">${item.label}</div>
-                  <div style="font-size:10px;color:var(--muted)">${item.sub}</div>
-                </div>
-                <div style="text-align:right">
-                  <div style="font-size:13px;font-weight:700;color:var(--foreground)">${item.amount}</div>
-                  <div style="font-size:10px;color:var(--muted)">${item.pct}%</div>
-                </div>
+                <div><div style="font-size:12px;font-weight:600">Salary (Aman + 1 support + 1 tech)</div></div>
+                <div style="font-size:13px;font-weight:700">₹6,85,000</div>
               </div>
-              <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden">
-                <div style="height:100%;width:${item.pct}%;background:${item.color};border-radius:3px"></div>
+              <div style="height:6px;background:var(--bg);border-radius:3px;margin-bottom:10px"><div style="height:100%;width:91%;background:var(--royal-blue);border-radius:3px"></div></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <div><div style="font-size:12px;font-weight:600">Tech & Infrastructure</div></div>
+                <div style="font-size:13px;font-weight:700">₹40,000</div>
               </div>
-            </div>`).join('')}
-
-            <div style="height:1px;background:var(--border);margin:16px 0"></div>
-
-            <!-- Stacked bar -->
-            <div style="height:10px;border-radius:5px;overflow:hidden;display:flex;margin-bottom:10px">
-              <div style="width:77%;background:var(--royal-blue)"></div>
-              <div style="width:13%;background:#6B7AE8"></div>
-              <div style="width:6%;background:#9BA8F0"></div>
-              <div style="width:4%;background:#C5CCFA"></div>
+              <div style="height:6px;background:var(--bg);border-radius:3px;margin-bottom:4px"><div style="height:100%;width:9%;background:#6B7AE8;border-radius:3px"></div></div>
+              <div style="font-size:10px;color:var(--muted)">+ GTM variable: organic bookings</div>
             </div>
 
-            <div style="background:var(--bg);border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center">
-              <div style="font-size:12px;color:var(--muted)">Total monthly burn</div>
-              <div style="font-size:16px;font-weight:700;color:var(--foreground)">₹7,75,000 / month</div>
+            <div style="height:1px;background:var(--border);margin-bottom:16px"></div>
+
+            <!-- Y2 -->
+            <div style="margin-bottom:16px">
+              <div style="font-size:11px;font-weight:700;color:#2E7D32;margin-bottom:10px;padding:4px 10px;background:#E8F5E9;border-radius:6px;display:inline-block">Y2 Jan–Dec 2027 · ₹9,34,000/month fixed</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <div><div style="font-size:12px;font-weight:600">Salary (+ 1 support + 1 tech added)</div></div>
+                <div style="font-size:13px;font-weight:700">₹10,00,000</div>
+              </div>
+              <div style="height:6px;background:var(--bg);border-radius:3px;margin-bottom:10px"><div style="height:100%;width:94%;background:#2E7D32;border-radius:3px"></div></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <div><div style="font-size:12px;font-weight:600">Tech & Infrastructure</div></div>
+                <div style="font-size:13px;font-weight:700">₹60,000</div>
+              </div>
+              <div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:6%;background:#66BB6A;border-radius:3px"></div></div>
+            </div>
+
+            <div style="height:1px;background:var(--border);margin-bottom:16px"></div>
+
+            <!-- Y3 -->
+            <div style="margin-bottom:16px">
+              <div style="font-size:11px;font-weight:700;color:#E64A19;margin-bottom:10px;padding:4px 10px;background:#FBE9E7;border-radius:6px;display:inline-block">Y3 Jan–Dec 2028 · ₹11,61,000/month fixed</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <div><div style="font-size:12px;font-weight:600">Salary (full team)</div></div>
+                <div style="font-size:13px;font-weight:700">₹15,00,000</div>
+              </div>
+              <div style="height:6px;background:var(--bg);border-radius:3px;margin-bottom:10px"><div style="height:100%;width:94%;background:#E64A19;border-radius:3px"></div></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <div><div style="font-size:12px;font-weight:600">Tech & Infrastructure</div></div>
+                <div style="font-size:13px;font-weight:700">₹1,00,000</div>
+              </div>
+              <div style="height:6px;background:var(--bg);border-radius:3px"><div style="height:100%;width:6%;background:#FF8A65;border-radius:3px"></div></div>
+            </div>
+
+            <!-- Summary box -->
+            <div style="background:var(--bg);border-radius:8px;padding:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0">
+              <div style="padding-right:12px;text-align:center">
+                <div style="font-size:16px;font-weight:700;color:var(--royal-blue)">₹7.95L</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">Y1 monthly burn</div>
+              </div>
+              <div style="padding:0 12px;border-left:1px solid var(--border);text-align:center">
+                <div style="font-size:16px;font-weight:700;color:#2E7D32">₹9.34L</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">Y2 monthly burn</div>
+              </div>
+              <div style="padding-left:12px;border-left:1px solid var(--border);text-align:center">
+                <div style="font-size:16px;font-weight:700;color:#E64A19">₹11.61L</div>
+                <div style="font-size:10px;color:var(--muted);margin-top:2px">Y3 monthly burn</div>
+              </div>
             </div>
           </div>
         </div>
@@ -1375,34 +1855,48 @@ const SLIDES = [
     </div>`
   },
   {
-    id:'closing', title:'Closing', dark:false,
-    html:`<div class="slide light-slide" id="s13">
-      <div class="top-nav"><div class="nav-section-label light"><span class="section-num">13</span><div class="nav-dash light"></div><span>CLOSING</span></div><div class="nav-logo light">rebuq<span>.</span></div></div>
-      <div class="slide-body" style="justify-content:center;align-items:center;text-align:center">
-        <div style="max-width:680px;display:flex;flex-direction:column;align-items:center;gap:20px">
-          <div style="width:48px;height:2px;background:var(--royal-blue)"></div>
-          <h2 style="font-size:clamp(24px,3vw,38px);font-weight:700;color:var(--foreground);line-height:1.3;letter-spacing:-0.02em">
-            The problem is structural.<br>The timing is right.<br><span style="color:var(--royal-blue)">The product is live.</span>
-          </h2>
-          <p style="font-size:14px;color:var(--muted);line-height:1.7;max-width:520px">Every premium traveller overpays. Every OTA profits from it. rebuq is the only platform built to return that money to the traveller — and earn from doing so.</p>
-          <div style="width:48px;height:2px;background:var(--royal-blue)"></div>
-          <div>
-            <div style="font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Get in touch</div>
-            <div style="font-size:18px;font-weight:600;color:var(--royal-blue)">hello@rebuq.com · rebuq.com</div>
-            <div style="font-size:13px;color:var(--muted);margin-top:4px">Aman Sharma · Founder & CEO</div>
-          </div>
-          <div style="display:flex;gap:12px;align-items:center">
-            <a href="https://www.rebuq.com" target="_blank" style="padding:12px 24px;background:var(--royal-blue);color:#fff;border:none;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block">Visit rebuq.com</a>
-            <button onclick="window.goTo(0)" style="padding:12px 24px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:24px;font-size:13px;font-weight:500;cursor:pointer">Back to start</button>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;border-top:1px solid var(--border);padding-top:20px;width:100%;margin-top:10px">
-            ${[['₹22.6 Cr','3-year revenue'],['71,138','Total bookings'],['₹284.5 Cr','Total GMV'],['₹14.4 Cr','Traveller savings']].map((s,i)=>`
-            <div style="${i>0?'border-left:1px solid var(--border);padding-left:20px;':'padding-right:20px;'}">
-              <div style="font-size:20px;font-weight:700;color:var(--royal-blue)">${s[0]}</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:3px">${s[1]}</div>
-            </div>`).join('')}
-          </div>
+    id:'closing', title:'Closing', dark:true,
+    html:`<div class="slide" id="s14" style="display:flex;flex-direction:column;background:linear-gradient(135deg,#0D1B6E 0%,#1535C9 45%,#2563EB 75%,#3B82F6 100%) !important;color:#fff;overflow:hidden">
+
+      <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px);background-size:48px 48px;pointer-events:none"></div>
+
+      <div style="position:relative;z-index:10;padding:28px 64px 0;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);border:1px solid rgba(255,255,255,0.15);padding:4px 14px;border-radius:20px">15 — CLOSING</span>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 64px;position:relative;z-index:10;gap:24px">
+        <div style="width:48px;height:2px;background:#FCD34D"></div>
+        <div style="font-size:clamp(28px,3.5vw,48px);font-weight:700;color:#fff;line-height:1.25;letter-spacing:-0.02em">
+          The problem is structural.<br>
+          The timing is right.<br>
+          <span style="color:#FCD34D">The product is live.</span>
         </div>
+        <p style="font-size:16px;color:rgba(255,255,255,0.65);max-width:520px;line-height:1.7">
+          rebuq is the only platform built to close the gap between what travellers pay and what they should. Both revenue streams are live. The seed round funds scale — not the build.
+        </p>
+        <div style="display:flex;gap:14px;margin-top:8px">
+          <a href="https://rebuq.com" style="padding:12px 28px;background:#fff;color:#1447b8;border-radius:24px;font-size:14px;font-weight:700;text-decoration:none">Visit rebuq.com</a>
+          <span style="padding:12px 28px;border:1.5px solid rgba(255,255,255,0.3);color:#fff;border-radius:24px;font-size:14px;font-weight:500">Series Seed 2026 · ₹90L</span>
+        </div>
+      </div>
+
+      <div style="position:relative;z-index:10;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(255,255,255,0.1);margin:0 64px 48px">
+        <div style="padding:20px 0 0">
+          <div style="font-size:26px;font-weight:700;color:#60A5FA;letter-spacing:-0.02em">₹97.2 Cr</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:4px">3-Year GMV · Expected</div>
+        </div>
+        <div style="padding:20px 0 0;border-left:1px solid rgba(255,255,255,0.1);padding-left:32px">
+          <div style="font-size:26px;font-weight:700;color:#60A5FA;letter-spacing:-0.02em">Nov 2026</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:4px">Break-even · all scenarios</div>
+        </div>
+        <div style="padding:20px 0 0;border-left:1px solid rgba(255,255,255,0.1);padding-left:32px">
+          <div style="font-size:26px;font-weight:700;color:#60A5FA;letter-spacing:-0.02em">₹3.19 Cr</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:4px">Final cash · Dec 2028 · Expected</div>
+        </div>
+      </div>
+
+      <div style="position:relative;z-index:10;text-align:center;padding-bottom:16px">
+        <p style="font-size:10px;color:rgba(255,255,255,0.15)">Confidential document intended solely for authorised investment reviews · Series Seed 2026</p>
       </div>
     </div>`
   }
@@ -1535,11 +2029,30 @@ updateNavLinks();
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+    navigator.serviceWorker.register('sw.js').then(function(reg) {
       console.log('SW registered');
     }).catch(function(err) {
       console.log('SW registration failed:', err);
     });
+  });
+}
+
+function switchTab(t){
+  ['conservative','expected','optimistic'].forEach(function(s){
+    var panel = document.getElementById('panel-'+s);
+    var btn = document.getElementById('tab-'+s);
+    if(!panel || !btn) return;
+    panel.style.display = s===t ? 'block' : 'none';
+    var colors = {'conservative':'#C62828','expected':'#3B5BDB','optimistic':'#2E7D32'};
+    if(s===t){
+      btn.style.background = colors[s];
+      btn.style.borderColor = colors[s];
+      btn.style.color = '#fff';
+    } else {
+      btn.style.background = '#fff';
+      btn.style.borderColor = '#E0E0E0';
+      btn.style.color = '#8A8A8A';
+    }
   });
 }
 </script>
