@@ -525,8 +525,7 @@ export default function Home() {
                           <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{hotel.hotel_name}</div>
                           <div style={{ fontSize: 12, color: '#64748b' }}>
                             {hotel.area && `📍 ${hotel.area}`}
-                            {hotel.stars ? ` · ${'★'.repeat(hotel.stars)}` : ''}
-                            {hotel.user_rating ? ` · ${hotel.user_rating}` : ''}
+                            {hotel.stars ? ` · ${'★'.repeat(Math.min(hotel.stars, 5))}` : ''}
                           </div>
                           {hotel.free_cancellation && <span style={{ display: 'inline-block', marginTop: 6, background: '#f0fdf4', color: '#16a34a', fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>✓ Free cancel</span>}
                         </div>
