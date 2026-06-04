@@ -295,6 +295,7 @@ export default function Home() {
       }
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to submit');
       sessionStorage.setItem('rebuq_booking', JSON.stringify({ extracted, bookingId: json.booking_id }));
+      closeModal();
       router.push('/confirmed');
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
@@ -489,7 +490,7 @@ export default function Home() {
                 {warnings.checkInSoon && (<div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#c2410c' }}>⏰ <strong>Check-in very soon</strong> — Your check-in is {warnings.checkInSoonDays === 0 ? 'today' : 'tomorrow'}. We will scan immediately but the window to rebook is tight.</div>)}
                 {warnings.payAtProperty && (<div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#0369a1' }}>💳 <strong>Pay at property detected</strong> — You have not paid yet so amount shows Rs.0. We will still track the rate.</div>)}
                 {warnings.unknownPolicy && (<div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}>❓ <strong>Cancellation policy unclear</strong> — Please select your policy below so we track correctly.</div>)}
-                {warnings.currencyConverted && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#166534' }}>💱 <strong>Currency converted</strong> — Original was in {warnings.originalCurrency}, converted to INR. Please verify the amount.</div>)}
+                {warnings.currencyConverted && extracted?.total_price_paid > 0 && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#166534' }}>💱 <strong>Currency converted</strong> — Original was in {warnings.originalCurrency}, converted to INR. Please verify the amount.</div>)}
                 {file && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#166534' }}><span style={{ fontSize: 16 }}>✨</span><span><strong>AI extracted successfully</strong> — verify and correct anything that looks wrong.</span></div>)}
 
                 <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
