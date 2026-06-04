@@ -219,7 +219,7 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
 
     let parsed;
     try {
-      const cleaned = rawText.replace(/^[\s\S]*?({)/, '$1').replace(/}[\s\S]*$/, '}').trim();
+      const cleaned = rawText.trim();
       parsed = JSON.parse(cleaned);
     } catch {
       try {
