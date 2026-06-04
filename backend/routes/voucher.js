@@ -107,7 +107,8 @@ TYPE A — confirmed_voucher:
 Extract all fields. This is a COMPLETED booking with a reference number.
 
 TYPE B — search_results:
-Extract ALL hotels visible as an array. Also extract search bar params.
+Extract ALL hotels visible on screen as an array. CRITICAL: If you can see 2, 3, or more hotel cards on screen, you MUST extract ALL of them — not just the first one. Each hotel card typically shows hotel name, area/location, star rating, user rating, price, and sometimes free cancellation or breakfast badges.
+Also extract search bar params.
 For each hotel: name, area, stars, user_rating, free_cancellation, breakfast_included, price_per_night_incl_tax, total_price_incl_tax, agoda_pretax_warning, price_note.
 
 TYPE C — hotel_detail_top:
