@@ -220,7 +220,8 @@ export default function Home() {
       // SEARCH RESULTS / HOTEL DETAIL — redirect to /upload page with data
       if (docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top') {
         sessionStorage.setItem('rebuq_extract_result', JSON.stringify(json));
-        closeModal();
+        setModalOpen(false);
+        document.body.style.overflow = '';
         router.push('/upload');
         return;
       }
