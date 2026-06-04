@@ -130,6 +130,8 @@ CRITICAL FOR SEARCH RESULTS PRICE: Always apply the tax logic from STEP 3. Never
 TYPE C — hotel_detail_top:
 Extract hotel-level info + any featured room shown.
 Get hotel_name from: page title → search bar field → breadcrumb → URL slug (parse hyphens to spaces, title-case).
+PRICE on hotel_detail_top: MMT shows "Total Price: ₹33,571" on the right panel — this is the TOTAL for all nights. Extract it as total_price_incl_tax for the featured room. Also extract the room name shown (e.g. "Superior Room Twin Bed") as the featured room type.
+Always extract the featured/highlighted room option shown on the hotel overview page — it typically shows in a panel on the right side with room name, price, and cancellation policy.
 
 TYPE D — hotel_detail_rooms:
 Extract hotel info + ALL room options visible.
