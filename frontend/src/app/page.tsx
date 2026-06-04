@@ -527,6 +527,7 @@ export default function Home() {
                       const s = extractResult.data;
                       setExtracted({ ...emptyExtracted(), hotel_name: h.hotel_name || '', hotel_city: s.destination || '', check_in: s.check_in || '', check_out: s.check_out || '', num_adults: s.num_adults || 2, num_rooms: s.num_rooms || 1, ota_name: s.ota_name || '', total_price_paid: h.total_price_incl_tax || h.price_per_night_incl_tax || 0 });
                       setWarnings({});
+                      setDocType('search_results');
                       setUploadStep(2);
                     }} style={{ background: selectedHotelIdx === idx ? '#eff6ff' : '#f8fafc', border: `1.5px solid ${selectedHotelIdx === idx ? B : '#e2e8f0'}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const, transition: 'all 0.15s' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
@@ -560,6 +561,7 @@ export default function Home() {
                       const d = extractResult.data;
                       setExtracted({ ...emptyExtracted(), hotel_name: d.hotel_name || '', hotel_city: d.hotel_city || '', check_in: d.check_in || '', check_out: d.check_out || '', num_adults: d.num_adults || 2, num_rooms: d.num_rooms || 1, ota_name: d.ota_name || '', room_type: room.room_type || '', board_basis: room.board_basis || 'RO', board_basis_label: room.board_basis_label || 'Room Only', cancellation_policy: room.cancellation_policy || 'unknown', cancellation_deadline: room.cancellation_deadline || '', total_price_paid: room.total_price_incl_tax || 0 });
                       setWarnings({});
+                      setDocType('hotel_detail_rooms');
                       setUploadStep(2);
                     }} style={{ background: selectedRoomIdx === idx ? '#eff6ff' : '#f8fafc', border: `1.5px solid ${selectedRoomIdx === idx ? B : '#e2e8f0'}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const, transition: 'all 0.15s' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
