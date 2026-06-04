@@ -1,4 +1,3 @@
-// backend/routes/voucher.js
 const express = require('express')
 const multer  = require('multer')
 const axios   = require('axios')
@@ -28,97 +27,271 @@ const RATES_TO_INR = {
   ZAR: 4.5, EGP: 1.7, MXN: 4.2, BHD: 223,
 }
 
-const EXTRACTION_PROMPT = `You are a hotel booking voucher parser for rebuq, an Indian travel price-tracking service.
+const EXTRACTION_PROMPT = `You are an expert hotel data extractor for rebuq, an Indian travel price-tracking service.
+You can read screenshots taken on phone cameras (angled, glare), desktop screenshots, PDFs, and WhatsApp-forwarded images.
 
-FIRST — determine if this document is a hotel booking confirmation/voucher.
-Look for: hotel name, check-in date, check-out date, room type, booking reference.
-If ANY of these are missing AND the document is clearly not a hotel booking, respond with ONLY:
-{"document_type": "not_hotel", "reason": "brief reason why"}
+═══════════════════════════════════════════════
+STEP 1 — IDENTIFY DOCUMENT TYPE
+═══════════════════════════════════════════════
 
-Examples that are NOT hotel bookings — always return not_hotel for these:
-- Photos of people, selfies, portraits
-- Flight tickets or boarding passes
-- Train/bus tickets
-- Restaurant receipts
-- Car rental confirmations
-- Visa documents or passports
-- Event tickets
-- Insurance policies
-- Bank statements
-- Random photos of objects, places, food
+Determine which type this is:
 
-If it IS a hotel booking, extract ALL fields below.
-Respond ONLY with a valid JSON object. No markdown, no code fences, no explanation.
+A) "confirmed_voucher" — Completed booking confirmation. Has booking reference, confirmation of payment. E.g. email voucher, PDF receipt, post-booking confirmation page.
 
-PRICING RULES (critical):
-- "original_price" = price per room per night BEFORE taxes (if shown separately)
-- "total_price_paid" = the TOTAL the customer actually paid (all rooms × all nights + ALL taxes + GST + service charges)
-- If only one total is shown, put it in "total_price_paid" and set original_price to the same value
-- Convert all non-INR currencies using: EUR=112, USD=84, GBP=107, AED=22.8, THB=2.3, SGD=62, AMD=0.21, MYR=18, JPY=0.56, OMR=218, SAR=22.4, QAR=23.1, NPR=0.63
-- Always output prices in INR as plain numbers (no symbols, no commas)
+B) "search_results" — Hotel search listing page showing MULTIPLE hotels with a search bar at top. User is browsing, has NOT booked.
 
-IMAGE QUALITY CHECK:
-- If the image is too blurry, too dark, or unreadable to extract key fields (hotel name, dates, price), set "extraction_quality": "poor"
-- If it's a partial/cropped screenshot missing key info, set "extraction_quality": "partial"
-- Otherwise set "extraction_quality": "good"
+C) "hotel_detail_top" — Single hotel overview/photos page. May show one featured room price. User is viewing the hotel.
 
-PAY AT PROPERTY:
-- If payment_type is "pay_at_property", the customer has NOT paid yet. Set total_price_paid to 0 and amount_paid_upfront to 0.
+D) "hotel_detail_rooms" — Hotel detail page scrolled to rooms/availability section. Shows MULTIPLE room types each with price, board, and cancellation policy.
 
-MULTI-HOTEL / MULTI-ROOM:
-- If the document contains bookings for multiple different hotels, set "multi_hotel": true and extract only the FIRST hotel.
-- If the document contains multiple rooms at the SAME hotel, extract as one booking with num_rooms set correctly.
+E) "checkout_page" — Booking checkout/payment/review page. User has selected a room but NOT yet paid. Has price breakdown, cancellation policy, guest details form.
 
-CANCELLATION RULES (read very carefully):
-- "free"           = fully refundable with no penalty before cancellation_deadline
-- "partial"        = some penalty applies even before deadline
-- "non-refundable" = NO refund under ANY circumstance — even if cancelled immediately
-- "unknown"        = cannot determine from voucher
-- cancellation_deadline = LAST DATE to cancel for FREE (YYYY-MM-DD). null if non-refundable or unknown.
-- cancellation_penalty  = penalty amount in INR if cancelled after deadline. null if free cancellation.
+F) "not_hotel" — Not related to hotels (flights, trains, food, selfies, passports, bank statements, car rental, etc.)
 
-BOARD BASIS CODES:
-- RO = Room Only, BB = Bed & Breakfast, HB = Half Board, FB = Full Board, AI = All Inclusive
+═══════════════════════════════════════════════
+STEP 2 — DETECT OTA
+═══════════════════════════════════════════════
 
-Respond with exactly this JSON shape for hotel bookings:
+Detect from logo, URL bar, or page design:
+- MakeMyTrip (MMT): purple/dark search bar, makemytrip.com in URL, "MMT Luxe" badge
+- Ixigo: orange "ixigo" logo, ixigo.com in URL
+- Goibibo: orange header, goibibo.com in URL
+- Agoda: dark nav with colored dots logo, agoda.com in URL
+- Hotels.com: red H logo, hotels.com in URL, "Collect stamps" badge
+- Booking.com: dark blue nav, booking.com in URL, "Genius" badge
+- Yatra: red "yatra" logo, yatra.com in URL
+- GRNConnect: "GRNConnect" or "VISA2FLY" branding, grnconnect.com in URL — shows "Tripadvisor Rating" on hotel cards
+- TBO: tbo.com in URL or TBO logo
+- Expedia: expedia.com in URL
+- Direct: hotel's own website
 
+═══════════════════════════════════════════════
+STEP 3 — TAX LOGIC BY OTA (CRITICAL)
+═══════════════════════════════════════════════
+
+ALWAYS INCLUSIVE — trust the price shown, no adjustment needed:
+- MMT: shows "with tax" or "For X Nights with tax" — TOTAL inclusive
+- Hotels.com: shows "includes taxes & fees" — TOTAL inclusive
+- GRNConnect: ALWAYS inclusive — all prices shown are final per night
+- TBO: ALWAYS inclusive — all prices shown are final per night
+- Yatra: shows "Hotel Charges + Hotel GST = Total Amount" on checkout — ADD all components. On search/detail: shows "+ ₹X taxes" separately — ADD base + tax
+
+TAXES SHOWN SEPARATELY — add base + taxes to get total:
+- Ixigo: shows "+ ₹X taxes & fees per night per room" — total = (base + tax) × nights × rooms
+- Goibibo: shows "+ ₹X taxes & fees" per night — total = (base + tax) × nights × rooms. On checkout shows full Price Summary — use Total Amount shown.
+- Booking.com: shows price for X nights + "+ ₹X taxes and fees" — ADD them. On checkout: use total from price breakdown.
+
+ALWAYS PRE-TAX — taxes NOT shown anywhere on screen:
+- Agoda: ALWAYS shows "Per night before taxes and fees" — set total_price_paid: null, set agoda_pretax_warning: true. Do NOT guess the tax amount.
+
+PER NIGHT vs TOTAL:
+- "For X Nights & Y Room with tax" → already the TOTAL (MMT style)
+- "per night" / "per room per night" → multiply: price × nights × rooms
+- "Price for X nights" → already the TOTAL (Booking.com room table)
+- "1 Room x 1 Night" → per night price (multiply by nights × rooms)
+- Checkout pages show full breakdowns — always use the final "Total Amount" / "Total Amount to be paid" line
+
+MANDATORY EXTRAS (city tax, tourism fee):
+- Goibibo checkout shows "City Tax (AED 10) = ₹261 — Not included in room price" → add to total
+- GRN shows tourism dirhams fee note → flag as extra, add if amount is visible
+- Always note these in price_breakdown.mandatory_extras
+
+LONG STAY DISCOUNTS:
+- MMT sometimes shows "Long Stay Benefits: 20% off" — the displayed price already includes the discount. Use the discounted price shown.
+
+═══════════════════════════════════════════════
+STEP 4 — EXTRACTION BY DOCUMENT TYPE
+═══════════════════════════════════════════════
+
+TYPE A — confirmed_voucher:
+Extract all fields. This is a COMPLETED booking with a reference number.
+
+TYPE B — search_results:
+Extract ALL hotels visible as an array. Also extract search bar params.
+For each hotel: name, area, stars, user_rating, free_cancellation, breakfast_included, price_per_night_incl_tax, total_price_incl_tax, agoda_pretax_warning, price_note.
+
+TYPE C — hotel_detail_top:
+Extract hotel-level info + any featured room shown.
+Get hotel_name from: page title → search bar field → breadcrumb → URL slug (parse hyphens to spaces, title-case).
+
+TYPE D — hotel_detail_rooms:
+Extract hotel info + ALL room options visible.
+Get hotel_name from: search bar field (Goibibo keeps hotel name there) → breadcrumb → page title → URL slug.
+GRNConnect room pages: room name on left, board basis below name, cancellation policy shown in red "Non-Refundable" text, price per night on right (INCLUSIVE).
+For each room option: room_type, option_name, board_basis (RO/BB/HB/FB/AI), board_basis_label, cancellation_policy, cancellation_deadline, price_per_night_incl_tax, total_price_incl_tax, agoda_pretax_warning, price_note.
+
+TYPE E — checkout_page:
+Richest data — extract everything:
+- hotel_name, hotel_address, hotel_city, stars
+- check_in, check_out, total_nights
+- room_type, num_rooms
+- num_adults, num_children, children_ages (Agoda checkout shows "Max: 2 adults, 1 child (0-10 years)" — extract this)
+- board_basis, board_basis_label
+- cancellation_policy, cancellation_deadline, cancellation_penalty
+- price_breakdown: base, discount, taxes/GST, mandatory_extras, total
+- total_price (use "Total Amount" / "Total Amount to be paid" line)
+- payment_type: "pay_now" / "pay_at_property" / "pay_later" (Agoda shows "No payment until X date" = pay_later)
+- agoda_pretax_warning (Agoda checkout still shows pre-tax — set true)
+- booking_reference: null (not confirmed yet)
+- GRNConnect checkout (Visa2Fly): shows "Booking Confirmation" title, hotel panel on right with all details, Amount in INR — treat as checkout_page NOT confirmed_voucher (no booking ref confirmed yet). Set booking_reference to the BID from URL if visible.
+
+TYPE F — not_hotel:
+{"document_type": "not_hotel", "reason": "brief description"}
+
+═══════════════════════════════════════════════
+STEP 5 — CAMERA PHOTO HANDLING
+═══════════════════════════════════════════════
+
+Camera photos of screens are common. Handle:
+- Angled shots: correct for perspective when reading text
+- Glare/reflections: read around glare areas
+- Partial visibility: extract what IS visible
+- Only set extraction_quality "poor" if key fields (hotel name, dates) are genuinely unreadable
+- Set extraction_quality "camera_photo" when image is clearly a photo of a screen
+- Note in price_note if price was partially obscured by glare
+
+═══════════════════════════════════════════════
+STEP 6 — HOTEL NAME FROM URL
+═══════════════════════════════════════════════
+
+If hotel name not visible on screen (common on scrolled Ixigo/Hotels.com pages):
+- Hotels.com: in.hotels.com/ho563112/hilton-garden-inn-dubai-mall-of-the-emirates → "Hilton Garden Inn Dubai Mall Of The Emirates"
+- Booking.com: booking.com/hotel/ae/burjaman-metro-premium-holiday-homes.html → "Burjaman Metro Premium Holiday Homes"
+- Agoda: agoda.com/en-in/seven-seas-hotel/hotel/dubai → "Seven Seas Hotel"
+- Ixigo: use locationName parameter or page breadcrumb
+- Goibibo: hotel name always in search bar at top
+Set hotel_name_from_url: true when using this method.
+
+═══════════════════════════════════════════════
+STEP 7 — CHILDREN
+═══════════════════════════════════════════════
+
+Always extract num_children and children_ages[].
+- children_ages: array of numbers, one per child. 0 = infant under 1. Max 12.
+- Booking.com search bar: "2 adults · 0 children · 1 room" — parse carefully
+- Agoda checkout: "Max: 2 adults, 1 child (0-10 years)" — num_children: 1, children_ages: [] (age not specified)
+- If children count shown but ages not: children_ages: []
+- If "0 children": num_children: 0, children_ages: []
+
+═══════════════════════════════════════════════
+STEP 8 — OUTPUT FORMAT (JSON ONLY)
+═══════════════════════════════════════════════
+
+Respond ONLY with valid JSON. No markdown. No code fences. No explanation.
+
+For confirmed_voucher and checkout_page:
 {
-  "document_type": "hotel",
-  "extraction_quality": "good|partial|poor",
-  "multi_hotel": false,
-  "hotel_name": "exact hotel name as printed on voucher",
-  "hotel_city": "city name only, no country",
+  "document_type": "confirmed_voucher|checkout_page",
+  "extraction_quality": "good|partial|poor|camera_photo",
+  "ota_name": "MMT|Ixigo|Goibibo|Agoda|Hotels.com|Booking.com|Yatra|GRNConnect|TBO|Expedia|Direct|Other",
+  "hotel_name": "",
+  "hotel_name_from_url": false,
+  "hotel_address": null,
+  "hotel_city": "",
+  "stars": null,
   "check_in": "YYYY-MM-DD",
   "check_out": "YYYY-MM-DD",
-  "total_nights": number,
-  "room_type": "exact room type",
-  "num_adults": number,
-  "num_children": number,
+  "total_nights": 0,
+  "room_type": null,
+  "num_adults": 2,
+  "num_children": 0,
   "children_ages": [],
-  "num_rooms": number,
-  "board_basis": "RO|BB|HB|FB|AI",
-  "board_basis_label": "Room Only|Bed & Breakfast|Half Board|Full Board|All Inclusive",
-  "rate_plan_name": "or null",
-  "original_price": number,
-  "total_price_paid": number,
-  "taxes_included": true,
-  "price_breakdown": {
-    "per_night": number,
-    "per_room": number,
-    "rooms": number,
-    "nights": number,
-    "taxes": number or null,
-    "total": number
-  },
-  "currency_original": "INR|EUR|USD|AED|THB|GBP|SGD|AMD|MYR|JPY|OMR|SAR|QAR|NPR",
-  "ota_name": "MakeMyTrip|Booking.com|Agoda|Goibibo|Hotels.com|Expedia|Direct|Other",
-  "booking_reference": "confirmation/PNR number as string, or null",
+  "num_rooms": 1,
+  "board_basis": "RO",
+  "board_basis_label": "Room Only",
+  "rate_plan_name": null,
   "cancellation_policy": "free|partial|non-refundable|unknown",
-  "cancellation_deadline": "YYYY-MM-DD or null",
-  "cancellation_penalty": number in INR or null,
-  "payment_type": "pay_now|pay_at_property|partial_payment",
-  "amount_paid_upfront": number
-}`
+  "cancellation_deadline": null,
+  "cancellation_penalty": null,
+  "payment_type": "pay_now|pay_at_property|pay_later",
+  "amount_paid_upfront": 0,
+  "total_price_paid": 0,
+  "original_price": 0,
+  "currency_original": "INR",
+  "taxes_included": true,
+  "agoda_pretax_warning": false,
+  "price_breakdown": {
+    "base_per_night": null,
+    "discount": null,
+    "taxes": null,
+    "gst": null,
+    "mandatory_extras": null,
+    "total": 0,
+    "rooms": 1,
+    "nights": 0,
+    "calculation_note": ""
+  },
+  "booking_reference": null,
+  "multi_hotel": false
+}
+
+For search_results:
+{
+  "document_type": "search_results",
+  "extraction_quality": "good|partial|poor|camera_photo",
+  "ota_name": "",
+  "destination": "",
+  "check_in": "YYYY-MM-DD",
+  "check_out": "YYYY-MM-DD",
+  "total_nights": 0,
+  "num_rooms": 1,
+  "num_adults": 2,
+  "num_children": 0,
+  "children_ages": [],
+  "hotels": [
+    {
+      "hotel_name": "",
+      "area": "",
+      "stars": null,
+      "user_rating": null,
+      "free_cancellation": null,
+      "breakfast_included": null,
+      "price_per_night_incl_tax": null,
+      "total_price_incl_tax": null,
+      "agoda_pretax_warning": false,
+      "price_note": ""
+    }
+  ]
+}
+
+For hotel_detail_top and hotel_detail_rooms:
+{
+  "document_type": "hotel_detail_top|hotel_detail_rooms",
+  "extraction_quality": "good|partial|poor|camera_photo",
+  "ota_name": "",
+  "hotel_name": "",
+  "hotel_name_from_url": false,
+  "hotel_address": null,
+  "hotel_city": "",
+  "stars": null,
+  "user_rating": null,
+  "check_in": "YYYY-MM-DD",
+  "check_out": "YYYY-MM-DD",
+  "total_nights": 0,
+  "num_rooms": 1,
+  "num_adults": 2,
+  "num_children": 0,
+  "children_ages": [],
+  "room_options": [
+    {
+      "room_type": "",
+      "option_name": "",
+      "board_basis": "RO",
+      "board_basis_label": "Room Only",
+      "cancellation_policy": "free|partial|non-refundable|unknown",
+      "cancellation_deadline": null,
+      "price_per_night_incl_tax": null,
+      "total_price_incl_tax": null,
+      "tax_per_night": null,
+      "agoda_pretax_warning": false,
+      "price_note": ""
+    }
+  ]
+}
+
+For not_hotel:
+{"document_type": "not_hotel", "reason": ""}
+`
 
 function buildClaudeContent(base64Data, mimeType) {
   if (mimeType === 'application/pdf') {
@@ -133,6 +306,40 @@ function buildClaudeContent(base64Data, mimeType) {
   ]
 }
 
+function applyCurrencyConversion(extracted) {
+  const currency = extracted.currency_original || 'INR'
+  const rate = RATES_TO_INR[currency] || 1
+  if (currency === 'INR' || rate === 1) return
+  if (extracted.original_price)       extracted.original_price       = Math.round(extracted.original_price * rate)
+  if (extracted.total_price_paid)     extracted.total_price_paid     = Math.round(extracted.total_price_paid * rate)
+  if (extracted.amount_paid_upfront)  extracted.amount_paid_upfront  = Math.round(extracted.amount_paid_upfront * rate)
+  if (extracted.cancellation_penalty) extracted.cancellation_penalty = Math.round(extracted.cancellation_penalty * rate)
+  if (extracted.price_breakdown) {
+    const pb = extracted.price_breakdown
+    if (pb.base_per_night)     pb.base_per_night     = Math.round(pb.base_per_night * rate)
+    if (pb.taxes)              pb.taxes              = Math.round(pb.taxes * rate)
+    if (pb.gst)                pb.gst                = Math.round(pb.gst * rate)
+    if (pb.mandatory_extras)   pb.mandatory_extras   = Math.round(pb.mandatory_extras * rate)
+    if (pb.total)              pb.total              = Math.round(pb.total * rate)
+  }
+}
+
+function calculateMissingFields(extracted) {
+  if (!extracted.total_nights && extracted.check_in && extracted.check_out) {
+    extracted.total_nights = Math.round(
+      (new Date(extracted.check_out) - new Date(extracted.check_in)) / 86400000
+    )
+  }
+  if (extracted.total_price_paid && extracted.total_nights > 0) {
+    extracted.price_per_night = Math.round(
+      extracted.total_price_paid / (extracted.total_nights * (extracted.num_rooms || 1))
+    )
+  }
+  if (extracted.payment_type === 'pay_at_property') {
+    extracted.total_price_paid = extracted.amount_paid_upfront || 0
+  }
+}
+
 // ── POST /api/voucher/extract ─────────────────────────────────────────────────
 router.post('/extract', upload.single('voucher'), async (req, res) => {
   try {
@@ -145,7 +352,7 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
       'https://api.anthropic.com/v1/messages',
       {
         model:      'claude-sonnet-4-5',
-        max_tokens: 1500,
+        max_tokens: 2000,
         messages:   [{ role: 'user', content: buildClaudeContent(base64Data, mimeType) }]
       },
       {
@@ -161,128 +368,126 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
     const rawText   = response.data.content[0].text.trim()
     const clean     = rawText.replace(/```json|```/g, '').trim()
     const extracted = JSON.parse(clean)
+    const docType   = extracted.document_type
 
-    // ── NOT A HOTEL DOCUMENT ──────────────────────────────────────────────
-    if (extracted.document_type === 'not_hotel') {
-      console.log(`❌ Not a hotel voucher: ${extracted.reason}`)
+    // ── NOT A HOTEL ───────────────────────────────────────────────────────────
+    if (docType === 'not_hotel') {
+      console.log(`❌ Not hotel: ${extracted.reason}`)
       return res.json({
-        success: false,
-        blocked: true,
-        blockReason: 'not_hotel',
+        success: false, blocked: true, blockReason: 'not_hotel',
         reason: extracted.reason,
-        message: 'This does not appear to be a hotel booking confirmation.'
+        message: 'This does not appear to be a hotel booking or search page.'
       })
     }
 
-    // ── POOR IMAGE QUALITY ────────────────────────────────────────────────
+    // ── POOR QUALITY ──────────────────────────────────────────────────────────
     if (extracted.extraction_quality === 'poor') {
-      console.log(`⚠️ Poor image quality for extraction`)
       return res.json({
-        success: false,
-        blocked: true,
-        blockReason: 'poor_quality',
-        message: 'We couldn\'t read your voucher clearly. Please upload a clearer image or PDF.',
+        success: false, blocked: true, blockReason: 'poor_quality',
+        message: "We couldn't read your document clearly. Please upload a clearer image or PDF.",
         canManualEntry: true
       })
     }
 
-    // ── CURRENCY CONVERSION ───────────────────────────────────────────────
-    const currency = extracted.currency_original || 'INR'
-    const rate     = RATES_TO_INR[currency] || 1
+    // ── SEARCH RESULTS ────────────────────────────────────────────────────────
+    if (docType === 'search_results') {
+      console.log(`🔍 Search results: ${extracted.ota_name} | ${extracted.destination} | ${extracted.hotels?.length} hotels`)
+      return res.json({
+        success: true,
+        documentType: 'search_results',
+        data: extracted,
+        requiresHotelSelection: true,
+        message: `Found ${extracted.hotels?.length || 0} hotels — select the one you want to monitor.`
+      })
+    }
 
-    if (currency !== 'INR' && rate !== 1) {
-      if (extracted.original_price)   extracted.original_price   = Math.round(extracted.original_price   * rate)
-      if (extracted.total_price_paid) extracted.total_price_paid = Math.round(extracted.total_price_paid * rate)
-      if (extracted.amount_paid_upfront) extracted.amount_paid_upfront = Math.round(extracted.amount_paid_upfront * rate)
-      if (extracted.price_breakdown) {
-        const pb = extracted.price_breakdown
-        if (pb.per_night) pb.per_night = Math.round(pb.per_night * rate)
-        if (pb.per_room)  pb.per_room  = Math.round(pb.per_room  * rate)
-        if (pb.taxes)     pb.taxes     = Math.round(pb.taxes     * rate)
-        if (pb.total)     pb.total     = Math.round(pb.total     * rate)
+    // ── HOTEL DETAIL (TOP OR ROOMS) ───────────────────────────────────────────
+    if (docType === 'hotel_detail_top' || docType === 'hotel_detail_rooms') {
+      const hasRooms = extracted.room_options?.length > 0
+      console.log(`🏨 Hotel detail: ${extracted.hotel_name} | ${extracted.room_options?.length || 0} room options`)
+      return res.json({
+        success: true,
+        documentType: docType,
+        data: extracted,
+        requiresRoomSelection: hasRooms,
+        message: hasRooms
+          ? `Found ${extracted.room_options.length} room option(s) — select the one you want to monitor.`
+          : `Hotel page detected. Scroll to the rooms section and upload again, or enter room details manually.`
+      })
+    }
+
+    // ── CHECKOUT PAGE ─────────────────────────────────────────────────────────
+    if (docType === 'checkout_page') {
+      applyCurrencyConversion(extracted)
+      calculateMissingFields(extracted)
+      console.log(`💳 Checkout: ${extracted.hotel_name} | ${extracted.ota_name} | ₹${extracted.total_price_paid}`)
+      return res.json({
+        success: true,
+        documentType: 'checkout_page',
+        data: extracted,
+        agodaPretaxWarning: extracted.agoda_pretax_warning === true,
+        message: extracted.agoda_pretax_warning
+          ? "Agoda shows prices before taxes. Please enter the total amount you'll pay after taxes."
+          : 'Checkout page detected — please confirm details and we\'ll start monitoring once you complete your booking.'
+      })
+    }
+
+    // ── CONFIRMED VOUCHER ─────────────────────────────────────────────────────
+    if (docType === 'confirmed_voucher') {
+      applyCurrencyConversion(extracted)
+      calculateMissingFields(extracted)
+
+      // Check-in already passed
+      if (extracted.check_in) {
+        const today = new Date(); today.setHours(0,0,0,0)
+        const daysUntil = Math.round((new Date(extracted.check_in) - today) / 86400000)
+        if (daysUntil < 0) {
+          return res.json({
+            success: false, blocked: true, blockReason: 'checkin_passed',
+            message: `Check-in date (${extracted.check_in}) has already passed. Nothing to monitor.`,
+            data: extracted
+          })
+        }
+        if (daysUntil <= 1) { extracted._warning = 'checkin_soon'; extracted._warningDays = daysUntil }
       }
-      if (extracted.cancellation_penalty)
-        extracted.cancellation_penalty = Math.round(extracted.cancellation_penalty * rate)
+
+      const isNonRefundable = extracted.cancellation_policy === 'non-refundable'
+      console.log(`✅ Voucher: ${extracted.hotel_name} | ${extracted.ota_name} | ${extracted.cancellation_policy} | ₹${extracted.total_price_paid}`)
+
+      return res.json({
+        success: true,
+        documentType: 'confirmed_voucher',
+        data: extracted,
+        blocked: isNonRefundable,
+        blockReason: isNonRefundable ? 'non_refundable' : null,
+        agodaPretaxWarning: extracted.agoda_pretax_warning === true,
+        warnings: {
+          partialExtraction: extracted.extraction_quality === 'partial',
+          cameraPhoto:       extracted.extraction_quality === 'camera_photo',
+          multiHotel:        extracted.multi_hotel === true,
+          checkInSoon:       extracted._warning === 'checkin_soon',
+          checkInSoonDays:   extracted._warningDays || null,
+          payAtProperty:     extracted.payment_type === 'pay_at_property',
+          unknownPolicy:     extracted.cancellation_policy === 'unknown',
+          agodaPretax:       extracted.agoda_pretax_warning === true,
+          currencyConverted: (extracted.currency_original || 'INR') !== 'INR',
+          originalCurrency:  (extracted.currency_original || 'INR') !== 'INR' ? extracted.currency_original : null,
+        }
+      })
     }
 
-    // ── CALCULATE MISSING FIELDS ──────────────────────────────────────────
-    if (!extracted.total_nights && extracted.check_in && extracted.check_out) {
-      extracted.total_nights = Math.round(
-        (new Date(extracted.check_out) - new Date(extracted.check_in)) / 86400000
-      )
-    }
-
-    if (extracted.total_price_paid && extracted.total_nights > 0) {
-      extracted.price_per_night = Math.round(
-        extracted.total_price_paid / (extracted.total_nights * (extracted.num_rooms || 1))
-      )
-    }
-
-    // ── CHECK-IN ALREADY PASSED ───────────────────────────────────────────
-    if (extracted.check_in) {
-      const checkInDate = new Date(extracted.check_in)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const daysUntilCheckIn = Math.round((checkInDate - today) / 86400000)
-
-      if (daysUntilCheckIn < 0) {
-        console.log(`❌ Check-in already passed: ${extracted.check_in}`)
-        return res.json({
-          success: false,
-          blocked: true,
-          blockReason: 'checkin_passed',
-          message: `Check-in date (${extracted.check_in}) has already passed. Nothing to monitor.`,
-          data: extracted
-        })
-      }
-
-      if (daysUntilCheckIn === 0 || daysUntilCheckIn === 1) {
-        extracted._warning = 'checkin_soon'
-        extracted._warningDays = daysUntilCheckIn
-      }
-    }
-
-    // ── PAY AT PROPERTY ───────────────────────────────────────────────────
-    if (extracted.payment_type === 'pay_at_property') {
-      extracted.total_price_paid = extracted.amount_paid_upfront || 0
-      extracted._warning = extracted._warning || 'pay_at_property'
-    }
-
-    // ── NON-REFUNDABLE ────────────────────────────────────────────────────
-    const isNonRefundable = extracted.cancellation_policy === 'non-refundable'
-
-    console.log(`✅ Voucher extracted: ${extracted.hotel_name} | ${extracted.cancellation_policy} | ₹${extracted.total_price_paid} | quality: ${extracted.extraction_quality}`)
-
-    res.json({
-      success:     true,
-      data:        extracted,
-      blocked:     isNonRefundable,
-      blockReason: isNonRefundable ? 'non_refundable' : null,
-      warnings: {
-        partialExtraction: extracted.extraction_quality === 'partial',
-        multiHotel:        extracted.multi_hotel === true,
-        checkInSoon:       extracted._warning === 'checkin_soon',
-        checkInSoonDays:   extracted._warningDays || null,
-        payAtProperty:     extracted._warning === 'pay_at_property',
-        unknownPolicy:     extracted.cancellation_policy === 'unknown',
-        currencyConverted: currency !== 'INR',
-        originalCurrency:  currency !== 'INR' ? currency : null,
-      }
-    })
+    return res.json({ success: false, blocked: true, blockReason: 'unknown_type', message: 'Unrecognised document type.' })
 
   } catch (err) {
-    console.error('❌ Voucher extraction error:', err.message)
-    // If JSON parse fails, likely unreadable document
+    console.error('❌ Extract error:', err.message)
     if (err instanceof SyntaxError) {
       return res.json({
-        success: false,
-        blocked: true,
-        blockReason: 'parse_error',
-        message: 'We couldn\'t read the details from your voucher. Please try a clearer image or enter details manually.',
+        success: false, blocked: true, blockReason: 'parse_error',
+        message: "Couldn't read the details. Please try a clearer image or PDF.",
         canManualEntry: true
       })
     }
-    res.status(500).json({ error: 'Failed to extract voucher details', details: err.message })
+    res.status(500).json({ error: 'Failed to extract details', details: err.message })
   }
 })
 
@@ -291,86 +496,68 @@ router.post('/submit', async (req, res) => {
   try {
     const data  = req.body
     const phone = data.phone || data.whatsapp
-
     if (!phone) return res.status(400).json({ error: 'Phone number required' })
 
-    // GATE: Block non-refundable
-    if (data.cancellation_policy === 'non-refundable') {
+    // Block non-refundable confirmed bookings
+    if (data.cancellation_policy === 'non-refundable' && data.documentType === 'confirmed_voucher') {
       await supabase.from('bookings').insert(buildBookingRow(data, 'non-refundable'))
       await sendNonRefundableWhatsApp(phone, data)
       if (email && data.email) {
         email.nonRefundable?.(data.email, { name: data.email.split('@')[0], booking: { hotelName: data.hotel_name, checkinDate: data.check_in } })
-          .catch(e => console.error('Non-refundable email failed:', e.message))
+          .catch(e => console.error('Email failed:', e.message))
       }
-      return res.status(200).json({
+      return res.json({
         success: false, blocked: true, reason: 'non_refundable',
         message: 'This booking is non-refundable. Customer notified via WhatsApp.',
       })
     }
 
-    // CHECK: Check-in already passed
+    // Check-in passed
     if (data.check_in) {
       const today = new Date(); today.setHours(0,0,0,0)
-      const daysUntil = Math.round((new Date(data.check_in) - today) / 86400000)
-      if (daysUntil < 0) {
-        return res.status(400).json({ error: 'Check-in date has already passed. Nothing to monitor.' })
+      if (Math.round((new Date(data.check_in) - today) / 86400000) < 0) {
+        return res.status(400).json({ error: 'Check-in date has already passed.' })
       }
     }
 
-    // CHECK: Duplicate upload (same hotel + check_in + phone)
-    const { data: existing } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('phone', phone)
-      .eq('hotel_name', data.hotel_name)
-      .eq('check_in', data.check_in)
-      .single()
-
-    if (existing) {
-      await sendDuplicateWhatsApp(phone, data)
-      return res.json({
-        success: false, blocked: false, reason: 'duplicate',
-        message: 'This booking is already being tracked.',
-        booking_id: existing.id
-      })
+    // Duplicate check (only for confirmed vouchers)
+    if (data.documentType === 'confirmed_voucher') {
+      const { data: existing } = await supabase
+        .from('bookings').select('id')
+        .eq('phone', phone).eq('hotel_name', data.hotel_name).eq('check_in', data.check_in)
+        .single()
+      if (existing) {
+        await sendDuplicateWhatsApp(phone, data)
+        return res.json({ success: false, blocked: false, reason: 'duplicate', message: 'Already tracking this booking.', booking_id: existing.id })
+      }
     }
 
-    // WARN: Unknown policy
-    if (data.cancellation_policy === 'unknown') {
+    // Unknown policy warning (confirmed vouchers only)
+    if (data.cancellation_policy === 'unknown' && data.documentType === 'confirmed_voucher') {
       await sendUnknownPolicyWhatsApp(phone, data)
     }
 
-    // WARN: Check-in soon
+    // Check-in soon warning
     if (data.check_in) {
       const today = new Date(); today.setHours(0,0,0,0)
       const daysUntil = Math.round((new Date(data.check_in) - today) / 86400000)
       if (daysUntil <= 1) {
-        // Save and send warning — we'll try but can't guarantee
-        const { data: booking, error } = await supabase
-          .from('bookings').insert(buildBookingRow(data, 'tracking')).select().single()
+        const { data: booking, error } = await supabase.from('bookings').insert(buildBookingRow(data, 'tracking')).select().single()
         if (error) throw error
         await sendCheckInSoonWhatsApp(phone, data, daysUntil)
-        res.json({ success: true, booking_id: booking.id, warning: 'checkin_soon' })
-        if (email && booking.email) {
-          email.bookingReceived?.(booking.email, buildEmailPayload(booking))
-            .catch(e => console.error('Email failed:', e.message))
-        }
-        return
+        if (email && booking.email) email.bookingReceived?.(booking.email, buildEmailPayload(booking)).catch(e => console.error('Email failed:', e.message))
+        return res.json({ success: true, booking_id: booking.id, warning: 'checkin_soon' })
       }
     }
 
-    // PROCEED: Save and track
-    const { data: booking, error } = await supabase
-      .from('bookings').insert(buildBookingRow(data, 'tracking')).select().single()
+    // Save and track
+    const { data: booking, error } = await supabase.from('bookings').insert(buildBookingRow(data, 'tracking')).select().single()
     if (error) throw error
 
     sendTrackingStartedWhatsApp(phone, booking).catch(e => console.error('WhatsApp failed:', e.message))
-    res.json({ success: true, booking_id: booking.id })
+    if (email && booking.email) email.bookingReceived?.(booking.email, buildEmailPayload(booking)).catch(e => console.error('Email failed:', e.message))
 
-    if (email && booking.email) {
-      email.bookingReceived?.(booking.email, buildEmailPayload(booking))
-        .catch(e => console.error('Email failed:', e.message))
-    }
+    res.json({ success: true, booking_id: booking.id })
 
   } catch (err) {
     console.error('❌ Submit error:', err.message)
@@ -380,13 +567,9 @@ router.post('/submit', async (req, res) => {
 
 function buildBookingRow(data, status) {
   const nights = data.total_nights ||
-    (data.check_in && data.check_out
-      ? Math.round((new Date(data.check_out) - new Date(data.check_in)) / 86400000)
-      : 1)
+    (data.check_in && data.check_out ? Math.round((new Date(data.check_out) - new Date(data.check_in)) / 86400000) : 1)
   const totalPaid = data.total_price_paid || data.original_price || 0
-  const perNight  = data.price_per_night ||
-    (totalPaid && nights > 0 ? Math.round(totalPaid / (nights * (data.num_rooms || 1))) : 0)
-
+  const perNight  = data.price_per_night || (totalPaid && nights > 0 ? Math.round(totalPaid / (nights * (data.num_rooms || 1))) : 0)
   return {
     phone:                 data.phone || data.whatsapp,
     email:                 data.email || null,
@@ -414,6 +597,7 @@ function buildBookingRow(data, status) {
     cancellation_policy:   data.cancellation_policy   || 'unknown',
     cancellation_deadline: data.cancellation_deadline || null,
     cancellation_penalty:  data.cancellation_penalty  || null,
+    document_type:         data.documentType          || 'confirmed_voucher',
     status,
     tracking_active:       status === 'tracking',
     next_check_at:         status === 'tracking' ? new Date().toISOString() : null,
@@ -440,7 +624,7 @@ function buildEmailPayload(booking) {
   }
 }
 
-// ── TWILIO WHATSAPP ───────────────────────────────────────────────────────────
+// ── WhatsApp helpers ──────────────────────────────────────────────────────────
 const twilio = require('twilio')
 
 function getTwilioClient() {
@@ -450,18 +634,14 @@ function getTwilioClient() {
 async function sendWhatsApp(to, body) {
   const client    = getTwilioClient()
   const formatted = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:+91${to}`
-  const rawFrom = process.env.TWILIO_WHATSAPP_FROM || '+14155238886'
-  const from = rawFrom.startsWith('whatsapp:') ? rawFrom : `whatsapp:${rawFrom}`
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Twilio timeout')), 10000))
-  await Promise.race([
-    client.messages.create({ from, to: formatted, body }),
-    timeout
-  ])
+  const rawFrom   = process.env.TWILIO_WHATSAPP_FROM || '+14155238886'
+  const from      = rawFrom.startsWith('whatsapp:') ? rawFrom : `whatsapp:${rawFrom}`
+  const timeout   = new Promise((_, reject) => setTimeout(() => reject(new Error('Twilio timeout')), 10000))
+  await Promise.race([client.messages.create({ from, to: formatted, body }), timeout])
 }
 
 async function sendNonRefundableWhatsApp(phone, data) {
-  const totalPaid = data.total_price_paid
-    ? `₹${Number(data.total_price_paid).toLocaleString('en-IN')}` : 'amount on voucher'
+  const totalPaid = data.total_price_paid ? `₹${Number(data.total_price_paid).toLocaleString('en-IN')}` : 'amount on voucher'
   const msg = `Hi! Thanks for uploading your booking to rebuq. 🙏
 
 *${data.hotel_name}*
@@ -471,79 +651,63 @@ async function sendNonRefundableWhatsApp(phone, data) {
 
 ❌ *We can't track this booking.*
 
-Your booking is *non-refundable* — even if the price drops, you can't cancel to rebook and save.
+Your booking is *non-refundable* — even if the price drops, you can't cancel and rebook to save.
 
-rebuq works best with flexible/refundable bookings. Next time, book a cancellable rate — rebuq regularly finds drops of ₹10,000–₹40,000 that more than cover any price difference.
+Next time, book a cancellable rate — rebuq regularly finds drops of ₹10,000–₹40,000 that more than cover any price difference.
 
-We'll be here for your next booking! 🏨
 — Team rebuq`
-  try { await sendWhatsApp(phone, msg) }
-  catch (e) { console.error('Non-refundable WhatsApp failed:', e.message) }
+  try { await sendWhatsApp(phone, msg) } catch (e) { console.error('WA failed:', e.message) }
 }
 
 async function sendUnknownPolicyWhatsApp(phone, data) {
-  const totalPaid = data.total_price_paid
-    ? `₹${Number(data.total_price_paid).toLocaleString('en-IN')}` : '—'
   const msg = `Hi! Your booking has been added to rebuq. ⚠️
 
 *${data.hotel_name}, ${data.hotel_city || '—'}*
-💳 Total paid: ${totalPaid}
 
-One thing — we couldn't clearly read your *cancellation policy* from the voucher.
+We couldn't clearly read your *cancellation policy*. Please reply:
+1️⃣ → Free cancellation
+2️⃣ → Non-refundable
+3️⃣ → Partial refund
 
-Please reply with:
-1️⃣ → *Free cancellation* (I can cancel for free)
-2️⃣ → *Non-refundable* (no cancellation allowed)
-3️⃣ → *Partial refund* (some fees apply)
-
-This helps us track correctly.
 — Team rebuq`
-  try { await sendWhatsApp(phone, msg) }
-  catch (e) { console.error('Unknown policy WhatsApp failed:', e.message) }
+  try { await sendWhatsApp(phone, msg) } catch (e) { console.error('WA failed:', e.message) }
 }
 
 async function sendDuplicateWhatsApp(phone, data) {
   const msg = `Hi! We noticed you uploaded *${data.hotel_name}* (${data.check_in}) again.
 
-✅ Don't worry — this booking is *already being tracked* by rebuq!
+✅ This booking is *already being tracked* by rebuq!
 
-We're checking prices every 6 hours and will WhatsApp you the moment we find a drop.
-
-Reply *STATUS* to check your active monitors.
+We're checking prices every 6 hours. Reply *STATUS* to check your monitors.
 — Team rebuq`
-  try { await sendWhatsApp(phone, msg) }
-  catch (e) { console.error('Duplicate WhatsApp failed:', e.message) }
+  try { await sendWhatsApp(phone, msg) } catch (e) { console.error('WA failed:', e.message) }
 }
 
 async function sendCheckInSoonWhatsApp(phone, data, daysUntil) {
-  const totalPaid = data.total_price_paid
-    ? `₹${Number(data.total_price_paid).toLocaleString('en-IN')}` : '—'
-  const timing = daysUntil === 0 ? 'today' : 'tomorrow'
+  const totalPaid = data.total_price_paid ? `₹${Number(data.total_price_paid).toLocaleString('en-IN')}` : '—'
+  const timing    = daysUntil === 0 ? 'today' : 'tomorrow'
   const msg = `Hi! We've added your booking to rebuq. ⚠️
 
 *${data.hotel_name}, ${data.hotel_city || '—'}*
 📅 Check-in: *${timing}* (${data.check_in})
-💳 Total paid: ${totalPaid}
+💳 Total: ${totalPaid}
 
-⚠️ *Heads up:* Your check-in is very soon. We'll do our best to scan prices immediately, but with only ${daysUntil === 0 ? 'hours' : '1 day'} to go, the window to rebook is very tight.
-
-We'll alert you instantly if we find anything. Fingers crossed! 🤞
+⚠️ Check-in is very soon — window to rebook is tight. We'll scan immediately and alert you if we find anything.
 — Team rebuq`
-  try { await sendWhatsApp(phone, msg) }
-  catch (e) { console.error('Check-in soon WhatsApp failed:', e.message) }
+  try { await sendWhatsApp(phone, msg) } catch (e) { console.error('WA failed:', e.message) }
 }
 
 async function sendTrackingStartedWhatsApp(phone, booking) {
   const nights = booking.total_nights || '?'
   const fmt = (d) => { try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) } catch { return d } }
   const children = (booking.children_ages && booking.children_ages.length > 0)
-    ? booking.children_ages.map(a => a ? `${a} yrs` : 'infant').join(', ')
+    ? booking.children_ages.map(a => a === 0 ? 'infant' : `${a} yrs`).join(', ')
     : 'None'
-  const cancelLine = (booking.cancellation_policy === 'free' && booking.cancellation_deadline)
+  const cancelLine = booking.cancellation_policy === 'free' && booking.cancellation_deadline
     ? `Free cancel until   ${fmt(booking.cancellation_deadline)}`
     : booking.cancellation_policy === 'partial'
     ? `Cancellation        Partial refund applies`
-    : `Cancellation        ${booking.cancellation_policy}`
+    : `Cancellation        ${booking.cancellation_policy || 'unknown'}`
   const meal = booking.board_basis_label ? `\nMeal plan           ${booking.board_basis_label}` : ''
 
   const msg = `Thank you for trusting rebuq with your booking.
@@ -556,17 +720,15 @@ Check-out   ${fmt(booking.check_out)}
 Room        ${booking.room_type || 'Standard Room'}  ·  ${booking.num_rooms || 1} Room
 Adults      ${booking.num_adults || 2}
 Children    ${children}${meal}
-Total paid  ₹${Number(booking.total_price_paid || booking.original_price).toLocaleString('en-IN')}
+Total paid  ₹${Number(booking.total_price_paid || booking.original_price || 0).toLocaleString('en-IN')}
 ${cancelLine}
 
-We're watching the price around the clock. The moment it drops for the same room and meal plan, we'll send you a direct link to rebook and save the difference.
+We're watching the price around the clock. The moment it drops for the same room and meal plan, we'll send you a direct link to rebook and save.
 
-Questions? Chat with us by replying to this message.
+Questions? Reply to this message.
 
 rebuq`
-
-  try { await sendWhatsApp(phone, msg) }
-  catch (e) { console.error('Tracking started WhatsApp failed:', e.message) }
+  try { await sendWhatsApp(phone, msg) } catch (e) { console.error('WA failed:', e.message) }
 }
 
 module.exports = router
