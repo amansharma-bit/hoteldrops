@@ -218,18 +218,23 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
     const rawText = await callClaude(file.buffer, file.mimetype);
 
     let parsed;
-    try {
-      const cleaned = rawText.trim();
-      parsed = JSON.parse(cleaned);
-    } catch {
+    // Step 1: try raw; Step 2: strip markdown; Step 3: find first { to last }
+    const rawTrimmed = rawText.trim();
+    try { parsed = JSON.parse(rawTrimmed); }
+    catch(e1) {
       try {
-        parsed = JSON.parse(rawText.trim());
-      } catch {
-        return res.json({
-          success: false, blocked: true, blockReason: 'parse_error',
-          message: 'Could not understand the document. Please try a clearer image or enter details manually.',
-        });
+        const stripped = rawTrimmed.replace(/^```[a-z]*\s*/m, '').replace(/\s*```\s*$/m, '').trim();
+        parsed = JSON.parse(stripped);
+      } catch(e2) {
+        try {
+          const start = rawTrimmed.indexOf('{');
+          const end = rawTrimmed.lastIndexOf('}');
+          if (start !== -1 && end !== -1) parsed = JSON.parse(rawTrimmed.slice(start, end+1));
+        } catch(e3) { parsed = null; }
       }
+    }
+    if (!parsed) {
+      return res.json({ success: false, blocked: true, blockReason: 'parse_error', message: 'Could not understand the document. Please try a clearer image or enter details manually.' });
     }
 
     if (parsed.blocked) return res.json(parsed);
