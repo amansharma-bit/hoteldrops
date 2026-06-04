@@ -222,20 +222,62 @@ export default function Home() {
 
       const docType = json.documentType;
 
-      // SEARCH RESULTS — show hotel picker inside modal
+      // SEARCH RESULTS — show picker only if multiple hotels
       if (docType === 'search_results') {
         setExtractResult(json);
-        setUploadStep('hotel_pick');
+        const hotels = json.data?.hotels;
+        if (hotels?.length > 1) {
+          setUploadStep('hotel_pick');
+        } else if (hotels?.length === 1) {
+          // Only 1 hotel — skip picker, go straight to confirm
+          const h = hotels[0];
+          const s = json.data;
+          setExtracted({ ...emptyExtracted(),
+            hotel_name: h.hotel_name || '',
+            hotel_city: s.destination || '',
+            check_in: s.check_in || '',
+            check_out: s.check_out || '',
+            num_adults: s.num_adults || 2,
+            num_rooms: s.num_rooms || 1,
+            ota_name: s.ota_name || '',
+            total_price_paid: h.total_price_incl_tax || h.price_per_night_incl_tax || 0,
+          });
+          setWarnings({});
+          setUploadStep(2);
+        }
         return;
       }
 
-      // HOTEL DETAIL — show room picker inside modal
+      // HOTEL DETAIL — show room picker only if multiple rooms
       if (docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top') {
         setExtractResult(json);
-        if (json.data?.room_options?.length > 0) {
+        const rooms = json.data?.room_options;
+        if (rooms?.length > 1) {
+          // Multiple rooms — show picker
           setUploadStep('room_pick');
+        } else if (rooms?.length === 1) {
+          // Only 1 room — skip picker, prefill and go straight to confirm
+          const d = json.data;
+          const room = rooms[0];
+          setExtracted({ ...emptyExtracted(),
+            hotel_name: d.hotel_name || '',
+            hotel_city: d.hotel_city || '',
+            check_in: d.check_in || '',
+            check_out: d.check_out || '',
+            num_adults: d.num_adults || 2,
+            num_rooms: d.num_rooms || 1,
+            ota_name: d.ota_name || '',
+            room_type: room.room_type || '',
+            board_basis: room.board_basis || 'RO',
+            board_basis_label: room.board_basis_label || 'Room Only',
+            cancellation_policy: room.cancellation_policy || 'unknown',
+            cancellation_deadline: room.cancellation_deadline || '',
+            total_price_paid: room.total_price_incl_tax || 0,
+          });
+          setWarnings(json.warnings || {});
+          setUploadStep(2);
         } else {
-          // No rooms visible — prefill and go to confirm
+          // No rooms extracted — prefill hotel data and go to confirm
           setExtracted({ ...emptyExtracted(), ...json.data });
           setWarnings(json.warnings || {});
           setUploadStep(2);
