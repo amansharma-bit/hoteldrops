@@ -107,7 +107,7 @@ export default function Home() {
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
 
   const [modalOpen, setModalOpen]     = useState(false);
-  const [uploadStep, setUploadStep]   = useState<1 | 2 | 'blocked'>(1);
+  const [uploadStep, setUploadStep]   = useState<1 | 2 | 'hotel_pick' | 'room_pick' | 'blocked'>(1);
   const [blockInfo, setBlockInfo]     = useState<{reason:string;message?:string}|null>(null);
   const [warnings, setWarnings]       = useState<Record<string,any>>({});
   const [file, setFile]               = useState<File | null>(null);
@@ -121,6 +121,9 @@ export default function Home() {
   const [emailVal, setEmailVal]       = useState('');
   const [submitError, setSubmitError] = useState('');
   const fileInputRef                  = useRef<HTMLInputElement>(null);
+  const [extractResult, setExtractResult] = useState<any>(null);
+  const [selectedHotelIdx, setSelectedHotelIdx] = useState<number | null>(null);
+  const [selectedRoomIdx, setSelectedRoomIdx] = useState<number | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -161,6 +164,7 @@ export default function Home() {
   const openModal = () => {
     setModalOpen(true); setUploadStep(1); setFile(null); setExtracted(null);
     setPhone(''); setEmailVal(''); setSubmitError(''); setBlockInfo(null); setWarnings({}); setLoading(false);
+    setExtractResult(null); setSelectedHotelIdx(null); setSelectedRoomIdx(null);
   };
 
   const closeModal = () => { setModalOpen(false); };
@@ -218,13 +222,24 @@ export default function Home() {
 
       const docType = json.documentType;
 
-      // SEARCH RESULTS / HOTEL DETAIL — redirect to /upload page with data
-      if (docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top') {
-        sessionStorage.setItem('rebuq_extract_result', JSON.stringify(json));
-        setModalOpen(false);
-        setRedirecting(true);
-        document.body.style.overflow = '';
-        router.push('/upload');
+      // SEARCH RESULTS — show hotel picker inside modal
+      if (docType === 'search_results') {
+        setExtractResult(json);
+        setUploadStep('hotel_pick');
+        return;
+      }
+
+      // HOTEL DETAIL — show room picker inside modal
+      if (docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top') {
+        setExtractResult(json);
+        if (json.data?.room_options?.length > 0) {
+          setUploadStep('room_pick');
+        } else {
+          // No rooms visible — prefill and go to confirm
+          setExtracted({ ...emptyExtracted(), ...json.data });
+          setWarnings(json.warnings || {});
+          setUploadStep(2);
+        }
         return;
       }
 
@@ -340,7 +355,7 @@ export default function Home() {
             <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky' as const, top: 0, background: '#fff', zIndex: 10, borderRadius: isMobile ? '20px 20px 0 0' : '16px 16px 0 0' }}>
               <div>
                 <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 17, fontWeight: 700, color: NAVY }}>
-                  {uploadStep === 1 ? '📎 Upload your voucher' : uploadStep === 2 ? '✏️ Confirm booking details' :
+                  {uploadStep === 1 ? '📎 Upload your voucher' : uploadStep === 2 ? '✏️ Confirm booking details' : uploadStep === 'hotel_pick' ? '🏨 Select a hotel' : uploadStep === 'room_pick' ? '🛏️ Select a room' :
                     blockInfo?.reason === 'non_refundable' ? '🔒 Non-refundable booking' :
                     blockInfo?.reason === 'not_hotel' ? '📄 Not a hotel booking' :
                     blockInfo?.reason === 'poor_quality' || blockInfo?.reason === 'parse_error' ? '🔍 Could not read voucher' :
@@ -356,7 +371,7 @@ export default function Home() {
               <button onClick={closeModal} style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#64748b', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
             </div>
 
-            {uploadStep !== 'blocked' && (
+            {uploadStep !== 'blocked' && uploadStep !== 'hotel_pick' && uploadStep !== 'room_pick' && (
               <div style={{ padding: '12px 24px', background: '#f8fafc', display: 'flex', alignItems: 'center', gap: 8 }}>
                 {[{ n: uploadStep === 2 ? '✓' : '1', label: 'Upload', done: uploadStep === 2 }, { n: '2', label: 'Confirm', active: uploadStep === 2 }].map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -372,46 +387,52 @@ export default function Home() {
 
             {uploadStep === 1 && (
               <div style={{ padding: '24px' }}>
-                {/* Mobile only: Upload + Camera options */}
-                {isMobile && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-                    <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 8, background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 12px', cursor: 'pointer' }}>
-                      <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { onDrop([f]); } }} />
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: NAVY }}>Upload file</div>
-                      <div style={{ fontSize: 10, color: '#94a3b8' }}>PDF or screenshot</div>
-                    </label>
-                    <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 8, background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 12px', cursor: 'pointer' }}>
-                      <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { onDrop([f]); } }} />
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: NAVY }}>Take photo</div>
-                      <div style={{ fontSize: 10, color: '#94a3b8' }}>Camera</div>
-                    </label>
+                {isMobile ? (
+                  /* ── MOBILE: two tap buttons only, no drag zone ── */
+                  <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: file ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${file ? '#86efac' : '#e2e8f0'}`, borderRadius: 14, padding: '24px 12px', cursor: 'pointer', minHeight: 110 }}>
+                        <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onDrop([f]); }} />
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Upload file</div><div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>PDF or screenshot</div></div>
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: '24px 12px', cursor: 'pointer', minHeight: 110 }}>
+                        <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onDrop([f]); }} />
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Take photo</div><div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Use camera</div></div>
+                      </label>
+                    </div>
+                    {file && (
+                      <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>✓ {file.name}</span>
+                        <button onClick={() => setFile(null)} style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Remove</button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* ── DESKTOP: drag & drop zone ── */
+                  <div {...getRootProps()} style={{ border: `2px dashed ${dragActive ? B : file ? '#86efac' : '#bfdbfe'}`, borderRadius: 14, padding: '32px 20px', textAlign: 'center' as const, cursor: 'pointer', background: dragActive ? '#eff6ff' : file ? '#f0fdf4' : '#f8fbff', transition: 'all 0.2s', marginBottom: 16 }}>
+                    <input {...getInputProps()} ref={fileInputRef} style={{ display: 'none' }} />
+                    {file ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 48, height: 48, background: '#dcfce7', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#166534' }}>{file.name}</div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>{(file.size / 1024).toFixed(0)} KB</div>
+                        <button onClick={e => { e.stopPropagation(); setFile(null); }} style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Remove</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 48, height: 48, background: '#dbeafe', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        </div>
+                        <div><div style={{ fontSize: 15, fontWeight: 600, color: NAVY, marginBottom: 4 }}>Drag & drop your booking</div><div style={{ fontSize: 13, color: '#64748b' }}>PDF, screenshot or email</div></div>
+                        <button onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }} style={{ background: B, color: '#fff', fontSize: 14, fontWeight: 600, padding: '10px 24px', borderRadius: 8, cursor: 'pointer', border: 'none', fontFamily: 'inherit' }}>Browse file</button>
+                      </div>
+                    )}
                   </div>
                 )}
-
-                <div {...getRootProps()} style={{ border: `2px dashed ${dragActive ? B : file ? '#86efac' : '#bfdbfe'}`, borderRadius: 14, padding: '32px 20px', textAlign: 'center' as const, cursor: 'pointer', background: dragActive ? '#eff6ff' : file ? '#f0fdf4' : '#f8fbff', transition: 'all 0.2s', marginBottom: 16 }}>
-                  <input {...getInputProps()} ref={fileInputRef} style={{ display: 'none' }} />
-                  {file ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 52, height: 52, background: '#dcfce7', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>✓</div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: '#166534' }}>{file.name}</div>
-                      <div style={{ fontSize: 13, color: '#64748b' }}>{(file.size / 1024).toFixed(0)} KB · Ready to scan</div>
-                      <button onClick={e => { e.stopPropagation(); setFile(null); }} style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 }}>✕ Remove file</button>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 52, height: 52, background: '#dbeafe', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="26" height="26"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: NAVY, marginBottom: 4 }}>Drag & drop your booking voucher</div>
-                        <div style={{ fontSize: 13, color: '#64748b' }}>Any hotel confirmation — PDF, screenshot or email</div>
-                      </div>
-                      <button onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }} style={{ background: B, color: '#fff', fontSize: 14, fontWeight: 600, padding: '10px 24px', borderRadius: 8, cursor: 'pointer', border: 'none', fontFamily: 'inherit' }}>Browse file</button>
-                    </div>
-                  )}
-                </div>
                 <div style={{ textAlign: 'center' as const, fontSize: 13, color: '#64748b', marginBottom: 16 }}>
                   No voucher?{' '}
                   <button onClick={() => { setExtracted(emptyExtracted()); setUploadStep(2); }} style={{ color: B, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>Enter details manually →</button>
@@ -427,7 +448,107 @@ export default function Home() {
               </div>
             )}
 
-            {uploadStep === 'blocked' && (
+            {/* ── HOTEL PICKER STEP ── */}
+            {uploadStep === 'hotel_pick' && extractResult?.data?.hotels && (
+              <div style={{ padding: '24px' }}>
+                <button onClick={() => setUploadStep(1)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>← Back</button>
+                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 6 }}>Which hotel do you want to track?</div>
+                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>We found {extractResult.data.hotels.length} hotels in your screenshot.</div>
+                {extractResult.data.check_in && (
+                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 12px', marginBottom: 16, fontSize: 12, color: B }}>
+                    📅 {new Date(extractResult.data.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} → {new Date(extractResult.data.check_out + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {extractResult.data.num_adults} Adults · {extractResult.data.num_rooms} Room
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                  {extractResult.data.hotels.map((hotel: any, idx: number) => (
+                    <button key={idx} onClick={() => {
+                      setSelectedHotelIdx(idx);
+                      const h = extractResult.data.hotels[idx];
+                      const s = extractResult.data;
+                      setExtracted({ ...emptyExtracted(),
+                        hotel_name: h.hotel_name || '',
+                        hotel_city: s.destination || '',
+                        check_in: s.check_in || '',
+                        check_out: s.check_out || '',
+                        num_adults: s.num_adults || 2,
+                        num_rooms: s.num_rooms || 1,
+                        ota_name: s.ota_name || '',
+                        total_price_paid: h.total_price_incl_tax || h.price_per_night_incl_tax || 0,
+                      });
+                      setWarnings({});
+                      setUploadStep(2);
+                    }} style={{ background: selectedHotelIdx === idx ? '#eff6ff' : '#f8fafc', border: `1.5px solid ${selectedHotelIdx === idx ? B : '#e2e8f0'}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const, transition: 'all 0.15s' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{hotel.hotel_name}</div>
+                          <div style={{ fontSize: 12, color: '#64748b' }}>
+                            {hotel.area && `📍 ${hotel.area}`}
+                            {hotel.stars ? ` · ${'★'.repeat(hotel.stars)}` : ''}
+                            {hotel.user_rating ? ` · ${hotel.user_rating}` : ''}
+                          </div>
+                          {hotel.free_cancellation && <span style={{ display: 'inline-block', marginTop: 6, background: '#f0fdf4', color: '#16a34a', fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>✓ Free cancel</span>}
+                        </div>
+                        <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
+                          {hotel.price_per_night_incl_tax ? <><div style={{ fontSize: 16, fontWeight: 800, color: NAVY }}>₹{Math.round(hotel.price_per_night_incl_tax).toLocaleString('en-IN')}</div><div style={{ fontSize: 10, color: '#94a3b8' }}>/ night</div></> : <div style={{ fontSize: 11, color: '#94a3b8' }}>Price n/a</div>}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── ROOM PICKER STEP ── */}
+            {uploadStep === 'room_pick' && extractResult?.data?.room_options && (
+              <div style={{ padding: '24px' }}>
+                <button onClick={() => setUploadStep(1)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>← Back</button>
+                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{extractResult.data.hotel_name || 'Select a room'}</div>
+                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+                  {extractResult.data.check_in && `${new Date(extractResult.data.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} → ${new Date(extractResult.data.check_out + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · `}
+                  Which room do you want to track?
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                  {extractResult.data.room_options.map((room: any, idx: number) => (
+                    <button key={idx} onClick={() => {
+                      setSelectedRoomIdx(idx);
+                      const d = extractResult.data;
+                      setExtracted({ ...emptyExtracted(),
+                        hotel_name: d.hotel_name || '',
+                        hotel_city: d.hotel_city || '',
+                        check_in: d.check_in || '',
+                        check_out: d.check_out || '',
+                        num_adults: d.num_adults || 2,
+                        num_rooms: d.num_rooms || 1,
+                        ota_name: d.ota_name || '',
+                        room_type: room.room_type || '',
+                        board_basis: room.board_basis || 'RO',
+                        board_basis_label: room.board_basis_label || 'Room Only',
+                        cancellation_policy: room.cancellation_policy || 'unknown',
+                        cancellation_deadline: room.cancellation_deadline || '',
+                        total_price_paid: room.total_price_incl_tax || 0,
+                      });
+                      setWarnings({});
+                      setUploadStep(2);
+                    }} style={{ background: selectedRoomIdx === idx ? '#eff6ff' : '#f8fafc', border: `1.5px solid ${selectedRoomIdx === idx ? B : '#e2e8f0'}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const, transition: 'all 0.15s' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{room.room_type}</div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{room.option_name || room.board_basis_label}</div>
+                          <span style={{ display: 'inline-block', background: room.cancellation_policy === 'free' ? '#f0fdf4' : room.cancellation_policy === 'non-refundable' ? '#fef2f2' : '#fffbeb', color: room.cancellation_policy === 'free' ? '#16a34a' : room.cancellation_policy === 'non-refundable' ? '#dc2626' : '#d97706', fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>
+                            {room.cancellation_policy === 'free' ? '✓ Free cancel' : room.cancellation_policy === 'non-refundable' ? '✗ Non-refundable' : `⚠️ ${room.cancellation_policy || 'Unknown policy'}`}
+                          </span>
+                        </div>
+                        <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
+                          {room.price_per_night_incl_tax ? <><div style={{ fontSize: 16, fontWeight: 800, color: NAVY }}>₹{Math.round(room.price_per_night_incl_tax).toLocaleString('en-IN')}</div><div style={{ fontSize: 10, color: '#94a3b8' }}>/ night</div></> : <div style={{ fontSize: 11, color: '#94a3b8' }}>Enter price manually</div>}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+                        {uploadStep === 'blocked' && (
               <div style={{ padding: '24px' }}>
                 {blockInfo?.reason === 'non_refundable' && (
                   <div>
