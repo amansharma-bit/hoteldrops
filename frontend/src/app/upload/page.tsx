@@ -406,20 +406,23 @@ export default function UploadPage() {
               <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.7 }}>Upload a voucher, screenshot, or checkout page. We'll extract the details and start monitoring for price drops.</p>
             </div>
 
-            {/* What we accept */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 24 }}>
-              {[
-                { icon: '📄', label: 'Booking voucher', sub: 'PDF or image' },
-                { icon: '📸', label: 'OTA screenshot', sub: 'Search or detail page' },
-                { icon: '📱', label: 'Camera photo', sub: 'Photo of your screen' },
-              ].map((item, i) => (
-                <div key={i} style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '14px 12px', textAlign: 'center' as const }}>
-                  <div style={{ fontSize: 24, marginBottom: 6 }}>{item.icon}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 2 }}>{item.label}</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{item.sub}</div>
-                </div>
-              ))}
-            </div>
+            {/* Mobile: Upload + Camera. Desktop: nothing (just drop zone) */}
+            {isMobile && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+                <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 8, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 12px', cursor: 'pointer' }}>
+                  <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: NAVY }}>Upload file</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8' }}>PDF or screenshot</div>
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 8, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 12px', cursor: 'pointer' }}>
+                  <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: NAVY }}>Take photo</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8' }}>Camera</div>
+                </label>
+              </div>
+            )}
 
             {/* Drop zone */}
             <div className="upload-zone"
