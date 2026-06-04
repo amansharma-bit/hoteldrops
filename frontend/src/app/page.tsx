@@ -111,6 +111,8 @@ export default function Home() {
   const [blockInfo, setBlockInfo]     = useState<{reason:string;message?:string}|null>(null);
   const [warnings, setWarnings]       = useState<Record<string,any>>({});
   const [file, setFile]               = useState<File | null>(null);
+  // FIX 1: track which button was used (upload vs camera)
+  const [fileSource, setFileSource]   = useState<'upload' | 'camera' | null>(null);
   const [dragActive, setDragActive]   = useState(false);
   const [scanning, setScanning]       = useState(false);
   const [redirecting, setRedirecting]   = useState(false);
@@ -150,7 +152,7 @@ export default function Home() {
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const f = acceptedFiles[0];
-    if (f) { setFile(f); setDragActive(false); }
+    if (f) { setFile(f); setDragActive(false); setFileSource('upload'); }
   }, []);
 
   const { getRootProps, getInputProps } = useDropzone({
@@ -162,7 +164,7 @@ export default function Home() {
   });
 
   const openModal = () => {
-    setModalOpen(true); setUploadStep(1); setFile(null); setExtracted(null);
+    setModalOpen(true); setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null);
     setPhone(''); setEmailVal(''); setSubmitError(''); setBlockInfo(null); setWarnings({}); setLoading(false);
     setExtractResult(null); setSelectedHotelIdx(null); setSelectedRoomIdx(null);
   };
@@ -195,9 +197,20 @@ export default function Home() {
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   const scrollCarousel = (dir: number) => setCarouselPos(prev => Math.max(0, Math.min(MAX_POS, prev + dir)));
 
+  // FIX 2: helper to display a clean file label
+  function getFileLabel() {
+    if (!file) return '';
+    if (fileSource === 'camera') return 'Photo taken ✓';
+    // Clean filename — truncate if too long
+    const name = file.name;
+    if (name.length > 30) return name.substring(0, 27) + '…';
+    return name;
+  }
+
   async function doScan() {
     if (!file) return;
     setScanning(true);
+    // FIX 3: scanning messages with Anthropic branding
     const msgs = ['Reading your voucher…', 'Identifying hotel & dates…', 'Extracting pricing…', 'Checking cancellation policy…', 'Almost done…'];
     let i = 0; setScanMsg(msgs[0]);
     const interval = setInterval(() => { i++; if (i < msgs.length) setScanMsg(msgs[i]); }, 900);
@@ -211,7 +224,6 @@ export default function Home() {
       clearInterval(interval);
       setScanning(false);
 
-      // NOT A HOTEL / POOR QUALITY / PARSE ERROR
       if (!json.success && json.blocked) {
         setBlockInfo({ reason: json.blockReason, message: json.message });
         if (json.data) setExtracted({ ...emptyExtracted(), ...json.data });
@@ -222,14 +234,12 @@ export default function Home() {
 
       const docType = json.documentType;
 
-      // SEARCH RESULTS — show picker only if multiple hotels
       if (docType === 'search_results') {
         setExtractResult(json);
         const hotels = json.data?.hotels;
         if (hotels?.length > 1) {
           setUploadStep('hotel_pick');
         } else if (hotels?.length === 1) {
-          // Only 1 hotel — skip picker, go straight to confirm
           const h = hotels[0];
           const s = json.data;
           setExtracted({ ...emptyExtracted(),
@@ -248,15 +258,12 @@ export default function Home() {
         return;
       }
 
-      // HOTEL DETAIL — show room picker only if multiple rooms
       if (docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top') {
         setExtractResult(json);
         const rooms = json.data?.room_options;
         if (rooms?.length > 1) {
-          // Multiple rooms — show picker
           setUploadStep('room_pick');
         } else if (rooms?.length === 1) {
-          // Only 1 room — skip picker, prefill and go straight to confirm
           const d = json.data;
           const room = rooms[0];
           setExtracted({ ...emptyExtracted(),
@@ -277,7 +284,6 @@ export default function Home() {
           setWarnings(json.warnings || {});
           setUploadStep(2);
         } else {
-          // No rooms extracted — prefill hotel data and go to confirm
           setExtracted({ ...emptyExtracted(), ...json.data });
           setWarnings(json.warnings || {});
           setUploadStep(2);
@@ -285,7 +291,6 @@ export default function Home() {
         return;
       }
 
-      // CHECKOUT PAGE — treat like confirmed voucher
       if (docType === 'checkout_page') {
         const data = json.data;
         setExtracted({ ...emptyExtracted(), ...data });
@@ -294,7 +299,6 @@ export default function Home() {
         return;
       }
 
-      // CONFIRMED VOUCHER
       const data = json.data;
       if (!data) {
         setBlockInfo({ reason: 'parse_error', message: json.message || 'Could not read voucher.' });
@@ -381,11 +385,18 @@ export default function Home() {
         input:focus, select:focus { border-color: ${B} !important; box-shadow: 0 0 0 3px rgba(20,71,184,0.08); }
       `}</style>
 
+      {/* FIX 3: Scan overlay with Anthropic branding */}
       {(scanning || redirecting) && (
-        <div style={{ position: 'fixed', inset: 0, background: B, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
+        <div style={{ position: 'fixed', inset: 0, background: B, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
           <div style={{ width: 52, height: 52, border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
           <div className="sora" style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>{redirecting ? 'Opening hotel picker…' : scanMsg}</div>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>{redirecting ? 'Just a moment' : 'Our AI is reading your booking details'}</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{redirecting ? 'Just a moment' : 'Our AI is reading your booking details'}</div>
+          {!redirecting && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 20, padding: '4px 12px' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"/><path d="M8 12l3 3 5-5" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 600, letterSpacing: '0.04em' }}>Powered by Claude AI · Anthropic</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -430,29 +441,30 @@ export default function Home() {
             {uploadStep === 1 && (
               <div style={{ padding: '24px' }}>
                 {isMobile ? (
-                  /* ── MOBILE: two tap buttons only, no drag zone ── */
                   <div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-                      <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: file ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${file ? '#86efac' : '#e2e8f0'}`, borderRadius: 14, padding: '24px 12px', cursor: 'pointer', minHeight: 110 }}>
-                        <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onDrop([f]); }} />
+                      {/* FIX 1: Upload file card — only highlights if fileSource === 'upload' */}
+                      <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: (file && fileSource === 'upload') ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${(file && fileSource === 'upload') ? '#86efac' : '#e2e8f0'}`, borderRadius: 14, padding: '24px 12px', cursor: 'pointer', minHeight: 110 }}>
+                        <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('upload'); } }} />
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Upload file</div><div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>PDF or screenshot</div></div>
                       </label>
-                      <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: '24px 12px', cursor: 'pointer', minHeight: 110 }}>
-                        <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onDrop([f]); }} />
+                      {/* FIX 1: Camera card — only highlights if fileSource === 'camera' */}
+                      <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: (file && fileSource === 'camera') ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${(file && fileSource === 'camera') ? '#86efac' : '#e2e8f0'}`, borderRadius: 14, padding: '24px 12px', cursor: 'pointer', minHeight: 110 }}>
+                        <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('camera'); } }} />
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                         <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Take photo</div><div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Use camera</div></div>
                       </label>
                     </div>
+                    {/* FIX 2: Clean file label */}
                     {file && (
                       <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>✓ {file.name}</span>
-                        <button onClick={() => setFile(null)} style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Remove</button>
+                        <span style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>✓ {getFileLabel()}</span>
+                        <button onClick={() => { setFile(null); setFileSource(null); }} style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Remove</button>
                       </div>
                     )}
                   </div>
                 ) : (
-                  /* ── DESKTOP: drag & drop zone ── */
                   <div {...getRootProps()} style={{ border: `2px dashed ${dragActive ? B : file ? '#86efac' : '#bfdbfe'}`, borderRadius: 14, padding: '32px 20px', textAlign: 'center' as const, cursor: 'pointer', background: dragActive ? '#eff6ff' : file ? '#f0fdf4' : '#f8fbff', transition: 'all 0.2s', marginBottom: 16 }}>
                     <input {...getInputProps()} ref={fileInputRef} style={{ display: 'none' }} />
                     {file ? (
@@ -460,9 +472,10 @@ export default function Home() {
                         <div style={{ width: 48, height: 48, background: '#dcfce7', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         </div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: '#166534' }}>{file.name}</div>
+                        {/* FIX 2: Clean filename on desktop too */}
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#166534' }}>{getFileLabel()}</div>
                         <div style={{ fontSize: 12, color: '#64748b' }}>{(file.size / 1024).toFixed(0)} KB</div>
-                        <button onClick={e => { e.stopPropagation(); setFile(null); }} style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Remove</button>
+                        <button onClick={e => { e.stopPropagation(); setFile(null); setFileSource(null); }} style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Remove</button>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
@@ -490,7 +503,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* ── HOTEL PICKER STEP ── */}
             {uploadStep === 'hotel_pick' && extractResult?.data?.hotels && (
               <div style={{ padding: '24px' }}>
                 <button onClick={() => setUploadStep(1)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>← Back</button>
@@ -507,26 +519,14 @@ export default function Home() {
                       setSelectedHotelIdx(idx);
                       const h = extractResult.data.hotels[idx];
                       const s = extractResult.data;
-                      setExtracted({ ...emptyExtracted(),
-                        hotel_name: h.hotel_name || '',
-                        hotel_city: s.destination || '',
-                        check_in: s.check_in || '',
-                        check_out: s.check_out || '',
-                        num_adults: s.num_adults || 2,
-                        num_rooms: s.num_rooms || 1,
-                        ota_name: s.ota_name || '',
-                        total_price_paid: h.total_price_incl_tax || h.price_per_night_incl_tax || 0,
-                      });
+                      setExtracted({ ...emptyExtracted(), hotel_name: h.hotel_name || '', hotel_city: s.destination || '', check_in: s.check_in || '', check_out: s.check_out || '', num_adults: s.num_adults || 2, num_rooms: s.num_rooms || 1, ota_name: s.ota_name || '', total_price_paid: h.total_price_incl_tax || h.price_per_night_incl_tax || 0 });
                       setWarnings({});
                       setUploadStep(2);
                     }} style={{ background: selectedHotelIdx === idx ? '#eff6ff' : '#f8fafc', border: `1.5px solid ${selectedHotelIdx === idx ? B : '#e2e8f0'}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const, transition: 'all 0.15s' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{hotel.hotel_name}</div>
-                          <div style={{ fontSize: 12, color: '#64748b' }}>
-                            {hotel.area && `📍 ${hotel.area}`}
-                            {hotel.stars ? ` · ${'★'.repeat(Math.min(hotel.stars, 5))}` : ''}
-                          </div>
+                          <div style={{ fontSize: 12, color: '#64748b' }}>{hotel.area && `📍 ${hotel.area}`}{hotel.stars ? ` · ${'★'.repeat(Math.min(hotel.stars, 5))}` : ''}</div>
                           {hotel.free_cancellation && <span style={{ display: 'inline-block', marginTop: 6, background: '#f0fdf4', color: '#16a34a', fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>✓ Free cancel</span>}
                         </div>
                         <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
@@ -539,7 +539,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* ── ROOM PICKER STEP ── */}
             {uploadStep === 'room_pick' && extractResult?.data?.room_options && (
               <div style={{ padding: '24px' }}>
                 <button onClick={() => setUploadStep(1)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>← Back</button>
@@ -553,21 +552,7 @@ export default function Home() {
                     <button key={idx} onClick={() => {
                       setSelectedRoomIdx(idx);
                       const d = extractResult.data;
-                      setExtracted({ ...emptyExtracted(),
-                        hotel_name: d.hotel_name || '',
-                        hotel_city: d.hotel_city || '',
-                        check_in: d.check_in || '',
-                        check_out: d.check_out || '',
-                        num_adults: d.num_adults || 2,
-                        num_rooms: d.num_rooms || 1,
-                        ota_name: d.ota_name || '',
-                        room_type: room.room_type || '',
-                        board_basis: room.board_basis || 'RO',
-                        board_basis_label: room.board_basis_label || 'Room Only',
-                        cancellation_policy: room.cancellation_policy || 'unknown',
-                        cancellation_deadline: room.cancellation_deadline || '',
-                        total_price_paid: room.total_price_incl_tax || 0,
-                      });
+                      setExtracted({ ...emptyExtracted(), hotel_name: d.hotel_name || '', hotel_city: d.hotel_city || '', check_in: d.check_in || '', check_out: d.check_out || '', num_adults: d.num_adults || 2, num_rooms: d.num_rooms || 1, ota_name: d.ota_name || '', room_type: room.room_type || '', board_basis: room.board_basis || 'RO', board_basis_label: room.board_basis_label || 'Room Only', cancellation_policy: room.cancellation_policy || 'unknown', cancellation_deadline: room.cancellation_deadline || '', total_price_paid: room.total_price_incl_tax || 0 });
                       setWarnings({});
                       setUploadStep(2);
                     }} style={{ background: selectedRoomIdx === idx ? '#eff6ff' : '#f8fafc', border: `1.5px solid ${selectedRoomIdx === idx ? B : '#e2e8f0'}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const, transition: 'all 0.15s' }}>
@@ -589,80 +574,14 @@ export default function Home() {
               </div>
             )}
 
-                        {uploadStep === 'blocked' && (
+            {uploadStep === 'blocked' && (
               <div style={{ padding: '24px' }}>
-                {blockInfo?.reason === 'non_refundable' && (
-                  <div>
-                    <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 14, padding: 24, marginBottom: 20 }}>
-                      <div style={{ fontSize: 28, marginBottom: 12 }}>🔒</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#dc2626', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>This booking is non-refundable.</div>
-                      <p style={{ fontSize: 13, color: '#b91c1c', lineHeight: 1.7 }}>Even if the price drops, you cannot cancel to rebook and save. rebuq works best with flexible rates. Next time, book a cancellable rate — rebuq regularly finds drops of Rs.10,000–Rs.40,000.</p>
-                    </div>
-                    <button onClick={() => { setUploadStep(1); setFile(null); setExtracted(null); setBlockInfo(null); }} style={{ width: '100%', background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Try a different booking</button>
-                  </div>
-                )}
-                {blockInfo?.reason === 'not_hotel' && (
-                  <div>
-                    <div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 14, padding: 24, marginBottom: 20 }}>
-                      <div style={{ fontSize: 28, marginBottom: 12 }}>📄</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>This does not look like a hotel booking.</div>
-                      <p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>Please upload a hotel booking confirmation — not a flight ticket, train ticket, restaurant receipt, or other document.</p>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={() => { setUploadStep(1); setFile(null); setBlockInfo(null); }} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Upload a hotel voucher</button>
-                      <button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }} style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
-                    </div>
-                  </div>
-                )}
-                {(blockInfo?.reason === 'poor_quality' || blockInfo?.reason === 'parse_error') && (
-                  <div>
-                    <div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 14, padding: 24, marginBottom: 20 }}>
-                      <div style={{ fontSize: 28, marginBottom: 12 }}>🔍</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#0369a1', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>We could not read your voucher clearly.</div>
-                      <p style={{ fontSize: 13, color: '#0c4a6e', lineHeight: 1.7 }}>This happens with blurry screenshots, dark mode images, or password-protected PDFs.</p>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={() => { setUploadStep(1); setFile(null); setBlockInfo(null); }} style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
-                      <button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
-                    </div>
-                  </div>
-                )}
-                {blockInfo?.reason === 'checkin_passed' && (
-                  <div>
-                    <div style={{ background: '#f1f5f9', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: 24, marginBottom: 20 }}>
-                      <div style={{ fontSize: 28, marginBottom: 12 }}>📅</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>Check-in date has already passed.</div>
-                      <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7 }}>Your stay has already started or ended. rebuq tracks prices before check-in. For future bookings, upload right after you book!</p>
-                    </div>
-                    <button onClick={() => { setUploadStep(1); setFile(null); setExtracted(null); setBlockInfo(null); }} style={{ width: '100%', background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Track a future booking</button>
-                  </div>
-                )}
-                {blockInfo?.reason === 'duplicate' && (
-                  <div>
-                    <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 14, padding: 24, marginBottom: 20 }}>
-                      <div style={{ fontSize: 28, marginBottom: 12 }}>✅</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#166534', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>Already tracking this booking!</div>
-                      <p style={{ fontSize: 13, color: '#15803d', lineHeight: 1.7 }}>We are already watching this booking for price drops. You will get a WhatsApp alert the moment we find a lower price.</p>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={() => { setUploadStep(1); setFile(null); setExtracted(null); setBlockInfo(null); }} style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Track another booking</button>
-                      <button onClick={closeModal} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Got it</button>
-                    </div>
-                  </div>
-                )}
-                {blockInfo?.reason === 'network_error' && (
-                  <div>
-                    <div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 14, padding: 24, marginBottom: 20 }}>
-                      <div style={{ fontSize: 28, marginBottom: 12 }}>⚠️</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>Connection issue</div>
-                      <p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>{blockInfo.message || 'Could not reach the server. Please try again or enter details manually.'}</p>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={() => { setUploadStep(1); setFile(null); setBlockInfo(null); }} style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
-                      <button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
-                    </div>
-                  </div>
-                )}
+                {blockInfo?.reason === 'non_refundable' && (<div><div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 14, padding: 24, marginBottom: 20 }}><div style={{ fontSize: 28, marginBottom: 12 }}>🔒</div><div style={{ fontSize: 16, fontWeight: 700, color: '#dc2626', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>This booking is non-refundable.</div><p style={{ fontSize: 13, color: '#b91c1c', lineHeight: 1.7 }}>Even if the price drops, you cannot cancel to rebook and save. rebuq works best with flexible rates. Next time, book a cancellable rate — rebuq regularly finds drops of Rs.10,000–Rs.40,000.</p></div><button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); setBlockInfo(null); }} style={{ width: '100%', background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Try a different booking</button></div>)}
+                {blockInfo?.reason === 'not_hotel' && (<div><div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 14, padding: 24, marginBottom: 20 }}><div style={{ fontSize: 28, marginBottom: 12 }}>📄</div><div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>This does not look like a hotel booking.</div><p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>Please upload a hotel booking confirmation — not a flight ticket, train ticket, restaurant receipt, or other document.</p></div><div style={{ display: 'flex', gap: 10 }}><button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setBlockInfo(null); }} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Upload a hotel voucher</button><button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }} style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button></div></div>)}
+                {(blockInfo?.reason === 'poor_quality' || blockInfo?.reason === 'parse_error') && (<div><div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 14, padding: 24, marginBottom: 20 }}><div style={{ fontSize: 28, marginBottom: 12 }}>🔍</div><div style={{ fontSize: 16, fontWeight: 700, color: '#0369a1', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>We could not read your voucher clearly.</div><p style={{ fontSize: 13, color: '#0c4a6e', lineHeight: 1.7 }}>This happens with blurry screenshots, dark mode images, or password-protected PDFs.</p></div><div style={{ display: 'flex', gap: 10 }}><button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setBlockInfo(null); }} style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button><button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button></div></div>)}
+                {blockInfo?.reason === 'checkin_passed' && (<div><div style={{ background: '#f1f5f9', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: 24, marginBottom: 20 }}><div style={{ fontSize: 28, marginBottom: 12 }}>📅</div><div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>Check-in date has already passed.</div><p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7 }}>Your stay has already started or ended. rebuq tracks prices before check-in. For future bookings, upload right after you book!</p></div><button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); setBlockInfo(null); }} style={{ width: '100%', background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Track a future booking</button></div>)}
+                {blockInfo?.reason === 'duplicate' && (<div><div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 14, padding: 24, marginBottom: 20 }}><div style={{ fontSize: 28, marginBottom: 12 }}>✅</div><div style={{ fontSize: 16, fontWeight: 700, color: '#166534', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>Already tracking this booking!</div><p style={{ fontSize: 13, color: '#15803d', lineHeight: 1.7 }}>We are already watching this booking for price drops. You will get a WhatsApp alert the moment we find a lower price.</p></div><div style={{ display: 'flex', gap: 10 }}><button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); setBlockInfo(null); }} style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Track another booking</button><button onClick={closeModal} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Got it</button></div></div>)}
+                {blockInfo?.reason === 'network_error' && (<div><div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 14, padding: 24, marginBottom: 20 }}><div style={{ fontSize: 28, marginBottom: 12 }}>⚠️</div><div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>Connection issue</div><p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>{blockInfo.message || 'Could not reach the server. Please try again or enter details manually.'}</p></div><div style={{ display: 'flex', gap: 10 }}><button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setBlockInfo(null); }} style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button><button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button></div></div>)}
               </div>
             )}
 
@@ -738,34 +657,10 @@ export default function Home() {
       <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)" }}>
       <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
         <a href="/" style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none", flexShrink: 0 }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
-        {!isMobile && (
-          <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
-            <button onClick={() => window.location.href = "/search-hotels"} style={{ fontSize: 14, color: "#FCD34D", background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Exclusive Member Deals</button>
-            {user ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
-                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user.name.split(" ")[0]}</span>
-              </div>
-            ) : (
-              <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Log in / Sign up</button>
-            )}
-          </div>
-        )}
-        {isMobile && (
-          <button onClick={() => setShowMenu(!showMenu)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
-            <span style={{ display: "block", width: 22, height: 2, background: showMenu ? "transparent" : "rgba(255,255,255,0.8)", transition: "all 0.2s" }} />
-            <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: showMenu ? "rotate(45deg) translate(5px,5px)" : "none" }} />
-            <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: showMenu ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
-          </button>
-        )}
+        {!isMobile && (<div style={{ display: "flex", gap: 28, alignItems: "center" }}><button onClick={() => window.location.href = "/search-hotels"} style={{ fontSize: 14, color: "#FCD34D", background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Exclusive Member Deals</button>{user ? (<div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}><div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div><span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user.name.split(" ")[0]}</span></div>) : (<button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Log in / Sign up</button>)}</div>)}
+        {isMobile && (<button onClick={() => setShowMenu(!showMenu)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}><span style={{ display: "block", width: 22, height: 2, background: showMenu ? "transparent" : "rgba(255,255,255,0.8)", transition: "all 0.2s" }} /><span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: showMenu ? "rotate(45deg) translate(5px,5px)" : "none" }} /><span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: showMenu ? "rotate(-45deg) translate(5px,-5px)" : "none" }} /></button>)}
       </nav>
-      {isMobile && showMenu && (
-        <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 99, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={() => { scrollTo("how"); setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>How it works</button>
-          <button onClick={() => { window.location.href = "/search-hotels"; }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
-          <button onClick={() => { window.location.href = "/signin"; setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Sign in</button>
-        </div>
-      )}
+      {isMobile && showMenu && (<div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 99, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}><button onClick={() => { scrollTo("how"); setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>How it works</button><button onClick={() => { window.location.href = "/search-hotels"; }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button><button onClick={() => { window.location.href = "/signin"; setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Sign in</button></div>)}
       <section style={{ textAlign: "center", padding: isMobile ? "60px 20px 50px" : "90px 24px 70px", background: "transparent" }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 100, marginBottom: 28, letterSpacing: "0.04em", textTransform: "uppercase", border: "1px solid rgba(255,255,255,0.2)" }}>✦ AI-Powered · Watches 24×7</div>
         <h1 className="sora" style={{ fontSize: isMobile ? 36 : 64, fontWeight: 800, lineHeight: 1.1, color: "#fff", maxWidth: 760, margin: "0 auto 20px" }}>Your hotel price just dropped. <span style={{ color: "#FCD34D" }}>Did you notice?</span></h1>
@@ -779,20 +674,13 @@ export default function Home() {
       </div>
 
       <div id="deals" style={{ padding: isMobile ? "40px 0" : "20px 0 60px" }}>
-        <div style={{ textAlign: "center", padding: isMobile ? "0 20px 20px" : "0 40px 28px" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 12 }}>Real savings · Verified drops</p>
-          <h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>rebuq members saved on these hotels</h2>
-        </div>
+        <div style={{ textAlign: "center", padding: isMobile ? "0 20px 20px" : "0 40px 28px" }}><p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 12 }}>Real savings · Verified drops</p><h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>rebuq members saved on these hotels</h2></div>
         <div style={{ overflow: "hidden", padding: isMobile ? "0 16px" : "0 40px" }} onTouchStart={e => { const t = e.touches[0]; (e.currentTarget as any)._touchStartX = t.clientX; }} onTouchEnd={e => { const startX = (e.currentTarget as any)._touchStartX; const endX = e.changedTouches[0].clientX; const diff = startX - endX; if (Math.abs(diff) > 50) { scrollCarousel(diff > 0 ? 1 : -1); } }}>
           <div style={{ display: "flex", gap: 16, transform: `translateX(-${carouselPos * (CARD_WIDTH + 16)}px)`, transition: "transform 0.4s cubic-bezier(.4,0,.2,1)" }}>
             {CARDS.map((c, i) => (<div key={i} className="hotel-card" style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><img src={c.img} alt={c.name} className="hotel-card-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /><div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.62) 0%, transparent 60%)" }} /><div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}><span style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, display: "block" }}>{c.price}</span><span style={{ fontSize: 12, opacity: 0.85 }}>{c.name}</span></div><div style={{ position: "absolute", top: 12, right: 12, background: "#16a34a", color: "#fff", fontSize: 13, fontWeight: 700, padding: "4px 10px", borderRadius: 8 }}>{c.pct}</div></div>))}
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
-          <button onClick={() => scrollCarousel(-1)} disabled={carouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos === 0 ? 0.4 : 1 }}>‹</button>
-          <div style={{ display: "flex", gap: 6 }}>{Array.from({ length: CARDS.length - VISIBLE + 1 }, (_, i) => (<div key={i} onClick={() => setCarouselPos(i)} style={{ width: i === carouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === carouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />))}</div>
-          <button onClick={() => scrollCarousel(1)} disabled={carouselPos >= MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos >= MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos >= MAX_POS ? 0.4 : 1 }}>›</button>
-        </div>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}><button onClick={() => scrollCarousel(-1)} disabled={carouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos === 0 ? 0.4 : 1 }}>‹</button><div style={{ display: "flex", gap: 6 }}>{Array.from({ length: CARDS.length - VISIBLE + 1 }, (_, i) => (<div key={i} onClick={() => setCarouselPos(i)} style={{ width: i === carouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === carouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />))}</div><button onClick={() => scrollCarousel(1)} disabled={carouselPos >= MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos >= MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos >= MAX_POS ? 0.4 : 1 }}>›</button></div>
         <div style={{ textAlign: "center", marginTop: 16 }}><button onClick={() => window.location.href = "/search-hotels"} style={{ background: "none", border: "1.5px solid #e2e8f0", color: NAVY, borderRadius: 10, padding: "10px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore all member deals →</button></div>
       </div>
 
@@ -801,16 +689,10 @@ export default function Home() {
         <h2 className="sora" style={{ fontSize: isMobile ? 28 : 46, fontWeight: 800, color: NAVY, textAlign: "center", lineHeight: 1.15 }}>Three steps. Zero effort.</h2>
         <p style={{ fontSize: 16, color: "#64748b", textAlign: "center", marginTop: 12 }}>Upload once. We watch forever. You save when the price drops.</p>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "200px 1fr", gap: 40, marginTop: 60, alignItems: "flex-start" }}>
-          <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column" }}>
-            {["Upload", "Watch", "Save"].map((s, i) => (<button key={i} onClick={() => setActiveStep(i)} style={{ padding: "16px 20px", cursor: "pointer", borderLeft: isMobile ? "none" : `3px solid ${activeStep === i ? B : "#e2e8f0"}`, color: activeStep === i ? B : "#64748b", fontWeight: 600, fontSize: 15, background: "none", border: "none", fontFamily: "inherit", textAlign: "left" as const }}>{s}</button>))}
-          </div>
+          <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column" }}>{["Upload", "Watch", "Save"].map((s, i) => (<button key={i} onClick={() => setActiveStep(i)} style={{ padding: "16px 20px", cursor: "pointer", borderLeft: isMobile ? "none" : `3px solid ${activeStep === i ? B : "#e2e8f0"}`, color: activeStep === i ? B : "#64748b", fontWeight: 600, fontSize: 15, background: "none", border: "none", fontFamily: "inherit", textAlign: "left" as const }}>{s}</button>))}</div>
           <div style={{ background: "#f8fafc", borderRadius: 14, padding: 32, boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#e0edff", color: B, fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, marginBottom: 12 }}>✦ AI-powered</div>
-            <p style={{ color: "#64748b", fontSize: 15, marginBottom: 24, lineHeight: 1.7 }}>
-              {activeStep === 0 && "Upload your hotel booking confirmation — any PDF, screenshot or email. Our AI reads the hotel, dates, and price in seconds. No manual entry needed."}
-              {activeStep === 1 && "rebuq's AI engine checks your hotel price every 6 hours — day and night. We track flash sales, last-minute drops, and OTA-specific discounts you'd never catch manually."}
-              {activeStep === 2 && "The moment we find a drop, you get a WhatsApp alert with a direct rebooking link. Cancel your old booking, rebook at the new rate, pocket the difference."}
-            </p>
+            <p style={{ color: "#64748b", fontSize: 15, marginBottom: 24, lineHeight: 1.7 }}>{activeStep === 0 && "Upload your hotel booking confirmation — any PDF, screenshot or email. Our AI reads the hotel, dates, and price in seconds. No manual entry needed."}{activeStep === 1 && "rebuq's AI engine checks your hotel price every 6 hours — day and night. We track flash sales, last-minute drops, and OTA-specific discounts you'd never catch manually."}{activeStep === 2 && "The moment we find a drop, you get a WhatsApp alert with a direct rebooking link. Cancel your old booking, rebook at the new rate, pocket the difference."}</p>
             <div style={{ background: "#fff", borderRadius: 12, padding: 20, boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}><span>Live Price Tracker</span><span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#16a34a" }}><span style={{ width: 7, height: 7, background: "#16a34a", borderRadius: "50%", display: "inline-block", animation: "pulse 1.5s infinite" }} />Monitoring</span></div>
               {[["MakeMyTrip", "₹41,200", "₹41,000", false], ["Booking.com", "₹41,200", "₹39,400", true], ["Agoda", "₹53,300", "₹53,300", false]].map(([site, orig, curr, drop], i) => (<div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < 2 ? "1px solid #e2e8f0" : "none", fontSize: 14 }}><span style={{ color: "#64748b" }}>{site}</span><span style={{ textDecoration: "line-through", color: "#94a3b8", fontSize: 13 }}>{orig}</span><span style={{ fontWeight: 700, color: NAVY }}>{curr}</span>{drop ? <span style={{ background: "#dcfce7", color: "#16a34a", fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 6 }}>↓₹1,800</span> : <span style={{ background: "#f1f5f9", color: "#64748b", fontSize: 12, padding: "2px 8px", borderRadius: 6 }}>—</span>}</div>))}
@@ -825,19 +707,12 @@ export default function Home() {
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 14, textAlign: "center" }}>Real Results</p>
           <h2 className="sora" style={{ fontSize: isMobile ? 28 : 46, fontWeight: 800, color: NAVY, textAlign: "center", lineHeight: 1.15 }}>₹18 crore saved. And counting.</h2>
           <p style={{ fontSize: 16, color: "#64748b", textAlign: "center", marginTop: 12 }}>12,000+ Indian travelers are already saving on their hotel bookings.</p>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 24, marginTop: 48 }}>
-            {statValues.map((s, i) => (<div key={i} style={{ background: "#fff", borderRadius: 14, padding: "28px 24px", textAlign: "center", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><div className="sora" style={{ fontSize: 36, fontWeight: 800, color: NAVY }}>{s.prefix}{s.val.toLocaleString("en-IN")}{s.suffix}</div><div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>{STATS[i].label}</div></div>))}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20, marginTop: 32 }}>
-            {TESTIMONIALS.map((t, i) => (<div key={i} style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 24, boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}><div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg, ${B}, #60a5fa)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>{t.initials}</div><div><div style={{ fontWeight: 600, fontSize: 14, color: NAVY }}>{t.name}</div><div style={{ fontSize: 12, color: "#64748b" }}>{t.role}</div></div></div><div className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 8 }}>{t.saved}</div><div style={{ fontSize: 13.5, color: "#64748b", lineHeight: 1.65 }}>&quot;{t.text}&quot;</div></div>))}
-          </div>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 24, marginTop: 48 }}>{statValues.map((s, i) => (<div key={i} style={{ background: "#fff", borderRadius: 14, padding: "28px 24px", textAlign: "center", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><div className="sora" style={{ fontSize: 36, fontWeight: 800, color: NAVY }}>{s.prefix}{s.val.toLocaleString("en-IN")}{s.suffix}</div><div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>{STATS[i].label}</div></div>))}</div>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20, marginTop: 32 }}>{TESTIMONIALS.map((t, i) => (<div key={i} style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 24, boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}><div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg, ${B}, #60a5fa)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>{t.initials}</div><div><div style={{ fontWeight: 600, fontSize: 14, color: NAVY }}>{t.name}</div><div style={{ fontSize: 12, color: "#64748b" }}>{t.role}</div></div></div><div className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 8 }}>{t.saved}</div><div style={{ fontSize: 13.5, color: "#64748b", lineHeight: 1.65 }}>&quot;{t.text}&quot;</div></div>))}</div>
         </div>
       </div>
 
-      <div style={{ background: NAVY, padding: isMobile ? "50px 20px" : "70px 40px", textAlign: "center" }}>
-        <div className="sora" style={{ fontSize: isMobile ? 22 : 38, fontWeight: 700, color: "#fff", maxWidth: 720, margin: "0 auto 20px", lineHeight: 1.25 }}>&quot;This should be mandatory for every Indian traveler who books hotels online.&quot;</div>
-        <div style={{ fontSize: 13, color: "#94a3b8", letterSpacing: "0.05em", textTransform: "uppercase" }}>— Ananya Krishnan · Travel Blogger, Chennai</div>
-      </div>
+      <div style={{ background: NAVY, padding: isMobile ? "50px 20px" : "70px 40px", textAlign: "center" }}><div className="sora" style={{ fontSize: isMobile ? 22 : 38, fontWeight: 700, color: "#fff", maxWidth: 720, margin: "0 auto 20px", lineHeight: 1.25 }}>&quot;This should be mandatory for every Indian traveler who books hotels online.&quot;</div><div style={{ fontSize: 13, color: "#94a3b8", letterSpacing: "0.05em", textTransform: "uppercase" }}>— Ananya Krishnan · Travel Blogger, Chennai</div></div>
 
       <div id="why" style={{ padding: isMobile ? "60px 20px" : "80px 40px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -854,9 +729,7 @@ export default function Home() {
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 14 }}>FAQ</p>
           <h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY }}>Common questions</h2>
-          <div style={{ marginTop: 36 }}>
-            {FAQS.map((f, i) => (<div key={i} style={{ background: "#fff", borderRadius: 12, marginBottom: 12, border: "1.5px solid #e2e8f0", overflow: "hidden" }}><button onClick={() => setOpenFaq(openFaq === i ? -1 : i)} style={{ width: "100%", padding: "20px 24px", fontWeight: 600, fontSize: 15, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", color: NAVY, background: "none", border: "none", fontFamily: "inherit", textAlign: "left" }}>{f.q}<span style={{ fontSize: 20, color: "#64748b", transform: openFaq === i ? "rotate(45deg)" : "none", transition: "transform 0.25s", flexShrink: 0 }}>+</span></button>{openFaq === i && <div style={{ padding: "0 24px 20px", fontSize: 14.5, color: "#64748b", lineHeight: 1.7 }}>{f.a}</div>}</div>))}
-          </div>
+          <div style={{ marginTop: 36 }}>{FAQS.map((f, i) => (<div key={i} style={{ background: "#fff", borderRadius: 12, marginBottom: 12, border: "1.5px solid #e2e8f0", overflow: "hidden" }}><button onClick={() => setOpenFaq(openFaq === i ? -1 : i)} style={{ width: "100%", padding: "20px 24px", fontWeight: 600, fontSize: 15, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", color: NAVY, background: "none", border: "none", fontFamily: "inherit", textAlign: "left" }}>{f.q}<span style={{ fontSize: 20, color: "#64748b", transform: openFaq === i ? "rotate(45deg)" : "none", transition: "transform 0.25s", flexShrink: 0 }}>+</span></button>{openFaq === i && <div style={{ padding: "0 24px 20px", fontSize: 14.5, color: "#64748b", lineHeight: 1.7 }}>{f.a}</div>}</div>))}</div>
         </div>
       </div>
 
@@ -874,9 +747,7 @@ export default function Home() {
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
             <div><div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 10 }}>rebuq<span style={{ color: B }}>.</span></div><p style={{ fontSize: 13.5, color: "#94a3b8", maxWidth: 260, lineHeight: 1.6 }}>AI-powered hotel price monitoring for Indian travelers. Never overpay for a hotel again.</p></div>
-            <div style={{ display: "flex", gap: isMobile ? 28 : 48, flexDirection: isMobile ? "column" : "row" }}>
-              {[{ title: "Product", links: ["How it works", "Results", "Why rebuq", "Exclusive Member Deals"] }, { title: "Company", links: ["About", "Privacy", "Terms"] }].map(col => (<div key={col.title}><h4 style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b", marginBottom: 14 }}>{col.title}</h4>{col.links.map(l => <a key={l} href="#" style={{ display: "block", fontSize: 14, color: "#94a3b8", textDecoration: "none", marginBottom: 10 }}>{l}</a>)}</div>))}
-            </div>
+            <div style={{ display: "flex", gap: isMobile ? 28 : 48, flexDirection: isMobile ? "column" : "row" }}>{[{ title: "Product", links: ["How it works", "Results", "Why rebuq", "Exclusive Member Deals"] }, { title: "Company", links: ["About", "Privacy", "Terms"] }].map(col => (<div key={col.title}><h4 style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b", marginBottom: 14 }}>{col.title}</h4>{col.links.map(l => <a key={l} href="#" style={{ display: "block", fontSize: 14, color: "#94a3b8", textDecoration: "none", marginBottom: 10 }}>{l}</a>)}</div>))}</div>
           </div>
           <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
             <span style={{ fontSize: 13, color: "#475569" }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
