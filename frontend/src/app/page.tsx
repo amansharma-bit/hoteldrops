@@ -113,6 +113,7 @@ export default function Home() {
   const [file, setFile]               = useState<File | null>(null);
   const [dragActive, setDragActive]   = useState(false);
   const [scanning, setScanning]       = useState(false);
+  const [redirecting, setRedirecting]   = useState(false);
   const [scanMsg, setScanMsg]         = useState('');
   const [loading, setLoading]         = useState(false);
   const [extracted, setExtracted]     = useState<ExtractedData | null>(null);
@@ -221,6 +222,7 @@ export default function Home() {
       if (docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top') {
         sessionStorage.setItem('rebuq_extract_result', JSON.stringify(json));
         setModalOpen(false);
+        setRedirecting(true);
         document.body.style.overflow = '';
         router.push('/upload');
         return;
@@ -322,11 +324,11 @@ export default function Home() {
         input:focus, select:focus { border-color: ${B} !important; box-shadow: 0 0 0 3px rgba(20,71,184,0.08); }
       `}</style>
 
-      {scanning && (
+      {(scanning || redirecting) && (
         <div style={{ position: 'fixed', inset: 0, background: B, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
           <div style={{ width: 52, height: 52, border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          <div className="sora" style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>{scanMsg}</div>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>Our AI is reading your booking details</div>
+          <div className="sora" style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>{redirecting ? 'Opening hotel picker…' : scanMsg}</div>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>{redirecting ? 'Just a moment' : 'Our AI is reading your booking details'}</div>
         </div>
       )}
 
@@ -370,6 +372,21 @@ export default function Home() {
 
             {uploadStep === 1 && (
               <div style={{ padding: '24px' }}>
+                {/* Upload type cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 16 }}>
+                  {[
+                    { icon: '📄', label: 'Booking voucher', sub: 'PDF or email' },
+                    { icon: '📸', label: 'OTA screenshot', sub: 'Search or detail' },
+                    { icon: '📱', label: 'Camera photo', sub: 'Photo of screen' },
+                  ].map((item, i) => (
+                    <div key={i} style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 8px', textAlign: 'center' as const }}>
+                      <div style={{ fontSize: 20, marginBottom: 4 }}>{item.icon}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: NAVY, marginBottom: 2 }}>{item.label}</div>
+                      <div style={{ fontSize: 10, color: '#94a3b8' }}>{item.sub}</div>
+                    </div>
+                  ))}
+                </div>
+
                 <div {...getRootProps()} style={{ border: `2px dashed ${dragActive ? B : file ? '#86efac' : '#bfdbfe'}`, borderRadius: 14, padding: '32px 20px', textAlign: 'center' as const, cursor: 'pointer', background: dragActive ? '#eff6ff' : file ? '#f0fdf4' : '#f8fbff', transition: 'all 0.2s', marginBottom: 16 }}>
                   <input {...getInputProps()} ref={fileInputRef} style={{ display: 'none' }} />
                   {file ? (
