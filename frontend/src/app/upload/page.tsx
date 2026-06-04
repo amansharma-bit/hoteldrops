@@ -158,6 +158,22 @@ export default function UploadPage() {
         setForm(f => ({ ...f, email: data.user.email || '' }))
       }
     })
+    // Check if redirected from homepage modal with extract result
+    try {
+      const stored = sessionStorage.getItem('rebuq_extract_result')
+      if (stored) {
+        sessionStorage.removeItem('rebuq_extract_result')
+        const json = JSON.parse(stored)
+        setExtractResult(json)
+        const docType = json.documentType
+        if (docType === 'search_results') {
+          setStep('hotel_pick')
+        } else if (docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top') {
+          if (json.data?.room_options?.length > 0) setStep('room_pick')
+          else { prefillForm(json.data, null, null); setStep('review') }
+        }
+      }
+    } catch {}
   }, [])
 
   const handleFile = (f: File) => {
