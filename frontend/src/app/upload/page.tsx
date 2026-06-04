@@ -397,72 +397,13 @@ export default function UploadPage() {
       {/* PAGE */}
       <div style={{ maxWidth: 640, margin: '0 auto', padding: isMobile ? '24px 16px 80px' : '40px 20px 80px' }}>
 
-        {/* ── STEP: UPLOAD ── */}
+        {/* ── STEP: UPLOAD — redirect to home if accessed directly ── */}
         {step === 'upload' && (
-          <div className="fade-up">
-            <div style={{ textAlign: 'center' as const, marginBottom: 32 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: B, textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 10 }}>REBUQ PRICE TRACKER</div>
-              <h1 className="sora" style={{ fontSize: isMobile ? 28 : 36, fontWeight: 800, color: NAVY, marginBottom: 12, lineHeight: 1.1 }}>Upload your hotel booking</h1>
-              <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.7 }}>Upload a voucher, screenshot, or checkout page. We'll extract the details and start monitoring for price drops.</p>
-            </div>
-
-            {/* Mobile: Upload + Camera. Desktop: nothing (just drop zone) */}
-            {isMobile && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-                <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 8, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 12px', cursor: 'pointer' }}>
-                  <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: NAVY }}>Upload file</div>
-                  <div style={{ fontSize: 10, color: '#94a3b8' }}>PDF or screenshot</div>
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 8, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px 12px', cursor: 'pointer' }}>
-                  <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: NAVY }}>Take photo</div>
-                  <div style={{ fontSize: 10, color: '#94a3b8' }}>Camera</div>
-                </label>
-              </div>
-            )}
-
-            {/* Drop zone */}
-            <div className="upload-zone"
-              style={{ border: `2px dashed ${dragging ? B : '#cbd5e1'}`, borderRadius: 16, padding: '40px 24px', textAlign: 'center' as const, background: dragging ? '#eff6ff' : '#fff', cursor: 'pointer', marginBottom: 16 }}
-              onClick={() => fileRef.current?.click()}
-              onDragOver={e => { e.preventDefault(); setDragging(true) }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={handleDrop}>
-              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
-              {file ? (
-                <div>
-                  {preview ? <img src={preview} alt="Preview" style={{ maxHeight: 200, maxWidth: '100%', borderRadius: 8, marginBottom: 12, objectFit: 'contain' }} /> : <div style={{ fontSize: 48, marginBottom: 12 }}>📄</div>}
-                  <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, marginBottom: 4 }}>{file.name}</div>
-                  <div style={{ fontSize: 12, color: '#94a3b8' }}>{(file.size / 1024).toFixed(0)} KB · Click to change</div>
-                </div>
-              ) : (
-                <div>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>📤</div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: NAVY, marginBottom: 8 }}>Drop your file here</div>
-                  <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16 }}>JPG, PNG, WebP or PDF · Max 10MB</div>
-                  <div style={{ display: 'inline-block', background: '#f1f5f9', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 600, color: B }}>Browse files</div>
-                </div>
-              )}
-            </div>
-
-            {file && (
-              <button onClick={handleExtract} disabled={uploading}
-                style={{ width: '100%', background: uploading ? '#94a3b8' : B, color: '#fff', border: 'none', borderRadius: 12, padding: '16px', fontSize: 16, fontWeight: 700, cursor: uploading ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                {uploading ? (
-                  <>
-                    <div style={{ width: 20, height: 20, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    Reading your document…
-                  </>
-                ) : '🔍 Extract & Continue →'}
-              </button>
-            )}
-
-            <div style={{ textAlign: 'center' as const, marginTop: 20 }}>
-              <button onClick={() => setStep('review')} style={{ background: 'none', border: 'none', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>Enter details manually instead</button>
-            </div>
+          <div className="fade-up" style={{ textAlign: 'center' as const, padding: '60px 0' }}>
+            <div style={{ fontSize: 48, marginBottom: 20 }}>📎</div>
+            <h2 className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 12 }}>Start from the homepage</h2>
+            <p style={{ fontSize: 14, color: '#64748b', marginBottom: 28, lineHeight: 1.7 }}>Upload your voucher or screenshot from the homepage to get started.</p>
+            <button onClick={() => router.push('/')} style={{ background: B, color: '#fff', border: 'none', borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>← Go to homepage</button>
           </div>
         )}
 
