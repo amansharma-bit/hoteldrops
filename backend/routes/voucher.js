@@ -182,6 +182,23 @@ If hotel name not visible on screen (common on scrolled Ixigo/Hotels.com pages):
 Set hotel_name_from_url: true when using this method.
 
 ═══════════════════════════════════════════════
+STEP 7 — HOTEL ADDRESS
+═══════════════════════════════════════════════
+
+For hotel_address and hotel_city:
+1. First try to read address from the screen (some OTAs show it below hotel name)
+2. If address NOT visible on screen, use your knowledge to infer it from hotel name + city:
+   - "Citymax Hotel Bur Dubai" → "Al Kuwait Street, Bur Dubai, Dubai, UAE"
+   - "Hilton Garden Inn Dubai Mall Avenue" → "22nd St, Al Barsha, Dubai, UAE"
+   - "Address Montgomerie" → "Emirates Hills, Dubai, UAE"
+   - "Atlantis The Palm" → "Crescent Road, The Palm, Dubai, UAE"
+   - "Seven Seas Hotel Dubai" → "Al Ittihad Road, Dubai International Airport, Dubai, UAE"
+   - For any well-known hotel chain (Marriott, Hilton, Hyatt, IHG, Accor, Taj, Oberoi etc.) in a major city — infer the address from your training knowledge
+   - For lesser-known hotels where you are not confident — leave hotel_address as null
+3. Always extract hotel_city from: search bar destination, breadcrumb, address text, or URL
+4. Never leave hotel_city blank if the destination is visible anywhere on screen
+
+═══════════════════════════════════════════════
 STEP 7 — CHILDREN
 ═══════════════════════════════════════════════
 
