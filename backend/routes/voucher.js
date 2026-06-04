@@ -135,7 +135,7 @@ const EXTRACTION_PROMPT = [
   '',
   'IMPORTANT:',
   '- Return ONLY valid JSON, no markdown, no explanation',
-  '- Blurry/unreadable: {"success":false,"blocked":true,"blockReason":"poor_quality","message":"Image too blurry or unclear to read."}',
+  '- IMPORTANT: Only return poor_quality if the image is completely unreadable (totally black, totally white, or no text visible at all). Do NOT return poor_quality for slightly blurry, dark, or low-resolution images — instead try your best to extract whatever you can and set partialExtraction:true if some fields are missing. Camera photos of screens, screenshots, and PDF pages are all acceptable even if not perfectly sharp.',
   '- Hotel doc with missing fields: set partialExtraction:true in warnings',
   '- GRN Tripadvisor rating: IGNORE it',
   '- Hotels.com: always INR',
