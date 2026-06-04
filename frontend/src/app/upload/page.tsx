@@ -158,6 +158,7 @@ export default function UploadPage() {
         setForm(f => ({ ...f, email: data.user.email || '' }))
       }
     })
+    // Redirect to homepage if accessed directly (no extract result)
     // Check if redirected from homepage modal with extract result
     try {
       const stored = sessionStorage.getItem('rebuq_extract_result')
@@ -172,8 +173,13 @@ export default function UploadPage() {
           if (json.data?.room_options?.length > 0) setStep('room_pick')
           else { prefillForm(json.data, null, null); setStep('review') }
         }
+      } else {
+        // No extract result — redirect to homepage
+        router.replace('/')
       }
-    } catch {}
+    } catch {
+      router.replace('/')
+    }
   }, [])
 
   const handleFile = (f: File) => {
@@ -397,15 +403,8 @@ export default function UploadPage() {
       {/* PAGE */}
       <div style={{ maxWidth: 640, margin: '0 auto', padding: isMobile ? '24px 16px 80px' : '40px 20px 80px' }}>
 
-        {/* ── STEP: UPLOAD — redirect to home if accessed directly ── */}
-        {step === 'upload' && (
-          <div className="fade-up" style={{ textAlign: 'center' as const, padding: '60px 0' }}>
-            <div style={{ fontSize: 48, marginBottom: 20 }}>📎</div>
-            <h2 className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 12 }}>Start from the homepage</h2>
-            <p style={{ fontSize: 14, color: '#64748b', marginBottom: 28, lineHeight: 1.7 }}>Upload your voucher or screenshot from the homepage to get started.</p>
-            <button onClick={() => router.push('/')} style={{ background: B, color: '#fff', border: 'none', borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>← Go to homepage</button>
-          </div>
-        )}
+        {/* ── STEP: UPLOAD — redirect to homepage ── */}
+        {step === 'upload' && null}
 
         {/* ── STEP: HOTEL PICK (search results) ── */}
         {step === 'hotel_pick' && extractResult?.data?.hotels && (
