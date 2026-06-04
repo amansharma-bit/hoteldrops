@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
@@ -9,406 +9,736 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-const B    = "#1447b8"
-const NAVY = "#0f172a"
+const API = 'https://hoteldrops-production-7e5a.up.railway.app/api/voucher'
+const B = '#1447b8'
+const NAVY = '#0f172a'
+const GREEN = '#16a34a'
+const RED = '#dc2626'
+const YELLOW = '#d97706'
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
+  const [m, setM] = useState(false)
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
+    const c = () => setM(window.innerWidth < 768)
+    c(); window.addEventListener('resize', c)
+    return () => window.removeEventListener('resize', c)
   }, [])
-  return isMobile
+  return m
 }
 
-function getCityHotels(city: string, checkIn: string, checkOut: string) {
-  const hotelsByCity: Record<string, any[]> = {
-    Dubai: [
-      { name: 'Atlantis The Palm', area: 'Palm Jumeirah', room: 'Ocean King Room', stars: 5, otaPrice: 42000, memberPrice: 32700, saving: 9300, pct: 22, board: 'Breakfast included' },
-      { name: 'Burj Al Arab Jumeirah', area: 'Jumeirah Beach', room: 'Deluxe Suite', stars: 5, otaPrice: 68000, memberPrice: 52000, saving: 16000, pct: 24, board: 'All Inclusive' },
-      { name: 'Jumeirah Beach Hotel', area: 'Jumeirah', room: 'Ocean Deluxe Room', stars: 5, otaPrice: 28000, memberPrice: 21500, saving: 6500, pct: 23, board: 'Room Only' },
-    ],
-    Bangkok: [
-      { name: 'Mandarin Oriental Bangkok', area: 'Riverside', room: 'Superior Room', stars: 5, otaPrice: 18000, memberPrice: 13800, saving: 4200, pct: 23, board: 'Breakfast included' },
-      { name: 'The Peninsula Bangkok', area: 'Charoen Nakhon', room: 'Deluxe River View', stars: 5, otaPrice: 22000, memberPrice: 16800, saving: 5200, pct: 24, board: 'Room Only' },
-      { name: 'Capella Bangkok', area: 'Chao Phraya', room: 'Riverfront Suite', stars: 5, otaPrice: 35000, memberPrice: 26600, saving: 8400, pct: 24, board: 'Breakfast included' },
-    ],
-    Bali: [
-      { name: 'Four Seasons Resort Bali', area: 'Sayan, Ubud', room: 'Villa with Pool', stars: 5, otaPrice: 32000, memberPrice: 24300, saving: 7700, pct: 24, board: 'Breakfast included' },
-      { name: 'COMO Shambhala Estate', area: 'Ubud', room: 'Garden Villa', stars: 5, otaPrice: 28000, memberPrice: 21500, saving: 6500, pct: 23, board: 'All Inclusive' },
-      { name: 'Amankila', area: 'Karangasem', room: 'Suite', stars: 5, otaPrice: 45000, memberPrice: 34200, saving: 10800, pct: 24, board: 'Room Only' },
-    ],
-    Maldives: [
-      { name: 'One & Only Reethi Rah', area: 'North Malé Atoll', room: 'Beach Villa', stars: 5, otaPrice: 85000, memberPrice: 64600, saving: 20400, pct: 24, board: 'All Inclusive' },
-      { name: 'Cheval Blanc Randheli', area: 'Noonu Atoll', room: 'Lagoon Villa', stars: 5, otaPrice: 92000, memberPrice: 69900, saving: 22100, pct: 24, board: 'Breakfast included' },
-      { name: 'Six Senses Laamu', area: 'Laamu Atoll', room: 'Water Villa', stars: 5, otaPrice: 72000, memberPrice: 54700, saving: 17300, pct: 24, board: 'All Inclusive' },
-    ],
-    Singapore: [
-      { name: 'Marina Bay Sands', area: 'Marina Bay', room: 'Deluxe Room', stars: 5, otaPrice: 28000, memberPrice: 21600, saving: 6400, pct: 23, board: 'Room Only' },
-      { name: 'Capella Singapore', area: 'Sentosa Island', room: 'Garden Villa', stars: 5, otaPrice: 42000, memberPrice: 32200, saving: 9800, pct: 23, board: 'Breakfast included' },
-      { name: 'The St. Regis Singapore', area: 'Orchard', room: 'Deluxe Room', stars: 5, otaPrice: 22000, memberPrice: 16900, saving: 5100, pct: 23, board: 'Room Only' },
-    ],
-  }
-  const defaultHotels = [
-    { name: `Grand Hyatt ${city}`, area: `City Centre, ${city}`, room: 'Deluxe King Room', stars: 5, otaPrice: 18000, memberPrice: 13700, saving: 4300, pct: 24, board: 'Breakfast included' },
-    { name: `Marriott ${city}`, area: `Business District, ${city}`, room: 'Superior Room', stars: 5, otaPrice: 14200, memberPrice: 10900, saving: 3300, pct: 23, board: 'Room Only' },
-    { name: `Hilton ${city}`, area: `Downtown, ${city}`, room: 'Executive Room', stars: 4, otaPrice: 11000, memberPrice: 8500, saving: 2500, pct: 23, board: 'Breakfast included' },
-  ]
-  return (hotelsByCity[city] || defaultHotels).map(h => ({ ...h, checkIn, checkOut }))
+function fmt(d: string) {
+  try { return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) }
+  catch { return d }
 }
 
-const GRADIENTS = [`${B}, #0a1a6e`, '#0f6e56, #064e3b', '#7c3aed, #4c1d95']
-const BADGES    = ['Member rate', 'Best value', 'Popular pick']
+function formatINR(n: number) { return '₹' + Math.round(n).toLocaleString('en-IN') }
 
-export default function ConfirmationPage() {
-  const router   = useRouter()
+// ── Children ages picker ─────────────────────────────────────────────────────
+function ChildrenPicker({ count, ages, onCountChange, onAgeChange }: {
+  count: number, ages: number[], onCountChange: (n: number) => void, onAgeChange: (idx: number, age: number) => void
+}) {
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: count > 0 ? 12 : 0 }}>
+        <span style={{ fontSize: 14, color: NAVY, fontWeight: 500 }}>Children (under 12)</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button type="button" onClick={() => onCountChange(Math.max(0, count - 1))} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #cbd5e1', background: '#fff', fontSize: 18, cursor: count === 0 ? 'not-allowed' : 'pointer', opacity: count === 0 ? 0.3 : 1, fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+          <span style={{ fontSize: 16, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: 'center' as const }}>{count}</span>
+          <button type="button" onClick={() => onCountChange(Math.min(8, count + 1))} style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid #cbd5e1', background: '#fff', fontSize: 18, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+        </div>
+      </div>
+      {count > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8, marginTop: 8 }}>
+          {Array.from({ length: count }).map((_, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
+              <label style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Child {i + 1}</label>
+              <select value={ages[i] ?? ''} onChange={e => onAgeChange(i, parseInt(e.target.value))}
+                style={{ border: '1.5px solid #e2e8f0', borderRadius: 8, padding: '6px 10px', fontSize: 13, fontFamily: 'inherit', background: '#fff', color: NAVY, cursor: 'pointer', outline: 'none' }}>
+                <option value="">Age</option>
+                <option value="0">Under 1</option>
+                {Array.from({ length: 12 }, (_, j) => j + 1).map(a => <option key={a} value={a}>{a} yrs</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Field row ────────────────────────────────────────────────────────────────
+function Field({ label, value, onChange, type = 'text', required = false, placeholder = '', editable = true }: {
+  label: string, value: string, onChange?: (v: string) => void, type?: string, required?: boolean, placeholder?: string, editable?: boolean
+}) {
+  return (
+    <div>
+      <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+        {label}{required && <span style={{ color: RED }}> *</span>}
+      </label>
+      {editable ? (
+        <input type={type} value={value} onChange={e => onChange?.(e.target.value)} placeholder={placeholder}
+          style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 14px', fontSize: 14, fontFamily: 'inherit', color: NAVY, background: '#fff', outline: 'none', boxSizing: 'border-box' as const }} />
+      ) : (
+        <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 14px', fontSize: 14, color: value ? NAVY : '#94a3b8', fontWeight: value ? 500 : 400 }}>{value || '—'}</div>
+      )}
+    </div>
+  )
+}
+
+// ── Warning / Alert box ──────────────────────────────────────────────────────
+function AlertBox({ type, title, message, children }: { type: 'success' | 'error' | 'warning' | 'info', title: string, message?: string, children?: React.ReactNode }) {
+  const colors = {
+    success: { bg: '#f0fdf4', border: '#bbf7d0', icon: '✅', title: GREEN },
+    error:   { bg: '#fef2f2', border: '#fecaca', icon: '❌', title: RED },
+    warning: { bg: '#fffbeb', border: '#fde68a', icon: '⚠️', title: YELLOW },
+    info:    { bg: '#eff6ff', border: '#bfdbfe', icon: 'ℹ️', title: B },
+  }[type]
+  return (
+    <div style={{ background: colors.bg, border: `1.5px solid ${colors.border}`, borderRadius: 12, padding: '14px 16px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <span style={{ fontSize: 18, flexShrink: 0 }}>{colors.icon}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: colors.title, marginBottom: message || children ? 4 : 0 }}>{title}</div>
+          {message && <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>{message}</div>}
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function UploadPage() {
+  const router = useRouter()
   const isMobile = useIsMobile()
-  const [extracted, setExtracted] = useState<any>(null)
-  const [loaded, setLoaded]       = useState(false)
-  const [user, setUser]           = useState<any>(null)
-  const [countdown, setCountdown] = useState('')
-  const [showMenu, setShowMenu]   = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [user, setUser] = useState<any>(null)
+  const [showMenu, setShowMenu] = useState(false)
+
+  // Upload state
+  const [file, setFile] = useState<File | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [step, setStep] = useState<'upload' | 'hotel_pick' | 'room_pick' | 'review' | 'error' | 'blocked' | 'success'>('upload')
+
+  // Backend response
+  const [extractResult, setExtractResult] = useState<any>(null)
+
+  // Hotel selection (for search_results)
+  const [selectedHotelIdx, setSelectedHotelIdx] = useState<number | null>(null)
+
+  // Room selection (for hotel_detail_rooms)
+  const [selectedRoomIdx, setSelectedRoomIdx] = useState<number | null>(null)
+
+  // Review form state
+  const [form, setForm] = useState({
+    hotel_name: '', hotel_city: '', hotel_address: '',
+    check_in: '', check_out: '',
+    num_adults: '2', num_children: 0, children_ages: [] as number[],
+    num_rooms: '1',
+    room_type: '', board_basis: '', board_basis_label: '',
+    cancellation_policy: '', cancellation_deadline: '',
+    total_price_paid: '', ota_name: '', booking_reference: '',
+    phone: '', email: '',
+  })
+
+  // Warnings
+  const [warnings, setWarnings] = useState<any>({})
+  const [agodaWarning, setAgodaWarning] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
         const meta = data.user.user_metadata
-        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split('@')[0] || 'Member', email: data.user.email })
+        setUser({
+          name: meta?.full_name || meta?.name || data.user.email?.split('@')[0] || 'Member',
+          email: data.user.email
+        })
+        setForm(f => ({ ...f, email: data.user.email || '' }))
       }
     })
-    try {
-      const stored = sessionStorage.getItem('rebuq_booking')
-      if (stored) {
-        const { extracted: data } = JSON.parse(stored)
-        setExtracted(data)
-      }
-    } catch {}
-    setLoaded(true)
   }, [])
 
-  useEffect(() => {
-    if (!loaded) return
-    const key = 'rebuq_submitted_at'
-    if (!sessionStorage.getItem(key)) sessionStorage.setItem(key, new Date().toISOString())
-    const nextScan = new Date(new Date(sessionStorage.getItem(key)!).getTime() + 6 * 3600000)
-    const tick = () => {
-      const diff = nextScan.getTime() - Date.now()
-      if (diff <= 0) { setCountdown('Scanning now...'); return }
-      const h = Math.floor(diff / 3600000)
-      const m = Math.floor((diff % 3600000) / 60000)
-      const s = Math.floor((diff % 60000) / 1000)
-      setCountdown(`${h}h ${m}m ${s}s`)
+  const handleFile = (f: File) => {
+    if (!['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(f.type)) {
+      alert('Only JPG, PNG, WebP or PDF files are allowed.')
+      return
     }
-    tick()
-    const iv = setInterval(tick, 1000)
-    return () => clearInterval(iv)
-  }, [loaded])
+    if (f.size > 10 * 1024 * 1024) { alert('File size must be under 10MB.'); return }
+    setFile(f)
+    if (f.type !== 'application/pdf') {
+      const reader = new FileReader()
+      reader.onload = e => setPreview(e.target?.result as string)
+      reader.readAsDataURL(f)
+    } else {
+      setPreview(null)
+    }
+  }
 
-  useEffect(() => { if (loaded && !extracted) router.push('/') }, [loaded, extracted, router])
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setDragging(false)
+    const f = e.dataTransfer.files[0]
+    if (f) handleFile(f)
+  }
 
-  if (!extracted) return null
+  const handleExtract = async () => {
+    if (!file) return
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('voucher', file)
+      const res = await fetch(`${API}/extract`, { method: 'POST', body: formData })
+      const data = await res.json()
+      setExtractResult(data)
 
-  const numNights = extracted.total_nights ||
-    Math.max(0, Math.round((new Date(extracted.check_out).getTime() - new Date(extracted.check_in).getTime()) / 86400000))
+      if (!data.success && data.blocked) {
+        if (data.blockReason === 'not_hotel') { setStep('error'); return }
+        if (data.blockReason === 'poor_quality') { setStep('error'); return }
+        if (data.blockReason === 'parse_error') { setStep('error'); return }
+      }
 
-  const cityHotels = getCityHotels(extracted.hotel_city, extracted.check_in, extracted.check_out)
+      if (!data.success && data.blockReason === 'checkin_passed') { setStep('blocked'); return }
 
-  const fmt = (d: string) => {
-    try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) }
-    catch { return d }
+      const docType = data.documentType
+
+      if (docType === 'search_results') {
+        setStep('hotel_pick')
+        return
+      }
+
+      if (docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top') {
+        const hasRooms = data.data?.room_options?.length > 0
+        if (hasRooms) { setStep('room_pick'); return }
+        // No rooms visible — pre-fill what we have and go to review
+        prefillForm(data.data, null, null)
+        setStep('review')
+        return
+      }
+
+      // confirmed_voucher or checkout_page
+      prefillForm(data.data, null, null)
+      setWarnings(data.warnings || {})
+      setAgodaWarning(data.agodaPretaxWarning || false)
+
+      if (data.blocked && data.blockReason === 'non_refundable') {
+        setStep('blocked'); return
+      }
+
+      setStep('review')
+
+    } catch (e) {
+      setExtractResult({ success: false, blocked: true, blockReason: 'parse_error', message: 'Something went wrong. Please try again.' })
+      setStep('error')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const prefillForm = (data: any, selectedHotel: any, selectedRoom: any) => {
+    setForm(f => ({
+      ...f,
+      hotel_name:            selectedHotel?.hotel_name || data?.hotel_name || '',
+      hotel_city:            selectedHotel?.destination || data?.destination || data?.hotel_city || '',
+      hotel_address:         data?.hotel_address || '',
+      check_in:              selectedHotel?.check_in || data?.check_in || '',
+      check_out:             selectedHotel?.check_out || data?.check_out || '',
+      num_adults:            String(selectedHotel?.num_adults || data?.num_adults || 2),
+      num_children:          selectedHotel?.num_children || data?.num_children || 0,
+      children_ages:         selectedHotel?.children_ages || data?.children_ages || [],
+      num_rooms:             String(selectedHotel?.num_rooms || data?.num_rooms || 1),
+      room_type:             selectedRoom?.room_type || data?.room_type || '',
+      board_basis:           selectedRoom?.board_basis || data?.board_basis || '',
+      board_basis_label:     selectedRoom?.board_basis_label || data?.board_basis_label || '',
+      cancellation_policy:   selectedRoom?.cancellation_policy || data?.cancellation_policy || '',
+      cancellation_deadline: selectedRoom?.cancellation_deadline || data?.cancellation_deadline || '',
+      total_price_paid:      String(selectedRoom?.total_price_incl_tax || data?.total_price_paid || ''),
+      ota_name:              data?.ota_name || '',
+      booking_reference:     data?.booking_reference || '',
+    }))
+  }
+
+  const handleHotelSelect = (idx: number) => {
+    setSelectedHotelIdx(idx)
+    const hotel = extractResult.data.hotels[idx]
+    const searchData = extractResult.data
+    prefillForm({
+      hotel_name: hotel.hotel_name,
+      hotel_city: searchData.destination,
+      check_in: searchData.check_in,
+      check_out: searchData.check_out,
+      num_adults: searchData.num_adults,
+      num_children: searchData.num_children,
+      children_ages: searchData.children_ages,
+      num_rooms: searchData.num_rooms,
+      ota_name: searchData.ota_name,
+      total_price_paid: hotel.total_price_incl_tax || hotel.price_per_night_incl_tax || '',
+    }, null, null)
+    setAgodaWarning(hotel.agoda_pretax_warning || false)
+    setStep('review')
+  }
+
+  const handleRoomSelect = (idx: number) => {
+    setSelectedRoomIdx(idx)
+    const room = extractResult.data.room_options[idx]
+    const hotelData = extractResult.data
+    prefillForm(hotelData, null, room)
+    setAgodaWarning(room.agoda_pretax_warning || false)
+    setStep('review')
+  }
+
+  const handleSubmit = async () => {
+    if (!form.phone || form.phone.length < 10) { alert('Please enter a valid WhatsApp number.'); return }
+    if (!form.hotel_name) { alert('Hotel name is required.'); return }
+    if (!form.check_in || !form.check_out) { alert('Check-in and check-out dates are required.'); return }
+
+    setSubmitting(true)
+    try {
+      const payload = {
+        ...form,
+        num_adults: parseInt(form.num_adults),
+        num_rooms: parseInt(form.num_rooms),
+        total_price_paid: form.total_price_paid ? parseFloat(form.total_price_paid) : 0,
+        documentType: extractResult?.documentType || 'confirmed_voucher',
+        taxes_included: true,
+      }
+      const res = await fetch(`${API}/submit`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      const data = await res.json()
+
+      if (data.success) {
+        sessionStorage.setItem('rebuq_booking', JSON.stringify({ extracted: { ...payload, hotel_name: form.hotel_name, hotel_city: form.hotel_city } }))
+        router.push('/confirmed')
+      } else if (data.reason === 'duplicate') {
+        alert('This booking is already being tracked!')
+        router.push('/dashboard')
+      } else {
+        alert(data.message || 'Something went wrong.')
+      }
+    } catch (e) {
+      alert('Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const reset = () => {
+    setFile(null); setPreview(null); setStep('upload')
+    setExtractResult(null); setSelectedHotelIdx(null); setSelectedRoomIdx(null)
+    setWarnings({}); setAgodaWarning(false)
+    setForm(f => ({ ...f, hotel_name: '', hotel_city: '', hotel_address: '', check_in: '', check_out: '', room_type: '', board_basis: '', board_basis_label: '', cancellation_policy: '', cancellation_deadline: '', total_price_paid: '', ota_name: '', booking_reference: '' }))
   }
 
   const firstName = user?.name?.split(' ')[0] || null
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif", background: '#f8fafc', color: NAVY, minHeight: '100vh' }}>
+    <div style={{ fontFamily: "'Inter',sans-serif", background: '#f8fafc', color: NAVY, minHeight: '100vh' }}>
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         .sora { font-family: 'Sora', sans-serif; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        .deal-card { transition: all 0.2s ease; cursor: pointer; }
-        .deal-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(20,71,184,0.13) !important; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        .fade-up { animation: fadeUp 0.3s ease; }
+        .upload-zone { transition: all 0.2s; }
+        .upload-zone:hover { border-color: ${B} !important; background: #eff6ff !important; }
+        .hotel-option { transition: all 0.2s; cursor: pointer; }
+        .hotel-option:hover { border-color: ${B} !important; box-shadow: 0 4px 16px rgba(20,71,184,0.1) !important; }
+        .room-option { transition: all 0.2s; cursor: pointer; }
+        .room-option:hover { border-color: ${B} !important; }
+        input:focus { outline: none !important; border-color: ${B} !important; box-shadow: 0 0 0 3px rgba(20,71,184,0.08) !important; }
+        select:focus { outline: none !important; border-color: ${B} !important; }
       `}</style>
 
-      {/* ── HEADER ── */}
-      <nav style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', borderBottom: '1px solid #e2e8f0', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 20px' : '0 40px', position: 'sticky', top: 0, zIndex: 100 }}>
-        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: NAVY, textDecoration: 'none' }}>
-          rebuq<span style={{ color: B }}>.</span>
-        </a>
-
+      {/* NAV */}
+      <nav style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 20px' : '0 40px', position: 'sticky', top: 0, zIndex: 100 }}>
+        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: NAVY, textDecoration: 'none' }}>rebuq<span style={{ color: B }}>.</span></a>
         {!isMobile && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-            <a href="/search-hotels" style={{ fontSize: 14, color: B, fontWeight: 600, textDecoration: 'none' }}>Exclusive Member Deals</a>
+            <a href="/search-hotels" style={{ fontSize: 14, color: B, fontWeight: 600, textDecoration: 'none' }}>Member Deals</a>
             {user ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => router.push('/dashboard')}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: B, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>
-                  {user.name[0].toUpperCase()}
-                </div>
-                <span style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{firstName}</span>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: B, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
+                <span style={{ fontSize: 14, fontWeight: 600 }}>{firstName}</span>
               </div>
             ) : (
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={() => router.push('/signin')} style={{ background: 'none', border: 'none', fontSize: 14, color: NAVY, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', padding: '8px 12px', borderRadius: 8 }}>Sign in</button>
-                <button onClick={() => router.push('/signin')} style={{ background: B, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Join free</button>
-              </div>
+              <button onClick={() => router.push('/signin')} style={{ background: B, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Sign in</button>
             )}
           </div>
         )}
-
         {isMobile && (
-          <button onClick={() => setShowMenu(!showMenu)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <span style={{ display: 'block', width: 22, height: 2, background: showMenu ? 'transparent' : NAVY, transition: 'all 0.2s' }} />
-            <span style={{ display: 'block', width: 22, height: 2, background: NAVY, transition: 'all 0.2s', transform: showMenu ? 'rotate(45deg) translate(5px,5px)' : 'none' }} />
-            <span style={{ display: 'block', width: 22, height: 2, background: NAVY, transition: 'all 0.2s', transform: showMenu ? 'rotate(-45deg) translate(5px,-5px)' : 'none' }} />
+          <button onClick={() => setShowMenu(!showMenu)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8 }}>
+            <span style={{ display: 'block', width: 22, height: 2, background: NAVY, marginBottom: 5 }} />
+            <span style={{ display: 'block', width: 22, height: 2, background: NAVY, marginBottom: 5 }} />
+            <span style={{ display: 'block', width: 22, height: 2, background: NAVY }} />
           </button>
         )}
       </nav>
 
-      {isMobile && showMenu && (
-        <div style={{ position: 'fixed', top: 60, left: 0, right: 0, bottom: 0, zIndex: 99, background: '#fff', padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <a href="/search-hotels" style={{ fontSize: 16, fontWeight: 600, color: B, padding: '14px 0', borderBottom: '1px solid #f1f5f9', textDecoration: 'none', display: 'block' }}>Exclusive Member Deals</a>
-          {user
-            ? <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 0', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }} onClick={() => router.push('/dashboard')}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: B, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
-                <span style={{ fontSize: 15, fontWeight: 600, color: NAVY }}>{firstName}</span>
-              </div>
-            : <>
-                <button onClick={() => router.push('/signin')} style={{ background: 'none', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', color: NAVY }}>Sign in</button>
-                <button onClick={() => router.push('/signin')} style={{ background: B, color: '#fff', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Join free</button>
-              </>
-          }
-        </div>
-      )}
+      {/* PAGE */}
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: isMobile ? '24px 16px 80px' : '40px 20px 80px' }}>
 
-      {/* ── HERO ── */}
-      <div style={{ background: B, padding: isMobile ? '52px 20px 60px' : '72px 40px 80px', textAlign: 'center' }}>
-        <div style={{ maxWidth: 720, margin: '0 auto' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(74,222,128,0.15)', border: '1px solid rgba(74,222,128,0.3)', padding: '6px 18px', borderRadius: 100, fontSize: 12, fontWeight: 700, color: '#4ade80', marginBottom: 32, letterSpacing: '0.06em' }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
-            PRICE TRACKER ACTIVATED
-          </div>
+        {/* ── STEP: UPLOAD ── */}
+        {step === 'upload' && (
+          <div className="fade-up">
+            <div style={{ textAlign: 'center' as const, marginBottom: 32 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: B, textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 10 }}>REBUQ PRICE TRACKER</div>
+              <h1 className="sora" style={{ fontSize: isMobile ? 28 : 36, fontWeight: 800, color: NAVY, marginBottom: 12, lineHeight: 1.1 }}>Upload your hotel booking</h1>
+              <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.7 }}>Upload a voucher, screenshot, or checkout page. We'll extract the details and start monitoring for price drops.</p>
+            </div>
 
-          <h1 className="sora" style={{ fontSize: isMobile ? 36 : 56, fontWeight: 800, color: '#fff', lineHeight: 1.08, marginBottom: 20 }}>
-            We&apos;re on it.<br />
-            <span style={{ color: '#FCD34D' }}>Watching 24/7</span><br />
-            for a better deal.
-          </h1>
-
-          <p style={{ fontSize: isMobile ? 15 : 17, color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, maxWidth: 540, margin: '0 auto 32px' }}>
-            Every 6 hours, our AI scans live rates for <strong style={{ color: '#fff' }}>{extracted.hotel_name}</strong> — same room, same meals, same dates. The moment we find a lower price, you&apos;ll get a WhatsApp instantly.
-          </p>
-
-          {extracted.cancellation_deadline && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, background: 'rgba(252,211,77,0.1)', border: '1.5px solid rgba(252,211,77,0.3)', borderRadius: 14, padding: '14px 20px', marginBottom: 36 }}>
-              <span style={{ fontSize: 22 }}>⏰</span>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#FCD34D' }}>Free cancellation deadline</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
-                  Cancel for free until <strong style={{ color: '#fff' }}>{fmt(extracted.cancellation_deadline)}</strong>
+            {/* What we accept */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 24 }}>
+              {[
+                { icon: '📄', label: 'Booking voucher', sub: 'PDF or image' },
+                { icon: '📸', label: 'OTA screenshot', sub: 'Search or detail page' },
+                { icon: '📱', label: 'Camera photo', sub: 'Photo of your screen' },
+              ].map((item, i) => (
+                <div key={i} style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '14px 12px', textAlign: 'center' as const }}>
+                  <div style={{ fontSize: 24, marginBottom: 6 }}>{item.icon}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 2 }}>{item.label}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{item.sub}</div>
                 </div>
-              </div>
+              ))}
             </div>
-          )}
 
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button onClick={() => router.push('/')} style={{ background: '#fff', color: B, border: 'none', padding: '13px 26px', borderRadius: 100, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>← Back to home</button>
-            <button onClick={() => { sessionStorage.removeItem('rebuq_booking'); sessionStorage.removeItem('rebuq_submitted_at'); router.push('/'); }} style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.25)', padding: '13px 26px', borderRadius: 100, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>↺ Track another booking</button>
-          </div>
-        </div>
-      </div>
-
-      {/* ── MONITORING STRIP ── */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '14px 20px' : '14px 40px', display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 32, flexWrap: 'wrap', justifyContent: isMobile ? 'center' : 'flex-start' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#16a34a' }}>Tracker active</span>
-          </div>
-          <span style={{ fontSize: 13, color: '#64748b' }}>Checking every 6 hours</span>
-          {countdown && <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Next scan in <span style={{ color: B }}>{countdown}</span></span>}
-          <span style={{ fontSize: 13, color: '#64748b' }}>Monitoring across Booking.com, Agoda, Hotels.com and 20+ OTAs</span>
-        </div>
-      </div>
-
-      {/* ── BOOKING + WHAT HAPPENS ── */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '32px 20px' : '48px 40px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 24 }}>
-
-        {/* Tracked booking */}
-        <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #e2e8f0', padding: 28, boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #f1f5f9' }}>
-            <div style={{ width: 38, height: 38, background: '#eff6ff', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📋</div>
-            <div>
-              <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>Your tracked booking</div>
-              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>We're watching this for price drops</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-            {[
-              { l: 'Hotel',      v: extracted.hotel_name },
-              { l: 'City',       v: extracted.hotel_city },
-              { l: 'Check-in',   v: fmt(extracted.check_in) },
-              { l: 'Check-out',  v: fmt(extracted.check_out) },
-              { l: 'Duration',   v: `${numNights} nights` },
-              { l: 'Room',       v: extracted.room_type || '—' },
-              { l: 'Meals',      v: extracted.board_basis_label || '—' },
-              { l: 'Amount paid', v: `₹${(extracted.total_price_paid || extracted.original_price || 0).toLocaleString('en-IN')}`, highlight: true },
-              { l: 'Booked on',  v: extracted.ota_name || '—' },
-              ...(extracted.booking_reference ? [{ l: 'Ref no.', v: extracted.booking_reference }] : []),
-            ].map((item: any, i: number) => (
-              <div key={i}>
-                <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.06em', fontWeight: 600 }}>{item.l}</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: item.highlight ? B : NAVY, lineHeight: 1.4 }}>{item.v}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
-            <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 600 }}>Tracker active</span>
-            <span style={{ fontSize: 13, color: '#64748b' }}>— next scan in <strong style={{ color: NAVY }}>{countdown || '...'}</strong></span>
-          </div>
-        </div>
-
-        {/* What happens next */}
-        <div style={{ background: NAVY, borderRadius: 20, padding: 28, boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-            <div style={{ width: 38, height: 38, background: 'rgba(255,255,255,0.08)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🚀</div>
-            <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>What happens next</div>
-          </div>
-
-          {[
-            { icon: '🔍', n: '1', title: 'Scanning every 6 hours', text: 'Same hotel, same room, same meal plan — like-for-like, no tricks.' },
-            { icon: '📱', n: '2', title: 'Instant WhatsApp alert', text: 'The moment a lower price is found, you get a direct message with a rebooking link.' },
-            { icon: '✅', n: '3', title: 'You rebook in 2 minutes', text: 'Cancel your original booking, tap our link, select your room and confirm. Done.' },
-            { icon: '💰', n: '4', title: 'You keep every rupee saved', text: 'Your saving goes straight into your pocket.' },
-          ].map((item, i) => (
-            <div key={i} style={{ display: 'flex', gap: 14, marginBottom: i < 3 ? 24 : 0 }}>
-              <div style={{ position: 'relative' as const, flexShrink: 0 }}>
-                <div style={{ width: 40, height: 40, background: 'rgba(255,255,255,0.07)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{item.icon}</div>
-                <div style={{ position: 'absolute' as const, top: -4, right: -4, width: 16, height: 16, borderRadius: '50%', background: B, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff' }}>{item.n}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{item.title}</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>{item.text}</div>
-              </div>
-            </div>
-          ))}
-
-          <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: 12, color: 'rgba(255,255,255,0.35)', lineHeight: 1.6 }}>
-            rebuq monitors prices across {extracted.ota_name || 'Agoda'}, Booking.com, Hotels.com and 20+ OTAs — always comparing like-for-like.
-          </div>
-        </div>
-      </div>
-
-      {/* ── CITY DEALS ── */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '0 20px 48px' : '0 40px 64px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#94a3b8', marginBottom: 8 }}>MEMBERS ONLY · EXCLUSIVE RATES</div>
-            <div className="sora" style={{ fontSize: isMobile ? 22 : 30, fontWeight: 800, color: NAVY }}>
-              While you&apos;re here — explore deals in <span style={{ color: B }}>{extracted.hotel_city}</span>
-            </div>
-            <div style={{ fontSize: 14, color: '#64748b', marginTop: 8 }}>Pre-negotiated member rates — often 15–30% below any OTA.</div>
-          </div>
-          <button onClick={() => router.push(`/search-hotels?city=${encodeURIComponent(extracted.hotel_city)}`)}
-            style={{ background: B, color: '#fff', border: 'none', padding: '12px 22px', borderRadius: 100, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>
-            See all {extracted.hotel_city} deals →
-          </button>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 20 }}>
-          {cityHotels.map((hotel, i) => (
-            <div key={i} className="deal-card" onClick={() => router.push(`/search-hotels?city=${encodeURIComponent(extracted.hotel_city)}`)}
-              style={{ background: '#fff', borderRadius: 20, overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-              <div style={{ height: 160, background: `linear-gradient(135deg, ${GRADIENTS[i]})`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' as const }}>
-                <span style={{ fontSize: 48 }}>🏨</span>
-                <div style={{ position: 'absolute' as const, top: 14, left: 14, background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.25)', padding: '4px 12px', borderRadius: 100, fontSize: 11, fontWeight: 700, color: '#fff' }}>{BADGES[i]}</div>
-                <div style={{ position: 'absolute' as const, bottom: 14, right: 14, display: 'flex', gap: 2 }}>
-                  {Array.from({ length: hotel.stars }).map((_: any, j: number) => <span key={j} style={{ color: '#FCD34D', fontSize: 13 }}>★</span>)}
+            {/* Drop zone */}
+            <div className="upload-zone"
+              style={{ border: `2px dashed ${dragging ? B : '#cbd5e1'}`, borderRadius: 16, padding: '40px 24px', textAlign: 'center' as const, background: dragging ? '#eff6ff' : '#fff', cursor: 'pointer', marginBottom: 16 }}
+              onClick={() => fileRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setDragging(true) }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}>
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+              {file ? (
+                <div>
+                  {preview ? <img src={preview} alt="Preview" style={{ maxHeight: 200, maxWidth: '100%', borderRadius: 8, marginBottom: 12, objectFit: 'contain' }} /> : <div style={{ fontSize: 48, marginBottom: 12 }}>📄</div>}
+                  <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, marginBottom: 4 }}>{file.name}</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>{(file.size / 1024).toFixed(0)} KB · Click to change</div>
                 </div>
-              </div>
-              <div style={{ padding: '18px 20px' }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{hotel.name}</div>
-                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>{hotel.area}</div>
-                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>{hotel.room} · {fmt(hotel.checkIn)} → {fmt(hotel.checkOut)}</div>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' as const }}>
-                  <span style={{ background: '#f1f5f9', color: '#475569', fontSize: 11, padding: '3px 10px', borderRadius: 100, fontWeight: 500 }}>✦ {hotel.board}</span>
-                  <span style={{ background: '#f0fdf4', color: '#16a34a', fontSize: 11, padding: '3px 10px', borderRadius: 100, fontWeight: 500 }}>✓ Free cancellation</span>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>📤</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: NAVY, marginBottom: 8 }}>Drop your file here</div>
+                  <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16 }}>JPG, PNG, WebP or PDF · Max 10MB</div>
+                  <div style={{ display: 'inline-block', background: '#f1f5f9', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 600, color: B }}>Browse files</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                      <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through' }}>₹{hotel.otaPrice.toLocaleString('en-IN')}</span>
-                      <span style={{ background: '#fef2f2', color: '#dc2626', fontSize: 11, padding: '2px 7px', borderRadius: 4, fontWeight: 700 }}>-{hotel.pct}%</span>
+              )}
+            </div>
+
+            {file && (
+              <button onClick={handleExtract} disabled={uploading}
+                style={{ width: '100%', background: uploading ? '#94a3b8' : B, color: '#fff', border: 'none', borderRadius: 12, padding: '16px', fontSize: 16, fontWeight: 700, cursor: uploading ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                {uploading ? (
+                  <>
+                    <div style={{ width: 20, height: 20, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    Reading your document…
+                  </>
+                ) : '🔍 Extract & Continue →'}
+              </button>
+            )}
+
+            <div style={{ textAlign: 'center' as const, marginTop: 20 }}>
+              <button onClick={() => setStep('review')} style={{ background: 'none', border: 'none', fontSize: 13, color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>Enter details manually instead</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP: HOTEL PICK (search results) ── */}
+        {step === 'hotel_pick' && extractResult?.data?.hotels && (
+          <div className="fade-up">
+            <button onClick={reset} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6 }}>← Back</button>
+            <h2 className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 8 }}>Which hotel?</h2>
+            <p style={{ fontSize: 14, color: '#64748b', marginBottom: 24 }}>We found {extractResult.data.hotels.length} hotels in this screenshot. Select the one you want to monitor.</p>
+
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: B }}>
+              📅 {extractResult.data.check_in && fmt(extractResult.data.check_in)} → {extractResult.data.check_out && fmt(extractResult.data.check_out)} · {extractResult.data.num_adults} Adults · {extractResult.data.num_rooms} Room
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+              {extractResult.data.hotels.map((hotel: any, idx: number) => (
+                <div key={idx} className="hotel-option"
+                  onClick={() => handleHotelSelect(idx)}
+                  style={{ background: '#fff', border: `1.5px solid ${selectedHotelIdx === idx ? B : '#e2e8f0'}`, borderRadius: 14, padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, boxShadow: selectedHotelIdx === idx ? `0 0 0 3px rgba(20,71,184,0.1)` : 'none' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{hotel.hotel_name}</div>
+                    <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>
+                      {hotel.area && `📍 ${hotel.area} · `}
+                      {hotel.stars && '★'.repeat(hotel.stars)}
+                      {hotel.user_rating && ` · ${hotel.user_rating} rating`}
                     </div>
-                    <div className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY }}>₹{hotel.memberPrice.toLocaleString('en-IN')}</div>
-                    <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>You save ₹{hotel.saving.toLocaleString('en-IN')}</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+                      {hotel.free_cancellation && <span style={{ background: '#f0fdf4', color: GREEN, fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>✓ Free cancel</span>}
+                      {hotel.breakfast_included && <span style={{ background: '#fef9c3', color: '#854d0e', fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>🍳 Breakfast</span>}
+                      {hotel.agoda_pretax_warning && <span style={{ background: '#fef2f2', color: RED, fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>⚠️ Pre-tax price</span>}
+                    </div>
                   </div>
-                  <button style={{ background: B, color: '#fff', border: 'none', padding: '10px 18px', borderRadius: 100, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>View deal →</button>
+                  <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
+                    {hotel.price_per_night_incl_tax ? (
+                      <>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: NAVY }}>{formatINR(hotel.price_per_night_incl_tax)}</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8' }}>per night</div>
+                      </>
+                    ) : <div style={{ fontSize: 12, color: '#94a3b8' }}>Price n/a</div>}
+                  </div>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP: ROOM PICK (hotel detail rooms) ── */}
+        {step === 'room_pick' && extractResult?.data?.room_options && (
+          <div className="fade-up">
+            <button onClick={reset} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6 }}>← Back</button>
+            <h2 className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 4 }}>
+              {extractResult.data.hotel_name || 'Select your room'}
+            </h2>
+            <p style={{ fontSize: 14, color: '#64748b', marginBottom: 24 }}>
+              {extractResult.data.check_in && `${fmt(extractResult.data.check_in)} → ${fmt(extractResult.data.check_out)} · `}
+              {extractResult.data.num_adults} Adults · Select the room option you want to monitor.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+              {extractResult.data.room_options.map((room: any, idx: number) => (
+                <div key={idx} className="room-option"
+                  onClick={() => handleRoomSelect(idx)}
+                  style={{ background: '#fff', border: `1.5px solid ${selectedRoomIdx === idx ? B : '#e2e8f0'}`, borderRadius: 14, padding: '16px 18px', boxShadow: selectedRoomIdx === idx ? `0 0 0 3px rgba(20,71,184,0.1)` : 'none' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{room.room_type}</div>
+                      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 8 }}>{room.option_name || room.board_basis_label}</div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+                        <span style={{
+                          background: room.cancellation_policy === 'free' ? '#f0fdf4' : room.cancellation_policy === 'non-refundable' ? '#fef2f2' : '#fffbeb',
+                          color: room.cancellation_policy === 'free' ? GREEN : room.cancellation_policy === 'non-refundable' ? RED : YELLOW,
+                          fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600
+                        }}>
+                          {room.cancellation_policy === 'free' ? '✓ Free cancel' : room.cancellation_policy === 'non-refundable' ? '✗ Non-refundable' : `⚠️ ${room.cancellation_policy}`}
+                        </span>
+                        {room.agoda_pretax_warning && <span style={{ background: '#fef2f2', color: RED, fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>⚠️ Pre-tax price</span>}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
+                      {room.price_per_night_incl_tax ? (
+                        <>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: NAVY }}>{formatINR(room.price_per_night_incl_tax)}</div>
+                          <div style={{ fontSize: 11, color: '#94a3b8' }}>/ night</div>
+                        </>
+                      ) : room.agoda_pretax_warning ? (
+                        <div style={{ fontSize: 12, color: RED }}>Enter total manually</div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP: REVIEW ── */}
+        {step === 'review' && (
+          <div className="fade-up">
+            <button onClick={reset} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6 }}>← Back</button>
+            <h2 className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 4 }}>Confirm your details</h2>
+            <p style={{ fontSize: 14, color: '#64748b', marginBottom: 24 }}>Please review and correct anything that looks wrong before we start monitoring.</p>
+
+            {/* Warnings */}
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10, marginBottom: 20 }}>
+              {warnings?.partialExtraction && <AlertBox type="warning" title="Some details may be missing" message="We extracted what we could. Please fill in any blank fields below." />}
+              {warnings?.cameraPhoto && <AlertBox type="info" title="Camera photo detected" message="We did our best to read your screen photo. Please verify the details carefully." />}
+              {warnings?.checkInSoon && <AlertBox type="warning" title={`Check-in is ${warnings.checkInSoonDays === 0 ? 'today' : 'tomorrow'}!`} message="The window to rebook is very tight. We'll scan immediately but can't guarantee a result." />}
+              {warnings?.unknownPolicy && <AlertBox type="warning" title="Cancellation policy unclear" message="We'll ask you to confirm via WhatsApp after submission." />}
+              {warnings?.payAtProperty && <AlertBox type="info" title="Pay at property booking" message="You haven't paid yet. We'll monitor rates so you get the best price at check-in." />}
+              {warnings?.currencyConverted && <AlertBox type="info" title={`Price converted from ${warnings.originalCurrency} to INR`} message="We used live exchange rates. Please verify the total below." />}
+              {agodaWarning && (
+                <AlertBox type="warning" title="Agoda shows prices before taxes">
+                  <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Agoda doesn't show taxes on this screen. Please enter the final total you'll pay (including all taxes) in the price field below.</div>
+                </AlertBox>
+              )}
+              {extractResult?.documentType === 'search_results' || extractResult?.documentType === 'hotel_detail_rooms' || extractResult?.documentType === 'hotel_detail_top' || extractResult?.documentType === 'checkout_page' ? (
+                <AlertBox type="info" title="Pre-booking monitor" message="You haven't booked yet — we'll monitor this price so you know the best time to book. Once you book, upload your confirmation for full tracking." />
+              ) : null}
+            </div>
+
+            {/* Form */}
+            <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 16, padding: isMobile ? 20 : 28, display: 'flex', flexDirection: 'column' as const, gap: 18 }}>
+
+              <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, paddingBottom: 12, borderBottom: '1px solid #f1f5f9' }}>🏨 Hotel Details</div>
+
+              <Field label="Hotel Name" value={form.hotel_name} onChange={v => setForm(f => ({ ...f, hotel_name: v }))} required />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <Field label="City" value={form.hotel_city} onChange={v => setForm(f => ({ ...f, hotel_city: v }))} required />
+                <Field label="OTA" value={form.ota_name} onChange={v => setForm(f => ({ ...f, ota_name: v }))} />
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
+              <Field label="Hotel Address" value={form.hotel_address} onChange={v => setForm(f => ({ ...f, hotel_address: v }))} placeholder="Optional — we'll look it up" />
 
-      {/* ── BOTTOM CTA ── */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '0 20px 48px' : '0 40px 64px' }}>
-        <div style={{ background: NAVY, borderRadius: 20, padding: isMobile ? '32px 24px' : '40px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: 20 }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.4)', marginBottom: 10 }}>REBUQ MEMBER DEALS</div>
-            <div className="sora" style={{ fontSize: isMobile ? 20 : 26, fontWeight: 800, color: '#fff', marginBottom: 8 }}>Plan your next trip smarter.</div>
-            <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, maxWidth: 440 }}>
-              Browse exclusive member rates across 50,000+ hotels. Book flexible, upload to rebuq, and we&apos;ll watch for drops from day one.
-            </div>
-          </div>
-          <button onClick={() => router.push('/search-hotels')} style={{ background: '#FCD34D', color: NAVY, border: 'none', borderRadius: 100, padding: '14px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>
-            Browse all member deals →
-          </button>
-        </div>
-      </div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, paddingBottom: 12, borderBottom: '1px solid #f1f5f9', marginTop: 4 }}>📅 Stay Details</div>
 
-      {/* ── FOOTER (matches homepage) ── */}
-      <footer style={{ background: NAVY, padding: isMobile ? '40px 20px 24px' : '48px 40px 32px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 40, gap: 40, flexWrap: 'wrap' as const, flexDirection: isMobile ? 'column' : 'row' }}>
-            <div>
-              <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: '#fff', marginBottom: 10 }}>rebuq<span style={{ color: B }}>.</span></div>
-              <p style={{ fontSize: 13.5, color: '#94a3b8', maxWidth: 260, lineHeight: 1.6 }}>AI-powered hotel price monitoring for Indian travelers. Never overpay for a hotel again.</p>
-            </div>
-            <div style={{ display: 'flex', gap: isMobile ? 28 : 48, flexDirection: isMobile ? 'column' : 'row' }}>
-              {[
-                { title: 'Product', links: ['How it works', 'Results', 'Why rebuq', 'Exclusive Member Deals'] },
-                { title: 'Company', links: ['About', 'Privacy', 'Terms', 'Contact'] },
-              ].map(col => (
-                <div key={col.title}>
-                  <h4 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#64748b', marginBottom: 14 }}>{col.title}</h4>
-                  {col.links.map(l => <a key={l} href="#" style={{ display: 'block', fontSize: 14, color: '#94a3b8', textDecoration: 'none', marginBottom: 10 }}>{l}</a>)}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <Field label="Check-in" value={form.check_in} onChange={v => setForm(f => ({ ...f, check_in: v }))} type="date" required />
+                <Field label="Check-out" value={form.check_out} onChange={v => setForm(f => ({ ...f, check_out: v }))} type="date" required />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <Field label="Adults" value={form.num_adults} onChange={v => setForm(f => ({ ...f, num_adults: v }))} type="number" />
+                <Field label="Rooms" value={form.num_rooms} onChange={v => setForm(f => ({ ...f, num_rooms: v }))} type="number" />
+              </div>
+
+              {/* Children */}
+              <ChildrenPicker
+                count={form.num_children}
+                ages={form.children_ages}
+                onCountChange={n => {
+                  const newAges = [...form.children_ages]
+                  while (newAges.length < n) newAges.push(0)
+                  setForm(f => ({ ...f, num_children: n, children_ages: newAges.slice(0, n) }))
+                }}
+                onAgeChange={(idx, age) => {
+                  const newAges = [...form.children_ages]
+                  newAges[idx] = age
+                  setForm(f => ({ ...f, children_ages: newAges }))
+                }}
+              />
+
+              <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, paddingBottom: 12, borderBottom: '1px solid #f1f5f9', marginTop: 4 }}>🛏️ Room & Price</div>
+
+              <Field label="Room Type" value={form.room_type} onChange={v => setForm(f => ({ ...f, room_type: v }))} placeholder="e.g. Deluxe King Room (optional)" />
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Board Basis</label>
+                <select value={form.board_basis} onChange={e => {
+                  const labels: Record<string, string> = { RO: 'Room Only', BB: 'Bed & Breakfast', HB: 'Half Board', FB: 'Full Board', AI: 'All Inclusive' }
+                  setForm(f => ({ ...f, board_basis: e.target.value, board_basis_label: labels[e.target.value] || '' }))
+                }} style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 14px', fontSize: 14, fontFamily: 'inherit', background: '#fff', color: NAVY, cursor: 'pointer' }}>
+                  <option value="">Not specified</option>
+                  <option value="RO">Room Only</option>
+                  <option value="BB">Bed & Breakfast</option>
+                  <option value="HB">Half Board</option>
+                  <option value="FB">Full Board</option>
+                  <option value="AI">All Inclusive</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
+                  Total Price Paid (₹){agodaWarning && <span style={{ color: RED }}> *</span>}
+                </label>
+                <input type="number" value={form.total_price_paid} onChange={e => setForm(f => ({ ...f, total_price_paid: e.target.value }))}
+                  placeholder={agodaWarning ? "Enter total incl. taxes (Agoda pre-tax price)" : "Total amount paid in ₹"}
+                  style={{ width: '100%', border: `1.5px solid ${agodaWarning && !form.total_price_paid ? RED : '#e2e8f0'}`, borderRadius: 10, padding: '10px 14px', fontSize: 14, fontFamily: 'inherit', color: NAVY, background: '#fff', outline: 'none' }} />
+                {agodaWarning && !form.total_price_paid && <div style={{ fontSize: 12, color: RED, marginTop: 4 }}>Required — Agoda shows pre-tax prices. Enter the final amount you'll pay.</div>}
+              </div>
+
+              <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, paddingBottom: 12, borderBottom: '1px solid #f1f5f9', marginTop: 4 }}>🔔 Cancellation</div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Cancellation Policy</label>
+                <select value={form.cancellation_policy} onChange={e => setForm(f => ({ ...f, cancellation_policy: e.target.value }))}
+                  style={{ width: '100%', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 14px', fontSize: 14, fontFamily: 'inherit', background: '#fff', color: NAVY, cursor: 'pointer' }}>
+                  <option value="">Unknown</option>
+                  <option value="free">Free Cancellation</option>
+                  <option value="partial">Partial Refund</option>
+                  <option value="non-refundable">Non-Refundable</option>
+                </select>
+              </div>
+
+              {form.cancellation_policy === 'free' && (
+                <Field label="Free Cancellation Until" value={form.cancellation_deadline} onChange={v => setForm(f => ({ ...f, cancellation_deadline: v }))} type="date" />
+              )}
+
+              {form.booking_reference && (
+                <Field label="Booking Reference" value={form.booking_reference} onChange={v => setForm(f => ({ ...f, booking_reference: v }))} />
+              )}
+
+              <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, paddingBottom: 12, borderBottom: '1px solid #f1f5f9', marginTop: 4 }}>📱 WhatsApp Alerts</div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>WhatsApp Number <span style={{ color: RED }}>*</span></label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                  <div style={{ background: '#f1f5f9', border: '1.5px solid #e2e8f0', borderRight: 'none', borderRadius: '10px 0 0 10px', padding: '10px 12px', fontSize: 14, color: '#64748b', fontWeight: 600 }}>+91</div>
+                  <input type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                    placeholder="10-digit mobile number"
+                    style={{ flex: 1, border: '1.5px solid #e2e8f0', borderRadius: '0 10px 10px 0', padding: '10px 14px', fontSize: 14, fontFamily: 'inherit', color: NAVY, background: '#fff', outline: 'none' }} />
                 </div>
-              ))}
+                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>We'll send you a WhatsApp when the price drops — instant alert, no spam.</div>
+              </div>
+
+              <Field label="Email (optional)" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} type="email" placeholder="For booking confirmation copies" />
+
+              {/* Submit */}
+              <button onClick={handleSubmit} disabled={submitting || (agodaWarning && !form.total_price_paid)}
+                style={{ width: '100%', background: submitting || (agodaWarning && !form.total_price_paid) ? '#94a3b8' : B, color: '#fff', border: 'none', borderRadius: 12, padding: '16px', fontSize: 16, fontWeight: 700, cursor: submitting || (agodaWarning && !form.total_price_paid) ? 'default' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 8 }}>
+                {submitting ? (
+                  <><div style={{ width: 20, height: 20, border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Starting tracker…</>
+                ) : '🔔 Start Price Monitoring →'}
+              </button>
             </div>
           </div>
-          <div style={{ borderTop: '1px solid #1e293b', paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 14 : 0 }}>
-            <span style={{ fontSize: 13, color: '#475569' }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              {[
-                { href: 'https://twitter.com/rebuq', path: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.261 5.632 5.903-5.632zm-1.161 17.52h1.833L7.084 4.126H5.117z' },
-                { href: 'https://linkedin.com/company/rebuq', path: 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z' },
-                { href: 'https://instagram.com/rebuq', path: 'M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z' },
-              ].map((s, i) => (
-                <a key={i} href={s.href} target="_blank" rel="noopener noreferrer" style={{ width: 34, height: 34, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#94a3b8"><path d={s.path} /></svg>
-                </a>
-              ))}
+        )}
+
+        {/* ── STEP: ERROR ── */}
+        {step === 'error' && (
+          <div className="fade-up" style={{ textAlign: 'center' as const, padding: '40px 0' }}>
+            {extractResult?.blockReason === 'not_hotel' ? (
+              <>
+                <div style={{ fontSize: 64, marginBottom: 20 }}>📋</div>
+                <h2 className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 12 }}>Not a hotel booking</h2>
+                <p style={{ fontSize: 14, color: '#64748b', marginBottom: 8, lineHeight: 1.7 }}>Please upload a hotel booking confirmation — not a flight ticket, train ticket, restaurant receipt, or other document.</p>
+                {extractResult?.reason && <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 28 }}>{extractResult.reason}</p>}
+              </>
+            ) : extractResult?.blockReason === 'poor_quality' ? (
+              <>
+                <div style={{ fontSize: 64, marginBottom: 20 }}>🔍</div>
+                <h2 className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 12 }}>Couldn't read your document</h2>
+                <p style={{ fontSize: 14, color: '#64748b', marginBottom: 28, lineHeight: 1.7 }}>The image is too blurry or dark to read. Try a clearer photo, or use a PDF from your email.</p>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 64, marginBottom: 20 }}>⚠️</div>
+                <h2 className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 12 }}>Something went wrong</h2>
+                <p style={{ fontSize: 14, color: '#64748b', marginBottom: 28 }}>{extractResult?.message || 'Please try again.'}</p>
+              </>
+            )}
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' as const }}>
+              <button onClick={reset} style={{ background: B, color: '#fff', border: 'none', borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Upload a hotel voucher</button>
+              <button onClick={() => { reset(); setStep('review'); }} style={{ background: '#fff', color: NAVY, border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
             </div>
           </div>
-        </div>
-      </footer>
+        )}
+
+        {/* ── STEP: BLOCKED ── */}
+        {step === 'blocked' && (
+          <div className="fade-up" style={{ textAlign: 'center' as const, padding: '40px 0' }}>
+            {extractResult?.blockReason === 'non_refundable' ? (
+              <>
+                <div style={{ fontSize: 64, marginBottom: 20 }}>🔒</div>
+                <h2 className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 12 }}>Non-refundable booking</h2>
+                <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.7, marginBottom: 8 }}>
+                  <strong>{form.hotel_name || extractResult?.data?.hotel_name}</strong> was booked as non-refundable.
+                </p>
+                <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.7, marginBottom: 28 }}>Even if the price drops, you can't cancel and rebook. We've let you know via WhatsApp.</p>
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '16px 20px', marginBottom: 28, textAlign: 'left' as const }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: YELLOW, marginBottom: 4 }}>💡 For next time</div>
+                  <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>Book a flexible/free cancellation rate — rebuq regularly finds drops of ₹10,000–₹40,000 that more than cover any price difference.</div>
+                </div>
+              </>
+            ) : extractResult?.blockReason === 'checkin_passed' ? (
+              <>
+                <div style={{ fontSize: 64, marginBottom: 20 }}>📅</div>
+                <h2 className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 12 }}>Check-in has already passed</h2>
+                <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.7, marginBottom: 28 }}>The check-in date on this booking has passed. Nothing left to monitor.</p>
+              </>
+            ) : null}
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' as const }}>
+              <button onClick={reset} style={{ background: B, color: '#fff', border: 'none', borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>↺ Track another booking</button>
+              <button onClick={() => router.push('/search-hotels')} style={{ background: '#fff', color: NAVY, border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Browse member deals →</button>
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   )
 }
