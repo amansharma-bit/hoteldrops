@@ -599,7 +599,8 @@ export default function Home() {
                   <div>
                     {/* What we captured */}
                     <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#64748b', marginBottom: 12 }}>We read your screenshot</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#64748b', marginBottom: 6 }}>We read your screenshot</div>
+                      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>Looks like you haven't booked yet — we'll watch this price while you decide.</div>
                       <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
                         {extracted.hotel_name && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -623,7 +624,7 @@ export default function Home() {
                         )}
                         {(extracted.total_price_paid > 0 || extracted.price_per_night > 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: B, flexShrink: 0, width: 16, textAlign: 'center' as const }}>₹</span>
                             <div style={{ fontSize: 13, color: NAVY, fontWeight: 600 }}>
                               {extracted.total_price_paid > 0 ? `₹${Math.round(extracted.total_price_paid).toLocaleString('en-IN')} total` : `₹${Math.round(extracted.price_per_night).toLocaleString('en-IN')}/night`}
                             </div>
