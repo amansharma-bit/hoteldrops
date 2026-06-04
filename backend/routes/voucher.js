@@ -58,7 +58,11 @@ Analyse the provided image/document and extract structured hotel booking data.
 
 - **MakeMyTrip (MMT)**: Prices shown are ALWAYS inclusive of taxes. Use displayed total directly.
 - **Hotels.com / in.hotels.com**: Always INR even if accessed from UAE. Always tax-inclusive.
-- **GRNConnect / TBO**: Always tax-inclusive.
+- **GRNConnect / TBO**: Always tax-inclusive. 
+  GRNConnect pages are identified by: URL containing 'grnconnect.com', logo saying 'VISA2FLY' or 'GRNConnect', or page title 'Booking Confirmation' with a BID- reference number.
+  On GRN hotel detail/room listing pages: prices shown per room for entire stay (e.g. 50788 INR, 83166 INR) — these are TOTAL prices for all nights. Divide by num_nights to get price_per_night_incl_tax.
+  On GRN booking confirmation page: ota_name = 'GRNConnect'. The booking reference starts with 'BID-'.
+  IMPORTANT: If the GRN page shows empty guest name fields (First Name, Last Name inputs still blank) or a PAN input field still unfilled, this is a PRE-BOOKING checkout page — classify as documentType 'checkout_page', NOT 'confirmed_voucher'. A confirmed_voucher only applies when guest name is already filled in and booking is complete.
 - **Booking.com**: Usually tax-inclusive for Indian users. Use displayed total.
 - **Ixigo / Goibibo / Yatra**: Show base price + taxes SEPARATELY. You MUST add: (base_price + tax_amount) × num_nights × num_rooms = total_price_paid.
   Example: base ₹9,896 + tax ₹2,839 × 4 nights × 1 room = ₹50,940
@@ -224,7 +228,9 @@ IMPORTANT:
 - If it's a hotel document but you cannot extract key fields: return confirmed_voucher with success:true but set partialExtraction:true in warnings
 - GRN Tripadvisor rating should be IGNORED (it shows GRN internal rating, not the actual hotel rating)
 - Hotels.com always INR regardless of country of access
-`;
+- GRNConnect booking confirmations: URL is grnconnect.com, may show Visa2Fly branding. ota_name must be 'GRNConnect', NOT 'MakeMyTrip'
+- On GRN room listing pages: each room card shows a total-stay price in INR (e.g. "50788 INR") — always capture these as total_price_incl_tax and divide by nights for price_per_night_incl_tax
+\`;
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
