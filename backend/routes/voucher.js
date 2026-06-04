@@ -74,22 +74,31 @@ ALWAYS INCLUSIVE — trust the price shown, no adjustment needed:
 - Hotels.com: shows "includes taxes & fees" — TOTAL inclusive
 - GRNConnect: ALWAYS inclusive — all prices shown are final per night
 - TBO: ALWAYS inclusive — all prices shown are final per night
-- Yatra: shows "Hotel Charges + Hotel GST = Total Amount" on checkout — ADD all components. On search/detail: shows "+ ₹X taxes" separately — ADD base + tax
+- Yatra on checkout: shows "Hotel Charges + Hotel GST = Total Amount" — use the Total Amount line directly
 
-TAXES SHOWN SEPARATELY — add base + taxes to get total:
-- Ixigo: shows "+ ₹X taxes & fees per night per room" — total = (base + tax) × nights × rooms
-- Goibibo: shows "+ ₹X taxes & fees" per night — total = (base + tax) × nights × rooms. On checkout shows full Price Summary — use Total Amount shown.
-- Booking.com: shows price for X nights + "+ ₹X taxes and fees" — ADD them. On checkout: use total from price breakdown.
+TAXES SHOWN SEPARATELY — add base + tax first, THEN multiply by nights and rooms:
+- Ixigo: shows "₹9,896 + ₹2,839 taxes & fees per night, per room"
+  STEP 1: price_per_night_incl_tax = 9896 + 2839 = 12735
+  STEP 2: total_price_incl_tax = 12735 × 4 nights × 1 room = 50940
+  NEVER store just the base price (9896). Always add tax before multiplying.
+- Goibibo: shows "₹2,214 + ₹498 taxes & fees per night"
+  STEP 1: price_per_night_incl_tax = 2214 + 498 = 2712
+  STEP 2: total_price_incl_tax = 2712 × nights × rooms
+  On checkout: use the "Total Amount to be paid" line directly — do not recalculate.
+- Booking.com: shows "₹4,800 for 4 nights" + "+₹1,947 taxes and fees"
+  total_price_incl_tax = 4800 + 1947 = 6747 (already a total, do NOT multiply by nights again)
+- Yatra: shows "₹5,070 + ₹303 taxes per room per night"
+  price_per_night_incl_tax = 5070 + 303 = 5373
+  total_price_incl_tax = 5373 × nights × rooms
 
-ALWAYS PRE-TAX — taxes NOT shown anywhere on screen:
-- Agoda: ALWAYS shows "Per night before taxes and fees" — set total_price_paid: null, set agoda_pretax_warning: true. Do NOT guess the tax amount.
+ALWAYS PRE-TAX — taxes NOT shown on screen:
+- Agoda: ALWAYS "Per night before taxes and fees" — total_price_paid: null, agoda_pretax_warning: true. Never guess tax.
 
-PER NIGHT vs TOTAL:
-- "For X Nights & Y Room with tax" → already the TOTAL (MMT style)
-- "per night" / "per room per night" → multiply: price × nights × rooms
-- "Price for X nights" → already the TOTAL (Booking.com room table)
-- "1 Room x 1 Night" → per night price (multiply by nights × rooms)
-- Checkout pages show full breakdowns — always use the final "Total Amount" / "Total Amount to be paid" line
+PER NIGHT vs TOTAL — determine this BEFORE calculating:
+- "For X Nights & Y Room with tax" → already TOTAL, do NOT multiply (MMT)
+- "per night" / "per room per night" → multiply: price_per_night_incl_tax × nights × rooms
+- "Price for X nights" → already TOTAL, do NOT multiply (Booking.com room table)
+- Checkout pages: use the final "Total Amount" line — never recalculate from per-night
 
 MANDATORY EXTRAS (city tax, tourism fee):
 - Goibibo checkout shows "City Tax (AED 10) = ₹261 — Not included in room price" → add to total
@@ -109,7 +118,14 @@ Extract all fields. This is a COMPLETED booking with a reference number.
 TYPE B — search_results:
 Extract ALL hotels visible on screen as an array. CRITICAL: If you can see 2, 3, or more hotel cards on screen, you MUST extract ALL of them — not just the first one. Each hotel card typically shows hotel name, area/location, star rating, user rating, price, and sometimes free cancellation or breakfast badges.
 Also extract search bar params.
-For each hotel: name, area, stars, user_rating, free_cancellation, breakfast_included, price_per_night_incl_tax, total_price_incl_tax, agoda_pretax_warning, price_note.
+For each hotel extract:
+- hotel_name, area, stars, user_rating, free_cancellation, breakfast_included
+- price_per_night_incl_tax: base price + taxes per night (e.g. Ixigo: 9896+2839=12735)
+- total_price_incl_tax: price_per_night_incl_tax × nights × rooms (e.g. 12735×4×1=50940)
+- agoda_pretax_warning: true only for Agoda
+- price_note: show your calculation e.g. "(9896+2839)×4nights×1room=50940"
+
+CRITICAL FOR SEARCH RESULTS PRICE: Always apply the tax logic from STEP 3. Never return just the base price without adding taxes for Ixigo/Goibibo/Yatra/Booking.com.
 
 TYPE C — hotel_detail_top:
 Extract hotel-level info + any featured room shown.
