@@ -241,14 +241,25 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
 
     const docType = parsed.documentType;
 
-    if (docType === 'confirmed_voucher' && parsed.data && parsed.data.check_in) {
-      const days = getDaysDiff(parsed.data.check_in);
-      if (days !== null && days < 0) {
+    if (docType === 'confirmed_voucher' && parsed.data) {
+      // Block non-refundable confirmed vouchers
+      if (parsed.data.cancellation_policy === 'non-refundable') {
         return res.json({
-          success: false, blocked: true, blockReason: 'checkin_passed',
-          message: 'This booking has already checked in or ended.',
+          success: false, blocked: true, blockReason: 'non_refundable',
+          message: 'This booking is non-refundable.',
           data: parsed.data,
         });
+      }
+      // Block if check-in already passed
+      if (parsed.data.check_in) {
+        const days = getDaysDiff(parsed.data.check_in);
+        if (days !== null && days < 0) {
+          return res.json({
+            success: false, blocked: true, blockReason: 'checkin_passed',
+            message: 'This booking has already checked in or ended.',
+            data: parsed.data,
+          });
+        }
       }
     }
 
