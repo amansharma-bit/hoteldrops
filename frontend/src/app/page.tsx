@@ -414,7 +414,7 @@ export default function Home() {
             <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky' as const, top: 0, background: '#fff', zIndex: 10, borderRadius: isMobile ? '20px 20px 0 0' : '16px 16px 0 0' }}>
               <div>
                 <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 17, fontWeight: 700, color: NAVY }}>
-                  {uploadStep === 1 ? '📎 Upload your voucher' : uploadStep === 2 ? '✏️ Confirm booking details' : uploadStep === 'hotel_pick' ? '🏨 Select a hotel' : uploadStep === 'room_pick' ? '🛏️ Select a room' :
+                  {uploadStep === 1 ? 'Upload your voucher' : uploadStep === 2 ? ((docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top' || docType === 'checkout_page') ? 'Set a price alert' : 'Confirm booking details') : uploadStep === 'hotel_pick' ? '🏨 Select a hotel' : uploadStep === 'room_pick' ? '🛏️ Select a room' :
                     blockInfo?.reason === 'non_refundable' ? '🔒 Non-refundable booking' :
                     blockInfo?.reason === 'not_hotel' ? '📄 Not a hotel booking' :
                     blockInfo?.reason === 'poor_quality' || blockInfo?.reason === 'parse_error' ? '🔍 Could not read voucher' :
@@ -424,7 +424,7 @@ export default function Home() {
                     '⚠️ We need your attention'}
                 </div>
                 <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-                  {uploadStep === 1 ? 'Free price check — 30 seconds' : uploadStep === 2 ? 'Review and correct anything that looks wrong' : ''}
+                  {uploadStep === 1 ? 'Free price check — 30 seconds' : uploadStep === 2 ? ((docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top' || docType === 'checkout_page') ? "We'll notify you the moment this price drops" : 'Review and correct anything that looks wrong') : ''}
                 </div>
               </div>
               <button onClick={closeModal} style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#64748b', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
@@ -599,13 +599,11 @@ export default function Home() {
                   <div>
                     {/* What we captured */}
                     <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#64748b', marginBottom: 12 }}>Here's what we found in your screenshot</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#64748b', marginBottom: 12 }}>We read your screenshot</div>
                       <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
                         {extracted.hotel_name && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0edff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                            </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
                             <div>
                               <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{extracted.hotel_name}</div>
                               {extracted.hotel_city && <div style={{ fontSize: 12, color: '#64748b' }}>{extracted.hotel_city}</div>}
@@ -614,9 +612,7 @@ export default function Home() {
                         )}
                         {extracted.check_in && extracted.check_out && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0edff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                             <div style={{ fontSize: 13, color: NAVY }}>
                               {new Date(extracted.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                               <span style={{ color: '#94a3b8', margin: '0 6px' }}>→</span>
@@ -627,9 +623,7 @@ export default function Home() {
                         )}
                         {(extracted.total_price_paid > 0 || extracted.price_per_night > 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0edff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                             <div style={{ fontSize: 13, color: NAVY, fontWeight: 600 }}>
                               {extracted.total_price_paid > 0 ? `₹${Math.round(extracted.total_price_paid).toLocaleString('en-IN')} total` : `₹${Math.round(extracted.price_per_night).toLocaleString('en-IN')}/night`}
                             </div>
@@ -637,9 +631,7 @@ export default function Home() {
                         )}
                         {extracted.num_adults > 0 && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0edff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                            </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                             <div style={{ fontSize: 13, color: '#64748b' }}>{extracted.num_adults} adult{extracted.num_adults > 1 ? 's' : ''}{extracted.num_children > 0 ? ` · ${extracted.num_children} child${extracted.num_children > 1 ? 'ren' : ''}` : ''}</div>
                           </div>
                         )}
