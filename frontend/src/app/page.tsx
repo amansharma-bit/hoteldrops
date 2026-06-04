@@ -609,9 +609,8 @@ export default function Home() {
                     <div><label style={lbl}>Room type</label><input style={inp} value={extracted.room_type} onChange={e => setExtracted({ ...extracted, room_type: e.target.value })} placeholder="e.g. Deluxe King" /></div>
                     <div><label style={lbl}>Meal plan</label><select style={inp} value={extracted.board_basis} onChange={e => { const opt = BOARD_OPTIONS.find(o => o.code === e.target.value); setExtracted({ ...extracted, board_basis: e.target.value, board_basis_label: opt?.label || '' }); }}>{BOARD_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}</select></div>
                   </div>
-                  <div style={grid2}>
-                    <div><label style={lbl}>Booked on</label><select style={inp} value={extracted.ota_name} onChange={e => setExtracted({ ...extracted, ota_name: e.target.value })}>{['MakeMyTrip','Booking.com','Agoda','Goibibo','Hotels.com','Expedia','Direct','Other'].map(o => <option key={o} value={o}>{o}</option>)}</select></div>
-                    <div><label style={lbl}>Booking ref</label><input style={inp} value={extracted.booking_reference} onChange={e => setExtracted({ ...extracted, booking_reference: e.target.value })} placeholder="PNR / ref no." /></div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={lbl}>Booked on</label><select style={inp} value={extracted.ota_name} onChange={e => setExtracted({ ...extracted, ota_name: e.target.value })}>{['MakeMyTrip','Booking.com','Agoda','Goibibo','Hotels.com','Expedia','Direct','Other'].map(o => <option key={o} value={o}>{o}</option>)}</select>
                   </div>
                 </div>
 
@@ -622,12 +621,35 @@ export default function Home() {
                     <div><label style={lbl}>Total price paid (₹) *</label><input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: parseFloat(e.target.value), original_price: parseFloat(e.target.value) })} placeholder="e.g. 85000" /></div>
                     <div><label style={lbl}>Adults</label><select style={inp} value={extracted.num_adults} onChange={e => setExtracted({ ...extracted, num_adults: parseInt(e.target.value) })}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} adult{n > 1 ? 's' : ''}</option>)}</select></div>
                   </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={lbl}>Children (under 12)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: extracted.num_children > 0 ? 10 : 0 }}>
+                      <button onClick={() => { const n = Math.max(0, extracted.num_children - 1); setExtracted({ ...extracted, num_children: n, children_ages: extracted.children_ages.slice(0, n) }); }} style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontFamily: 'inherit' }}>−</button>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: 'center' as const }}>{extracted.num_children}</span>
+                      <button onClick={() => { const n = Math.min(8, extracted.num_children + 1); const ages = [...extracted.children_ages]; while (ages.length < n) ages.push(null); setExtracted({ ...extracted, num_children: n, children_ages: ages }); }} style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontFamily: 'inherit' }}>+</button>
+                      <span style={{ fontSize: 12, color: '#94a3b8' }}>{extracted.num_children === 0 ? 'No children' : extracted.num_children === 1 ? '1 child' : `${extracted.num_children} children`}</span>
+                    </div>
+                    {extracted.num_children > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
+                        {Array.from({ length: extracted.num_children }, (_, i) => (
+                          <div key={i} style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
+                            <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>Child {i+1}</span>
+                            <select style={{ ...inp, width: 100 }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
+                              <option value=''>Age</option>
+                              <option value='0'>Under 1</option>
+                              {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a} yr</option>)}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 10 }}>🔒 Cancellation policy</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-                    {CANCEL_OPTIONS.map(o => (<button key={o.code} onClick={() => setExtracted({ ...extracted, cancellation_policy: o.code })} style={{ padding: '9px 8px', borderRadius: 8, border: `2px solid ${extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#ef4444' : B) : '#e2e8f0'}`, background: extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#fef2f2' : '#eff6ff') : '#fff', color: extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#dc2626' : B) : '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' as const }}>{o.label}</button>))}
+                    {CANCEL_OPTIONS.map(o => (<button key={o.code} onClick={() => { if (o.code === 'non-refundable') { setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return; } setExtracted({ ...extracted, cancellation_policy: o.code }); }} style={{ padding: '9px 8px', borderRadius: 8, border: `2px solid ${extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#ef4444' : B) : '#e2e8f0'}`, background: extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#fef2f2' : '#eff6ff') : '#fff', color: extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#dc2626' : B) : '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' as const }}>{o.label}</button>))}
                   </div>
                   {(extracted.cancellation_policy === 'free' || extracted.cancellation_policy === 'partial') && (<div><label style={lbl}>Free cancel deadline</label><input style={inp} type="date" value={extracted.cancellation_deadline} onChange={e => setExtracted({ ...extracted, cancellation_deadline: e.target.value })} /></div>)}
                 </div>
