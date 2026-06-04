@@ -57,7 +57,7 @@ Detect from logo, URL bar, or page design:
 - Ixigo: orange "ixigo" logo, ixigo.com in URL
 - Goibibo: orange header, goibibo.com in URL
 - Agoda: dark nav with colored dots logo, agoda.com in URL
-- Hotels.com: red H logo, hotels.com in URL, "Collect stamps" badge
+- Hotels.com: red H logo, hotels.com in URL, "Collect stamps" badge. in.hotels.com ALWAYS shows INR — never flag AED or any other currency for Hotels.com India.
 - Booking.com: dark blue nav, booking.com in URL, "Genius" badge
 - Yatra: red "yatra" logo, yatra.com in URL
 - GRNConnect: "GRNConnect" or "VISA2FLY" branding, grnconnect.com in URL — shows "Tripadvisor Rating" on hotel cards
@@ -71,7 +71,7 @@ STEP 3 — TAX LOGIC BY OTA (CRITICAL)
 
 ALWAYS INCLUSIVE — trust the price shown, no adjustment needed:
 - MMT: shows "with tax" or "For X Nights with tax" — TOTAL inclusive
-- Hotels.com: shows "includes taxes & fees" — TOTAL inclusive
+- Hotels.com: shows "includes taxes & fees" — TOTAL inclusive. Currency is ALWAYS INR for in.hotels.com — set currency_original: "INR" always.
 - GRNConnect: ALWAYS inclusive — all prices shown are final per night
 - TBO: ALWAYS inclusive — all prices shown are final per night
 - Yatra on checkout: shows "Hotel Charges + Hotel GST = Total Amount" — use the Total Amount line directly
@@ -151,6 +151,8 @@ Richest data — extract everything:
 - agoda_pretax_warning (Agoda checkout still shows pre-tax — set true)
 - booking_reference: null (not confirmed yet)
 - GRNConnect checkout (Visa2Fly): shows "Booking Confirmation" title, hotel panel on right with all details, Amount in INR — treat as checkout_page NOT confirmed_voucher (no booking ref confirmed yet). Set booking_reference to the BID from URL if visible.
+- Agoda checkout: hotel name is often NOT visible on the booking form screen (it's above the fold). If hotel name is not visible, set hotel_name: "" (empty string) — NOT "Unknown Hotel". The upload page will prompt the user to enter it manually.
+- For city on Agoda checkout: look for city name in the URL (e.g. agoda.com/en-in/book/dubai → "Dubai"), or in any breadcrumb or address text visible on screen. If not found, set hotel_city: "".
 
 TYPE F — not_hotel:
 {"document_type": "not_hotel", "reason": "brief description"}
