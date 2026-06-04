@@ -575,6 +575,12 @@ export default function UploadPage() {
                   <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Agoda doesn't show taxes on this screen. Please enter the final total you'll pay (including all taxes) in the price field below.</div>
                 </AlertBox>
               )}
+              {!form.hotel_name && extractResult?.data?.ota_name === 'Agoda' && (
+                <AlertBox type="warning" title="Hotel name not visible on this Agoda screen" message="Agoda's booking form doesn't show the hotel name. Please enter it manually below." />
+              )}
+              {!form.total_price_paid && (extractResult?.documentType === 'checkout_page' || extractResult?.documentType === 'confirmed_voucher') && !agodaWarning && (
+                <AlertBox type="info" title="Price not visible on this screen" message="The price summary wasn't visible in your screenshot. Please scroll to it and enter the total amount manually." />
+              )}
               {extractResult?.documentType === 'search_results' || extractResult?.documentType === 'hotel_detail_rooms' || extractResult?.documentType === 'hotel_detail_top' || extractResult?.documentType === 'checkout_page' ? (
                 <AlertBox type="info" title="Pre-booking monitor" message="You haven't booked yet — we'll monitor this price so you know the best time to book. Once you book, upload your confirmation for full tracking." />
               ) : null}
@@ -585,7 +591,12 @@ export default function UploadPage() {
 
               <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, paddingBottom: 12, borderBottom: '1px solid #f1f5f9' }}>🏨 Hotel Details</div>
 
-              <Field label="Hotel Name" value={form.hotel_name} onChange={v => setForm(f => ({ ...f, hotel_name: v }))} required />
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Hotel Name <span style={{ color: RED }}>*</span></label>
+                <input value={form.hotel_name} onChange={e => setForm(f => ({ ...f, hotel_name: e.target.value }))}
+                  placeholder={extractResult?.data?.ota_name === 'Agoda' && !form.hotel_name ? "Enter hotel name — not shown on Agoda checkout" : "e.g. Taj Dubai"}
+                  style={{ width: '100%', border: `1.5px solid ${!form.hotel_name && extractResult?.data?.ota_name === 'Agoda' ? RED : '#e2e8f0'}`, borderRadius: 10, padding: '10px 14px', fontSize: 14, fontFamily: 'inherit', color: NAVY, background: '#fff', outline: 'none', boxSizing: 'border-box' as const }} />
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <Field label="City" value={form.hotel_city} onChange={v => setForm(f => ({ ...f, hotel_city: v }))} required />
                 <Field label="OTA" value={form.ota_name} onChange={v => setForm(f => ({ ...f, ota_name: v }))} />
