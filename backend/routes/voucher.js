@@ -1,772 +1,888 @@
-const express = require('express')
-const multer  = require('multer')
-const axios   = require('axios')
-const { createClient } = require('@supabase/supabase-js')
-const router  = express.Router()
+"use client";
 
-let email
-try { email = require('../utils/emailService') } catch(e) { email = null }
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+import { useDropzone } from "react-dropzone";
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-    if (allowed.includes(file.mimetype)) cb(null, true)
-    else cb(new Error('Only images and PDFs are allowed'))
-  }
+const B = "#1447b8";
+const NAVY = "#0f172a";
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(true);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
+interface ExtractedData {
+  hotel_name: string; hotel_city: string; check_in: string; check_out: string;
+  total_nights: number; room_type: string; num_adults: number; num_children: number;
+  children_ages: (number | null)[]; num_rooms: number; board_basis: string;
+  board_basis_label: string; rate_plan_name: string; original_price: number;
+  total_price_paid: number; price_per_night: number; currency_original: string;
+  ota_name: string; booking_reference: string; cancellation_policy: string;
+  cancellation_deadline: string; cancellation_penalty: number | null;
+  payment_type: string; amount_paid_upfront: number;
+}
+
+const emptyExtracted = (): ExtractedData => ({
+  hotel_name: '', hotel_city: '', check_in: '', check_out: '', total_nights: 0,
+  room_type: '', num_adults: 2, num_children: 0, children_ages: [], num_rooms: 1,
+  board_basis: 'RO', board_basis_label: 'Room Only', rate_plan_name: '',
+  original_price: 0, total_price_paid: 0, price_per_night: 0, currency_original: 'INR',
+  ota_name: '', booking_reference: '',
+  cancellation_policy: 'unknown', cancellation_deadline: '', cancellation_penalty: null,
+  payment_type: 'pay_now', amount_paid_upfront: 0,
 })
 
-const RATES_TO_INR = {
-  INR: 1, EUR: 112, USD: 84, GBP: 107,
-  AED: 22.8, THB: 2.3, SGD: 62, MYR: 18, IDR: 0.005,
-  AMD: 0.21, JPY: 0.56, OMR: 218, SAR: 22.4, QAR: 23.1,
-  NPR: 0.63, LKR: 0.26, MUR: 1.9, KRW: 0.063, TRY: 2.5,
-  ZAR: 4.5, EGP: 1.7, MXN: 4.2, BHD: 223,
-}
+const BOARD_OPTIONS = [
+  { code: 'RO', label: 'Room Only' },
+  { code: 'BB', label: 'Bed & Breakfast' },
+  { code: 'HB', label: 'Half Board' },
+  { code: 'FB', label: 'Full Board' },
+  { code: 'AI', label: 'All Inclusive' },
+]
 
-const EXTRACTION_PROMPT = `You are an expert hotel data extractor for rebuq, an Indian travel price-tracking service.
-You can read screenshots taken on phone cameras (angled, glare), desktop screenshots, PDFs, and WhatsApp-forwarded images.
+const CANCEL_OPTIONS = [
+  { code: 'free', label: '✅ Free cancellation' },
+  { code: 'partial', label: '⚠️ Partial refund' },
+  { code: 'non-refundable', label: '❌ Non-refundable' },
+  { code: 'unknown', label: '❓ Not sure' },
+]
 
-═══════════════════════════════════════════════
-STEP 1 — IDENTIFY DOCUMENT TYPE
-═══════════════════════════════════════════════
+const inp: React.CSSProperties = { width: '100%', background: '#f9fafb', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '11px 14px', fontSize: 14, fontFamily: 'inherit', outline: 'none', color: NAVY }
+const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.07em', color: '#64748b', display: 'block', marginBottom: 6 }
+const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }
 
-Determine which type this is:
+const CARDS = [
+  { img: "/atlantisdubai.jpg", price: "₹22,400", name: "Atlantis The Palm, Dubai", pct: "↓19%" },
+  { img: "/Westinmaldives.jpg", price: "₹31,600", name: "The Westin, Maldives", pct: "↓20%" },
+  { img: "/lemeridienbali.jpg", price: "₹18,200", name: "Le Meridien, Bali", pct: "↓22%" },
+  { img: "/hyattregencybangkok.jpg", price: "₹17,400", name: "Hyatt Regency, Bangkok", pct: "↓28%" },
+  { img: "/theroseatenewdelhi.jpg", price: "₹14,800", name: "The Roseate, New Delhi", pct: "↓16%" },
+  { img: "/wgoa.jpg", price: "₹21,000", name: "W Goa", pct: "↓18%" },
+  { img: "/andazsingapore.jpg", price: "₹19,500", name: "Andaz, Singapore", pct: "↓23%" },
+  { img: "/langhamlondon.jpg", price: "₹26,200", name: "The Langham, London", pct: "↓21%" },
+  { img: "/fourseasonsmumbai.jpg", price: "₹16,900", name: "Four Seasons, Mumbai", pct: "↓25%" },
+  { img: "/Crowneplazayasidland.jpg", price: "₹48,000", name: "Crowne Plaza, Yas Island", pct: "↓12%" },
+];
 
-A) "confirmed_voucher" — Completed booking confirmation. Has booking reference, confirmation of payment. E.g. email voucher, PDF receipt, post-booking confirmation page.
+const STATS = [
+  { target: 18, prefix: "₹", suffix: "Cr+", label: "Total saved by travelers" },
+  { target: 12000, prefix: "", suffix: "+", label: "Indian travelers saving" },
+  { target: 28, prefix: "", suffix: "%", label: "Average price drop caught" },
+  { target: 24000, prefix: "₹", suffix: "", label: "Average saving per booking" },
+];
 
-B) "search_results" — Hotel search listing page showing MULTIPLE hotels with a search bar at top. User is browsing, has NOT booked.
+const TESTIMONIALS = [
+  { initials: "PS", name: "Priya Sharma", role: "Product Manager, Bengaluru", saved: "₹24,000", text: "Booked a resort in Maldives and completely forgot about it. rebuq caught a ₹24,000 drop 3 weeks later. The WhatsApp alert was so clear — I rebooked in 10 minutes." },
+  { initials: "RM", name: "Rahul Mehta", role: "Startup Founder, Mumbai", saved: "₹80,000+", text: "I travel every month for work. rebuq has saved me over ₹80,000 this year alone. It's the smartest thing I've added to my travel routine." },
+  { initials: "AK", name: "Ananya Krishnan", role: "Travel Blogger, Chennai", saved: "₹22,400", text: "Found a ₹22,400 drop in 4 hours — that's how fast rebuq caught a sudden drop in my Dubai booking. This should be mandatory for every traveler." },
+];
 
-C) "hotel_detail_top" — Single hotel overview/photos page. May show one featured room price. User is viewing the hotel.
+const FAQS = [
+  { q: "Is rebuq really free to check?", a: "Yes — uploading your booking and letting rebuq monitor it is completely free. We only charge a small success fee when we actually save you money. If the price doesn't drop, you pay nothing." },
+  { q: "Which OTAs and hotel chains do you support?", a: "We support MakeMyTrip, Booking.com, Agoda, Goibibo, Expedia, Hotels.com, and over 50 direct hotel websites. We're constantly adding new sources." },
+  { q: "How do I rebook once you find a drop?", a: "We send you a WhatsApp alert with a direct link to the lower-priced booking. Cancel your old booking (most are free to cancel), rebook at the new rate, and pocket the difference. The whole process usually takes under 10 minutes." },
+  { q: "What if I have a non-refundable booking?", a: "rebuq works best with refundable bookings. If your booking is non-refundable, we'll let you know when you upload — and suggest booking a flexible rate next time so you can benefit from price drops." },
+];
 
-D) "hotel_detail_rooms" — Hotel detail page scrolled to rooms/availability section. Shows MULTIPLE room types each with price, board, and cancellation policy.
+export default function Home() {
+  const router = useRouter();
+  const isMobile = useIsMobile();
+  const [openFaq, setOpenFaq] = useState(0);
+  const [activeStep, setActiveStep] = useState(0);
+  const [carouselPos, setCarouselPos] = useState(0);
+  const [showMenu, setShowMenu] = useState(false);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
 
-E) "checkout_page" — Booking checkout/payment/review page. User has selected a room but NOT yet paid. Has price breakdown, cancellation policy, guest details form.
+  const [modalOpen, setModalOpen]     = useState(false);
+  const [uploadStep, setUploadStep]   = useState<1 | 2 | 'hotel_pick' | 'room_pick' | 'blocked'>(1);
+  const [blockInfo, setBlockInfo]     = useState<{reason:string;message?:string}|null>(null);
+  const [warnings, setWarnings]       = useState<Record<string,any>>({});
+  const [file, setFile]               = useState<File | null>(null);
+  const [dragActive, setDragActive]   = useState(false);
+  const [scanning, setScanning]       = useState(false);
+  const [redirecting, setRedirecting]   = useState(false);
+  const [scanMsg, setScanMsg]         = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [extracted, setExtracted]     = useState<ExtractedData | null>(null);
+  const [phone, setPhone]             = useState('');
+  const [emailVal, setEmailVal]       = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const fileInputRef                  = useRef<HTMLInputElement>(null);
+  const [extractResult, setExtractResult] = useState<any>(null);
+  const [selectedHotelIdx, setSelectedHotelIdx] = useState<number | null>(null);
+  const [selectedRoomIdx, setSelectedRoomIdx] = useState<number | null>(null);
 
-F) "not_hotel" — Not related to hotels (flights, trains, food, selfies, passports, bank statements, car rental, etc.)
-
-═══════════════════════════════════════════════
-STEP 2 — DETECT OTA
-═══════════════════════════════════════════════
-
-Detect from logo, URL bar, or page design:
-- MakeMyTrip (MMT): purple/dark search bar, makemytrip.com in URL, "MMT Luxe" badge
-- Ixigo: orange "ixigo" logo, ixigo.com in URL
-- Goibibo: orange header, goibibo.com in URL
-- Agoda: dark nav with colored dots logo, agoda.com in URL
-- Hotels.com: red H logo, hotels.com in URL, "Collect stamps" badge. in.hotels.com ALWAYS shows INR — never flag AED or any other currency for Hotels.com India.
-- Booking.com: dark blue nav, booking.com in URL, "Genius" badge
-- Yatra: red "yatra" logo, yatra.com in URL
-- GRNConnect: "GRNConnect" or "VISA2FLY" branding, grnconnect.com in URL — shows "Tripadvisor Rating" on hotel cards
-- TBO: tbo.com in URL or TBO logo
-- Expedia: expedia.com in URL
-- Direct: hotel's own website
-
-═══════════════════════════════════════════════
-STEP 3 — TAX LOGIC BY OTA (CRITICAL)
-═══════════════════════════════════════════════
-
-ALWAYS INCLUSIVE — trust the price shown, no adjustment needed:
-- MMT: shows "with tax" or "For X Nights with tax" — TOTAL inclusive
-- Hotels.com: shows "includes taxes & fees" — TOTAL inclusive. Currency is ALWAYS INR for in.hotels.com — set currency_original: "INR" always.
-- GRNConnect: ALWAYS inclusive — all prices shown are final per night
-- TBO: ALWAYS inclusive — all prices shown are final per night
-- Yatra on checkout: shows "Hotel Charges + Hotel GST = Total Amount" — use the Total Amount line directly
-
-TAXES SHOWN SEPARATELY — add base + tax first, THEN multiply by nights and rooms:
-- Ixigo: shows "₹9,896 + ₹2,839 taxes & fees per night, per room"
-  STEP 1: price_per_night_incl_tax = 9896 + 2839 = 12735
-  STEP 2: total_price_incl_tax = 12735 × 4 nights × 1 room = 50940
-  NEVER store just the base price (9896). Always add tax before multiplying.
-- Goibibo: shows "₹2,214 + ₹498 taxes & fees per night"
-  STEP 1: price_per_night_incl_tax = 2214 + 498 = 2712
-  STEP 2: total_price_incl_tax = 2712 × nights × rooms
-  On checkout: use the "Total Amount to be paid" line directly — do not recalculate.
-- Booking.com: shows "₹4,800 for 4 nights" + "+₹1,947 taxes and fees"
-  total_price_incl_tax = 4800 + 1947 = 6747 (already a total, do NOT multiply by nights again)
-- Yatra: shows "₹5,070 + ₹303 taxes per room per night"
-  price_per_night_incl_tax = 5070 + 303 = 5373
-  total_price_incl_tax = 5373 × nights × rooms
-
-ALWAYS PRE-TAX — taxes NOT shown on screen:
-- Agoda: ALWAYS "Per night before taxes and fees" — total_price_paid: null, agoda_pretax_warning: true. Never guess tax.
-
-PER NIGHT vs TOTAL — determine this BEFORE calculating:
-- "For X Nights & Y Room with tax" → already TOTAL, do NOT multiply (MMT)
-- "per night" / "per room per night" → multiply: price_per_night_incl_tax × nights × rooms
-- "Price for X nights" → already TOTAL, do NOT multiply (Booking.com room table)
-- Checkout pages: use the final "Total Amount" line — never recalculate from per-night
-
-MANDATORY EXTRAS (city tax, tourism fee):
-- Goibibo checkout shows "City Tax (AED 10) = ₹261 — Not included in room price" → add to total
-- GRN shows tourism dirhams fee note → flag as extra, add if amount is visible
-- Always note these in price_breakdown.mandatory_extras
-
-LONG STAY DISCOUNTS:
-- MMT sometimes shows "Long Stay Benefits: 20% off" — the displayed price already includes the discount. Use the discounted price shown.
-
-═══════════════════════════════════════════════
-STEP 4 — EXTRACTION BY DOCUMENT TYPE
-═══════════════════════════════════════════════
-
-TYPE A — confirmed_voucher:
-Extract all fields. This is a COMPLETED booking with a reference number.
-
-TYPE B — search_results:
-Extract ALL hotels visible on screen as an array. CRITICAL: If you can see 2, 3, or more hotel cards on screen, you MUST extract ALL of them — not just the first one. Each hotel card typically shows hotel name, area/location, star rating, user rating, price, and sometimes free cancellation or breakfast badges.
-Also extract search bar params.
-For each hotel extract:
-- hotel_name, area, stars, user_rating, free_cancellation, breakfast_included
-- price_per_night_incl_tax: base price + taxes per night (e.g. Ixigo: 9896+2839=12735)
-- total_price_incl_tax: price_per_night_incl_tax × nights × rooms (e.g. 12735×4×1=50940)
-- agoda_pretax_warning: true only for Agoda
-- price_note: show your calculation e.g. "(9896+2839)×4nights×1room=50940"
-
-CRITICAL FOR SEARCH RESULTS PRICE: Always apply the tax logic from STEP 3. Never return just the base price without adding taxes for Ixigo/Goibibo/Yatra/Booking.com.
-
-TYPE C — hotel_detail_top:
-Extract hotel-level info + any featured room shown.
-Get hotel_name from: page title → search bar field → breadcrumb → URL slug (parse hyphens to spaces, title-case).
-PRICE on hotel_detail_top: MMT shows "Total Price: ₹33,571" on the right panel — this is the TOTAL for all nights. Extract it as total_price_incl_tax for the featured room. Also extract the room name shown (e.g. "Superior Room Twin Bed") as the featured room type.
-Always extract the featured/highlighted room option shown on the hotel overview page — it typically shows in a panel on the right side with room name, price, and cancellation policy.
-
-TYPE D — hotel_detail_rooms:
-Extract hotel info + ALL room options visible.
-Get hotel_name from: search bar field (Goibibo keeps hotel name there) → breadcrumb → page title → URL slug.
-GRNConnect room pages: room name on left, board basis below name, cancellation policy shown in red "Non-Refundable" text, price per night on right (INCLUSIVE).
-For each room option: room_type, option_name, board_basis (RO/BB/HB/FB/AI), board_basis_label, cancellation_policy, cancellation_deadline, price_per_night_incl_tax, total_price_incl_tax, agoda_pretax_warning, price_note.
-
-TYPE E — checkout_page:
-Richest data — extract everything:
-- hotel_name, hotel_address, hotel_city, stars
-- check_in, check_out, total_nights
-- room_type, num_rooms
-- num_adults, num_children, children_ages (Agoda checkout shows "Max: 2 adults, 1 child (0-10 years)" — extract this)
-- board_basis, board_basis_label
-- cancellation_policy, cancellation_deadline, cancellation_penalty
-- price_breakdown: base, discount, taxes/GST, mandatory_extras, total
-- total_price (use "Total Amount" / "Total Amount to be paid" line)
-- payment_type: "pay_now" / "pay_at_property" / "pay_later" (Agoda shows "No payment until X date" = pay_later)
-- agoda_pretax_warning (Agoda checkout still shows pre-tax — set true)
-- booking_reference: null (not confirmed yet)
-- GRNConnect checkout (Visa2Fly): shows "Booking Confirmation" title, hotel panel on right with all details, Amount in INR — treat as checkout_page NOT confirmed_voucher (no booking ref confirmed yet). Set booking_reference to the BID from URL if visible.
-- Agoda checkout: hotel name is often NOT visible on the booking form screen (it's above the fold). If hotel name is not visible, set hotel_name: "" (empty string) — NOT "Unknown Hotel". The upload page will prompt the user to enter it manually.
-- For city on Agoda checkout: look for city name in the URL (e.g. agoda.com/en-in/book/dubai → "Dubai"), or in any breadcrumb or address text visible on screen. If not found, set hotel_city: "".
-
-TYPE F — not_hotel:
-{"document_type": "not_hotel", "reason": "brief description"}
-
-═══════════════════════════════════════════════
-STEP 5 — CAMERA PHOTO HANDLING
-═══════════════════════════════════════════════
-
-Camera photos of screens are common. Handle:
-- Angled shots: correct for perspective when reading text
-- Glare/reflections: read around glare areas
-- Partial visibility: extract what IS visible
-- Only set extraction_quality "poor" if key fields (hotel name, dates) are genuinely unreadable
-- Set extraction_quality "camera_photo" when image is clearly a photo of a screen
-- Note in price_note if price was partially obscured by glare
-
-═══════════════════════════════════════════════
-STEP 6 — HOTEL NAME FROM URL
-═══════════════════════════════════════════════
-
-If hotel name not visible on screen (common on scrolled Ixigo/Hotels.com pages):
-- Hotels.com: in.hotels.com/ho563112/hilton-garden-inn-dubai-mall-of-the-emirates → "Hilton Garden Inn Dubai Mall Of The Emirates"
-- Booking.com: booking.com/hotel/ae/burjaman-metro-premium-holiday-homes.html → "Burjaman Metro Premium Holiday Homes"
-- Agoda: agoda.com/en-in/seven-seas-hotel/hotel/dubai → "Seven Seas Hotel"
-- Ixigo: use locationName parameter or page breadcrumb
-- Goibibo: hotel name always in search bar at top
-Set hotel_name_from_url: true when using this method.
-
-═══════════════════════════════════════════════
-STEP 7 — HOTEL ADDRESS
-═══════════════════════════════════════════════
-
-For hotel_address and hotel_city:
-1. First try to read address from the screen (some OTAs show it below hotel name)
-2. If address NOT visible on screen, use your knowledge to infer it from hotel name + city:
-   - "Citymax Hotel Bur Dubai" → "Al Kuwait Street, Bur Dubai, Dubai, UAE"
-   - "Hilton Garden Inn Dubai Mall Avenue" → "22nd St, Al Barsha, Dubai, UAE"
-   - "Address Montgomerie" → "Emirates Hills, Dubai, UAE"
-   - "Atlantis The Palm" → "Crescent Road, The Palm, Dubai, UAE"
-   - "Seven Seas Hotel Dubai" → "Al Ittihad Road, Dubai International Airport, Dubai, UAE"
-   - For any well-known hotel chain (Marriott, Hilton, Hyatt, IHG, Accor, Taj, Oberoi etc.) in a major city — infer the address from your training knowledge
-   - For lesser-known hotels where you are not confident — leave hotel_address as null
-3. Always extract hotel_city from: search bar destination, breadcrumb, address text, or URL
-4. Never leave hotel_city blank if the destination is visible anywhere on screen
-
-═══════════════════════════════════════════════
-STEP 7 — CHILDREN
-═══════════════════════════════════════════════
-
-Always extract num_children and children_ages[].
-- children_ages: array of numbers, one per child. 0 = infant under 1. Max 12.
-- Booking.com search bar: "2 adults · 0 children · 1 room" — parse carefully
-- Agoda checkout: "Max: 2 adults, 1 child (0-10 years)" — num_children: 1, children_ages: [] (age not specified)
-- If children count shown but ages not: children_ages: []
-- If "0 children": num_children: 0, children_ages: []
-
-═══════════════════════════════════════════════
-STEP 8 — OUTPUT FORMAT (JSON ONLY)
-═══════════════════════════════════════════════
-
-Respond ONLY with valid JSON. No markdown. No code fences. No explanation.
-
-For confirmed_voucher and checkout_page:
-{
-  "document_type": "confirmed_voucher|checkout_page",
-  "extraction_quality": "good|partial|poor|camera_photo",
-  "ota_name": "MMT|Ixigo|Goibibo|Agoda|Hotels.com|Booking.com|Yatra|GRNConnect|TBO|Expedia|Direct|Other",
-  "hotel_name": "",
-  "hotel_name_from_url": false,
-  "hotel_address": null,
-  "hotel_city": "",
-  "stars": null,
-  "check_in": "YYYY-MM-DD",
-  "check_out": "YYYY-MM-DD",
-  "total_nights": 0,
-  "room_type": null,
-  "num_adults": 2,
-  "num_children": 0,
-  "children_ages": [],
-  "num_rooms": 1,
-  "board_basis": "RO",
-  "board_basis_label": "Room Only",
-  "rate_plan_name": null,
-  "cancellation_policy": "free|partial|non-refundable|unknown",
-  "cancellation_deadline": null,
-  "cancellation_penalty": null,
-  "payment_type": "pay_now|pay_at_property|pay_later",
-  "amount_paid_upfront": 0,
-  "total_price_paid": 0,
-  "original_price": 0,
-  "currency_original": "INR",
-  "taxes_included": true,
-  "agoda_pretax_warning": false,
-  "price_breakdown": {
-    "base_per_night": null,
-    "discount": null,
-    "taxes": null,
-    "gst": null,
-    "mandatory_extras": null,
-    "total": 0,
-    "rooms": 1,
-    "nights": 0,
-    "calculation_note": ""
-  },
-  "booking_reference": null,
-  "multi_hotel": false
-}
-
-For search_results:
-{
-  "document_type": "search_results",
-  "extraction_quality": "good|partial|poor|camera_photo",
-  "ota_name": "",
-  "destination": "",
-  "check_in": "YYYY-MM-DD",
-  "check_out": "YYYY-MM-DD",
-  "total_nights": 0,
-  "num_rooms": 1,
-  "num_adults": 2,
-  "num_children": 0,
-  "children_ages": [],
-  "hotels": [
-    {
-      "hotel_name": "",
-      "area": "",
-      "stars": null,
-      "user_rating": null,
-      "free_cancellation": null,
-      "breakfast_included": null,
-      "price_per_night_incl_tax": null,
-      "total_price_incl_tax": null,
-      "agoda_pretax_warning": false,
-      "price_note": ""
-    }
-  ]
-}
-
-For hotel_detail_top and hotel_detail_rooms:
-{
-  "document_type": "hotel_detail_top|hotel_detail_rooms",
-  "extraction_quality": "good|partial|poor|camera_photo",
-  "ota_name": "",
-  "hotel_name": "",
-  "hotel_name_from_url": false,
-  "hotel_address": null,
-  "hotel_city": "",
-  "stars": null,
-  "user_rating": null,
-  "check_in": "YYYY-MM-DD",
-  "check_out": "YYYY-MM-DD",
-  "total_nights": 0,
-  "num_rooms": 1,
-  "num_adults": 2,
-  "num_children": 0,
-  "children_ages": [],
-  "room_options": [
-    {
-      "room_type": "",
-      "option_name": "",
-      "board_basis": "RO",
-      "board_basis_label": "Room Only",
-      "cancellation_policy": "free|partial|non-refundable|unknown",
-      "cancellation_deadline": null,
-      "price_per_night_incl_tax": null,
-      "total_price_incl_tax": null,
-      "tax_per_night": null,
-      "agoda_pretax_warning": false,
-      "price_note": ""
-    }
-  ]
-}
-
-For not_hotel:
-{"document_type": "not_hotel", "reason": ""}
-`
-
-function buildClaudeContent(base64Data, mimeType) {
-  if (mimeType === 'application/pdf') {
-    return [
-      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Data } },
-      { type: 'text', text: EXTRACTION_PROMPT }
-    ]
-  }
-  return [
-    { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Data } },
-    { type: 'text', text: EXTRACTION_PROMPT }
-  ]
-}
-
-function applyCurrencyConversion(extracted) {
-  const currency = extracted.currency_original || 'INR'
-  const rate = RATES_TO_INR[currency] || 1
-  if (currency === 'INR' || rate === 1) return
-  if (extracted.original_price)       extracted.original_price       = Math.round(extracted.original_price * rate)
-  if (extracted.total_price_paid)     extracted.total_price_paid     = Math.round(extracted.total_price_paid * rate)
-  if (extracted.amount_paid_upfront)  extracted.amount_paid_upfront  = Math.round(extracted.amount_paid_upfront * rate)
-  if (extracted.cancellation_penalty) extracted.cancellation_penalty = Math.round(extracted.cancellation_penalty * rate)
-  if (extracted.price_breakdown) {
-    const pb = extracted.price_breakdown
-    if (pb.base_per_night)     pb.base_per_night     = Math.round(pb.base_per_night * rate)
-    if (pb.taxes)              pb.taxes              = Math.round(pb.taxes * rate)
-    if (pb.gst)                pb.gst                = Math.round(pb.gst * rate)
-    if (pb.mandatory_extras)   pb.mandatory_extras   = Math.round(pb.mandatory_extras * rate)
-    if (pb.total)              pb.total              = Math.round(pb.total * rate)
-  }
-}
-
-function calculateMissingFields(extracted) {
-  if (!extracted.total_nights && extracted.check_in && extracted.check_out) {
-    extracted.total_nights = Math.round(
-      (new Date(extracted.check_out) - new Date(extracted.check_in)) / 86400000
-    )
-  }
-  if (extracted.total_price_paid && extracted.total_nights > 0) {
-    extracted.price_per_night = Math.round(
-      extracted.total_price_paid / (extracted.total_nights * (extracted.num_rooms || 1))
-    )
-  }
-  if (extracted.payment_type === 'pay_at_property') {
-    extracted.total_price_paid = extracted.amount_paid_upfront || 0
-  }
-}
-
-// ── POST /api/voucher/extract ─────────────────────────────────────────────────
-router.post('/extract', upload.single('voucher'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
-
-    const base64Data = req.file.buffer.toString('base64')
-    const mimeType   = req.file.mimetype
-
-    const response = await axios.post(
-      'https://api.anthropic.com/v1/messages',
-      {
-        model:      'claude-sonnet-4-5',
-        max_tokens: 2000,
-        messages:   [{ role: 'user', content: buildClaudeContent(base64Data, mimeType) }]
-      },
-      {
-        headers: {
-          'x-api-key':         process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'content-type':      'application/json'
-        },
-        timeout: 30000
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        const meta = data.user.user_metadata;
+        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member", email: data.user.email || "" });
       }
-    )
+    });
+  }, []);
 
-    const rawText   = response.data.content[0].text.trim()
-    const clean     = rawText.replace(/```json|```/g, '').trim()
-    const extracted = JSON.parse(clean)
-    const docType   = extracted.document_type
+  useEffect(() => {
+    if (modalOpen) { document.body.style.overflow = 'hidden'; }
+    else { document.body.style.overflow = ''; }
+    return () => { document.body.style.overflow = ''; };
+  }, [modalOpen]);
 
-    // ── NOT A HOTEL ───────────────────────────────────────────────────────────
-    if (docType === 'not_hotel') {
-      console.log(`❌ Not hotel: ${extracted.reason}`)
-      return res.json({
-        success: false, blocked: true, blockReason: 'not_hotel',
-        reason: extracted.reason,
-        message: 'This does not appear to be a hotel booking or search page.'
-      })
-    }
+  const [statValues, setStatValues] = useState(STATS.map(s => ({ prefix: s.prefix, suffix: s.suffix, val: s.target })));
+  const statsRef = useRef<HTMLDivElement>(null);
+  const statsAnimated = useRef(false);
 
-    // ── POOR QUALITY ──────────────────────────────────────────────────────────
-    if (extracted.extraction_quality === 'poor') {
-      return res.json({
-        success: false, blocked: true, blockReason: 'poor_quality',
-        message: "We couldn't read your document clearly. Please upload a clearer image or PDF.",
-        canManualEntry: true
-      })
-    }
+  const CARD_WIDTH = isMobile ? 200 : 256;
+  const VISIBLE = isMobile ? 2 : 4;
+  const MAX_POS = CARDS.length - VISIBLE;
 
-    // ── SEARCH RESULTS ────────────────────────────────────────────────────────
-    if (docType === 'search_results') {
-      console.log(`🔍 Search results: ${extracted.ota_name} | ${extracted.destination} | ${extracted.hotels?.length} hotels`)
-      return res.json({
-        success: true,
-        documentType: 'search_results',
-        data: extracted,
-        requiresHotelSelection: true,
-        message: `Found ${extracted.hotels?.length || 0} hotels — select the one you want to monitor.`
-      })
-    }
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const f = acceptedFiles[0];
+    if (f) { setFile(f); setDragActive(false); }
+  }, []);
 
-    // ── HOTEL DETAIL (TOP OR ROOMS) ───────────────────────────────────────────
-    if (docType === 'hotel_detail_top' || docType === 'hotel_detail_rooms') {
-      const hasRooms = extracted.room_options?.length > 0
-      console.log(`🏨 Hotel detail: ${extracted.hotel_name} | ${extracted.room_options?.length || 0} room options`)
-      return res.json({
-        success: true,
-        documentType: docType,
-        data: extracted,
-        requiresRoomSelection: hasRooms,
-        message: hasRooms
-          ? `Found ${extracted.room_options.length} room option(s) — select the one you want to monitor.`
-          : `Hotel page detected. Scroll to the rooms section and upload again, or enter room details manually.`
-      })
-    }
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop,
+    onDragEnter: () => setDragActive(true),
+    onDragLeave: () => setDragActive(false),
+    accept: { 'application/pdf': ['.pdf'], 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
+    maxFiles: 1, maxSize: 10 * 1024 * 1024,
+  });
 
-    // ── CHECKOUT PAGE ─────────────────────────────────────────────────────────
-    if (docType === 'checkout_page') {
-      applyCurrencyConversion(extracted)
-      calculateMissingFields(extracted)
-      console.log(`💳 Checkout: ${extracted.hotel_name} | ${extracted.ota_name} | ₹${extracted.total_price_paid}`)
-      return res.json({
-        success: true,
-        documentType: 'checkout_page',
-        data: extracted,
-        agodaPretaxWarning: extracted.agoda_pretax_warning === true,
-        message: extracted.agoda_pretax_warning
-          ? "Agoda shows prices before taxes. Please enter the total amount you'll pay after taxes."
-          : 'Checkout page detected — please confirm details and we\'ll start monitoring once you complete your booking.'
-      })
-    }
+  const openModal = () => {
+    setModalOpen(true); setUploadStep(1); setFile(null); setExtracted(null);
+    setPhone(''); setEmailVal(''); setSubmitError(''); setBlockInfo(null); setWarnings({}); setLoading(false);
+    setExtractResult(null); setSelectedHotelIdx(null); setSelectedRoomIdx(null);
+  };
 
-    // ── CONFIRMED VOUCHER ─────────────────────────────────────────────────────
-    if (docType === 'confirmed_voucher') {
-      applyCurrencyConversion(extracted)
-      calculateMissingFields(extracted)
+  const closeModal = () => { setModalOpen(false); };
 
-      // Check-in already passed
-      if (extracted.check_in) {
-        const today = new Date(); today.setHours(0,0,0,0)
-        const daysUntil = Math.round((new Date(extracted.check_in) - today) / 86400000)
-        if (daysUntil < 0) {
-          return res.json({
-            success: false, blocked: true, blockReason: 'checkin_passed',
-            message: `Check-in date (${extracted.check_in}) has already passed. Nothing to monitor.`,
-            data: extracted
-          })
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !statsAnimated.current) {
+        statsAnimated.current = true;
+        STATS.forEach((s, i) => {
+          let start: number | null = null;
+          const duration = 1400;
+          const step = (ts: number) => {
+            if (!start) start = ts;
+            const progress = Math.min((ts - start) / duration, 1);
+            const val = Math.floor(progress * s.target);
+            setStatValues(prev => { const next = [...prev]; next[i] = { prefix: s.prefix, suffix: s.suffix, val }; return next; });
+            if (progress < 1) requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+        });
+        observer.disconnect();
+      }
+    }, { threshold: 0.3 });
+    if (statsRef.current) observer.observe(statsRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  const scrollCarousel = (dir: number) => setCarouselPos(prev => Math.max(0, Math.min(MAX_POS, prev + dir)));
+
+  async function doScan() {
+    if (!file) return;
+    setScanning(true);
+    const msgs = ['Reading your voucher…', 'Identifying hotel & dates…', 'Extracting pricing…', 'Checking cancellation policy…', 'Almost done…'];
+    let i = 0; setScanMsg(msgs[0]);
+    const interval = setInterval(() => { i++; if (i < msgs.length) setScanMsg(msgs[i]); }, 900);
+    try {
+      const formData = new FormData();
+      formData.append('voucher', file);
+      const res = await fetch('https://hoteldrops-production-7e5a.up.railway.app/api/voucher/extract', {
+        method: 'POST', body: formData,
+      });
+      const json = await res.json();
+      clearInterval(interval);
+      setScanning(false);
+
+      // NOT A HOTEL / POOR QUALITY / PARSE ERROR
+      if (!json.success && json.blocked) {
+        setBlockInfo({ reason: json.blockReason, message: json.message });
+        if (json.data) setExtracted({ ...emptyExtracted(), ...json.data });
+        else setExtracted(emptyExtracted());
+        setUploadStep('blocked');
+        return;
+      }
+
+      const docType = json.documentType;
+
+      // SEARCH RESULTS — show picker only if multiple hotels
+      if (docType === 'search_results') {
+        setExtractResult(json);
+        const hotels = json.data?.hotels;
+        if (hotels?.length > 1) {
+          setUploadStep('hotel_pick');
+        } else if (hotels?.length === 1) {
+          // Only 1 hotel — skip picker, go straight to confirm
+          const h = hotels[0];
+          const s = json.data;
+          setExtracted({ ...emptyExtracted(),
+            hotel_name: h.hotel_name || '',
+            hotel_city: s.destination || '',
+            check_in: s.check_in || '',
+            check_out: s.check_out || '',
+            num_adults: s.num_adults || 2,
+            num_rooms: s.num_rooms || 1,
+            ota_name: s.ota_name || '',
+            total_price_paid: h.total_price_incl_tax || h.price_per_night_incl_tax || 0,
+          });
+          setWarnings({});
+          setUploadStep(2);
         }
-        if (daysUntil <= 1) { extracted._warning = 'checkin_soon'; extracted._warningDays = daysUntil }
+        return;
       }
 
-      const isNonRefundable = extracted.cancellation_policy === 'non-refundable'
-      console.log(`✅ Voucher: ${extracted.hotel_name} | ${extracted.ota_name} | ${extracted.cancellation_policy} | ₹${extracted.total_price_paid}`)
-
-      return res.json({
-        success: true,
-        documentType: 'confirmed_voucher',
-        data: extracted,
-        blocked: isNonRefundable,
-        blockReason: isNonRefundable ? 'non_refundable' : null,
-        agodaPretaxWarning: extracted.agoda_pretax_warning === true,
-        warnings: {
-          partialExtraction: extracted.extraction_quality === 'partial',
-          cameraPhoto:       extracted.extraction_quality === 'camera_photo',
-          multiHotel:        extracted.multi_hotel === true,
-          checkInSoon:       extracted._warning === 'checkin_soon',
-          checkInSoonDays:   extracted._warningDays || null,
-          payAtProperty:     extracted.payment_type === 'pay_at_property',
-          unknownPolicy:     extracted.cancellation_policy === 'unknown',
-          agodaPretax:       extracted.agoda_pretax_warning === true,
-          currencyConverted: (extracted.currency_original || 'INR') !== 'INR',
-          originalCurrency:  (extracted.currency_original || 'INR') !== 'INR' ? extracted.currency_original : null,
+      // HOTEL DETAIL — show room picker only if multiple rooms
+      if (docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top') {
+        setExtractResult(json);
+        const rooms = json.data?.room_options;
+        if (rooms?.length > 1) {
+          // Multiple rooms — show picker
+          setUploadStep('room_pick');
+        } else if (rooms?.length === 1) {
+          // Only 1 room — skip picker, prefill and go straight to confirm
+          const d = json.data;
+          const room = rooms[0];
+          setExtracted({ ...emptyExtracted(),
+            hotel_name: d.hotel_name || '',
+            hotel_city: d.hotel_city || '',
+            check_in: d.check_in || '',
+            check_out: d.check_out || '',
+            num_adults: d.num_adults || 2,
+            num_rooms: d.num_rooms || 1,
+            ota_name: d.ota_name || '',
+            room_type: room.room_type || '',
+            board_basis: room.board_basis || 'RO',
+            board_basis_label: room.board_basis_label || 'Room Only',
+            cancellation_policy: room.cancellation_policy || 'unknown',
+            cancellation_deadline: room.cancellation_deadline || '',
+            total_price_paid: room.total_price_incl_tax || 0,
+          });
+          setWarnings(json.warnings || {});
+          setUploadStep(2);
+        } else {
+          // No rooms extracted — prefill hotel data and go to confirm
+          setExtracted({ ...emptyExtracted(), ...json.data });
+          setWarnings(json.warnings || {});
+          setUploadStep(2);
         }
-      })
-    }
-
-    return res.json({ success: false, blocked: true, blockReason: 'unknown_type', message: 'Unrecognised document type.' })
-
-  } catch (err) {
-    console.error('❌ Extract error:', err.message)
-    if (err instanceof SyntaxError) {
-      return res.json({
-        success: false, blocked: true, blockReason: 'parse_error',
-        message: "Couldn't read the details. Please try a clearer image or PDF.",
-        canManualEntry: true
-      })
-    }
-    res.status(500).json({ error: 'Failed to extract details', details: err.message })
-  }
-})
-
-// ── POST /api/voucher/submit ──────────────────────────────────────────────────
-router.post('/submit', async (req, res) => {
-  try {
-    const data  = req.body
-    const phone = data.phone || data.whatsapp
-    if (!phone) return res.status(400).json({ error: 'Phone number required' })
-
-    // Block non-refundable confirmed bookings
-    if (data.cancellation_policy === 'non-refundable' && data.documentType === 'confirmed_voucher') {
-      await supabase.from('bookings').insert(buildBookingRow(data, 'non-refundable'))
-      await sendNonRefundableWhatsApp(phone, data)
-      if (email && data.email) {
-        email.nonRefundable?.(data.email, { name: data.email.split('@')[0], booking: { hotelName: data.hotel_name, checkinDate: data.check_in } })
-          .catch(e => console.error('Email failed:', e.message))
+        return;
       }
-      return res.json({
-        success: false, blocked: true, reason: 'non_refundable',
-        message: 'This booking is non-refundable. Customer notified via WhatsApp.',
-      })
-    }
 
-    // Check-in passed
-    if (data.check_in) {
-      const today = new Date(); today.setHours(0,0,0,0)
-      if (Math.round((new Date(data.check_in) - today) / 86400000) < 0) {
-        return res.status(400).json({ error: 'Check-in date has already passed.' })
+      // CHECKOUT PAGE — treat like confirmed voucher
+      if (docType === 'checkout_page') {
+        const data = json.data;
+        setExtracted({ ...emptyExtracted(), ...data });
+        setWarnings(json.warnings || {});
+        setUploadStep(2);
+        return;
       }
-    }
 
-    // Duplicate check (only for confirmed vouchers)
-    if (data.documentType === 'confirmed_voucher') {
-      const { data: existing } = await supabase
-        .from('bookings').select('id')
-        .eq('phone', phone).eq('hotel_name', data.hotel_name).eq('check_in', data.check_in)
-        .single()
-      if (existing) {
-        await sendDuplicateWhatsApp(phone, data)
-        return res.json({ success: false, blocked: false, reason: 'duplicate', message: 'Already tracking this booking.', booking_id: existing.id })
+      // CONFIRMED VOUCHER
+      const data = json.data;
+      if (!data) {
+        setBlockInfo({ reason: 'parse_error', message: json.message || 'Could not read voucher.' });
+        setExtracted(emptyExtracted());
+        setUploadStep('blocked');
+        return;
       }
-    }
+      setExtracted({ ...emptyExtracted(), ...data });
+      setWarnings(json.warnings || {});
 
-    // Unknown policy warning (confirmed vouchers only)
-    if (data.cancellation_policy === 'unknown' && data.documentType === 'confirmed_voucher') {
-      await sendUnknownPolicyWhatsApp(phone, data)
-    }
-
-    // Check-in soon warning
-    if (data.check_in) {
-      const today = new Date(); today.setHours(0,0,0,0)
-      const daysUntil = Math.round((new Date(data.check_in) - today) / 86400000)
-      if (daysUntil <= 1) {
-        const { data: booking, error } = await supabase.from('bookings').insert(buildBookingRow(data, 'tracking')).select().single()
-        if (error) throw error
-        await sendCheckInSoonWhatsApp(phone, data, daysUntil)
-        if (email && booking.email) email.bookingReceived?.(booking.email, buildEmailPayload(booking)).catch(e => console.error('Email failed:', e.message))
-        return res.json({ success: true, booking_id: booking.id, warning: 'checkin_soon' })
+      if (json.blocked && json.blockReason === 'non_refundable') {
+        setBlockInfo({ reason: 'non_refundable' });
+        setUploadStep('blocked');
+        return;
       }
-    }
+      if (json.blockReason === 'checkin_passed') {
+        setBlockInfo({ reason: 'checkin_passed', message: json.message });
+        setUploadStep('blocked');
+        return;
+      }
 
-    // Save and track
-    const { data: booking, error } = await supabase.from('bookings').insert(buildBookingRow(data, 'tracking')).select().single()
-    if (error) throw error
+      setUploadStep(2);
 
-    sendTrackingStartedWhatsApp(phone, booking).catch(e => console.error('WhatsApp failed:', e.message))
-    if (email && booking.email) email.bookingReceived?.(booking.email, buildEmailPayload(booking)).catch(e => console.error('Email failed:', e.message))
-
-    res.json({ success: true, booking_id: booking.id })
-
-  } catch (err) {
-    console.error('❌ Submit error:', err.message)
-    res.status(500).json({ error: err.message })
-  }
-})
-
-function buildBookingRow(data, status) {
-  const nights = data.total_nights ||
-    (data.check_in && data.check_out ? Math.round((new Date(data.check_out) - new Date(data.check_in)) / 86400000) : 1)
-  const totalPaid = data.total_price_paid || data.original_price || 0
-  const perNight  = data.price_per_night || (totalPaid && nights > 0 ? Math.round(totalPaid / (nights * (data.num_rooms || 1))) : 0)
-  return {
-    phone:                 data.phone || data.whatsapp,
-    email:                 data.email || null,
-    hotel_name:            data.hotel_name,
-    hotel_city:            data.hotel_city,
-    check_in:              data.check_in,
-    check_out:             data.check_out,
-    total_nights:          nights,
-    room_type:             data.room_type            || null,
-    num_adults:            data.num_adults            || 2,
-    num_children:          data.num_children          || 0,
-    children_ages:         data.children_ages         || [],
-    num_rooms:             data.num_rooms             || 1,
-    board_basis:           data.board_basis           || null,
-    board_basis_label:     data.board_basis_label     || null,
-    rate_plan_name:        data.rate_plan_name        || null,
-    original_price:        data.original_price        || totalPaid,
-    total_price_paid:      totalPaid,
-    price_per_night:       perNight,
-    currency:              'INR',
-    taxes_included:        data.taxes_included ?? true,
-    price_breakdown:       data.price_breakdown       || null,
-    ota_name:              data.ota_name              || null,
-    booking_reference:     data.booking_reference     || null,
-    cancellation_policy:   data.cancellation_policy   || 'unknown',
-    cancellation_deadline: data.cancellation_deadline || null,
-    cancellation_penalty:  data.cancellation_penalty  || null,
-    document_type:         data.documentType          || 'confirmed_voucher',
-    status,
-    tracking_active:       status === 'tracking',
-    next_check_at:         status === 'tracking' ? new Date().toISOString() : null,
-  }
-}
-
-function buildEmailPayload(booking) {
-  return {
-    name: booking.email?.split('@')[0] || 'there',
-    booking: {
-      hotelName:    booking.hotel_name,
-      city:         booking.hotel_city,
-      checkinDate:  booking.check_in,
-      checkoutDate: booking.check_out,
-      nights:       booking.total_nights,
-      roomType:     booking.room_type,
-      adults:       booking.num_adults,
-      children:     booking.children_ages || [],
-      amountPaid:   booking.total_price_paid,
-      currency:     'INR',
-      otaName:      booking.ota_name,
-      bookingRef:   booking.booking_reference,
+    } catch {
+      clearInterval(interval);
+      setScanning(false);
+      setExtracted(emptyExtracted());
+      setWarnings({});
+      setBlockInfo({ reason: 'network_error', message: 'Could not reach the server. Please enter your booking details manually.' });
+      setUploadStep('blocked');
     }
   }
+
+  async function submitBooking() {
+    setSubmitError('');
+    if (!phone || phone.length < 10)  { setSubmitError('Please enter a valid 10-digit WhatsApp number'); return; }
+    if (!emailVal)                     { setSubmitError('Please enter your email'); return; }
+    if (!extracted?.hotel_name)        { setSubmitError('Please enter the hotel name'); return; }
+    if (!extracted?.check_in)         { setSubmitError('Please enter check-in date'); return; }
+    if (!extracted?.check_out)        { setSubmitError('Please enter check-out date'); return; }
+    if (!extracted?.total_price_paid) { setSubmitError('Please enter the total price you paid'); return; }
+    if (extracted?.cancellation_policy === 'non-refundable') {
+      setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('https://hoteldrops-production-7e5a.up.railway.app/api/voucher/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...extracted, phone: phone.startsWith('+') ? phone : `+91${phone}`, email: emailVal }),
+      });
+      const json = await res.json();
+      if (json.blocked && json.reason === 'non_refundable') {
+        setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return;
+      }
+      if (json.reason === 'duplicate') {
+        setBlockInfo({ reason: 'duplicate', message: json.message }); setUploadStep('blocked'); return;
+      }
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to submit');
+      sessionStorage.setItem('rebuq_booking', JSON.stringify({ extracted, bookingId: json.booking_id }));
+      closeModal();
+      router.push('/confirmed');
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 16, lineHeight: 1.6, WebkitFontSmoothing: "antialiased", overflowX: "hidden", maxWidth: "100vw" }}>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+      <style>{`
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        .sora { font-family: 'Sora', sans-serif; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes slideUp { from { opacity:0; transform: translateY(24px); } to { opacity:1; transform: translateY(0); } }
+        .hotel-card-img { transition: transform 0.3s ease; }
+        .hotel-card:hover .hotel-card-img { transform: scale(1.04); }
+        input:focus, select:focus { border-color: ${B} !important; box-shadow: 0 0 0 3px rgba(20,71,184,0.08); }
+      `}</style>
+
+      {(scanning || redirecting) && (
+        <div style={{ position: 'fixed', inset: 0, background: B, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
+          <div style={{ width: 52, height: 52, border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <div className="sora" style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>{redirecting ? 'Opening hotel picker…' : scanMsg}</div>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>{redirecting ? 'Just a moment' : 'Our AI is reading your booking details'}</div>
+        </div>
+      )}
+
+      {modalOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', animation: 'fadeIn 0.2s ease' }}>
+          <div onClick={closeModal} style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)' }} />
+          <div style={{ position: 'relative', zIndex: 1, background: '#fff', borderRadius: isMobile ? '16px 16px 0 0' : 16, width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto', marginTop: isMobile ? 'auto' : 60, animation: 'slideUp 0.25s ease', boxShadow: '0 32px 80px rgba(0,0,0,0.3)', ...(isMobile ? { position: 'fixed' as const, bottom: 0, left: 0, right: 0, marginTop: 0, borderRadius: '20px 20px 0 0', maxHeight: '92vh' } : {}) }}>
+
+            <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky' as const, top: 0, background: '#fff', zIndex: 10, borderRadius: isMobile ? '20px 20px 0 0' : '16px 16px 0 0' }}>
+              <div>
+                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 17, fontWeight: 700, color: NAVY }}>
+                  {uploadStep === 1 ? '📎 Upload your voucher' : uploadStep === 2 ? '✏️ Confirm booking details' : uploadStep === 'hotel_pick' ? '🏨 Select a hotel' : uploadStep === 'room_pick' ? '🛏️ Select a room' :
+                    blockInfo?.reason === 'non_refundable' ? '🔒 Non-refundable booking' :
+                    blockInfo?.reason === 'not_hotel' ? '📄 Not a hotel booking' :
+                    blockInfo?.reason === 'poor_quality' || blockInfo?.reason === 'parse_error' ? '🔍 Could not read voucher' :
+                    blockInfo?.reason === 'checkin_passed' ? '📅 Check-in already passed' :
+                    blockInfo?.reason === 'duplicate' ? '✅ Already tracking' :
+                    blockInfo?.reason === 'network_error' ? '⚠️ Connection issue' :
+                    '⚠️ We need your attention'}
+                </div>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+                  {uploadStep === 1 ? 'Free price check — 30 seconds' : uploadStep === 2 ? 'Review and correct anything that looks wrong' : ''}
+                </div>
+              </div>
+              <button onClick={closeModal} style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#64748b', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
+            </div>
+
+            {uploadStep !== 'blocked' && uploadStep !== 'hotel_pick' && uploadStep !== 'room_pick' && (
+              <div style={{ padding: '12px 24px', background: '#f8fafc', display: 'flex', alignItems: 'center', gap: 8 }}>
+                {[{ n: uploadStep === 2 ? '✓' : '1', label: 'Upload', done: uploadStep === 2 }, { n: '2', label: 'Confirm', active: uploadStep === 2 }].map((s, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: s.done ? '#16a34a' : s.active ? B : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: s.done || s.active ? '#fff' : '#94a3b8' }}>{s.n}</div>
+                      <span style={{ fontSize: 12, color: s.done ? '#16a34a' : s.active ? B : '#94a3b8', fontWeight: s.active || s.done ? 600 : 400 }}>{s.label}</span>
+                    </div>
+                    {i < 1 && <div style={{ width: 24, height: 1, background: '#e2e8f0' }} />}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {uploadStep === 1 && (
+              <div style={{ padding: '24px' }}>
+                {isMobile ? (
+                  /* ── MOBILE: two tap buttons only, no drag zone ── */
+                  <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: file ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${file ? '#86efac' : '#e2e8f0'}`, borderRadius: 14, padding: '24px 12px', cursor: 'pointer', minHeight: 110 }}>
+                        <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onDrop([f]); }} />
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Upload file</div><div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>PDF or screenshot</div></div>
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: '24px 12px', cursor: 'pointer', minHeight: 110 }}>
+                        <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onDrop([f]); }} />
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Take photo</div><div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Use camera</div></div>
+                      </label>
+                    </div>
+                    {file && (
+                      <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>✓ {file.name}</span>
+                        <button onClick={() => setFile(null)} style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Remove</button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* ── DESKTOP: drag & drop zone ── */
+                  <div {...getRootProps()} style={{ border: `2px dashed ${dragActive ? B : file ? '#86efac' : '#bfdbfe'}`, borderRadius: 14, padding: '32px 20px', textAlign: 'center' as const, cursor: 'pointer', background: dragActive ? '#eff6ff' : file ? '#f0fdf4' : '#f8fbff', transition: 'all 0.2s', marginBottom: 16 }}>
+                    <input {...getInputProps()} ref={fileInputRef} style={{ display: 'none' }} />
+                    {file ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 48, height: 48, background: '#dcfce7', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#166534' }}>{file.name}</div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>{(file.size / 1024).toFixed(0)} KB</div>
+                        <button onClick={e => { e.stopPropagation(); setFile(null); }} style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Remove</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 48, height: 48, background: '#dbeafe', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        </div>
+                        <div><div style={{ fontSize: 15, fontWeight: 600, color: NAVY, marginBottom: 4 }}>Drag & drop your booking</div><div style={{ fontSize: 13, color: '#64748b' }}>PDF, screenshot or email</div></div>
+                        <button onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }} style={{ background: B, color: '#fff', fontSize: 14, fontWeight: 600, padding: '10px 24px', borderRadius: 8, cursor: 'pointer', border: 'none', fontFamily: 'inherit' }}>Browse file</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div style={{ textAlign: 'center' as const, fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+                  No voucher?{' '}
+                  <button onClick={() => { setExtracted(emptyExtracted()); setUploadStep(2); }} style={{ color: B, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>Enter details manually →</button>
+                </div>
+                <button onClick={doScan} disabled={!file} style={{ width: '100%', background: file ? NAVY : '#e2e8f0', color: file ? '#fff' : '#94a3b8', border: 'none', borderRadius: 10, padding: 14, fontSize: 15, fontWeight: 700, fontFamily: 'inherit', cursor: file ? 'pointer' : 'not-allowed', marginBottom: 12, transition: 'all 0.2s' }}>
+                  Scan my voucher →
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' as const }}>
+                  {['Booking.com', 'Agoda', 'MakeMyTrip', 'Expedia', 'Direct'].map(t => (
+                    <span key={t} style={{ fontSize: 11, color: '#94a3b8' }}>{t}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── HOTEL PICKER STEP ── */}
+            {uploadStep === 'hotel_pick' && extractResult?.data?.hotels && (
+              <div style={{ padding: '24px' }}>
+                <button onClick={() => setUploadStep(1)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>← Back</button>
+                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 6 }}>Which hotel do you want to track?</div>
+                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>We found {extractResult.data.hotels.length} hotels in your screenshot.</div>
+                {extractResult.data.check_in && (
+                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 12px', marginBottom: 16, fontSize: 12, color: B }}>
+                    📅 {new Date(extractResult.data.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} → {new Date(extractResult.data.check_out + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {extractResult.data.num_adults} Adults · {extractResult.data.num_rooms} Room
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                  {extractResult.data.hotels.map((hotel: any, idx: number) => (
+                    <button key={idx} onClick={() => {
+                      setSelectedHotelIdx(idx);
+                      const h = extractResult.data.hotels[idx];
+                      const s = extractResult.data;
+                      setExtracted({ ...emptyExtracted(),
+                        hotel_name: h.hotel_name || '',
+                        hotel_city: s.destination || '',
+                        check_in: s.check_in || '',
+                        check_out: s.check_out || '',
+                        num_adults: s.num_adults || 2,
+                        num_rooms: s.num_rooms || 1,
+                        ota_name: s.ota_name || '',
+                        total_price_paid: h.total_price_incl_tax || h.price_per_night_incl_tax || 0,
+                      });
+                      setWarnings({});
+                      setUploadStep(2);
+                    }} style={{ background: selectedHotelIdx === idx ? '#eff6ff' : '#f8fafc', border: `1.5px solid ${selectedHotelIdx === idx ? B : '#e2e8f0'}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const, transition: 'all 0.15s' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{hotel.hotel_name}</div>
+                          <div style={{ fontSize: 12, color: '#64748b' }}>
+                            {hotel.area && `📍 ${hotel.area}`}
+                            {hotel.stars ? ` · ${'★'.repeat(Math.min(hotel.stars, 5))}` : ''}
+                          </div>
+                          {hotel.free_cancellation && <span style={{ display: 'inline-block', marginTop: 6, background: '#f0fdf4', color: '#16a34a', fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>✓ Free cancel</span>}
+                        </div>
+                        <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
+                          {hotel.price_per_night_incl_tax ? <><div style={{ fontSize: 16, fontWeight: 800, color: NAVY }}>₹{Math.round(hotel.price_per_night_incl_tax).toLocaleString('en-IN')}</div><div style={{ fontSize: 10, color: '#94a3b8' }}>/ night</div></> : <div style={{ fontSize: 11, color: '#94a3b8' }}>Price n/a</div>}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── ROOM PICKER STEP ── */}
+            {uploadStep === 'room_pick' && extractResult?.data?.room_options && (
+              <div style={{ padding: '24px' }}>
+                <button onClick={() => setUploadStep(1)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>← Back</button>
+                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{extractResult.data.hotel_name || 'Select a room'}</div>
+                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+                  {extractResult.data.check_in && `${new Date(extractResult.data.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} → ${new Date(extractResult.data.check_out + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · `}
+                  Which room do you want to track?
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                  {extractResult.data.room_options.map((room: any, idx: number) => (
+                    <button key={idx} onClick={() => {
+                      setSelectedRoomIdx(idx);
+                      const d = extractResult.data;
+                      setExtracted({ ...emptyExtracted(),
+                        hotel_name: d.hotel_name || '',
+                        hotel_city: d.hotel_city || '',
+                        check_in: d.check_in || '',
+                        check_out: d.check_out || '',
+                        num_adults: d.num_adults || 2,
+                        num_rooms: d.num_rooms || 1,
+                        ota_name: d.ota_name || '',
+                        room_type: room.room_type || '',
+                        board_basis: room.board_basis || 'RO',
+                        board_basis_label: room.board_basis_label || 'Room Only',
+                        cancellation_policy: room.cancellation_policy || 'unknown',
+                        cancellation_deadline: room.cancellation_deadline || '',
+                        total_price_paid: room.total_price_incl_tax || 0,
+                      });
+                      setWarnings({});
+                      setUploadStep(2);
+                    }} style={{ background: selectedRoomIdx === idx ? '#eff6ff' : '#f8fafc', border: `1.5px solid ${selectedRoomIdx === idx ? B : '#e2e8f0'}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const, transition: 'all 0.15s' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{room.room_type}</div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{room.option_name || room.board_basis_label}</div>
+                          <span style={{ display: 'inline-block', background: room.cancellation_policy === 'free' ? '#f0fdf4' : room.cancellation_policy === 'non-refundable' ? '#fef2f2' : '#fffbeb', color: room.cancellation_policy === 'free' ? '#16a34a' : room.cancellation_policy === 'non-refundable' ? '#dc2626' : '#d97706', fontSize: 11, padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>
+                            {room.cancellation_policy === 'free' ? '✓ Free cancel' : room.cancellation_policy === 'non-refundable' ? '✗ Non-refundable' : `⚠️ ${room.cancellation_policy || 'Unknown policy'}`}
+                          </span>
+                        </div>
+                        <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
+                          {room.price_per_night_incl_tax ? <><div style={{ fontSize: 16, fontWeight: 800, color: NAVY }}>₹{Math.round(room.price_per_night_incl_tax).toLocaleString('en-IN')}</div><div style={{ fontSize: 10, color: '#94a3b8' }}>/ night</div></> : <div style={{ fontSize: 11, color: '#94a3b8' }}>Enter price manually</div>}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+                        {uploadStep === 'blocked' && (
+              <div style={{ padding: '24px' }}>
+                {blockInfo?.reason === 'non_refundable' && (
+                  <div>
+                    <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                      <div style={{ fontSize: 28, marginBottom: 12 }}>🔒</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#dc2626', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>This booking is non-refundable.</div>
+                      <p style={{ fontSize: 13, color: '#b91c1c', lineHeight: 1.7 }}>Even if the price drops, you cannot cancel to rebook and save. rebuq works best with flexible rates. Next time, book a cancellable rate — rebuq regularly finds drops of Rs.10,000–Rs.40,000.</p>
+                    </div>
+                    <button onClick={() => { setUploadStep(1); setFile(null); setExtracted(null); setBlockInfo(null); }} style={{ width: '100%', background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Try a different booking</button>
+                  </div>
+                )}
+                {blockInfo?.reason === 'not_hotel' && (
+                  <div>
+                    <div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                      <div style={{ fontSize: 28, marginBottom: 12 }}>📄</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>This does not look like a hotel booking.</div>
+                      <p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>Please upload a hotel booking confirmation — not a flight ticket, train ticket, restaurant receipt, or other document.</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => { setUploadStep(1); setFile(null); setBlockInfo(null); }} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Upload a hotel voucher</button>
+                      <button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }} style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
+                    </div>
+                  </div>
+                )}
+                {(blockInfo?.reason === 'poor_quality' || blockInfo?.reason === 'parse_error') && (
+                  <div>
+                    <div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                      <div style={{ fontSize: 28, marginBottom: 12 }}>🔍</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#0369a1', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>We could not read your voucher clearly.</div>
+                      <p style={{ fontSize: 13, color: '#0c4a6e', lineHeight: 1.7 }}>This happens with blurry screenshots, dark mode images, or password-protected PDFs.</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => { setUploadStep(1); setFile(null); setBlockInfo(null); }} style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
+                      <button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
+                    </div>
+                  </div>
+                )}
+                {blockInfo?.reason === 'checkin_passed' && (
+                  <div>
+                    <div style={{ background: '#f1f5f9', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                      <div style={{ fontSize: 28, marginBottom: 12 }}>📅</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>Check-in date has already passed.</div>
+                      <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7 }}>Your stay has already started or ended. rebuq tracks prices before check-in. For future bookings, upload right after you book!</p>
+                    </div>
+                    <button onClick={() => { setUploadStep(1); setFile(null); setExtracted(null); setBlockInfo(null); }} style={{ width: '100%', background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Track a future booking</button>
+                  </div>
+                )}
+                {blockInfo?.reason === 'duplicate' && (
+                  <div>
+                    <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                      <div style={{ fontSize: 28, marginBottom: 12 }}>✅</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#166534', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>Already tracking this booking!</div>
+                      <p style={{ fontSize: 13, color: '#15803d', lineHeight: 1.7 }}>We are already watching this booking for price drops. You will get a WhatsApp alert the moment we find a lower price.</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => { setUploadStep(1); setFile(null); setExtracted(null); setBlockInfo(null); }} style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Track another booking</button>
+                      <button onClick={closeModal} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Got it</button>
+                    </div>
+                  </div>
+                )}
+                {blockInfo?.reason === 'network_error' && (
+                  <div>
+                    <div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 14, padding: 24, marginBottom: 20 }}>
+                      <div style={{ fontSize: 28, marginBottom: 12 }}>⚠️</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>Connection issue</div>
+                      <p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>{blockInfo.message || 'Could not reach the server. Please try again or enter details manually.'}</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => { setUploadStep(1); setFile(null); setBlockInfo(null); }} style={{ flex: 1, background: '#fff', color: '#1447b8', border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Try again</button>
+                      <button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }} style={{ flex: 1, background: '#1447b8', color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {uploadStep === 2 && extracted && (
+              <div style={{ padding: '24px' }}>
+                {warnings.partialExtraction && (<div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}>⚠️ <strong>Partial read</strong> — We could not read all fields. Please check and fill in missing details.</div>)}
+                {warnings.multiHotel && (<div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}>🏨 <strong>Multiple hotels detected</strong> — We extracted the first hotel only. Upload each booking separately.</div>)}
+                {warnings.checkInSoon && (<div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#c2410c' }}>⏰ <strong>Check-in very soon</strong> — Your check-in is {warnings.checkInSoonDays === 0 ? 'today' : 'tomorrow'}. We will scan immediately but the window to rebook is tight.</div>)}
+                {warnings.payAtProperty && (<div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#0369a1' }}>💳 <strong>Pay at property detected</strong> — You have not paid yet so amount shows Rs.0. We will still track the rate.</div>)}
+                {warnings.unknownPolicy && (<div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}>❓ <strong>Cancellation policy unclear</strong> — Please select your policy below so we track correctly.</div>)}
+                {warnings.currencyConverted && extracted?.total_price_paid > 0 && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#166534' }}>💱 <strong>Currency converted</strong> — Original was in {warnings.originalCurrency}, converted to INR. Please verify the amount.</div>)}
+                {file && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#166534' }}><span style={{ fontSize: 16 }}>✨</span><span><strong>AI extracted successfully</strong> — verify and correct anything that looks wrong.</span></div>)}
+
+                <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>🏨 Hotel details</div>
+                  <div style={grid2}>
+                    <div><label style={lbl}>Hotel name *</label><input style={inp} value={extracted.hotel_name} onChange={e => setExtracted({ ...extracted, hotel_name: e.target.value })} placeholder="e.g. Taj Dubai" /></div>
+                    <div><label style={lbl}>City *</label><input style={inp} value={extracted.hotel_city} onChange={e => setExtracted({ ...extracted, hotel_city: e.target.value })} placeholder="e.g. Dubai" /></div>
+                  </div>
+                  <div style={grid2}>
+                    <div><label style={lbl}>Check-in *</label><input style={inp} type="date" value={extracted.check_in} onChange={e => setExtracted({ ...extracted, check_in: e.target.value })} /></div>
+                    <div><label style={lbl}>Check-out *</label><input style={inp} type="date" value={extracted.check_out} onChange={e => setExtracted({ ...extracted, check_out: e.target.value })} /></div>
+                  </div>
+                  <div style={grid2}>
+                    <div><label style={lbl}>Room type</label><input style={inp} value={extracted.room_type} onChange={e => setExtracted({ ...extracted, room_type: e.target.value })} placeholder="e.g. Deluxe King" /></div>
+                    <div><label style={lbl}>Meal plan</label><select style={inp} value={extracted.board_basis} onChange={e => { const opt = BOARD_OPTIONS.find(o => o.code === e.target.value); setExtracted({ ...extracted, board_basis: e.target.value, board_basis_label: opt?.label || '' }); }}>{BOARD_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}</select></div>
+                  </div>
+                  <div style={grid2}>
+                    <div><label style={lbl}>Booked on</label><select style={inp} value={extracted.ota_name} onChange={e => setExtracted({ ...extracted, ota_name: e.target.value })}>{['MakeMyTrip','Booking.com','Agoda','Goibibo','Hotels.com','Expedia','Direct','Other'].map(o => <option key={o} value={o}>{o}</option>)}</select></div>
+                    <div><label style={lbl}>Booking ref</label><input style={inp} value={extracted.booking_reference} onChange={e => setExtracted({ ...extracted, booking_reference: e.target.value })} placeholder="PNR / ref no." /></div>
+                  </div>
+                </div>
+
+                <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>💳 Pricing</div>
+                  {extracted.currency_original && extracted.currency_original !== 'INR' && (<div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#92400e' }}>💱 Original: <strong>{extracted.currency_original}</strong> — converted to INR. Please verify.</div>)}
+                  <div style={grid2}>
+                    <div><label style={lbl}>Total price paid (₹) *</label><input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: parseFloat(e.target.value), original_price: parseFloat(e.target.value) })} placeholder="e.g. 85000" /></div>
+                    <div><label style={lbl}>Adults</label><select style={inp} value={extracted.num_adults} onChange={e => setExtracted({ ...extracted, num_adults: parseInt(e.target.value) })}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} adult{n > 1 ? 's' : ''}</option>)}</select></div>
+                  </div>
+                </div>
+
+                <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 10 }}>🔒 Cancellation policy</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                    {CANCEL_OPTIONS.map(o => (<button key={o.code} onClick={() => setExtracted({ ...extracted, cancellation_policy: o.code })} style={{ padding: '9px 8px', borderRadius: 8, border: `2px solid ${extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#ef4444' : B) : '#e2e8f0'}`, background: extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#fef2f2' : '#eff6ff') : '#fff', color: extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#dc2626' : B) : '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' as const }}>{o.label}</button>))}
+                  </div>
+                  {(extracted.cancellation_policy === 'free' || extracted.cancellation_policy === 'partial') && (<div><label style={lbl}>Free cancel deadline</label><input style={inp} type="date" value={extracted.cancellation_deadline} onChange={e => setExtracted({ ...extracted, cancellation_deadline: e.target.value })} /></div>)}
+                </div>
+
+                <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>📱 Where should we send the alert?</div>
+                  <div style={grid2}>
+                    <div><label style={lbl}>WhatsApp *</label><div style={{ display: 'flex' }}><span style={{ ...inp, width: 52, borderRadius: '10px 0 0 10px', borderRight: 'none', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>+91</span><input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1 }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="9876543210" maxLength={10} /></div></div>
+                    <div><label style={lbl}>Email *</label><input style={inp} type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} placeholder="you@example.com" /></div>
+                  </div>
+                </div>
+
+                {submitError && (<div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#dc2626' }}>⚠️ {submitError}</div>)}
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => setUploadStep(1)} style={{ background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '12px 20px', borderRadius: 10, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>← Back</button>
+                  <button onClick={submitBooking} disabled={loading || extracted.cancellation_policy === 'non-refundable'} style={{ flex: 1, background: extracted.cancellation_policy === 'non-refundable' ? '#e2e8f0' : B, color: extracted.cancellation_policy === 'non-refundable' ? '#94a3b8' : '#fff', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: extracted.cancellation_policy === 'non-refundable' ? 'not-allowed' : 'pointer' }}>
+                    {loading ? 'Starting tracker…' : extracted.cancellation_policy === 'non-refundable' ? 'Cannot track non-refundable' : 'Start tracking my price →'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)" }}>
+      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
+        <a href="/" style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none", flexShrink: 0 }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
+        {!isMobile && (
+          <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+            <button onClick={() => window.location.href = "/search-hotels"} style={{ fontSize: 14, color: "#FCD34D", background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Exclusive Member Deals</button>
+            {user ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user.name.split(" ")[0]}</span>
+              </div>
+            ) : (
+              <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Log in / Sign up</button>
+            )}
+          </div>
+        )}
+        {isMobile && (
+          <button onClick={() => setShowMenu(!showMenu)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+            <span style={{ display: "block", width: 22, height: 2, background: showMenu ? "transparent" : "rgba(255,255,255,0.8)", transition: "all 0.2s" }} />
+            <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: showMenu ? "rotate(45deg) translate(5px,5px)" : "none" }} />
+            <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: showMenu ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
+          </button>
+        )}
+      </nav>
+      {isMobile && showMenu && (
+        <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 99, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <button onClick={() => { scrollTo("how"); setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>How it works</button>
+          <button onClick={() => { window.location.href = "/search-hotels"; }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
+          <button onClick={() => { window.location.href = "/signin"; setShowMenu(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Sign in</button>
+        </div>
+      )}
+      <section style={{ textAlign: "center", padding: isMobile ? "60px 20px 50px" : "90px 24px 70px", background: "transparent" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 100, marginBottom: 28, letterSpacing: "0.04em", textTransform: "uppercase", border: "1px solid rgba(255,255,255,0.2)" }}>✦ AI-Powered · Watches 24×7</div>
+        <h1 className="sora" style={{ fontSize: isMobile ? 36 : 64, fontWeight: 800, lineHeight: 1.1, color: "#fff", maxWidth: 760, margin: "0 auto 20px" }}>Your hotel price just dropped. <span style={{ color: "#FCD34D" }}>Did you notice?</span></h1>
+        <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 36px", lineHeight: 1.7 }}>Booked a hotel? rebuq watches the price 24/7 after you pay. When it drops, we alert you instantly — you rebook and pocket the difference. Free to check.</p>
+        <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" as const }}>
+          <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
+          <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore exclusive member deals →</button>
+        </div>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
+      </section>
+      </div>
+
+      <div id="deals" style={{ padding: isMobile ? "40px 0" : "20px 0 60px" }}>
+        <div style={{ textAlign: "center", padding: isMobile ? "0 20px 20px" : "0 40px 28px" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 12 }}>Real savings · Verified drops</p>
+          <h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>rebuq members saved on these hotels</h2>
+        </div>
+        <div style={{ overflow: "hidden", padding: isMobile ? "0 16px" : "0 40px" }} onTouchStart={e => { const t = e.touches[0]; (e.currentTarget as any)._touchStartX = t.clientX; }} onTouchEnd={e => { const startX = (e.currentTarget as any)._touchStartX; const endX = e.changedTouches[0].clientX; const diff = startX - endX; if (Math.abs(diff) > 50) { scrollCarousel(diff > 0 ? 1 : -1); } }}>
+          <div style={{ display: "flex", gap: 16, transform: `translateX(-${carouselPos * (CARD_WIDTH + 16)}px)`, transition: "transform 0.4s cubic-bezier(.4,0,.2,1)" }}>
+            {CARDS.map((c, i) => (<div key={i} className="hotel-card" style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><img src={c.img} alt={c.name} className="hotel-card-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /><div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.62) 0%, transparent 60%)" }} /><div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}><span style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, display: "block" }}>{c.price}</span><span style={{ fontSize: 12, opacity: 0.85 }}>{c.name}</span></div><div style={{ position: "absolute", top: 12, right: 12, background: "#16a34a", color: "#fff", fontSize: 13, fontWeight: 700, padding: "4px 10px", borderRadius: 8 }}>{c.pct}</div></div>))}
+          </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
+          <button onClick={() => scrollCarousel(-1)} disabled={carouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos === 0 ? 0.4 : 1 }}>‹</button>
+          <div style={{ display: "flex", gap: 6 }}>{Array.from({ length: CARDS.length - VISIBLE + 1 }, (_, i) => (<div key={i} onClick={() => setCarouselPos(i)} style={{ width: i === carouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === carouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />))}</div>
+          <button onClick={() => scrollCarousel(1)} disabled={carouselPos >= MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos >= MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos >= MAX_POS ? 0.4 : 1 }}>›</button>
+        </div>
+        <div style={{ textAlign: "center", marginTop: 16 }}><button onClick={() => window.location.href = "/search-hotels"} style={{ background: "none", border: "1.5px solid #e2e8f0", color: NAVY, borderRadius: 10, padding: "10px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore all member deals →</button></div>
+      </div>
+
+      <div id="how" style={{ padding: isMobile ? "60px 20px" : "80px 40px", maxWidth: 1100, margin: "0 auto" }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 14, textAlign: "center" }}>How it works</p>
+        <h2 className="sora" style={{ fontSize: isMobile ? 28 : 46, fontWeight: 800, color: NAVY, textAlign: "center", lineHeight: 1.15 }}>Three steps. Zero effort.</h2>
+        <p style={{ fontSize: 16, color: "#64748b", textAlign: "center", marginTop: 12 }}>Upload once. We watch forever. You save when the price drops.</p>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "200px 1fr", gap: 40, marginTop: 60, alignItems: "flex-start" }}>
+          <div style={{ display: "flex", flexDirection: isMobile ? "row" : "column" }}>
+            {["Upload", "Watch", "Save"].map((s, i) => (<button key={i} onClick={() => setActiveStep(i)} style={{ padding: "16px 20px", cursor: "pointer", borderLeft: isMobile ? "none" : `3px solid ${activeStep === i ? B : "#e2e8f0"}`, color: activeStep === i ? B : "#64748b", fontWeight: 600, fontSize: 15, background: "none", border: "none", fontFamily: "inherit", textAlign: "left" as const }}>{s}</button>))}
+          </div>
+          <div style={{ background: "#f8fafc", borderRadius: 14, padding: 32, boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#e0edff", color: B, fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, marginBottom: 12 }}>✦ AI-powered</div>
+            <p style={{ color: "#64748b", fontSize: 15, marginBottom: 24, lineHeight: 1.7 }}>
+              {activeStep === 0 && "Upload your hotel booking confirmation — any PDF, screenshot or email. Our AI reads the hotel, dates, and price in seconds. No manual entry needed."}
+              {activeStep === 1 && "rebuq's AI engine checks your hotel price every 6 hours — day and night. We track flash sales, last-minute drops, and OTA-specific discounts you'd never catch manually."}
+              {activeStep === 2 && "The moment we find a drop, you get a WhatsApp alert with a direct rebooking link. Cancel your old booking, rebook at the new rate, pocket the difference."}
+            </p>
+            <div style={{ background: "#fff", borderRadius: 12, padding: 20, boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, fontSize: 12, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em" }}><span>Live Price Tracker</span><span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: "#16a34a" }}><span style={{ width: 7, height: 7, background: "#16a34a", borderRadius: "50%", display: "inline-block", animation: "pulse 1.5s infinite" }} />Monitoring</span></div>
+              {[["MakeMyTrip", "₹41,200", "₹41,000", false], ["Booking.com", "₹41,200", "₹39,400", true], ["Agoda", "₹53,300", "₹53,300", false]].map(([site, orig, curr, drop], i) => (<div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < 2 ? "1px solid #e2e8f0" : "none", fontSize: 14 }}><span style={{ color: "#64748b" }}>{site}</span><span style={{ textDecoration: "line-through", color: "#94a3b8", fontSize: 13 }}>{orig}</span><span style={{ fontWeight: 700, color: NAVY }}>{curr}</span>{drop ? <span style={{ background: "#dcfce7", color: "#16a34a", fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 6 }}>↓₹1,800</span> : <span style={{ background: "#f1f5f9", color: "#64748b", fontSize: 12, padding: "2px 8px", borderRadius: 6 }}>—</span>}</div>))}
+            </div>
+            <button onClick={openModal} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "11px 22px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 20 }}>Start for free</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="results" style={{ background: "#f8fafc", padding: isMobile ? "60px 20px" : "80px 40px" }} ref={statsRef}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 14, textAlign: "center" }}>Real Results</p>
+          <h2 className="sora" style={{ fontSize: isMobile ? 28 : 46, fontWeight: 800, color: NAVY, textAlign: "center", lineHeight: 1.15 }}>₹18 crore saved. And counting.</h2>
+          <p style={{ fontSize: 16, color: "#64748b", textAlign: "center", marginTop: 12 }}>12,000+ Indian travelers are already saving on their hotel bookings.</p>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 24, marginTop: 48 }}>
+            {statValues.map((s, i) => (<div key={i} style={{ background: "#fff", borderRadius: 14, padding: "28px 24px", textAlign: "center", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><div className="sora" style={{ fontSize: 36, fontWeight: 800, color: NAVY }}>{s.prefix}{s.val.toLocaleString("en-IN")}{s.suffix}</div><div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>{STATS[i].label}</div></div>))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20, marginTop: 32 }}>
+            {TESTIMONIALS.map((t, i) => (<div key={i} style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 24, boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}><div style={{ width: 38, height: 38, borderRadius: "50%", background: `linear-gradient(135deg, ${B}, #60a5fa)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>{t.initials}</div><div><div style={{ fontWeight: 600, fontSize: 14, color: NAVY }}>{t.name}</div><div style={{ fontSize: 12, color: "#64748b" }}>{t.role}</div></div></div><div className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 8 }}>{t.saved}</div><div style={{ fontSize: 13.5, color: "#64748b", lineHeight: 1.65 }}>&quot;{t.text}&quot;</div></div>))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: NAVY, padding: isMobile ? "50px 20px" : "70px 40px", textAlign: "center" }}>
+        <div className="sora" style={{ fontSize: isMobile ? 22 : 38, fontWeight: 700, color: "#fff", maxWidth: 720, margin: "0 auto 20px", lineHeight: 1.25 }}>&quot;This should be mandatory for every Indian traveler who books hotels online.&quot;</div>
+        <div style={{ fontSize: 13, color: "#94a3b8", letterSpacing: "0.05em", textTransform: "uppercase" }}>— Ananya Krishnan · Travel Blogger, Chennai</div>
+      </div>
+
+      <div id="why" style={{ padding: isMobile ? "60px 20px" : "80px 40px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 14, textAlign: "center" }}>Why rebuq</p>
+          <h2 className="sora" style={{ fontSize: isMobile ? 28 : 46, fontWeight: 800, color: NAVY, textAlign: "center", lineHeight: 1.15 }}>Built for travelers who hate leaving money on the table.</h2>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 20, marginTop: 48 }}>
+            <div style={{ borderRadius: 14, padding: 28, border: "1.5px solid #e2e8f0", background: "#f8fafc", gridColumn: isMobile ? "auto" : "1/-1", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 32, alignItems: "center" }}><div><span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", padding: "3px 10px", borderRadius: 100, marginBottom: 12, background: "#e0edff", color: B }}>Continuous</span><h3 className="sora" style={{ fontSize: 18, fontWeight: 700, color: NAVY, marginBottom: 10 }}>AI that never sleeps</h3><p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.65 }}>Our monitoring AI checks your hotel price every 6 hours — through the night, through weekends.</p><div className="sora" style={{ fontSize: 42, fontWeight: 800, color: B, marginTop: 16 }}>+4,200</div><div style={{ fontSize: 13, color: "#64748b" }}>Price drops found this month alone</div></div><div style={{ background: "#eff6ff", borderRadius: 12, padding: 28, textAlign: "center" }}><div className="sora" style={{ fontWeight: 700, fontSize: 22, color: B }}>24/7 Watching</div><div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>Every 6 hours. Day &amp; night.</div></div></div>
+            {[{ badge: "Instant", badgeBg: "#dcfce7", badgeColor: "#166634", title: "WhatsApp alerts", text: "The moment we find a drop, you get a WhatsApp message with a direct rebooking link — no app to install." }, { badge: "Full Coverage", badgeBg: "#fee2e2", badgeColor: "#991b1b", title: "All major OTAs", text: "MakeMyTrip, Booking.com, Agoda, Goibibo, Hotels.com — we watch them all so you don't have to." }, { badge: "Zero Risk", badgeBg: "#fef9c3", badgeColor: "#854d0e", title: "Zero-risk pricing", text: "Free to check. We take a small success fee only if we actually save you money." }, { badge: "Fast · 6hr avg", badgeBg: "#f3e8ff", badgeColor: "#7c3aed", title: "Catches drops fast", text: "Average time to find a significant price drop: under 6 hours." }].map((f, i) => (<div key={i} style={{ borderRadius: 14, padding: 28, border: "1.5px solid #e2e8f0", background: "#f8fafc" }}><span style={{ display: "inline-block", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", padding: "3px 10px", borderRadius: 100, marginBottom: 12, background: f.badgeBg, color: f.badgeColor }}>{f.badge}</span><h3 className="sora" style={{ fontSize: 18, fontWeight: 700, color: NAVY, marginBottom: 10 }}>{f.title}</h3><p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.65 }}>{f.text}</p></div>))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: "#f8fafc", padding: isMobile ? "60px 20px" : "80px 40px" }}>
+        <div style={{ maxWidth: 700, margin: "0 auto" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 14 }}>FAQ</p>
+          <h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY }}>Common questions</h2>
+          <div style={{ marginTop: 36 }}>
+            {FAQS.map((f, i) => (<div key={i} style={{ background: "#fff", borderRadius: 12, marginBottom: 12, border: "1.5px solid #e2e8f0", overflow: "hidden" }}><button onClick={() => setOpenFaq(openFaq === i ? -1 : i)} style={{ width: "100%", padding: "20px 24px", fontWeight: 600, fontSize: 15, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", color: NAVY, background: "none", border: "none", fontFamily: "inherit", textAlign: "left" }}>{f.q}<span style={{ fontSize: 20, color: "#64748b", transform: openFaq === i ? "rotate(45deg)" : "none", transition: "transform 0.25s", flexShrink: 0 }}>+</span></button>{openFaq === i && <div style={{ padding: "0 24px 20px", fontSize: 14.5, color: "#64748b", lineHeight: 1.7 }}>{f.a}</div>}</div>))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: "linear-gradient(135deg, #1d4ed8 0%, #1447b8 100%)", padding: isMobile ? "60px 20px" : "80px 40px", textAlign: "center" }}>
+        <div style={{ display: "inline-block", background: "rgba(255,255,255,0.2)", color: "#fff", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", padding: "4px 14px", borderRadius: 100, marginBottom: 24 }}>Free to check</div>
+        <h2 className="sora" style={{ fontSize: isMobile ? 28 : 46, fontWeight: 800, color: "#fff", maxWidth: 600, margin: "0 auto 16px", lineHeight: 1.15 }}>Your next hotel booking could cost less. Let&apos;s find out.</h2>
+        <p style={{ fontSize: 16, color: "rgba(255,255,255,0.75)", maxWidth: 480, margin: "0 auto 36px" }}>Upload your booking confirmation in 30 seconds. We watch and alert you the moment it drops.</p>
+        <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" as const }}>
+          <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "13px 26px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Upload my booking now ↗</button>
+          <button onClick={() => scrollTo("how")} style={{ background: "transparent", color: "#fff", border: "1.5px solid rgba(255,255,255,0.5)", borderRadius: 10, padding: "13px 26px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>▶ See how it works</button>
+        </div>
+      </div>
+
+      <footer style={{ background: NAVY, padding: isMobile ? "40px 20px 24px" : "48px 40px 32px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
+            <div><div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 10 }}>rebuq<span style={{ color: B }}>.</span></div><p style={{ fontSize: 13.5, color: "#94a3b8", maxWidth: 260, lineHeight: 1.6 }}>AI-powered hotel price monitoring for Indian travelers. Never overpay for a hotel again.</p></div>
+            <div style={{ display: "flex", gap: isMobile ? 28 : 48, flexDirection: isMobile ? "column" : "row" }}>
+              {[{ title: "Product", links: ["How it works", "Results", "Why rebuq", "Exclusive Member Deals"] }, { title: "Company", links: ["About", "Privacy", "Terms"] }].map(col => (<div key={col.title}><h4 style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b", marginBottom: 14 }}>{col.title}</h4>{col.links.map(l => <a key={l} href="#" style={{ display: "block", fontSize: 14, color: "#94a3b8", textDecoration: "none", marginBottom: 10 }}>{l}</a>)}</div>))}
+            </div>
+          </div>
+          <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
+            <span style={{ fontSize: 13, color: "#475569" }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
 }
-
-// ── WhatsApp helpers ──────────────────────────────────────────────────────────
-const twilio = require('twilio')
-
-function getTwilioClient() {
-  return twilio(process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_TOKEN)
-}
-
-async function sendWhatsApp(to, body) {
-  const client    = getTwilioClient()
-  const formatted = to.startsWith('+') ? `whatsapp:${to}` : `whatsapp:+91${to}`
-  const rawFrom   = process.env.TWILIO_WHATSAPP_FROM || '+14155238886'
-  const from      = rawFrom.startsWith('whatsapp:') ? rawFrom : `whatsapp:${rawFrom}`
-  const timeout   = new Promise((_, reject) => setTimeout(() => reject(new Error('Twilio timeout')), 10000))
-  await Promise.race([client.messages.create({ from, to: formatted, body }), timeout])
-}
-
-async function sendNonRefundableWhatsApp(phone, data) {
-  const totalPaid = data.total_price_paid ? `₹${Number(data.total_price_paid).toLocaleString('en-IN')}` : 'amount on voucher'
-  const msg = `Hi! Thanks for uploading your booking to rebuq. 🙏
-
-*${data.hotel_name}*
-📍 ${data.hotel_city || '—'}
-📅 ${data.check_in} → ${data.check_out}
-💳 Total paid: ${totalPaid}
-
-❌ *We can't track this booking.*
-
-Your booking is *non-refundable* — even if the price drops, you can't cancel and rebook to save.
-
-Next time, book a cancellable rate — rebuq regularly finds drops of ₹10,000–₹40,000 that more than cover any price difference.
-
-— Team rebuq`
-  try { await sendWhatsApp(phone, msg) } catch (e) { console.error('WA failed:', e.message) }
-}
-
-async function sendUnknownPolicyWhatsApp(phone, data) {
-  const msg = `Hi! Your booking has been added to rebuq. ⚠️
-
-*${data.hotel_name}, ${data.hotel_city || '—'}*
-
-We couldn't clearly read your *cancellation policy*. Please reply:
-1️⃣ → Free cancellation
-2️⃣ → Non-refundable
-3️⃣ → Partial refund
-
-— Team rebuq`
-  try { await sendWhatsApp(phone, msg) } catch (e) { console.error('WA failed:', e.message) }
-}
-
-async function sendDuplicateWhatsApp(phone, data) {
-  const msg = `Hi! We noticed you uploaded *${data.hotel_name}* (${data.check_in}) again.
-
-✅ This booking is *already being tracked* by rebuq!
-
-We're checking prices every 6 hours. Reply *STATUS* to check your monitors.
-— Team rebuq`
-  try { await sendWhatsApp(phone, msg) } catch (e) { console.error('WA failed:', e.message) }
-}
-
-async function sendCheckInSoonWhatsApp(phone, data, daysUntil) {
-  const totalPaid = data.total_price_paid ? `₹${Number(data.total_price_paid).toLocaleString('en-IN')}` : '—'
-  const timing    = daysUntil === 0 ? 'today' : 'tomorrow'
-  const msg = `Hi! We've added your booking to rebuq. ⚠️
-
-*${data.hotel_name}, ${data.hotel_city || '—'}*
-📅 Check-in: *${timing}* (${data.check_in})
-💳 Total: ${totalPaid}
-
-⚠️ Check-in is very soon — window to rebook is tight. We'll scan immediately and alert you if we find anything.
-— Team rebuq`
-  try { await sendWhatsApp(phone, msg) } catch (e) { console.error('WA failed:', e.message) }
-}
-
-async function sendTrackingStartedWhatsApp(phone, booking) {
-  const nights = booking.total_nights || '?'
-  const fmt = (d) => { try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) } catch { return d } }
-  const children = (booking.children_ages && booking.children_ages.length > 0)
-    ? booking.children_ages.map(a => a === 0 ? 'infant' : `${a} yrs`).join(', ')
-    : 'None'
-  const cancelLine = booking.cancellation_policy === 'free' && booking.cancellation_deadline
-    ? `Free cancel until   ${fmt(booking.cancellation_deadline)}`
-    : booking.cancellation_policy === 'partial'
-    ? `Cancellation        Partial refund applies`
-    : `Cancellation        ${booking.cancellation_policy || 'unknown'}`
-  const meal = booking.board_basis_label ? `\nMeal plan           ${booking.board_basis_label}` : ''
-
-  const msg = `Thank you for trusting rebuq with your booking.
-
-*${booking.hotel_name}*
-${booking.hotel_city}
-
-Check-in    ${fmt(booking.check_in)}
-Check-out   ${fmt(booking.check_out)}
-Room        ${booking.room_type || 'Standard Room'}  ·  ${booking.num_rooms || 1} Room
-Adults      ${booking.num_adults || 2}
-Children    ${children}${meal}
-Total paid  ₹${Number(booking.total_price_paid || booking.original_price || 0).toLocaleString('en-IN')}
-${cancelLine}
-
-We're watching the price around the clock. The moment it drops for the same room and meal plan, we'll send you a direct link to rebook and save.
-
-Questions? Reply to this message.
-
-rebuq`
-  try { await sendWhatsApp(phone, msg) } catch (e) { console.error('WA failed:', e.message) }
-}
-
-module.exports = router
