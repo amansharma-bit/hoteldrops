@@ -593,99 +593,163 @@ export default function Home() {
 
             {uploadStep === 2 && extracted && (
               <div style={{ padding: '24px' }}>
-                {warnings.partialExtraction && (<div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}>⚠️ <strong>Partial read</strong> — We could not read all fields. Please check and fill in missing details.</div>)}
-                {warnings.multiHotel && (<div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}>🏨 <strong>Multiple hotels detected</strong> — We extracted the first hotel only. Upload each booking separately.</div>)}
-                {warnings.checkInSoon && (<div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#c2410c' }}>⏰ <strong>Check-in very soon</strong> — Your check-in is {warnings.checkInSoonDays === 0 ? 'today' : 'tomorrow'}. We will scan immediately but the window to rebook is tight.</div>)}
-                {warnings.payAtProperty && (<div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#0369a1' }}>💳 <strong>Pay at property detected</strong> — You have not paid yet so amount shows Rs.0. We will still track the rate.</div>)}
-                {warnings.unknownPolicy && (<div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}>❓ <strong>Cancellation policy unclear</strong> — Please select your policy below so we track correctly.</div>)}
-                {warnings.currencyConverted && extracted?.total_price_paid > 0 && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#166534' }}>💱 <strong>Currency converted</strong> — Original was in {warnings.originalCurrency}, converted to INR. Please verify the amount.</div>)}
-                {file && docType === 'confirmed_voucher' && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#166534' }}><span style={{ fontSize: 16 }}>✨</span><span><strong>AI extracted successfully</strong> — verify and correct anything that looks wrong.</span></div>)}
-                {file && (docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top' || docType === 'checkout_page') && extracted?.hotel_name && (
-                  <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 12, padding: '16px 18px', marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <span style={{ fontSize: 16 }}>👀</span>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>Checking prices for your trip?</span>
-                    </div>
-                    <div style={{ background: '#fff', borderRadius: 8, padding: '10px 12px', marginBottom: 10, fontSize: 13, color: '#334155' }}>
-                      <strong>{extracted.hotel_name}</strong>{extracted.hotel_city ? `, ${extracted.hotel_city}` : ''}{extracted.check_in ? ` · ${new Date(extracted.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} → ${new Date(extracted.check_out + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}
-                    </div>
-                    <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>Drop your WhatsApp number below — we'll send you the best available price and alert you the moment it drops. <strong>Free. No spam.</strong></div>
-                  </div>
-                )}
 
-                <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>🏨 Hotel details</div>
-                  <div style={grid2}>
-                    <div><label style={lbl}>Hotel name *</label><input style={inp} value={extracted.hotel_name} onChange={e => setExtracted({ ...extracted, hotel_name: e.target.value })} placeholder="e.g. Taj Dubai" /></div>
-                    <div><label style={lbl}>City *</label><input style={inp} value={extracted.hotel_city} onChange={e => setExtracted({ ...extracted, hotel_city: e.target.value })} placeholder="e.g. Dubai" /></div>
-                  </div>
-                  <div style={grid2}>
-                    <div><label style={lbl}>Check-in *</label><input style={inp} type="date" value={extracted.check_in} onChange={e => setExtracted({ ...extracted, check_in: e.target.value })} /></div>
-                    <div><label style={lbl}>Check-out *</label><input style={inp} type="date" value={extracted.check_out} onChange={e => setExtracted({ ...extracted, check_out: e.target.value })} /></div>
-                  </div>
-                  <div style={grid2}>
-                    <div><label style={lbl}>Room type</label><input style={inp} value={extracted.room_type} onChange={e => setExtracted({ ...extracted, room_type: e.target.value })} placeholder="e.g. Deluxe King" /></div>
-                    <div><label style={lbl}>Booked on</label><select style={inp} value={extracted.ota_name} onChange={e => setExtracted({ ...extracted, ota_name: e.target.value })}>{['MakeMyTrip','Booking.com','Agoda','Goibibo','Hotels.com','Expedia','Direct','Other'].map(o => <option key={o} value={o}>{o}</option>)}</select></div>
-                  </div>
-                </div>
-
-                <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>💳 Pricing</div>
-                  {extracted.currency_original && extracted.currency_original !== 'INR' && (<div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#92400e' }}>💱 Original: <strong>{extracted.currency_original}</strong> — converted to INR. Please verify.</div>)}
-                  <div style={grid2}>
-                    <div><label style={lbl}>Total price paid (₹) *</label><input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: parseFloat(e.target.value), original_price: parseFloat(e.target.value) })} placeholder="e.g. 85000" /></div>
-                    <div><label style={lbl}>Adults</label><select style={inp} value={extracted.num_adults} onChange={e => setExtracted({ ...extracted, num_adults: parseInt(e.target.value) })}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} adult{n > 1 ? 's' : ''}</option>)}</select></div>
-                  </div>
-                  <div style={grid2}>
-                    <div>
-                      <label style={lbl}>Children (under 12)</label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <button onClick={() => { const n = Math.max(0, extracted.num_children - 1); setExtracted({ ...extracted, num_children: n, children_ages: extracted.children_ages.slice(0, n) }); }} style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontFamily: 'inherit', flexShrink: 0 }}>−</button>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: NAVY, minWidth: 16, textAlign: 'center' as const }}>{extracted.num_children}</span>
-                        <button onClick={() => { const n = Math.min(8, extracted.num_children + 1); const ages = [...extracted.children_ages]; while (ages.length < n) ages.push(null); setExtracted({ ...extracted, num_children: n, children_ages: ages }); }} style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontFamily: 'inherit', flexShrink: 0 }}>+</button>
-                        <span style={{ fontSize: 11, color: '#94a3b8' }}>{extracted.num_children === 0 ? 'None' : extracted.num_children === 1 ? '1 child' : `${extracted.num_children}`}</span>
+                {/* ── PRE-BOOKING FLOW ── */}
+                {(docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top' || docType === 'checkout_page') ? (
+                  <div>
+                    {/* What we captured */}
+                    <div style={{ marginBottom: 20 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#64748b', marginBottom: 12 }}>Here's what we found in your screenshot</div>
+                      <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                        {extracted.hotel_name && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0edff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{extracted.hotel_name}</div>
+                              {extracted.hotel_city && <div style={{ fontSize: 12, color: '#64748b' }}>{extracted.hotel_city}</div>}
+                            </div>
+                          </div>
+                        )}
+                        {extracted.check_in && extracted.check_out && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0edff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            </div>
+                            <div style={{ fontSize: 13, color: NAVY }}>
+                              {new Date(extracted.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              <span style={{ color: '#94a3b8', margin: '0 6px' }}>→</span>
+                              {new Date(extracted.check_out + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {extracted.total_nights > 0 && <span style={{ color: '#64748b', marginLeft: 6, fontSize: 12 }}>{extracted.total_nights} nights</span>}
+                            </div>
+                          </div>
+                        )}
+                        {(extracted.total_price_paid > 0 || extracted.price_per_night > 0) && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0edff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            </div>
+                            <div style={{ fontSize: 13, color: NAVY, fontWeight: 600 }}>
+                              {extracted.total_price_paid > 0 ? `₹${Math.round(extracted.total_price_paid).toLocaleString('en-IN')} total` : `₹${Math.round(extracted.price_per_night).toLocaleString('en-IN')}/night`}
+                            </div>
+                          </div>
+                        )}
+                        {extracted.num_adults > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#e0edff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            </div>
+                            <div style={{ fontSize: 13, color: '#64748b' }}>{extracted.num_adults} adult{extracted.num_adults > 1 ? 's' : ''}{extracted.num_children > 0 ? ` · ${extracted.num_children} child${extracted.num_children > 1 ? 'ren' : ''}` : ''}</div>
+                          </div>
+                        )}
+                        <button onClick={() => {}} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#94a3b8', textAlign: 'left' as const, padding: 0, fontFamily: 'inherit', textDecoration: 'underline', marginTop: 2 }}>Something looks wrong? Edit details</button>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'flex-end' }}>
-                      {extracted.num_children > 0 && Array.from({ length: extracted.num_children }, (_, i) => (
-                        <div key={i} style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
-                          <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>C{i+1}</span>
-                          <select style={{ ...inp, width: 72, padding: '8px 6px' }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
-                            <option value=''>Age</option>
-                            <option value='0'>&lt;1</option>
-                            {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a}</option>)}
-                          </select>
+
+                    {/* CTA */}
+                    <div style={{ background: NAVY, borderRadius: 14, padding: 20, marginBottom: 16 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6, fontFamily: "'Sora',sans-serif" }}>Get alerted when this price drops</div>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 16, lineHeight: 1.5 }}>We'll send you one WhatsApp message the moment the price moves. Free. No spam.</div>
+                      <div style={{ display: 'flex', marginBottom: 12 }}>
+                        <span style={{ ...inp, width: 52, borderRadius: '10px 0 0 10px', borderRight: 'none', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>+91</span>
+                        <input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.15)', borderLeft: 'none' }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number" maxLength={10} />
+                      </div>
+                      <input style={{ ...inp, marginBottom: 12, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.15)' }} type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} placeholder="Email address" />
+                      {submitError && <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#fca5a5' }}>{submitError}</div>}
+                      <button onClick={submitBooking} disabled={loading} style={{ width: '100%', background: '#FCD34D', color: NAVY, border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
+                        {loading ? 'Setting up alert…' : 'Alert me when price drops →'}
+                      </button>
+                    </div>
+
+                    <button onClick={() => setUploadStep(1)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', width: '100%', textAlign: 'center' as const }}>← Back</button>
+                  </div>
+
+                ) : (
+                  /* ── CONFIRMED VOUCHER FLOW ── */
+                  <div>
+                    {warnings.partialExtraction && (<div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}><strong>Partial read</strong> — We could not read all fields. Please check and fill in missing details.</div>)}
+                    {warnings.checkInSoon && (<div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#c2410c' }}><strong>Check-in very soon</strong> — Your check-in is {warnings.checkInSoonDays === 0 ? 'today' : 'tomorrow'}. We will scan immediately but the window to rebook is tight.</div>)}
+                    {warnings.payAtProperty && (<div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#0369a1' }}><strong>Pay at property</strong> — You have not paid yet so amount shows Rs.0. We will still track the rate.</div>)}
+                    {warnings.unknownPolicy && (<div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}><strong>Cancellation policy unclear</strong> — Please select your policy below.</div>)}
+                    {warnings.currencyConverted && extracted?.total_price_paid > 0 && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#166534' }}><strong>Currency converted</strong> — Original was in {warnings.originalCurrency}, converted to INR. Please verify.</div>)}
+                    {file && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#166534' }}><strong>AI extracted successfully</strong> — verify and correct anything that looks wrong.</div>)}
+
+                    <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Hotel details</div>
+                      <div style={grid2}>
+                        <div><label style={lbl}>Hotel name *</label><input style={inp} value={extracted.hotel_name} onChange={e => setExtracted({ ...extracted, hotel_name: e.target.value })} placeholder="e.g. Taj Dubai" /></div>
+                        <div><label style={lbl}>City *</label><input style={inp} value={extracted.hotel_city} onChange={e => setExtracted({ ...extracted, hotel_city: e.target.value })} placeholder="e.g. Dubai" /></div>
+                      </div>
+                      <div style={grid2}>
+                        <div><label style={lbl}>Check-in *</label><input style={inp} type="date" value={extracted.check_in} onChange={e => setExtracted({ ...extracted, check_in: e.target.value })} /></div>
+                        <div><label style={lbl}>Check-out *</label><input style={inp} type="date" value={extracted.check_out} onChange={e => setExtracted({ ...extracted, check_out: e.target.value })} /></div>
+                      </div>
+                      <div style={grid2}>
+                        <div><label style={lbl}>Room type</label><input style={inp} value={extracted.room_type} onChange={e => setExtracted({ ...extracted, room_type: e.target.value })} placeholder="e.g. Deluxe King" /></div>
+                        <div><label style={lbl}>Booked on</label><select style={inp} value={extracted.ota_name} onChange={e => setExtracted({ ...extracted, ota_name: e.target.value })}>{['MakeMyTrip','Booking.com','Agoda','Goibibo','Hotels.com','Expedia','Direct','Other'].map(o => <option key={o} value={o}>{o}</option>)}</select></div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Pricing</div>
+                      {extracted.currency_original && extracted.currency_original !== 'INR' && (<div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#92400e' }}>Original: <strong>{extracted.currency_original}</strong> — converted to INR. Please verify.</div>)}
+                      <div style={grid2}>
+                        <div><label style={lbl}>Total price paid (₹) *</label><input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: parseFloat(e.target.value), original_price: parseFloat(e.target.value) })} placeholder="e.g. 85000" /></div>
+                        <div><label style={lbl}>Adults</label><select style={inp} value={extracted.num_adults} onChange={e => setExtracted({ ...extracted, num_adults: parseInt(e.target.value) })}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} adult{n > 1 ? 's' : ''}</option>)}</select></div>
+                      </div>
+                      <div style={grid2}>
+                        <div>
+                          <label style={lbl}>Children (under 12)</label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <button onClick={() => { const n = Math.max(0, extracted.num_children - 1); setExtracted({ ...extracted, num_children: n, children_ages: extracted.children_ages.slice(0, n) }); }} style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontFamily: 'inherit', flexShrink: 0 }}>−</button>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: NAVY, minWidth: 16, textAlign: 'center' as const }}>{extracted.num_children}</span>
+                            <button onClick={() => { const n = Math.min(8, extracted.num_children + 1); const ages = [...extracted.children_ages]; while (ages.length < n) ages.push(null); setExtracted({ ...extracted, num_children: n, children_ages: ages }); }} style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontFamily: 'inherit', flexShrink: 0 }}>+</button>
+                            <span style={{ fontSize: 11, color: '#94a3b8' }}>{extracted.num_children === 0 ? 'None' : `${extracted.num_children}`}</span>
+                          </div>
                         </div>
-                      ))}
-                      {extracted.num_children === 0 && <span style={{ fontSize: 12, color: '#cbd5e1' }}>Add children above</span>}
+                        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'flex-end' }}>
+                          {extracted.num_children > 0 && Array.from({ length: extracted.num_children }, (_, i) => (
+                            <div key={i} style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+                              <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>C{i+1}</span>
+                              <select style={{ ...inp, width: 72, padding: '8px 6px' }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
+                                <option value=''>Age</option>
+                                <option value='0'>&lt;1</option>
+                                {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a}</option>)}
+                              </select>
+                            </div>
+                          ))}
+                          {extracted.num_children === 0 && <span style={{ fontSize: 12, color: '#cbd5e1' }}>Add above</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 10 }}>Cancellation policy</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                        {CANCEL_OPTIONS.map(o => (<button key={o.code} onClick={() => { if (o.code === 'non-refundable') { setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return; } setExtracted({ ...extracted, cancellation_policy: o.code }); }} style={{ padding: '9px 8px', borderRadius: 8, border: `2px solid ${extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#ef4444' : B) : '#e2e8f0'}`, background: extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#fef2f2' : '#eff6ff') : '#fff', color: extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#dc2626' : B) : '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' as const }}>{o.label}</button>))}
+                      </div>
+                      {(extracted.cancellation_policy === 'free' || extracted.cancellation_policy === 'partial') && (<div><label style={lbl}>Free cancel deadline</label><input style={inp} type="date" value={extracted.cancellation_deadline} onChange={e => setExtracted({ ...extracted, cancellation_deadline: e.target.value })} /></div>)}
+                    </div>
+
+                    <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 16 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Where should we send the alert?</div>
+                      <div style={grid2}>
+                        <div><label style={lbl}>WhatsApp *</label><div style={{ display: 'flex' }}><span style={{ ...inp, width: 52, borderRadius: '10px 0 0 10px', borderRight: 'none', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>+91</span><input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1 }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="9876543210" maxLength={10} /></div></div>
+                        <div><label style={lbl}>Email *</label><input style={inp} type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} placeholder="you@example.com" /></div>
+                      </div>
+                    </div>
+
+                    {submitError && (<div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#dc2626' }}>{submitError}</div>)}
+
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => setUploadStep(1)} style={{ background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '12px 20px', borderRadius: 10, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>← Back</button>
+                      <button onClick={submitBooking} disabled={loading || extracted.cancellation_policy === 'non-refundable'} style={{ flex: 1, background: extracted.cancellation_policy === 'non-refundable' ? '#e2e8f0' : B, color: extracted.cancellation_policy === 'non-refundable' ? '#94a3b8' : '#fff', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: extracted.cancellation_policy === 'non-refundable' ? 'not-allowed' : 'pointer' }}>
+                        {loading ? 'Starting tracker…' : extracted.cancellation_policy === 'non-refundable' ? 'Cannot track non-refundable' : 'Start tracking my price →'}
+                      </button>
                     </div>
                   </div>
-                </div>
-
-                <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 10 }}>🔒 Cancellation policy</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-                    {CANCEL_OPTIONS.map(o => (<button key={o.code} onClick={() => { if (o.code === 'non-refundable') { setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return; } setExtracted({ ...extracted, cancellation_policy: o.code }); }} style={{ padding: '9px 8px', borderRadius: 8, border: `2px solid ${extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#ef4444' : B) : '#e2e8f0'}`, background: extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#fef2f2' : '#eff6ff') : '#fff', color: extracted.cancellation_policy === o.code ? (o.code === 'non-refundable' ? '#dc2626' : B) : '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' as const }}>{o.label}</button>))}
-                  </div>
-                  {(extracted.cancellation_policy === 'free' || extracted.cancellation_policy === 'partial') && (<div><label style={lbl}>Free cancel deadline</label><input style={inp} type="date" value={extracted.cancellation_deadline} onChange={e => setExtracted({ ...extracted, cancellation_deadline: e.target.value })} /></div>)}
-                </div>
-
-                <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>📱 Where should we send the alert?</div>
-                  <div style={grid2}>
-                    <div><label style={lbl}>WhatsApp *</label><div style={{ display: 'flex' }}><span style={{ ...inp, width: 52, borderRadius: '10px 0 0 10px', borderRight: 'none', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>+91</span><input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1 }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="9876543210" maxLength={10} /></div></div>
-                    <div><label style={lbl}>Email *</label><input style={inp} type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} placeholder="you@example.com" /></div>
-                  </div>
-                </div>
-
-                {submitError && (<div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#dc2626' }}>⚠️ {submitError}</div>)}
-
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button onClick={() => setUploadStep(1)} style={{ background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '12px 20px', borderRadius: 10, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>← Back</button>
-                  <button onClick={submitBooking} disabled={loading || extracted.cancellation_policy === 'non-refundable'} style={{ flex: 1, background: extracted.cancellation_policy === 'non-refundable' ? '#e2e8f0' : B, color: extracted.cancellation_policy === 'non-refundable' ? '#94a3b8' : '#fff', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: extracted.cancellation_policy === 'non-refundable' ? 'not-allowed' : 'pointer' }}>
-                    {loading ? 'Starting tracker…' : extracted.cancellation_policy === 'non-refundable' ? 'Cannot track non-refundable' : 'Start tracking my price →'}
-                  </button>
-                </div>
+                )}
               </div>
             )}
           </div>
