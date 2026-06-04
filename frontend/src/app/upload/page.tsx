@@ -240,7 +240,7 @@ export default function UploadPage() {
       ...f,
       hotel_name:            selectedHotel?.hotel_name || data?.hotel_name || '',
       hotel_city:            selectedHotel?.destination || data?.destination || data?.hotel_city || '',
-      hotel_address:         data?.hotel_address || '',
+      hotel_address:         selectedHotel?.area || data?.hotel_address || '',
       check_in:              selectedHotel?.check_in || data?.check_in || '',
       check_out:             selectedHotel?.check_out || data?.check_out || '',
       num_adults:            String(selectedHotel?.num_adults || data?.num_adults || 2),
@@ -265,6 +265,7 @@ export default function UploadPage() {
     prefillForm({
       hotel_name: hotel.hotel_name,
       hotel_city: searchData.destination,
+      hotel_address: hotel.area || '',
       check_in: searchData.check_in,
       check_out: searchData.check_out,
       num_adults: searchData.num_adults,
