@@ -124,6 +124,7 @@ export default function Home() {
   const [submitError, setSubmitError] = useState('');
   const fileInputRef                  = useRef<HTMLInputElement>(null);
   const [extractResult, setExtractResult] = useState<any>(null);
+  const [docType, setDocType] = useState<string>('confirmed_voucher');
   const [selectedHotelIdx, setSelectedHotelIdx] = useState<number | null>(null);
   const [selectedRoomIdx, setSelectedRoomIdx] = useState<number | null>(null);
 
@@ -164,7 +165,7 @@ export default function Home() {
   });
 
   const openModal = () => {
-    setModalOpen(true); setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null);
+    setModalOpen(true); setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); setDocType('confirmed_voucher');
     setPhone(''); setEmailVal(''); setSubmitError(''); setBlockInfo(null); setWarnings({}); setLoading(false);
     setExtractResult(null); setSelectedHotelIdx(null); setSelectedRoomIdx(null);
   };
@@ -253,6 +254,7 @@ export default function Home() {
             total_price_paid: h.total_price_incl_tax || h.price_per_night_incl_tax || 0,
           });
           setWarnings({});
+          setDocType('search_results');
           setUploadStep(2);
         }
         return;
@@ -282,10 +284,12 @@ export default function Home() {
             total_price_paid: room.total_price_incl_tax || 0,
           });
           setWarnings(json.warnings || {});
+          setDocType('hotel_detail_rooms');
           setUploadStep(2);
         } else {
           setExtracted({ ...emptyExtracted(), ...json.data });
           setWarnings(json.warnings || {});
+          setDocType('hotel_detail_rooms');
           setUploadStep(2);
         }
         return;
@@ -295,6 +299,7 @@ export default function Home() {
         const data = json.data;
         setExtracted({ ...emptyExtracted(), ...data });
         setWarnings(json.warnings || {});
+        setDocType('checkout_page');
         setUploadStep(2);
         return;
       }
@@ -308,6 +313,7 @@ export default function Home() {
       }
       setExtracted({ ...emptyExtracted(), ...data });
       setWarnings(json.warnings || {});
+      setDocType('confirmed_voucher');
 
       if (json.blocked && json.blockReason === 'non_refundable') {
         setBlockInfo({ reason: 'non_refundable' });
@@ -593,7 +599,19 @@ export default function Home() {
                 {warnings.payAtProperty && (<div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#0369a1' }}>💳 <strong>Pay at property detected</strong> — You have not paid yet so amount shows Rs.0. We will still track the rate.</div>)}
                 {warnings.unknownPolicy && (<div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}>❓ <strong>Cancellation policy unclear</strong> — Please select your policy below so we track correctly.</div>)}
                 {warnings.currencyConverted && extracted?.total_price_paid > 0 && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#166534' }}>💱 <strong>Currency converted</strong> — Original was in {warnings.originalCurrency}, converted to INR. Please verify the amount.</div>)}
-                {file && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#166534' }}><span style={{ fontSize: 16 }}>✨</span><span><strong>AI extracted successfully</strong> — verify and correct anything that looks wrong.</span></div>)}
+                {file && docType === 'confirmed_voucher' && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#166534' }}><span style={{ fontSize: 16 }}>✨</span><span><strong>AI extracted successfully</strong> — verify and correct anything that looks wrong.</span></div>)}
+                {file && (docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top' || docType === 'checkout_page') && extracted?.hotel_name && (
+                  <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 12, padding: '16px 18px', marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 16 }}>👀</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>Checking prices for your trip?</span>
+                    </div>
+                    <div style={{ background: '#fff', borderRadius: 8, padding: '10px 12px', marginBottom: 10, fontSize: 13, color: '#334155' }}>
+                      <strong>{extracted.hotel_name}</strong>{extracted.hotel_city ? `, ${extracted.hotel_city}` : ''}{extracted.check_in ? ` · ${new Date(extracted.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} → ${new Date(extracted.check_out + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>Drop your WhatsApp number below — we'll send you the best available price and alert you the moment it drops. <strong>Free. No spam.</strong></div>
+                  </div>
+                )}
 
                 <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>🏨 Hotel details</div>
@@ -607,10 +625,7 @@ export default function Home() {
                   </div>
                   <div style={grid2}>
                     <div><label style={lbl}>Room type</label><input style={inp} value={extracted.room_type} onChange={e => setExtracted({ ...extracted, room_type: e.target.value })} placeholder="e.g. Deluxe King" /></div>
-                    <div><label style={lbl}>Meal plan</label><select style={inp} value={extracted.board_basis} onChange={e => { const opt = BOARD_OPTIONS.find(o => o.code === e.target.value); setExtracted({ ...extracted, board_basis: e.target.value, board_basis_label: opt?.label || '' }); }}>{BOARD_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}</select></div>
-                  </div>
-                  <div style={{ marginBottom: 14 }}>
-                    <label style={lbl}>Booked on</label><select style={inp} value={extracted.ota_name} onChange={e => setExtracted({ ...extracted, ota_name: e.target.value })}>{['MakeMyTrip','Booking.com','Agoda','Goibibo','Hotels.com','Expedia','Direct','Other'].map(o => <option key={o} value={o}>{o}</option>)}</select>
+                    <div><label style={lbl}>Booked on</label><select style={inp} value={extracted.ota_name} onChange={e => setExtracted({ ...extracted, ota_name: e.target.value })}>{['MakeMyTrip','Booking.com','Agoda','Goibibo','Hotels.com','Expedia','Direct','Other'].map(o => <option key={o} value={o}>{o}</option>)}</select></div>
                   </div>
                 </div>
 
@@ -621,28 +636,29 @@ export default function Home() {
                     <div><label style={lbl}>Total price paid (₹) *</label><input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: parseFloat(e.target.value), original_price: parseFloat(e.target.value) })} placeholder="e.g. 85000" /></div>
                     <div><label style={lbl}>Adults</label><select style={inp} value={extracted.num_adults} onChange={e => setExtracted({ ...extracted, num_adults: parseInt(e.target.value) })}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} adult{n > 1 ? 's' : ''}</option>)}</select></div>
                   </div>
-                  <div style={{ marginBottom: 14 }}>
-                    <label style={lbl}>Children (under 12)</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: extracted.num_children > 0 ? 10 : 0 }}>
-                      <button onClick={() => { const n = Math.max(0, extracted.num_children - 1); setExtracted({ ...extracted, num_children: n, children_ages: extracted.children_ages.slice(0, n) }); }} style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontFamily: 'inherit' }}>−</button>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: 'center' as const }}>{extracted.num_children}</span>
-                      <button onClick={() => { const n = Math.min(8, extracted.num_children + 1); const ages = [...extracted.children_ages]; while (ages.length < n) ages.push(null); setExtracted({ ...extracted, num_children: n, children_ages: ages }); }} style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontFamily: 'inherit' }}>+</button>
-                      <span style={{ fontSize: 12, color: '#94a3b8' }}>{extracted.num_children === 0 ? 'No children' : extracted.num_children === 1 ? '1 child' : `${extracted.num_children} children`}</span>
-                    </div>
-                    {extracted.num_children > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
-                        {Array.from({ length: extracted.num_children }, (_, i) => (
-                          <div key={i} style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
-                            <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>Child {i+1}</span>
-                            <select style={{ ...inp, width: 100 }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
-                              <option value=''>Age</option>
-                              <option value='0'>Under 1</option>
-                              {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a} yr</option>)}
-                            </select>
-                          </div>
-                        ))}
+                  <div style={grid2}>
+                    <div>
+                      <label style={lbl}>Children (under 12)</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <button onClick={() => { const n = Math.max(0, extracted.num_children - 1); setExtracted({ ...extracted, num_children: n, children_ages: extracted.children_ages.slice(0, n) }); }} style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontFamily: 'inherit', flexShrink: 0 }}>−</button>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: NAVY, minWidth: 16, textAlign: 'center' as const }}>{extracted.num_children}</span>
+                        <button onClick={() => { const n = Math.min(8, extracted.num_children + 1); const ages = [...extracted.children_ages]; while (ages.length < n) ages.push(null); setExtracted({ ...extracted, num_children: n, children_ages: ages }); }} style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontFamily: 'inherit', flexShrink: 0 }}>+</button>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>{extracted.num_children === 0 ? 'None' : extracted.num_children === 1 ? '1 child' : `${extracted.num_children}`}</span>
                       </div>
-                    )}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'flex-end' }}>
+                      {extracted.num_children > 0 && Array.from({ length: extracted.num_children }, (_, i) => (
+                        <div key={i} style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+                          <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>C{i+1}</span>
+                          <select style={{ ...inp, width: 72, padding: '8px 6px' }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
+                            <option value=''>Age</option>
+                            <option value='0'>&lt;1</option>
+                            {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a}</option>)}
+                          </select>
+                        </div>
+                      ))}
+                      {extracted.num_children === 0 && <span style={{ fontSize: 12, color: '#cbd5e1' }}>Add children above</span>}
+                    </div>
                   </div>
                 </div>
 
