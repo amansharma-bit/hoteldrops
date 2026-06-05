@@ -240,6 +240,7 @@ export default function Home() {
         setExtractResult(json);
         const hotels = json.data?.hotels;
         if (hotels?.length > 1) {
+          setDocType('search_results');
           setUploadStep('hotel_pick');
         } else if (hotels?.length === 1) {
           const h = hotels[0];
@@ -265,6 +266,7 @@ export default function Home() {
         setExtractResult(json);
         const rooms = json.data?.room_options;
         if (rooms?.length > 1) {
+          setDocType('hotel_detail_rooms');
           setUploadStep('room_pick');
         } else if (rooms?.length === 1) {
           const d = json.data;
