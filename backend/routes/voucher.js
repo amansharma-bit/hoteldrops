@@ -85,6 +85,8 @@ const EXTRACTION_PROMPT = [
   '',
   '## CHILDREN:',
   'Extract num_children and children_ages array. Ages 0-12 (0 = infant/under 1).',
+  'GRN pages show search summary like: "We found X hotel(s)...Adult(s): 2, Child(s): 1" — always read Child(s) value from this header.',
+  'If Child(s): 1 or more, set num_children accordingly. Children ages may not be visible — leave children_ages as empty array in that case.',
   '',
   '## HOTEL ADDRESS:',
   'If not visible, infer from your knowledge of the hotel name/chain.',
