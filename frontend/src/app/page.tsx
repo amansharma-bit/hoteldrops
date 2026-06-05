@@ -714,27 +714,22 @@ export default function Home() {
                         <div><label style={lbl}>Adults</label><select style={inp} value={extracted.num_adults} onChange={e => setExtracted({ ...extracted, num_adults: parseInt(e.target.value) })}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} adult{n > 1 ? 's' : ''}</option>)}</select></div>
                       </div>
                       <div style={grid2}>
-                        <div>
-                          <label style={lbl}>Children (under 12)</label>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <button onClick={() => { const n = Math.max(0, extracted.num_children - 1); setExtracted({ ...extracted, num_children: n, children_ages: extracted.children_ages.slice(0, n) }); }} style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontFamily: 'inherit', flexShrink: 0 }}>−</button>
-                            <span style={{ fontSize: 14, fontWeight: 700, color: NAVY, minWidth: 16, textAlign: 'center' as const }}>{extracted.num_children}</span>
-                            <button onClick={() => { const n = Math.min(8, extracted.num_children + 1); const ages = [...extracted.children_ages]; while (ages.length < n) ages.push(null); setExtracted({ ...extracted, num_children: n, children_ages: ages }); }} style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontFamily: 'inherit', flexShrink: 0 }}>+</button>
-                            <span style={{ fontSize: 11, color: '#94a3b8' }}>{extracted.num_children === 0 ? 'None' : `${extracted.num_children}`}</span>
-                          </div>
+                        <div><label style={lbl}>Children (under 12)</label>
+                          <select style={inp} value={extracted.num_children} onChange={e => { const n = parseInt(e.target.value); const ages = [...extracted.children_ages]; while (ages.length < n) ages.push(null); setExtracted({ ...extracted, num_children: n, children_ages: ages.slice(0, n) }); }}>
+                            {[0,1,2,3,4,5,6].map(n => <option key={n} value={n}>{n === 0 ? 'No children' : n === 1 ? '1 child' : `${n} children`}</option>)}
+                          </select>
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'flex-end' }}>
                           {extracted.num_children > 0 && Array.from({ length: extracted.num_children }, (_, i) => (
                             <div key={i} style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
-                              <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>C{i+1}</span>
-                              <select style={{ ...inp, width: 72, padding: '8px 6px' }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
+                              <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>Child {i+1}</span>
+                              <select style={{ ...inp, width: 90, padding: '8px 6px' }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
                                 <option value=''>Age</option>
-                                <option value='0'>&lt;1</option>
-                                {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a}</option>)}
+                                <option value='0'>Under 1</option>
+                                {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a} yrs</option>)}
                               </select>
                             </div>
                           ))}
-                          {extracted.num_children === 0 && <span style={{ fontSize: 12, color: '#cbd5e1' }}>Add above</span>}
                         </div>
                       </div>
                     </div>
