@@ -863,8 +863,11 @@ export default function Home() {
 
                     {submitError && (<div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#dc2626' }}>{submitError}</div>)}
 
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+                      <button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); }} style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '11px', borderRadius: 10, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>Retake / Re-upload</button>
+                      <button onClick={() => setUploadStep(1)} style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '11px', borderRadius: 10, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>← Back</button>
+                    </div>
                     <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={() => setUploadStep(1)} style={{ background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '12px 20px', borderRadius: 10, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>← Back</button>
                       <button onClick={submitBooking} disabled={loading || extracted.cancellation_policy === 'non-refundable'} style={{ flex: 1, background: extracted.cancellation_policy === 'non-refundable' ? '#e2e8f0' : B, color: extracted.cancellation_policy === 'non-refundable' ? '#94a3b8' : '#fff', border: 'none', borderRadius: 10, padding: 14, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: extracted.cancellation_policy === 'non-refundable' ? 'not-allowed' : 'pointer' }}>
                         {loading ? 'Starting tracker…' : extracted.cancellation_policy === 'non-refundable' ? 'Cannot track non-refundable' : 'Start tracking my price →'}
                       </button>
