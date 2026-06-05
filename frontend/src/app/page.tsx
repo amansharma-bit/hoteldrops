@@ -615,7 +615,7 @@ export default function Home() {
                       if (!extracted.check_in) missing.push('check-in date');
                       if (!extracted.check_out) missing.push('check-out date');
                       if (!extracted.num_adults) missing.push('number of adults');
-                      const missingChildAges = extracted.num_children > 0 && extracted.children_ages.some((a: any) => a === null || a === undefined || a === '');
+                      const missingChildAges = extracted.num_children > 0 && extracted.children_ages.some((a: any) => a === null || a === undefined || a === '' || a === -1);
                       if (missingChildAges) missing.push('child ages');
                       return missing.length > 0 ? (
                         <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
@@ -716,12 +716,12 @@ export default function Home() {
                             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
                               {Array.from({ length: extracted.num_children }, (_, i) => (
                                 <div key={i} style={{ flex: 1, minWidth: 100 }}>
-                                  <select style={{ ...inp, borderColor: (extracted.children_ages[i] === null || extracted.children_ages[i] === undefined || extracted.children_ages[i] === '') ? '#ef4444' : '#e2e8f0' }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
+                                  <select style={{ ...inp, borderColor: (extracted.children_ages[i] === null || extracted.children_ages[i] === undefined || extracted.children_ages[i] as any === '') ? '#ef4444' : '#e2e8f0' }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
                                     <option value=''>Child {i+1} age</option>
                                     <option value='0'>Under 1</option>
                                     {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a} yrs</option>)}
                                   </select>
-                                  {(extracted.children_ages[i] === null || extracted.children_ages[i] === undefined || extracted.children_ages[i] === '') && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>Age required</div>}
+                                  {(extracted.children_ages[i] === null || extracted.children_ages[i] === undefined || extracted.children_ages[i] as any === '') && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>Age required</div>}
                                 </div>
                               ))}
                             </div>
@@ -750,7 +750,7 @@ export default function Home() {
                       const mandatoryMissing =
                         !extracted.hotel_name || !extracted.hotel_city ||
                         !extracted.check_in || !extracted.check_out || !extracted.num_adults ||
-                        (extracted.num_children > 0 && extracted.children_ages.some((a: any) => a === null || a === undefined || a === ''));
+                        (extracted.num_children > 0 && extracted.children_ages.some((a: any) => a === null || a === undefined || a === '' || a === -1));
                       return (
                         <div style={{ background: NAVY, borderRadius: 14, padding: 20, marginBottom: 16 }}>
                           <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6, fontFamily: "'Sora',sans-serif" }}>Get alerted when this price drops</div>
