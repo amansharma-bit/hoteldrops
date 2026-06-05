@@ -125,6 +125,7 @@ export default function Home() {
   const fileInputRef                  = useRef<HTMLInputElement>(null);
   const cameraInputRef                = useRef<HTMLInputElement>(null);
   const childAgeRef                   = useRef<HTMLDivElement>(null);
+  const [showChildAgePopup, setShowChildAgePopup] = useState(false);
   const [extractResult, setExtractResult] = useState<any>(null);
   const [editMode, setEditMode] = useState(false);
   const [docType, setDocType] = useState<string>('confirmed_voucher');
@@ -170,7 +171,7 @@ export default function Home() {
   const openModal = () => {
     setModalOpen(true); setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); setDocType('confirmed_voucher');
     setPhone(''); setEmailVal(''); setSubmitError(''); setBlockInfo(null); setWarnings({}); setLoading(false);
-    setExtractResult(null); setSelectedHotelIdx(null); setSelectedRoomIdx(null); setEditMode(false);
+    setExtractResult(null); setSelectedHotelIdx(null); setSelectedRoomIdx(null); setEditMode(false); setShowChildAgePopup(false);
   };
 
   const closeModal = () => { setModalOpen(false); };
@@ -472,16 +473,16 @@ export default function Home() {
                       </label>
                     </div>
                     {file && fileSource === 'camera' && (
-                      <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 12, padding: '14px 16px', marginBottom: 14 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 10 }}>Photo taken — does it look clear?</div>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <label style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'center' as const, display: 'block' }}>
-                            <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} ref={cameraInputRef} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('camera'); } }} />
-                            Retake
-                          </label>
-                          <div style={{ flex: 2, background: B, color: '#fff', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'center' as const, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={doScan}>
-                            Looks good — Scan →
+                      <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '16px', marginBottom: 14 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 12 }}>Photo taken — does it look clear?</div>
+                        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                          <div style={{ background: '#FCD34D', color: NAVY, borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center' as const }} onClick={doScan}>
+                            Looks good — scan it
                           </div>
+                          <label style={{ background: 'transparent', border: '1.5px solid #1447b8', color: '#1447b8', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer', textAlign: 'center' as const, display: 'block' }}>
+                            <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} ref={cameraInputRef} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('camera'); } }} />
+                            📷 Retake photo
+                          </label>
                         </div>
                       </div>
                     )}
@@ -644,7 +645,7 @@ export default function Home() {
                               <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('camera'); setExtracted(null); setUploadStep(1); } }} />
                               Retake photo
                             </label>
-                            <button onClick={() => { setEditMode(true); setTimeout(() => { if (hasChildAgeMissing && childAgeRef.current) { childAgeRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 200); }} style={{ flex: 1, background: '#dc2626', border: 'none', color: '#fff', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
+                            <button onClick={() => { if (hasChildAgeMissing && missing.length === 1) { setShowChildAgePopup(true); } else { setEditMode(true); } }} style={{ flex: 1, background: '#dc2626', border: 'none', color: '#fff', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>{hasChildAgeMissing && missing.length === 1 ? 'Add child ages' : 'Enter manually'}</button>
                           </div>
                         </div>
                       ) : null;
@@ -652,8 +653,8 @@ export default function Home() {
 
                     {/* ── CAPTURED SUMMARY CARD ── */}
                     <div style={{ marginBottom: 16 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#64748b', marginBottom: 6 }}>We read your screenshot</div>
-                      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 10 }}>Looks like you haven't booked yet — we'll watch this price while you decide.</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 6, fontFamily: "'Sora',sans-serif", letterSpacing: '-0.5px' }}>Spotted.</div>
+                      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 10 }}>We've got this hotel locked in. Drop your number and we'll alert you the moment the price falls.</div>
                       <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={extracted.hotel_name ? B : '#ef4444'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
@@ -763,6 +764,30 @@ export default function Home() {
                       </div>
                     )}
 
+                    {/* ── CHILD AGE POPUP ── */}
+                    {showChildAgePopup && extracted && extracted.num_children > 0 && (
+                      <div style={{ position: 'fixed' as const, inset: 0, zIndex: 2000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                        <div onClick={() => setShowChildAgePopup(false)} style={{ position: 'absolute' as const, inset: 0, background: 'rgba(15,23,42,0.5)' }} />
+                        <div style={{ position: 'relative' as const, background: '#fff', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 600, padding: '24px 24px 40px', zIndex: 1 }}>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 6, fontFamily: "'Sora',sans-serif" }}>How old are the children?</div>
+                          <div style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>We need ages to search the right room configuration.</div>
+                          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12, marginBottom: 20 }}>
+                            {Array.from({ length: extracted.num_children }, (_, i) => (
+                              <div key={i}>
+                                <label style={lbl}>Child {i + 1}</label>
+                                <select style={inp} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
+                                  <option value=''>Select age</option>
+                                  <option value='0'>Under 1</option>
+                                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a} yrs</option>)}
+                                </select>
+                              </div>
+                            ))}
+                          </div>
+                          <button onClick={() => setShowChildAgePopup(false)} style={{ width: '100%', background: '#FCD34D', color: NAVY, border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* ── CTA BOX ── */}
                     {(() => {
                       const mandatoryMissing =
@@ -771,8 +796,8 @@ export default function Home() {
                         (extracted.num_children > 0 && (extracted.children_ages.length < extracted.num_children || extracted.children_ages.some((a: any) => a === null || a === undefined || a === '' || a === -1)));
                       return (
                         <div style={{ background: NAVY, borderRadius: 14, padding: 20, marginBottom: 16 }}>
-                          <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6, fontFamily: "'Sora',sans-serif" }}>Get alerted when this price drops</div>
-                          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 16, lineHeight: 1.5 }}>One WhatsApp message the moment the price moves. Free. No spam.</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6, fontFamily: "'Sora',sans-serif" }}>One message. One tap. You save.</div>
+                          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 16, lineHeight: 1.5 }}>Free. No app. No spam.</div>
                           <div style={{ display: 'flex', marginBottom: 12 }}>
                             <span style={{ ...inp, width: 52, borderRadius: '10px 0 0 10px', borderRight: 'none', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>+91</span>
                             <input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.15)', borderLeft: 'none' }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number" maxLength={10} />
@@ -785,7 +810,7 @@ export default function Home() {
                             </div>
                           )}
                           <button onClick={mandatoryMissing ? () => setEditMode(true) : submitBooking} disabled={loading} style={{ width: '100%', background: mandatoryMissing ? '#475569' : '#FCD34D', color: mandatoryMissing ? 'rgba(255,255,255,0.6)' : NAVY, border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit', transition: 'all 0.2s' }}>
-                            {loading ? 'Setting up alert…' : mandatoryMissing ? 'Complete required fields first' : 'Alert me when price drops →'}
+                            {loading ? 'Setting up alert…' : mandatoryMissing ? 'Complete required fields first' : 'Yes, watch this price for me →'}
                           </button>
                         </div>
                       );
