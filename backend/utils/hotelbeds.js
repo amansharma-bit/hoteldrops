@@ -97,14 +97,10 @@ function getDestinationCode(cityName) {
   return DESTINATION_MAP[key] ? key : null
 }
 
-// Extract best image URL from a hotel object (handles multiple possible field names)
 function extractImageUrl(hotelObj) {
   if (!hotelObj) return null
-  // main_photo is returned in the hotels[] array of rates response
   if (hotelObj.main_photo) return hotelObj.main_photo
-  // hotelImages is returned in /data/hotel endpoint
   if (hotelObj.hotelImages && hotelObj.hotelImages.length > 0) return hotelObj.hotelImages[0].url
-  // images array fallback
   if (hotelObj.images && hotelObj.images.length > 0) return hotelObj.images[0].url || hotelObj.images[0]
   return null
 }
@@ -141,7 +137,6 @@ async function searchHotels({ destination, checkIn, checkOut, adults = 2, childr
       throw new Error(`LiteAPI ${res.status}: ${JSON.stringify(res.data).slice(0, 200)}`)
     }
 
-    // Log full structure of first item to understand response shape
     const rawData = res.data
     console.log('🔍 Response keys:', Object.keys(rawData))
     if (rawData.hotels && rawData.hotels[0]) {
@@ -155,10 +150,8 @@ async function searchHotels({ destination, checkIn, checkOut, adults = 2, childr
     const ratesList = rawData.data || []
     const hotelsList = rawData.hotels || []
 
-    // Build lookup map hotelId → hotel info
     const hotelInfoMap = {}
     for (const h of hotelsList) {
-      // LiteAPI uses 'id' in hotels array
       hotelInfoMap[h.id] = h
     }
 
@@ -175,12 +168,17 @@ async function searchHotels({ destination, checkIn, checkOut, adults = 2, childr
         city: dest.city,
         stars: info.starRating ? Math.round(parseFloat(info.starRating)) : 5,
         minRate: minRateUSD ? Math.round(minRateUSD * USD_TO_INR) : 0,
+        lowestPriceINR: minRateUSD ? Math.round(minRateUSD * USD_TO_INR) : 0,
         maxRate: null,
         currency: 'INR',
         address: info.address || null,
-        imageUrl: extractImageUrl(info),   // extracts from main_photo, hotelImages, or images
+        imageUrl: extractImageUrl(info),
         chain: info.chainName || null,
         rating: info.rating || null,
+        latitude: info.location?.latitude || null,
+        longitude: info.location?.longitude || null,
+        isRefundable: null,
+        hasBreakfast: false,
         rooms: h.roomTypes || [],
         reviews: info.rating ? [{ rate: info.rating }] : [],
       }
@@ -189,6 +187,7 @@ async function searchHotels({ destination, checkIn, checkOut, adults = 2, childr
     cacheSet(cacheKey, hotels, TTL_SEARCH)
     console.log(`✅ Found ${hotels.length} hotels`)
     console.log(`🖼️ Hotels with images: ${hotels.filter(h => h.imageUrl).length}`)
+    console.log(`📍 Hotels with coords: ${hotels.filter(h => h.latitude && h.longitude).length}`)
     console.log(`📛 Hotels with names: ${hotels.filter(h => h.name && h.name !== 'Hotel').length}`)
     return hotels
   } catch (err) {
@@ -211,7 +210,6 @@ async function getHotelContent(hotelCode) {
     const hotel = res.data.data || null
     if (!hotel) return null
 
-    // hotelImages is the correct field per docs: [{ url, caption, order }]
     const images = (hotel.hotelImages || hotel.images || []).map((img, i) => ({
       type: { code: 'GEN', description: { content: img.caption || 'General' } },
       path: img.url || img,
