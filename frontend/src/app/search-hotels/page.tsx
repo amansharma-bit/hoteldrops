@@ -43,6 +43,8 @@ const TICKER_ITEMS = [
   { name: "Neha R.", hotel: "Four Seasons, Bali", saved: "₹18,200", time: "23 min ago" },
   { name: "Arjun T.", hotel: "The Langham, London", saved: "₹26,200", time: "31 min ago" },
 ];
+
+// Full destinations list with flags
 const DESTINATIONS = [
   { flag: "🇦🇪", city: "Dubai", country: "UAE", img: "/dubai.jpg", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
   { flag: "🇮🇳", city: "New Delhi", country: "India", img: "/newdelhi.jpg", badge: "Member Deal", badgeColor: "#1447b8", badgeText: "#fff" },
@@ -50,7 +52,38 @@ const DESTINATIONS = [
   { flag: "🇮🇳", city: "Goa", country: "India", img: "/goa.jpg", badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
   { flag: "🇮🇩", city: "Bali", country: "Indonesia", img: "/bali.jpg" },
   { flag: "🇮🇳", city: "Mumbai", country: "India", img: "/mumbai.jpg" },
+  { flag: "🇦🇪", city: "Abu Dhabi", country: "UAE", img: "/dubai.jpg" },
+  { flag: "🇮🇳", city: "Bangalore", country: "India", img: "/newdelhi.jpg" },
+  { flag: "🇮🇳", city: "Chennai", country: "India", img: "/newdelhi.jpg" },
+  { flag: "🇮🇳", city: "Hyderabad", country: "India", img: "/newdelhi.jpg" },
+  { flag: "🇮🇳", city: "Jaipur", country: "India", img: "/newdelhi.jpg" },
+  { flag: "🇮🇳", city: "Kolkata", country: "India", img: "/newdelhi.jpg" },
+  { flag: "🇮🇳", city: "Agra", country: "India", img: "/newdelhi.jpg" },
+  { flag: "🇮🇳", city: "Kochi", country: "India", img: "/newdelhi.jpg" },
+  { flag: "🇹🇭", city: "Bangkok", country: "Thailand", img: "/singapore.jpg" },
+  { flag: "🇹🇭", city: "Phuket", country: "Thailand", img: "/bali.jpg" },
+  { flag: "🇲🇾", city: "Kuala Lumpur", country: "Malaysia", img: "/singapore.jpg" },
+  { flag: "🇻🇳", city: "Hanoi", country: "Vietnam", img: "/singapore.jpg" },
+  { flag: "🇬🇧", city: "London", country: "UK", img: "/dubai.jpg" },
+  { flag: "🇫🇷", city: "Paris", country: "France", img: "/dubai.jpg" },
+  { flag: "🇮🇹", city: "Rome", country: "Italy", img: "/dubai.jpg" },
+  { flag: "🇪🇸", city: "Barcelona", country: "Spain", img: "/dubai.jpg" },
+  { flag: "🇳🇱", city: "Amsterdam", country: "Netherlands", img: "/dubai.jpg" },
+  { flag: "🇹🇷", city: "Istanbul", country: "Turkey", img: "/dubai.jpg" },
+  { flag: "🇲🇻", city: "Maldives", country: "Maldives", img: "/bali.jpg" },
+  { flag: "🇿🇦", city: "Cape Town", country: "South Africa", img: "/dubai.jpg" },
+  { flag: "🇺🇸", city: "New York", country: "USA", img: "/dubai.jpg" },
+  { flag: "🇯🇵", city: "Tokyo", country: "Japan", img: "/singapore.jpg" },
+  { flag: "🇭🇰", city: "Hong Kong", country: "Hong Kong", img: "/singapore.jpg" },
+  { flag: "🇰🇷", city: "Seoul", country: "South Korea", img: "/singapore.jpg" },
+  { flag: "🇦🇺", city: "Sydney", country: "Australia", img: "/dubai.jpg" },
+  { flag: "🇶🇦", city: "Doha", country: "Qatar", img: "/dubai.jpg" },
+  { flag: "🇴🇲", city: "Muscat", country: "Oman", img: "/dubai.jpg" },
+  { flag: "🇸🇦", city: "Riyadh", country: "Saudi Arabia", img: "/dubai.jpg" },
 ];
+
+// Featured 6 for the destination cards grid
+const FEATURED_DESTINATIONS = DESTINATIONS.slice(0, 6);
 
 const HOTELS_BY_CITY: Record<string, Array<{name:string;loc:string;stars:number;rating:string;tags:string[];was:string;now:string;save:string;badges:[string,string][];img:string}>> = {
   "All Hotels": [
@@ -115,7 +148,9 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
   luxury: { bg: "#1e293b", color: "#fff" }, best: { bg: "#16a34a", color: "#fff" },
   watching: { bg: "rgba(20,71,184,0.92)", color: "#fff" }, trending: { bg: "#f59e0b", color: "#1a1a1a" }, off: { bg: "#ef4444", color: "#fff" },
 };
+
 const CITY_FILTERS = ["All Hotels", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai"];
+
 const STATS = [
   { id: 0, target: 4200, prefix: "", suffix: "+", label: "Member deals live right now" },
   { id: 1, target: 18, prefix: "₹", suffix: "Cr", label: "Saved for members" },
@@ -150,6 +185,14 @@ export default function SearchHotelsPage() {
   const statsRef = useRef<HTMLDivElement>(null);
   const statsAnimated = useRef(false);
   const searchBoxRef = useRef<HTMLDivElement>(null);
+
+  // Filtered suggestions based on input
+  const filteredSuggestions = destination.length > 0
+    ? DESTINATIONS.filter(d =>
+        `${d.city}`.toLowerCase().includes(destination.toLowerCase()) ||
+        `${d.country}`.toLowerCase().includes(destination.toLowerCase())
+      ).slice(0, 8)
+    : DESTINATIONS.slice(0, 8);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -250,25 +293,16 @@ export default function SearchHotelsPage() {
     const firstDow = getFirstDow(year, month);
     return (
       <div key={`${year}-${month}`} style={{ marginBottom: 32 }}>
-        <div style={{ fontWeight: 700, fontSize: 16, color: NAVY, textAlign: "center", marginBottom: 16, fontFamily: "'Sora',sans-serif" }}>
-          {MONTHS[month]} {year}
-        </div>
+        <div style={{ fontWeight: 700, fontSize: 16, color: NAVY, textAlign: "center", marginBottom: 16, fontFamily: "'Sora',sans-serif" }}>{MONTHS[month]} {year}</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
           {DOWS.map(d => <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, color: "#94a3b8", paddingBottom: 10 }}>{d}</div>)}
           {Array.from({ length: firstDow }).map((_, i) => <div key={`e${i}`} />)}
           {Array.from({ length: days }).map((_, i) => {
-            const day = i + 1;
-            const ds = toDateStr(year, month, day);
-            const isDisabled = ds < todayStr;
-            const isStart = ds === checkIn && !!checkOut;
-            const isEnd = ds === checkOut;
-            const isOnly = ds === checkIn && !checkOut;
-            const isInRange = !!(checkIn && checkOut && ds > checkIn && ds < checkOut);
+            const day = i + 1; const ds = toDateStr(year, month, day); const isDisabled = ds < todayStr;
+            const isStart = ds === checkIn && !!checkOut; const isEnd = ds === checkOut;
+            const isOnly = ds === checkIn && !checkOut; const isInRange = !!(checkIn && checkOut && ds > checkIn && ds < checkOut);
             const isToday = ds === todayStr;
-            let bg = "transparent";
-            let clr = isDisabled ? "#cbd5e1" : NAVY;
-            let br = "50%";
-            let fw = isToday ? 700 : 400;
+            let bg = "transparent", clr = isDisabled ? "#cbd5e1" : NAVY, br = "50%", fw = isToday ? 700 : 400;
             if (isStart) { bg = B; clr = "#fff"; br = "50% 0 0 50%"; fw = 700; }
             else if (isEnd) { bg = B; clr = "#fff"; br = "0 50% 50% 0"; fw = 700; }
             else if (isOnly) { bg = B; clr = "#fff"; br = "50%"; fw = 700; }
@@ -308,7 +342,26 @@ export default function SearchHotelsPage() {
     .sfield:hover { background: rgba(0,0,0,0.02); }
     .fs { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; flex-direction: column; animation: slideInRight 0.22s ease; }
     .ybtn:hover { background: #e6b800 !important; }
+    .sugg-item:hover { background: #f0f7ff !important; }
   `;
+
+  // Suggestion dropdown — shared between mobile and desktop
+  const SuggestionDropdown = ({ style }: { style?: React.CSSProperties }) => (
+    showSuggestions && filteredSuggestions.length > 0 ? (
+      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 9999, maxHeight: 280, overflowY: "auto" as const, marginTop: 4, ...style }}>
+        {filteredSuggestions.map((d, i) => (
+          <div key={i} className="sugg-item" onMouseDown={() => { setDestination(`${d.city}, ${d.country}`); setShowSuggestions(false); }}
+            style={{ padding: "11px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontSize: 14, color: NAVY, borderBottom: i < filteredSuggestions.length - 1 ? "1px solid #f8fafc" : "none" }}>
+            <span style={{ fontSize: 22, flexShrink: 0 }}>{d.flag}</span>
+            <div>
+              <div style={{ fontWeight: 600 }}>{d.city}</div>
+              <div style={{ fontSize: 12, color: "#64748b" }}>{d.country}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : null
+  );
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, overflowX: "hidden" }}>
@@ -320,15 +373,10 @@ export default function SearchHotelsPage() {
         <div className="fs">
           <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderBottom: "1px solid #f1f5f9", flexShrink: 0 }}>
             <button onClick={() => setCalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, color: NAVY, lineHeight: 1, padding: 2 }}>&#8592;</button>
-            <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 17, color: NAVY }}>
-              {calMode === "checkin" ? "Select Check-in Date" : "Select Check-out Date"}
-            </div>
+            <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 17, color: NAVY }}>{calMode === "checkin" ? "Select Check-in Date" : "Select Check-out Date"}</div>
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 0" }}>
-            {Array.from({ length: 12 }).map((_, i) => {
-              const dm = new Date(today.getFullYear(), today.getMonth() + i);
-              return renderMonth(dm.getFullYear(), dm.getMonth());
-            })}
+            {Array.from({ length: 12 }).map((_, i) => { const dm = new Date(today.getFullYear(), today.getMonth() + i); return renderMonth(dm.getFullYear(), dm.getMonth()); })}
           </div>
           <div style={{ borderTop: "1px solid #e2e8f0", padding: "14px 20px 32px", background: "#fff", flexShrink: 0 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
@@ -357,22 +405,13 @@ export default function SearchHotelsPage() {
             <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 17, color: NAVY }}>Select Rooms &amp; Guests</div>
           </div>
           <div style={{ flex: 1, padding: "0 20px", overflowY: "auto" }}>
-            {[
-              { label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 },
-              { label: "Adults", sub: "13 years & above", key: "adults" as keyof GuestState, min: 1, max: 16 },
-              { label: "Children", sub: "0–12 years", key: "children" as keyof GuestState, min: 0, max: 8 },
-            ].map(item => (
+            {([{ label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 }, { label: "Adults", sub: "13 years & above", key: "adults" as keyof GuestState, min: 1, max: 16 }, { label: "Children", sub: "0–12 years", key: "children" as keyof GuestState, min: 0, max: 8 }]).map(item => (
               <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 0", borderBottom: "1px solid #f1f5f9" }}>
-                <div>
-                  <div style={{ fontSize: 17, fontWeight: 600, color: NAVY }}>{item.label}</div>
-                  <div style={{ fontSize: 13, color: "#94a3b8" }}>{item.sub}</div>
-                </div>
+                <div><div style={{ fontSize: 17, fontWeight: 600, color: NAVY }}>{item.label}</div><div style={{ fontSize: 13, color: "#94a3b8" }}>{item.sub}</div></div>
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  <button className="gbtn" style={{ width: 40, height: 40 }} disabled={(guests[item.key] as number) <= item.min}
-                    onClick={() => updateGuests(item.key, Math.max(item.min, (guests[item.key] as number) - 1))}>−</button>
+                  <button className="gbtn" style={{ width: 40, height: 40 }} disabled={(guests[item.key] as number) <= item.min} onClick={() => updateGuests(item.key, Math.max(item.min, (guests[item.key] as number) - 1))}>−</button>
                   <span style={{ fontSize: 18, fontWeight: 700, color: NAVY, minWidth: 28, textAlign: "center" as const }}>{guests[item.key]}</span>
-                  <button className="gbtn" style={{ width: 40, height: 40 }} disabled={(guests[item.key] as number) >= item.max}
-                    onClick={() => updateGuests(item.key, Math.min(item.max, (guests[item.key] as number) + 1))}>+</button>
+                  <button className="gbtn" style={{ width: 40, height: 40 }} disabled={(guests[item.key] as number) >= item.max} onClick={() => updateGuests(item.key, Math.min(item.max, (guests[item.key] as number) + 1))}>+</button>
                 </div>
               </div>
             ))}
@@ -405,218 +444,185 @@ export default function SearchHotelsPage() {
 
       {/* NAV + HERO */}
       <div style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)" }}>
-      {/* NAV */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 200, background: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
-        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none", flexShrink: 0 }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
-        {!isMobile && (
-          <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
-            <a href="/search-hotels" style={{ fontSize: 14, color: "#FCD34D", textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a>
-            {user ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
-                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user.name.split(" ")[0]}</span>
-              </div>
-            ) : (
-              <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Log in / Sign up</button>
-            )}
-          </div>
-        )}
-        {isMobile && (
-          <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
-            <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px,5px)" : "none" }} />
-            <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : "rgba(255,255,255,0.8)", transition: "all 0.2s" }} />
-            <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: menuOpen ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
-          </button>
-        )}
-      </nav>
-
-      {isMobile && menuOpen && (
-        <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 199, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={() => { router.push("/search-hotels"); setMenuOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
-          <button onClick={() => window.location.href = "/signin"} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Log in / Sign up</button>
-        </div>
-      )}
-
-      {/* HERO */}
-      <section style={{ background: "transparent", padding: isMobile ? "48px 0 0" : "72px 0 0", textAlign: "center", position: "relative", overflow: "visible", zIndex: 1 }}>
-        <div style={{ padding: isMobile ? "0 20px" : "0 40px" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
-            ✦ Exclusive Member Deals
-          </div>
-          <h1 className="sora" style={{ fontSize: isMobile ? 34 : 60, fontWeight: 800, color: "#fff", lineHeight: 1.08, maxWidth: 760, margin: "0 auto 18px" }}>
-            Find your <span style={{ color: YELLOW }}>perfect stay</span>
-          </h1>
-          <p style={{ fontSize: isMobile ? 15 : 16.5, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.7 }}>
-            500,000+ exclusive deals across the globe for members only.
-          </p>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: isMobile ? 12 : 13, padding: "8px 18px", borderRadius: 100, marginBottom: 36 }}>
-            <span style={{ width: 8, height: 8, background: "#4ade80", borderRadius: "50%", flexShrink: 0, animation: "pulse 1.5s infinite" }} />
-            <span className={tickerVisible ? "ticker-visible" : "ticker-hidden"} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const, justifyContent: "center" }}>
-              <span style={{ fontWeight: 600, color: YELLOW }}>{ticker.name}</span>
-              <span style={{ color: "rgba(255,255,255,0.7)" }}>saved on</span>
-              <span style={{ fontWeight: 600 }}>{ticker.hotel}</span>
-              <span style={{ color: "#4ade80", fontWeight: 700 }}>— {ticker.saved}</span>
-              <span style={{ background: "rgba(255,255,255,0.15)", fontSize: 11, padding: "2px 8px", borderRadius: 6, color: "rgba(255,255,255,0.7)" }}>{ticker.time}</span>
-            </span>
-          </div>
-        </div>
-
-        {/* SEARCH BAR */}
-        <div ref={searchBoxRef} style={{ width: "100%", padding: isMobile ? "0 12px" : "0 40px" }}>
-          <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.22)", overflow: "visible", position: "relative", marginBottom: isMobile ? -32 : -36 }}>
-
-            {isMobile ? (
-              <div>
-                <div style={{ padding: "13px 16px", borderBottom: "1px solid #f1f5f9", borderRadius: "16px 16px 0 0", position: "relative" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or hotel</div>
-                  <input type="text" placeholder="Where to? e.g. Dubai, UAE" value={destination}
-                    onChange={e => { setDestination(e.target.value); setShowSuggestions(true); setSearchError(""); }}
-                    onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                    style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 16, fontWeight: 500, color: NAVY, background: "transparent", padding: 0 }} />
-                  {showSuggestions && destination.length > 0 && (
-                    <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 9999, maxHeight: 220, overflowY: "auto" as const, marginTop: 4 }}>
-                      {DESTINATIONS.filter(d => `${d.city}, ${d.country}`.toLowerCase().includes(destination.toLowerCase())).map((d, i) => (
-                        <div key={i} onMouseDown={() => { setDestination(`${d.city}, ${d.country}`); setShowSuggestions(false); }}
-                          style={{ padding: "12px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontSize: 14, color: NAVY, borderBottom: "1px solid #f8fafc" }}>
-                          <span style={{ fontSize: 20 }}>{d.flag}</span>
-                          <div><div style={{ fontWeight: 600 }}>{d.city}</div><div style={{ fontSize: 12, color: "#64748b" }}>{d.country}</div></div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+        <nav style={{ position: "sticky", top: 0, zIndex: 200, background: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
+          <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none", flexShrink: 0 }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
+          {!isMobile && (
+            <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+              <a href="/search-hotels" style={{ fontSize: 14, color: "#FCD34D", textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a>
+              {user ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user.name.split(" ")[0]}</span>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: "1px solid #f1f5f9" }}>
-                  <div className="sfield" style={{ padding: "12px 16px", borderRight: "1px solid #f1f5f9", background: calOpen && calMode === "checkin" ? "#f0f7ff" : "transparent" }}
-                    onClick={() => { setCalMode("checkin"); setCalOpen(true); }}>
+              ) : (
+                <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Log in / Sign up</button>
+              )}
+            </div>
+          )}
+          {isMobile && (
+            <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+              <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px,5px)" : "none" }} />
+              <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : "rgba(255,255,255,0.8)", transition: "all 0.2s" }} />
+              <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: menuOpen ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
+            </button>
+          )}
+        </nav>
+
+        {isMobile && menuOpen && (
+          <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 199, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+            <button onClick={() => { router.push("/search-hotels"); setMenuOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
+            <button onClick={() => window.location.href = "/signin"} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Log in / Sign up</button>
+          </div>
+        )}
+
+        {/* HERO */}
+        <section style={{ background: "transparent", padding: isMobile ? "48px 0 0" : "72px 0 0", textAlign: "center", position: "relative", overflow: "visible", zIndex: 1 }}>
+          <div style={{ padding: isMobile ? "0 20px" : "0 40px" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
+              ✦ Exclusive Member Deals
+            </div>
+            <h1 className="sora" style={{ fontSize: isMobile ? 34 : 60, fontWeight: 800, color: "#fff", lineHeight: 1.08, maxWidth: 760, margin: "0 auto 18px" }}>
+              Find your <span style={{ color: YELLOW }}>perfect stay</span>
+            </h1>
+            <p style={{ fontSize: isMobile ? 15 : 16.5, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.7 }}>
+              500,000+ exclusive deals across the globe for members only.
+            </p>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: isMobile ? 12 : 13, padding: "8px 18px", borderRadius: 100, marginBottom: 36 }}>
+              <span style={{ width: 8, height: 8, background: "#4ade80", borderRadius: "50%", flexShrink: 0, animation: "pulse 1.5s infinite" }} />
+              <span className={tickerVisible ? "ticker-visible" : "ticker-hidden"} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const, justifyContent: "center" }}>
+                <span style={{ fontWeight: 600, color: YELLOW }}>{ticker.name}</span>
+                <span style={{ color: "rgba(255,255,255,0.7)" }}>saved on</span>
+                <span style={{ fontWeight: 600 }}>{ticker.hotel}</span>
+                <span style={{ color: "#4ade80", fontWeight: 700 }}>— {ticker.saved}</span>
+                <span style={{ background: "rgba(255,255,255,0.15)", fontSize: 11, padding: "2px 8px", borderRadius: 6, color: "rgba(255,255,255,0.7)" }}>{ticker.time}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* SEARCH BAR */}
+          <div ref={searchBoxRef} style={{ width: "100%", padding: isMobile ? "0 12px" : "0 40px" }}>
+            <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.22)", overflow: "visible", position: "relative", marginBottom: isMobile ? -32 : -36 }}>
+              {isMobile ? (
+                <div>
+                  <div style={{ padding: "13px 16px", borderBottom: "1px solid #f1f5f9", borderRadius: "16px 16px 0 0", position: "relative" }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or hotel</div>
+                    <input type="text" placeholder="Where to? e.g. Dubai" value={destination}
+                      onChange={e => { setDestination(e.target.value); setShowSuggestions(true); setSearchError(""); }}
+                      onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                      style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 16, fontWeight: 500, color: NAVY, background: "transparent", padding: 0 }} />
+                    <SuggestionDropdown />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: "1px solid #f1f5f9" }}>
+                    <div className="sfield" style={{ padding: "12px 16px", borderRight: "1px solid #f1f5f9", background: calOpen && calMode === "checkin" ? "#f0f7ff" : "transparent" }} onClick={() => { setCalMode("checkin"); setCalOpen(true); }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
+                      <div style={{ fontSize: 14, fontWeight: checkIn ? 600 : 400, color: checkIn ? NAVY : "#94a3b8" }}>{checkIn ? formatDate(checkIn) : "Add date"}</div>
+                    </div>
+                    <div className="sfield" style={{ padding: "12px 16px", background: calOpen && calMode === "checkout" ? "#f0f7ff" : "transparent" }} onClick={() => { setCalMode("checkout"); setCalOpen(true); }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-out</div>
+                      <div style={{ fontSize: 14, fontWeight: checkOut ? 600 : 400, color: checkOut ? NAVY : "#94a3b8" }}>{checkOut ? formatDate(checkOut) : "Add date"}</div>
+                    </div>
+                  </div>
+                  <div className="sfield" style={{ padding: "12px 16px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }} onClick={() => setGuestOpen(true)}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Rooms &amp; Guests</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{guestSummary()}</div>
+                    </div>
+                    <span style={{ fontSize: 18, color: "#94a3b8" }}>&#8250;</span>
+                  </div>
+                  <button className="ybtn" onClick={handleSearch} style={{ background: YELLOW, color: "#1a1a1a", border: "none", width: "100%", padding: "18px", fontSize: 17, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", borderRadius: "0 0 16px 16px" }}>
+                    Search Hotels
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: 72 }}>
+                  <div className="sfield" style={{ padding: "0 24px", borderRight: "1px solid #e2e8f0", borderRadius: "16px 0 0 16px", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or hotel</div>
+                    <input type="text" placeholder="Enter city, area or property name" value={destination}
+                      onChange={e => { setDestination(e.target.value); setShowSuggestions(true); setSearchError(""); }}
+                      onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                      style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 15, fontWeight: 500, color: NAVY, background: "transparent", padding: 0, width: "100%" }} />
+                    <SuggestionDropdown style={{ width: 380 }} />
+                  </div>
+                  <div className="sfield" style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkin" ? "#f0f7ff" : "transparent" }} onClick={() => { setCalMode("checkin"); setCalOpen(true); setCalMonthOffset(0); }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
-                    <div style={{ fontSize: 14, fontWeight: checkIn ? 600 : 400, color: checkIn ? NAVY : "#94a3b8" }}>{checkIn ? formatDate(checkIn) : "Add date"}</div>
+                    <div style={{ fontSize: checkIn ? 15 : 14, fontWeight: checkIn ? 700 : 400, color: checkIn ? NAVY : "#94a3b8" }}>{checkIn ? formatDate(checkIn) : "Add date"}</div>
                   </div>
-                  <div className="sfield" style={{ padding: "12px 16px", background: calOpen && calMode === "checkout" ? "#f0f7ff" : "transparent" }}
-                    onClick={() => { setCalMode("checkout"); setCalOpen(true); }}>
+                  <div className="sfield" style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkout" ? "#f0f7ff" : "transparent" }} onClick={() => { setCalMode("checkout"); setCalOpen(true); setCalMonthOffset(0); }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-out</div>
-                    <div style={{ fontSize: 14, fontWeight: checkOut ? 600 : 400, color: checkOut ? NAVY : "#94a3b8" }}>{checkOut ? formatDate(checkOut) : "Add date"}</div>
+                    <div style={{ fontSize: checkOut ? 15 : 14, fontWeight: checkOut ? 700 : 400, color: checkOut ? NAVY : "#94a3b8" }}>{checkOut ? formatDate(checkOut) : "Add date"}</div>
                   </div>
-                </div>
-                <div className="sfield" style={{ padding: "12px 16px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                  onClick={() => setGuestOpen(true)}>
-                  <div>
+                  <div ref={guestRef} className="sfield" style={{ padding: "0 20px", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }} onClick={() => setGuestOpen(!guestOpen)}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Rooms &amp; Guests</div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{guestSummary()}</div>
-                  </div>
-                  <span style={{ fontSize: 18, color: "#94a3b8" }}>&#8250;</span>
-                </div>
-                <button className="ybtn" onClick={handleSearch} style={{ background: YELLOW, color: "#1a1a1a", border: "none", width: "100%", padding: "18px", fontSize: 17, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", borderRadius: "0 0 16px 16px" }}>
-                  Search Hotels
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: 72 }}>
-                <div className="sfield" style={{ padding: "0 24px", borderRight: "1px solid #e2e8f0", borderRadius: "16px 0 0 16px", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or hotel</div>
-                  <input type="text" placeholder="Enter city, area or property name" value={destination}
-                    onChange={e => { setDestination(e.target.value); setShowSuggestions(true); setSearchError(""); }}
-                    onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                    style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 15, fontWeight: 500, color: NAVY, background: "transparent", padding: 0, width: "100%" }} />
-                  {showSuggestions && destination.length > 0 && (
-                    <div style={{ position: "absolute", top: "100%", left: 0, width: 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 9999, maxHeight: 240, overflowY: "auto" as const, marginTop: 6 }}>
-                      {DESTINATIONS.filter(d => `${d.city}, ${d.country}`.toLowerCase().includes(destination.toLowerCase())).map((d, i) => (
-                        <div key={i} onMouseDown={() => { setDestination(`${d.city}, ${d.country}`); setShowSuggestions(false); }}
-                          style={{ padding: "11px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontSize: 14, color: NAVY, borderBottom: "1px solid #f8fafc" }}
-                          onMouseOver={e => (e.currentTarget.style.background = "#f0f7ff")} onMouseOut={e => (e.currentTarget.style.background = "#fff")}>
-                          <span style={{ fontSize: 20 }}>{d.flag}</span>
-                          <div><div style={{ fontWeight: 600 }}>{d.city}</div><div style={{ fontSize: 12, color: "#64748b" }}>{d.country}</div></div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="sfield" style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkin" ? "#f0f7ff" : "transparent" }}
-                  onClick={() => { setCalMode("checkin"); setCalOpen(true); setCalMonthOffset(0); }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
-                  <div style={{ fontSize: checkIn ? 15 : 14, fontWeight: checkIn ? 700 : 400, color: checkIn ? NAVY : "#94a3b8" }}>{checkIn ? formatDate(checkIn) : "Add date"}</div>
-                </div>
-                <div className="sfield" style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkout" ? "#f0f7ff" : "transparent" }}
-                  onClick={() => { setCalMode("checkout"); setCalOpen(true); setCalMonthOffset(0); }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-out</div>
-                  <div style={{ fontSize: checkOut ? 15 : 14, fontWeight: checkOut ? 700 : 400, color: checkOut ? NAVY : "#94a3b8" }}>{checkOut ? formatDate(checkOut) : "Add date"}</div>
-                </div>
-                <div ref={guestRef} className="sfield" style={{ padding: "0 20px", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }} onClick={() => setGuestOpen(!guestOpen)}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Rooms &amp; Guests</div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: NAVY, display: "flex", alignItems: "center", gap: 4 }}><span>{guestSummary()}</span><span style={{ fontSize: 9, color: "#94a3b8" }}></span></div>
-                  {guestOpen && (
-                    <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 20 }}>
-                      {[
-                        { label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 },
-                        { label: "Adults", sub: "Age 13+", key: "adults" as keyof GuestState, min: 1, max: 16 },
-                        { label: "Children", sub: "Age 0–12", key: "children" as keyof GuestState, min: 0, max: 8 },
-                      ].map(item => (
-                        <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0", borderBottom: "1px solid #f1f5f9" }}>
-                          <div><div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{item.label}</div><div style={{ fontSize: 12, color: "#94a3b8" }}>{item.sub}</div></div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                            <button className="gbtn" disabled={(guests[item.key] as number) <= item.min} onClick={e => { e.stopPropagation(); updateGuests(item.key, Math.max(item.min, (guests[item.key] as number) - 1)); }}>−</button>
-                            <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" as const }}>{guests[item.key]}</span>
-                            <button className="gbtn" disabled={(guests[item.key] as number) >= item.max} onClick={e => { e.stopPropagation(); updateGuests(item.key, Math.min(item.max, (guests[item.key] as number) + 1)); }}>+</button>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: NAVY }}>{guestSummary()}</div>
+                    {guestOpen && (
+                      <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 20 }}>
+                        {([{ label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 }, { label: "Adults", sub: "Age 13+", key: "adults" as keyof GuestState, min: 1, max: 16 }, { label: "Children", sub: "Age 0–12", key: "children" as keyof GuestState, min: 0, max: 8 }]).map(item => (
+                          <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0", borderBottom: "1px solid #f1f5f9" }}>
+                            <div><div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{item.label}</div><div style={{ fontSize: 12, color: "#94a3b8" }}>{item.sub}</div></div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                              <button className="gbtn" disabled={(guests[item.key] as number) <= item.min} onClick={e => { e.stopPropagation(); updateGuests(item.key, Math.max(item.min, (guests[item.key] as number) - 1)); }}>−</button>
+                              <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" as const }}>{guests[item.key]}</span>
+                              <button className="gbtn" disabled={(guests[item.key] as number) >= item.max} onClick={e => { e.stopPropagation(); updateGuests(item.key, Math.min(item.max, (guests[item.key] as number) + 1)); }}>+</button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {guests.children > 0 && (
-                        <div style={{ marginTop: 12 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>Age of children at check-in</div>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                            {guests.childAges.map((age, idx) => (
-                              <div key={idx}>
-                                <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>Child {idx + 1}</div>
-                                <select value={age} onChange={e => { const a = [...guests.childAges]; a[idx] = parseInt(e.target.value); setGuests(p => ({ ...p, childAges: a })); }}
-                                  style={{ width: "100%", padding: "7px 10px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontFamily: "inherit", fontSize: 13, color: NAVY, background: "#f8fafc", outline: "none" }}>
-                                  {Array.from({ length: 13 }, (_, i) => <option key={i} value={i}>{i === 0 ? "Under 1" : `${i} year${i > 1 ? "s" : ""}`}</option>)}
-                                </select>
-                              </div>
-                            ))}
+                        ))}
+                        {guests.children > 0 && (
+                          <div style={{ marginTop: 12 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>Age of children at check-in</div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                              {guests.childAges.map((age, idx) => (
+                                <div key={idx}>
+                                  <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>Child {idx + 1}</div>
+                                  <select value={age} onChange={e => { const a = [...guests.childAges]; a[idx] = parseInt(e.target.value); setGuests(p => ({ ...p, childAges: a })); }}
+                                    style={{ width: "100%", padding: "7px 10px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontFamily: "inherit", fontSize: 13, color: NAVY, background: "#f8fafc", outline: "none" }}>
+                                    {Array.from({ length: 13 }, (_, i) => <option key={i} value={i}>{i === 0 ? "Under 1" : `${i} year${i > 1 ? "s" : ""}`}</option>)}
+                                  </select>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      <button onClick={() => setGuestOpen(false)} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 14 }}>Done</button>
+                        )}
+                        <button onClick={() => setGuestOpen(false)} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 14 }}>Done</button>
+                      </div>
+                    )}
+                  </div>
+                  <button className="ybtn" onClick={handleSearch} style={{ background: YELLOW, color: "#1a1a1a", border: "none", padding: "0 36px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", borderRadius: "0 16px 16px 0", whiteSpace: "nowrap" as const, minWidth: 130 }}>Search</button>
+                </div>
+              )}
+
+              {/* Desktop calendar */}
+              {!isMobile && calOpen && (
+                <div ref={calRef} onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", left: "34%", width: 680, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 24 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                    <button onClick={() => setCalMonthOffset(p => Math.max(0, p - 1))} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>&#8249;</button>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, flex: 1 }}>
+                      {renderMonth(d1.getFullYear(), d1.getMonth())}
+                      {renderMonth(d2.getFullYear(), d2.getMonth())}
                     </div>
-                  )}
-                </div>
-                <button className="ybtn" onClick={handleSearch} style={{ background: YELLOW, color: "#1a1a1a", border: "none", padding: "0 36px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", borderRadius: "0 16px 16px 0", whiteSpace: "nowrap" as const, minWidth: 130 }}>Search</button>
-              </div>
-            )}
-
-            {/* Desktop calendar popup — opens UPWARD */}
-            {!isMobile && calOpen && (
-              <div ref={calRef} onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", left: "34%", width: 680, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 24 }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                  <button onClick={() => setCalMonthOffset(p => Math.max(0, p - 1))} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>&#8249;</button>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, flex: 1 }}>
-                    {renderMonth(d1.getFullYear(), d1.getMonth())}
-                    {renderMonth(d2.getFullYear(), d2.getMonth())}
+                    <button onClick={() => setCalMonthOffset(p => p + 1)} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>&#8250;</button>
                   </div>
-                  <button onClick={() => setCalMonthOffset(p => p + 1)} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>&#8250;</button>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: 12, marginTop: 8 }}>
-                  <div style={{ fontSize: 13, color: "#64748b" }}>
-                    {calMode === "checkin" ? "Select check-in date" : "Select check-out date"}
-                    {checkIn && checkOut && <span style={{ color: "#16a34a", marginLeft: 8, fontWeight: 600 }}>&#10003; {formatDate(checkIn)} → {formatDate(checkOut)}</span>}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: 12, marginTop: 8 }}>
+                    <div style={{ fontSize: 13, color: "#64748b" }}>
+                      {calMode === "checkin" ? "Select check-in date" : "Select check-out date"}
+                      {checkIn && checkOut && <span style={{ color: "#16a34a", marginLeft: 8, fontWeight: 600 }}>&#10003; {formatDate(checkIn)} → {formatDate(checkOut)}</span>}
+                    </div>
+                    <button onClick={() => { setCheckIn(""); setCheckOut(""); }} style={{ background: "none", border: "none", fontSize: 13, color: "#94a3b8", cursor: "pointer", fontFamily: "inherit" }}>Clear</button>
                   </div>
-                  <button onClick={() => { setCheckIn(""); setCheckOut(""); }} style={{ background: "none", border: "none", fontSize: 13, color: "#94a3b8", cursor: "pointer", fontFamily: "inherit" }}>Clear</button>
                 </div>
-              </div>
-            )}
+              )}
 
-            {searchError && (
-              <div style={{ padding: "10px 20px", background: "#fef2f2", borderTop: "1px solid #fecaca", borderRadius: "0 0 16px 16px", fontSize: 13, color: "#dc2626", display: "flex", alignItems: "center", gap: 6 }}>
-                &#9888; {searchError}
-              </div>
-            )}
+              {searchError && (
+                <div style={{ padding: "10px 20px", background: "#fef2f2", borderTop: "1px solid #fecaca", borderRadius: "0 0 16px 16px", fontSize: 13, color: "#dc2626", display: "flex", alignItems: "center", gap: 6 }}>
+                  &#9888; {searchError}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        <div style={{ height: isMobile ? 48 : 56 }} />
-      </section>
-
+          <div style={{ height: isMobile ? 48 : 56 }} />
+        </section>
       </div>
 
-            {/* STATS */}
+      {/* STATS */}
       <div style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", paddingTop: isMobile ? 48 : 56 }} ref={statsRef}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "20px" : "26px 40px", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)" }}>
           {STATS.map((s, i) => (
@@ -641,7 +647,7 @@ export default function SearchHotelsPage() {
           </span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 14 }}>
-          {DESTINATIONS.map((d, i) => (
+          {FEATURED_DESTINATIONS.map((d, i) => (
             <div key={i} onClick={() => { setActiveCity(d.city); setDestination(`${d.city}, ${d.country}`); document.getElementById("hotels-section")?.scrollIntoView({ behavior: "smooth" }); }}
               style={{ borderRadius: 14, overflow: "hidden", position: "relative", cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", transition: "transform .25s", height: isMobile ? 140 : 200 }}
               onMouseOver={e => (e.currentTarget.style.transform = "translateY(-4px)")} onMouseOut={e => (e.currentTarget.style.transform = "none")}>
@@ -649,7 +655,7 @@ export default function SearchHotelsPage() {
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 55%)" }} />
               {d.badge && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, padding: "3px 9px", borderRadius: 6, background: d.badgeColor, color: d.badgeText }}>{d.badge}</span>}
               <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
-                <div className="sora" style={{ fontSize: 17, fontWeight: 700 }}>{d.city}</div>
+                <div className="sora" style={{ fontSize: 17, fontWeight: 700 }}>{d.flag} {d.city}</div>
                 <div style={{ fontSize: 12, opacity: 0.8 }}>{d.country}</div>
               </div>
             </div>
@@ -666,11 +672,14 @@ export default function SearchHotelsPage() {
             <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Members save an average of <strong>₹24,600</strong> on these properties.</p>
           </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto", paddingBottom: 4 }}>
-            {CITY_FILTERS.map(f => (
-              <button key={f} onClick={() => setActiveCity(f)} style={{ background: activeCity === f ? NAVY : "#fff", border: `1.5px solid ${activeCity === f ? NAVY : "#e2e8f0"}`, color: activeCity === f ? "#fff" : NAVY, fontSize: 13, fontWeight: 500, padding: "7px 18px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, flexShrink: 0, transition: "all 0.2s" }}>
-                {f === "All Hotels" ? f : `${DESTINATIONS.find(d => d.city === f)?.flag || ""} ${f}`}
-              </button>
-            ))}
+            {CITY_FILTERS.map(f => {
+              const dest = DESTINATIONS.find(d => d.city === f);
+              return (
+                <button key={f} onClick={() => setActiveCity(f)} style={{ background: activeCity === f ? NAVY : "#fff", border: `1.5px solid ${activeCity === f ? NAVY : "#e2e8f0"}`, color: activeCity === f ? "#fff" : NAVY, fontSize: 13, fontWeight: 500, padding: "7px 18px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, flexShrink: 0, transition: "all 0.2s" }}>
+                  {f === "All Hotels" ? f : `${dest?.flag || ""} ${f}`}
+                </button>
+              );
+            })}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20 }}>
             {hotels.map((h, i) => (
@@ -683,7 +692,7 @@ export default function SearchHotelsPage() {
                   </div>
                 </div>
                 <div style={{ padding: "16px 18px 18px" }}>
-                  <div style={{ color: "#f59e0b", fontSize: 12, marginBottom: 4 }}>{"&#9733;".repeat(0).padStart(0) + "★★★★★".slice(0, h.stars)}</div>
+                  <div style={{ color: "#f59e0b", fontSize: 12, marginBottom: 4 }}>{"★".repeat(h.stars)}</div>
                   <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{h.name}</div>
                   <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{h.loc} · {h.rating}</div>
                   <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5, marginBottom: 14 }}>
@@ -724,7 +733,6 @@ export default function SearchHotelsPage() {
         </div>
       </div>
 
-      {/* FOOTER */}
       {/* FOOTER */}
       <footer style={{ background: NAVY, padding: isMobile ? "40px 20px 24px" : "48px 40px 32px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
