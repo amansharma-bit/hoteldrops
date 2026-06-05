@@ -135,7 +135,7 @@ async function callClaude(fileBuffer, mimeType) {
   const response = await axios.post(
     'https://api.anthropic.com/v1/messages',
     {
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-4-5-20251022',
       max_tokens: 4096,
       messages: [{ role: 'user', content: [fileContent, { type: 'text', text: EXTRACTION_PROMPT }] }],
     },
