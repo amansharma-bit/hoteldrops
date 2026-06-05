@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const axios = require('axios');
+const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
-let sharp;
-try { sharp = require('sharp'); } catch(e) { sharp = null; }
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -31,6 +31,9 @@ const EXTRACTION_PROMPT = [
   '',
   '## OTA IDENTIFICATION — read the URL bar, logo, or page design:',
   '- makemytrip.com → MakeMyTrip',
+  '- MakeMyTrip hotel detail page (hotel name + photos + amenities + "BOOK NOW" or "VIEW THIS COMBO" button) → hotel_detail_top or hotel_detail_rooms. NEVER confirmed_voucher unless booking reference is present.',
+  '- MakeMyTrip hotel detail with room options listed → hotel_detail_rooms',
+  '- MakeMyTrip hotel detail without room options → hotel_detail_top',
   '- booking.com → Booking.com',
   '- agoda.com → Agoda',
   '- goibibo.com → Goibibo',
@@ -133,25 +136,17 @@ async function callClaude(fileBuffer, mimeType) {
     : { type: 'image', source: { type: 'base64', media_type: mimeType, data: fileBuffer.toString('base64') } };
 
   try {
-    const response = await axios.post(
-      'https://api.anthropic.com/v1/messages',
-      {
-        model: 'claude-opus-4-5-20251101',
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: [{ type: 'text', text: EXTRACTION_PROMPT }, fileContent] }],
-      },
-      {
-        headers: {
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        timeout: 55000,
-      }
-    );
-    return response.data.content[0]?.text || '';
+    const response = await anthropic.messages.create({
+      model: 'claude-opus-4-5',
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: [fileContent, { type: 'text', text: EXTRACTION_PROMPT }],
+      }],
+    });
+    return response.content[0]?.text || '';
   } catch (err) {
-    const errMsg = err?.response?.data ? JSON.stringify(err.response.data) : err.message;
+    const errMsg = err?.message || JSON.stringify(err);
     console.error('Claude API error:', errMsg);
     throw new Error('Claude API error: ' + errMsg);
   }
@@ -205,21 +200,7 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
       return res.status(400).json({ success: false, error: 'File must be an image or PDF' });
     }
 
-    // Compress image if too large (>1MB) to avoid Anthropic API 400 errors
-    let fileBuffer = file.buffer;
-    let fileMime = file.mimetype;
-    if (sharp && file.mimetype.startsWith('image/') && file.buffer.length > 1 * 1024 * 1024) {
-      try {
-        fileBuffer = await sharp(file.buffer)
-          .resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 85 })
-          .toBuffer();
-        fileMime = 'image/jpeg';
-      } catch(e) {
-        console.error('Image compression failed, using original:', e.message);
-      }
-    }
-    const rawText = await callClaude(fileBuffer, fileMime);
+    const rawText = await callClaude(file.buffer, file.mimetype);
 
     let parsed;
     // Step 1: try raw; Step 2: strip markdown; Step 3: find first { to last }
