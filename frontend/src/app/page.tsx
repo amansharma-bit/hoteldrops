@@ -520,9 +520,11 @@ export default function Home() {
                   No voucher?{' '}
                   <button onClick={() => { setExtracted(emptyExtracted()); setUploadStep(2); }} style={{ color: B, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>Enter details manually →</button>
                 </div>
-                <button onClick={doScan} disabled={!file} style={{ width: '100%', background: file ? NAVY : '#e2e8f0', color: file ? '#fff' : '#94a3b8', border: 'none', borderRadius: 10, padding: 14, fontSize: 15, fontWeight: 700, fontFamily: 'inherit', cursor: file ? 'pointer' : 'not-allowed', marginBottom: 12, transition: 'all 0.2s' }}>
-                  Scan my voucher →
-                </button>
+                {(!file || fileSource === 'upload') && (
+                  <button onClick={doScan} disabled={!file} style={{ width: '100%', background: file ? NAVY : '#e2e8f0', color: file ? '#fff' : '#94a3b8', border: 'none', borderRadius: 10, padding: 14, fontSize: 15, fontWeight: 700, fontFamily: 'inherit', cursor: file ? 'pointer' : 'not-allowed', marginBottom: 12, transition: 'all 0.2s' }}>
+                    {file ? 'Continue →' : 'Upload a file to continue'}
+                  </button>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' as const }}>
                   {['Booking.com', 'Agoda', 'MakeMyTrip', 'Expedia', 'Direct'].map(t => (
                     <span key={t} style={{ fontSize: 11, color: '#94a3b8' }}>{t}</span>
