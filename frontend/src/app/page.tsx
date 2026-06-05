@@ -251,6 +251,8 @@ export default function Home() {
             check_in: s.check_in || '',
             check_out: s.check_out || '',
             num_adults: s.num_adults || 2,
+            num_children: s.num_children || 0,
+            children_ages: s.children_ages || [],
             num_rooms: s.num_rooms || 1,
             ota_name: s.ota_name || '',
             total_price_paid: h.total_price_incl_tax || h.price_per_night_incl_tax || 0,
@@ -277,6 +279,8 @@ export default function Home() {
             check_in: d.check_in || '',
             check_out: d.check_out || '',
             num_adults: d.num_adults || 2,
+            num_children: d.num_children || 0,
+            children_ages: d.children_ages || [],
             num_rooms: d.num_rooms || 1,
             ota_name: d.ota_name || '',
             room_type: room.room_type || '',
@@ -528,7 +532,7 @@ export default function Home() {
                       setSelectedHotelIdx(idx);
                       const h = extractResult.data.hotels[idx];
                       const s = extractResult.data;
-                      setExtracted({ ...emptyExtracted(), hotel_name: h.hotel_name || '', hotel_city: s.destination || '', check_in: s.check_in || '', check_out: s.check_out || '', num_adults: s.num_adults || 2, num_rooms: s.num_rooms || 1, ota_name: s.ota_name || '', total_price_paid: h.total_price_incl_tax || h.price_per_night_incl_tax || 0 });
+                      setExtracted({ ...emptyExtracted(), hotel_name: h.hotel_name || '', hotel_city: s.destination || '', check_in: s.check_in || '', check_out: s.check_out || '', num_adults: s.num_adults || 2, num_children: s.num_children || 0, children_ages: s.children_ages || [], num_rooms: s.num_rooms || 1, ota_name: s.ota_name || '', total_price_paid: h.total_price_incl_tax || h.price_per_night_incl_tax || 0 });
                       setWarnings({});
                       setDocType('search_results');
                       setUploadStep(2);
@@ -562,7 +566,7 @@ export default function Home() {
                     <button key={idx} onClick={() => {
                       setSelectedRoomIdx(idx);
                       const d = extractResult.data;
-                      setExtracted({ ...emptyExtracted(), hotel_name: d.hotel_name || '', hotel_city: d.hotel_city || '', check_in: d.check_in || '', check_out: d.check_out || '', num_adults: d.num_adults || 2, num_rooms: d.num_rooms || 1, ota_name: d.ota_name || '', room_type: room.room_type || '', board_basis: room.board_basis || 'RO', board_basis_label: room.board_basis_label || 'Room Only', cancellation_policy: room.cancellation_policy || 'unknown', cancellation_deadline: room.cancellation_deadline || '', total_price_paid: room.total_price_incl_tax || 0 });
+                      setExtracted({ ...emptyExtracted(), hotel_name: d.hotel_name || '', hotel_city: d.hotel_city || '', check_in: d.check_in || '', check_out: d.check_out || '', num_adults: d.num_adults || 2, num_children: d.num_children || 0, children_ages: d.children_ages || [], num_rooms: d.num_rooms || 1, ota_name: d.ota_name || '', room_type: room.room_type || '', board_basis: room.board_basis || 'RO', board_basis_label: room.board_basis_label || 'Room Only', cancellation_policy: room.cancellation_policy || 'unknown', cancellation_deadline: room.cancellation_deadline || '', total_price_paid: room.total_price_incl_tax || 0 });
                       setWarnings({});
                       setDocType('hotel_detail_rooms');
                       setUploadStep(2);
