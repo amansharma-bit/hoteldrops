@@ -32,7 +32,7 @@ interface ExtractedData {
   total_price_paid: number; price_per_night: number; currency_original: string;
   ota_name: string; booking_reference: string; cancellation_policy: string;
   cancellation_deadline: string; cancellation_penalty: number | null;
-  payment_type: string; amount_paid_upfront: number;
+  payment_type: string; amount_paid_upfront: number; notes: string;
 }
 
 const emptyExtracted = (): ExtractedData => ({
@@ -42,7 +42,7 @@ const emptyExtracted = (): ExtractedData => ({
   original_price: 0, total_price_paid: 0, price_per_night: 0, currency_original: 'INR',
   ota_name: '', booking_reference: '',
   cancellation_policy: 'unknown', cancellation_deadline: '', cancellation_penalty: null,
-  payment_type: 'pay_now', amount_paid_upfront: 0,
+  payment_type: 'pay_now', amount_paid_upfront: 0, notes: '',
 })
 
 const BOARD_OPTIONS = [
@@ -606,97 +606,172 @@ export default function Home() {
                 {/* ── PRE-BOOKING FLOW ── */}
                 {(docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top' || docType === 'checkout_page') ? (
                   <div>
-                    {/* What we captured */}
-                    <div style={{ marginBottom: 20 }}>
+
+                    {/* ── MANDATORY FIELD CHECKS ── */}
+                    {(() => {
+                      const missing = [];
+                      if (!extracted.hotel_name) missing.push('hotel name');
+                      if (!extracted.hotel_city) missing.push('city');
+                      if (!extracted.check_in) missing.push('check-in date');
+                      if (!extracted.check_out) missing.push('check-out date');
+                      if (!extracted.num_adults) missing.push('number of adults');
+                      const missingChildAges = extracted.num_children > 0 && extracted.children_ages.some((a: any) => a === null || a === undefined || a === '');
+                      if (missingChildAges) missing.push('child ages');
+                      return missing.length > 0 ? (
+                        <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#dc2626', marginBottom: 6 }}>We couldn't detect: {missing.join(', ')}</div>
+                          <div style={{ fontSize: 12, color: '#b91c1c', marginBottom: 12 }}>Please enter the missing details below or retake the photo.</div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); }} style={{ flex: 1, background: '#fff', border: '1.5px solid #fecaca', color: '#dc2626', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: 'middle' }}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                              Retake photo
+                            </button>
+                            <button onClick={() => setEditMode(true)} style={{ flex: 1, background: '#dc2626', border: 'none', color: '#fff', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
+
+                    {/* ── CAPTURED SUMMARY CARD ── */}
+                    <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#64748b', marginBottom: 6 }}>We read your screenshot</div>
-                      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>Looks like you haven't booked yet — we'll watch this price while you decide.</div>
+                      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 10 }}>Looks like you haven't booked yet — we'll watch this price while you decide.</div>
                       <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
-                        {extracted.hotel_name && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                            <div>
-                              <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{extracted.hotel_name}</div>
-                              {extracted.hotel_city && <div style={{ fontSize: 12, color: '#64748b' }}>{extracted.hotel_city}</div>}
-                            </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={extracted.hotel_name ? B : '#ef4444'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                          <div style={{ flex: 1 }}>
+                            {extracted.hotel_name
+                              ? <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{extracted.hotel_name}</div>
+                              : <div style={{ fontSize: 13, color: '#ef4444', fontWeight: 600 }}>Hotel name not detected</div>}
+                            {extracted.hotel_city
+                              ? <div style={{ fontSize: 12, color: '#64748b' }}>{extracted.hotel_city}</div>
+                              : <div style={{ fontSize: 11, color: '#ef4444' }}>City not detected</div>}
                           </div>
-                        )}
-                        {extracted.check_in && extracted.check_out && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            <div style={{ fontSize: 13, color: NAVY }}>
-                              {new Date(extracted.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                              <span style={{ color: '#94a3b8', margin: '0 6px' }}>→</span>
-                              {new Date(extracted.check_out + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                              {extracted.total_nights > 0 && <span style={{ color: '#64748b', marginLeft: 6, fontSize: 12 }}>{extracted.total_nights} nights</span>}
-                            </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={extracted.check_in && extracted.check_out ? B : '#ef4444'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                          {extracted.check_in && extracted.check_out
+                            ? <div style={{ fontSize: 13, color: NAVY }}>{new Date(extracted.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}<span style={{ color: '#94a3b8', margin: '0 6px' }}>→</span>{new Date(extracted.check_out + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}{extracted.total_nights > 0 && <span style={{ color: '#64748b', marginLeft: 6, fontSize: 12 }}>{extracted.total_nights} nights</span>}</div>
+                            : <div style={{ fontSize: 13, color: '#ef4444', fontWeight: 600 }}>Dates not detected</div>}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                          <div style={{ fontSize: 13, color: '#64748b' }}>
+                            {extracted.num_adults} adult{extracted.num_adults > 1 ? 's' : ''}
+                            {extracted.num_children > 0 ? ` · ${extracted.num_children} child${extracted.num_children > 1 ? 'ren' : ''}` : ''}
                           </div>
-                        )}
+                        </div>
                         {(extracted.total_price_paid > 0 || extracted.price_per_night > 0) && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <span style={{ fontSize: 14, fontWeight: 700, color: B, flexShrink: 0, width: 16, textAlign: 'center' as const }}>₹</span>
-                            <div style={{ fontSize: 13, color: NAVY, fontWeight: 600 }}>
-                              {extracted.total_price_paid > 0 ? `₹${Math.round(extracted.total_price_paid).toLocaleString('en-IN')} total` : `₹${Math.round(extracted.price_per_night).toLocaleString('en-IN')}/night`}
-                            </div>
-                          </div>
-                        )}
-                        {extracted.num_adults > 0 && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                            <div style={{ fontSize: 13, color: '#64748b' }}>{extracted.num_adults} adult{extracted.num_adults > 1 ? 's' : ''}{extracted.num_children > 0 ? ` · ${extracted.num_children} child${extracted.num_children > 1 ? 'ren' : ''}` : ''}</div>
+                            <div style={{ fontSize: 13, color: NAVY, fontWeight: 600 }}>{extracted.total_price_paid > 0 ? `₹${Math.round(extracted.total_price_paid).toLocaleString('en-IN')} total` : `₹${Math.round(extracted.price_per_night).toLocaleString('en-IN')}/night`}</div>
                           </div>
                         )}
                         <button onClick={() => setEditMode(!editMode)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: B, textAlign: 'left' as const, padding: 0, fontFamily: 'inherit', fontWeight: 600, marginTop: 2 }}>{editMode ? '✕ Close edit' : 'Something wrong? Edit details'}</button>
                       </div>
                     </div>
 
-                    {/* Edit fields */}
+                    {/* ── EDIT FORM ── */}
                     {editMode && extracted && (
-                      <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#64748b', marginBottom: 12 }}>Edit details</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                          <div><label style={lbl}>Hotel name</label><input style={inp} value={extracted.hotel_name} onChange={e => setExtracted({ ...extracted, hotel_name: e.target.value })} placeholder="e.g. Taj Dubai" /></div>
-                          <div><label style={lbl}>City</label><input style={inp} value={extracted.hotel_city} onChange={e => setExtracted({ ...extracted, hotel_city: e.target.value })} placeholder="e.g. Dubai" /></div>
+                      <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, marginBottom: 16, display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#64748b' }}>Edit details</div>
+
+                        <div>
+                          <label style={lbl}>Hotel name {!extracted.hotel_name && <span style={{ color: '#ef4444' }}>*</span>}</label>
+                          <input style={{ ...inp, borderColor: !extracted.hotel_name ? '#ef4444' : '#e2e8f0' }} value={extracted.hotel_name} onChange={e => setExtracted({ ...extracted, hotel_name: e.target.value })} placeholder="e.g. Crowne Plaza Dubai Deira" autoFocus={!extracted.hotel_name} />
+                          {!extracted.hotel_name && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>Required — needed for price comparison</div>}
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                          <div><label style={lbl}>Check-in</label><input style={inp} type="date" value={extracted.check_in} onChange={e => setExtracted({ ...extracted, check_in: e.target.value })} /></div>
-                          <div><label style={lbl}>Check-out</label><input style={inp} type="date" value={extracted.check_out} onChange={e => setExtracted({ ...extracted, check_out: e.target.value })} /></div>
+
+                        <div>
+                          <label style={lbl}>City {!extracted.hotel_city && <span style={{ color: '#ef4444' }}>*</span>}</label>
+                          <input style={{ ...inp, borderColor: !extracted.hotel_city ? '#ef4444' : '#e2e8f0' }} value={extracted.hotel_city} onChange={e => setExtracted({ ...extracted, hotel_city: e.target.value })} placeholder="e.g. Dubai" />
+                          {!extracted.hotel_city && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>Required — needed to search hotels</div>}
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                          <div><label style={lbl}>Adults</label><select style={inp} value={extracted.num_adults} onChange={e => setExtracted({ ...extracted, num_adults: parseInt(e.target.value) })}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                          <div><label style={lbl}>Children (under 12)</label><select style={inp} value={extracted.num_children} onChange={e => { const n = parseInt(e.target.value); const ages = [...extracted.children_ages]; while (ages.length < n) ages.push(null); setExtracted({ ...extracted, num_children: n, children_ages: ages.slice(0, n) }); }}>{[0,1,2,3,4,5,6].map(n => <option key={n} value={n}>{n === 0 ? 'No children' : n === 1 ? '1 child' : `${n} children`}</option>)}</select></div>
-                          <div><label style={lbl}>Total price (₹)</label><input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: parseFloat(e.target.value) })} placeholder="e.g. 15000" /></div>
+
+                        <div style={grid2}>
+                          <div>
+                            <label style={lbl}>Check-in {!extracted.check_in && <span style={{ color: '#ef4444' }}>*</span>}</label>
+                            <input style={{ ...inp, borderColor: !extracted.check_in ? '#ef4444' : '#e2e8f0' }} type="date" value={extracted.check_in} onChange={e => setExtracted({ ...extracted, check_in: e.target.value })} />
+                          </div>
+                          <div>
+                            <label style={lbl}>Check-out {!extracted.check_out && <span style={{ color: '#ef4444' }}>*</span>}</label>
+                            <input style={{ ...inp, borderColor: !extracted.check_out ? '#ef4444' : '#e2e8f0' }} type="date" value={extracted.check_out} onChange={e => setExtracted({ ...extracted, check_out: e.target.value })} />
+                          </div>
                         </div>
+
+                        <div style={grid2}>
+                          <div>
+                            <label style={lbl}>Adults *</label>
+                            <select style={inp} value={extracted.num_adults} onChange={e => setExtracted({ ...extracted, num_adults: parseInt(e.target.value) })}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} adult{n > 1 ? 's' : ''}</option>)}</select>
+                          </div>
+                          <div>
+                            <label style={lbl}>Children</label>
+                            <select style={inp} value={extracted.num_children} onChange={e => { const n = parseInt(e.target.value); const ages = [...extracted.children_ages]; while (ages.length < n) ages.push(null); setExtracted({ ...extracted, num_children: n, children_ages: ages.slice(0, n) }); }}>{[0,1,2,3,4,5,6].map(n => <option key={n} value={n}>{n === 0 ? 'No children' : n === 1 ? '1 child' : `${n} children`}</option>)}</select>
+                          </div>
+                        </div>
+
                         {extracted.num_children > 0 && (
-                          <div style={{ marginTop: 10 }}>
-                            <label style={lbl}>Children ages</label>
-                            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                          <div>
+                            <label style={lbl}>Child ages <span style={{ color: '#ef4444' }}>*</span></label>
+                            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
                               {Array.from({ length: extracted.num_children }, (_, i) => (
-                                <select key={i} style={{ ...inp, width: 100 }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
-                                  <option value=''>Child {i+1} age</option>
-                                  <option value='0'>Under 1</option>
-                                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a} yrs</option>)}
-                                </select>
+                                <div key={i} style={{ flex: 1, minWidth: 100 }}>
+                                  <select style={{ ...inp, borderColor: (extracted.children_ages[i] === null || extracted.children_ages[i] === undefined || extracted.children_ages[i] === '') ? '#ef4444' : '#e2e8f0' }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
+                                    <option value=''>Child {i+1} age</option>
+                                    <option value='0'>Under 1</option>
+                                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a} yrs</option>)}
+                                  </select>
+                                  {(extracted.children_ages[i] === null || extracted.children_ages[i] === undefined || extracted.children_ages[i] === '') && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 3 }}>Age required</div>}
+                                </div>
                               ))}
                             </div>
                           </div>
                         )}
+
+                        <div style={grid2}>
+                          <div><label style={lbl}>Room type <span style={{ fontWeight: 400, textTransform: 'none' as const }}>optional</span></label><input style={inp} value={extracted.room_type} onChange={e => setExtracted({ ...extracted, room_type: e.target.value })} placeholder="e.g. Deluxe King" /></div>
+                          <div><label style={lbl}>Board basis <span style={{ fontWeight: 400, textTransform: 'none' as const }}>optional</span></label><select style={inp} value={extracted.board_basis} onChange={e => { const opt = BOARD_OPTIONS.find(o => o.code === e.target.value); setExtracted({ ...extracted, board_basis: e.target.value, board_basis_label: opt?.label || '' }); }}>{BOARD_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}</select></div>
+                        </div>
+
+                        <div>
+                          <label style={lbl}>Total price (₹ incl. taxes) <span style={{ fontWeight: 400, textTransform: 'none' as const }}>optional</span></label>
+                          <input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: parseFloat(e.target.value), original_price: parseFloat(e.target.value) })} placeholder="e.g. 3929" />
+                        </div>
+
+                        <div>
+                          <label style={lbl}>Notes <span style={{ fontWeight: 400, textTransform: 'none' as const, letterSpacing: 0 }}>optional</span></label>
+                          <textarea style={{ ...inp, height: 64, resize: 'none' as const }} value={(extracted as any).notes || ''} onChange={e => setExtracted({ ...extracted, ...(extracted as any), notes: e.target.value })} placeholder="e.g. corporate booking, need flexible cancellation…" />
+                        </div>
                       </div>
                     )}
 
-                    {/* CTA */}
-                    <div style={{ background: NAVY, borderRadius: 14, padding: 20, marginBottom: 16 }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6, fontFamily: "'Sora',sans-serif" }}>Get alerted when this price drops</div>
-                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 16, lineHeight: 1.5 }}>We'll send you one WhatsApp message the moment the price moves. Free. No spam.</div>
-                      <div style={{ display: 'flex', marginBottom: 12 }}>
-                        <span style={{ ...inp, width: 52, borderRadius: '10px 0 0 10px', borderRight: 'none', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>+91</span>
-                        <input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.15)', borderLeft: 'none' }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number" maxLength={10} />
-                      </div>
-                      <input style={{ ...inp, marginBottom: 12, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.15)' }} type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} placeholder="Email address" />
-                      {submitError && <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#fca5a5' }}>{submitError}</div>}
-                      <button onClick={submitBooking} disabled={loading} style={{ width: '100%', background: '#FCD34D', color: NAVY, border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
-                        {loading ? 'Setting up alert…' : 'Alert me when price drops →'}
-                      </button>
-                    </div>
+                    {/* ── CTA BOX ── */}
+                    {(() => {
+                      const mandatoryMissing =
+                        !extracted.hotel_name || !extracted.hotel_city ||
+                        !extracted.check_in || !extracted.check_out || !extracted.num_adults ||
+                        (extracted.num_children > 0 && extracted.children_ages.some((a: any) => a === null || a === undefined || a === ''));
+                      return (
+                        <div style={{ background: NAVY, borderRadius: 14, padding: 20, marginBottom: 16 }}>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6, fontFamily: "'Sora',sans-serif" }}>Get alerted when this price drops</div>
+                          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 16, lineHeight: 1.5 }}>One WhatsApp message the moment the price moves. Free. No spam.</div>
+                          <div style={{ display: 'flex', marginBottom: 12 }}>
+                            <span style={{ ...inp, width: 52, borderRadius: '10px 0 0 10px', borderRight: 'none', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>+91</span>
+                            <input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.15)', borderLeft: 'none' }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number" maxLength={10} />
+                          </div>
+                          <input style={{ ...inp, marginBottom: 12, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.15)' }} type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} placeholder="Email address" />
+                          {submitError && <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#fca5a5' }}>{submitError}</div>}
+                          {mandatoryMissing && (
+                            <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#fca5a5' }}>
+                              Please complete all required fields above before submitting.
+                            </div>
+                          )}
+                          <button onClick={mandatoryMissing ? () => setEditMode(true) : submitBooking} disabled={loading} style={{ width: '100%', background: mandatoryMissing ? '#475569' : '#FCD34D', color: mandatoryMissing ? 'rgba(255,255,255,0.6)' : NAVY, border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit', transition: 'all 0.2s' }}>
+                            {loading ? 'Setting up alert…' : mandatoryMissing ? 'Complete required fields first' : 'Alert me when price drops →'}
+                          </button>
+                        </div>
+                      );
+                    })()}
 
                     <button onClick={() => setUploadStep(1)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', width: '100%', textAlign: 'center' as const }}>← Back</button>
                   </div>
@@ -773,6 +848,12 @@ export default function Home() {
                         <div><label style={lbl}>WhatsApp *</label><div style={{ display: 'flex' }}><span style={{ ...inp, width: 52, borderRadius: '10px 0 0 10px', borderRight: 'none', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>+91</span><input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1 }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="9876543210" maxLength={10} /></div></div>
                         <div><label style={lbl}>Email *</label><input style={inp} type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} placeholder="you@example.com" /></div>
                       </div>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Notes</div>
+                      <textarea style={{ ...inp, height: 72, resize: 'none' as const }} value={extracted.notes || ''} onChange={e => setExtracted({ ...extracted, notes: e.target.value })} placeholder="e.g. corporate booking, honeymoon, need flexible cancellation…" />
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>Optional — helps us find a more accurate price match</div>
                     </div>
 
                     {submitError && (<div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#dc2626' }}>{submitError}</div>)}
