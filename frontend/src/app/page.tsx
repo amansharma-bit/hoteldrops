@@ -123,6 +123,8 @@ export default function Home() {
   const [emailVal, setEmailVal]       = useState('');
   const [submitError, setSubmitError] = useState('');
   const fileInputRef                  = useRef<HTMLInputElement>(null);
+  const cameraInputRef                = useRef<HTMLInputElement>(null);
+  const childAgeRef                   = useRef<HTMLDivElement>(null);
   const [extractResult, setExtractResult] = useState<any>(null);
   const [editMode, setEditMode] = useState(false);
   const [docType, setDocType] = useState<string>('confirmed_voucher');
@@ -469,8 +471,21 @@ export default function Home() {
                         <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Take photo</div><div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Use camera</div></div>
                       </label>
                     </div>
-                    {/* FIX 2: Clean file label */}
-                    {file && (
+                    {file && fileSource === 'camera' && (
+                      <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 12, padding: '14px 16px', marginBottom: 14 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 10 }}>Photo taken — does it look clear?</div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <label style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'center' as const, display: 'block' }}>
+                            <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} ref={cameraInputRef} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('camera'); } }} />
+                            Retake
+                          </label>
+                          <div style={{ flex: 2, background: B, color: '#fff', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'center' as const, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={doScan}>
+                            Looks good — Scan →
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {file && fileSource === 'upload' && (
                       <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>✓ {getFileLabel()}</span>
                         <button onClick={() => { setFile(null); setFileSource(null); }} style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Remove</button>
@@ -617,16 +632,17 @@ export default function Home() {
                       if (!extracted.num_adults) missing.push('number of adults');
                       const missingChildAges = extracted.num_children > 0 && (extracted.children_ages.length < extracted.num_children || extracted.children_ages.some((a: any) => a === null || a === undefined || a === '' || a === -1));
                       if (missingChildAges) missing.push('child ages');
+                      const hasChildAgeMissing = missingChildAges;
                       return missing.length > 0 ? (
                         <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: '#dc2626', marginBottom: 6 }}>We couldn't detect: {missing.join(', ')}</div>
                           <div style={{ fontSize: 12, color: '#b91c1c', marginBottom: 12 }}>Please enter the missing details below or retake the photo.</div>
                           <div style={{ display: 'flex', gap: 8 }}>
-                            <button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); }} style={{ flex: 1, background: '#fff', border: '1.5px solid #fecaca', color: '#dc2626', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: 'middle' }}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                            <label style={{ flex: 1, background: '#fff', border: '1.5px solid #fecaca', color: '#dc2626', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' as const, display: 'block' }}>
+                              <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('camera'); setExtracted(null); setUploadStep(1); } }} />
                               Retake photo
-                            </button>
-                            <button onClick={() => setEditMode(true)} style={{ flex: 1, background: '#dc2626', border: 'none', color: '#fff', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
+                            </label>
+                            <button onClick={() => { setEditMode(true); setTimeout(() => { if (hasChildAgeMissing && childAgeRef.current) { childAgeRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 200); }} style={{ flex: 1, background: '#dc2626', border: 'none', color: '#fff', borderRadius: 8, padding: '9px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button>
                           </div>
                         </div>
                       ) : null;
@@ -711,7 +727,7 @@ export default function Home() {
                         </div>
 
                         {extracted.num_children > 0 && (
-                          <div>
+                          <div ref={childAgeRef}>
                             <label style={lbl}>Child ages <span style={{ color: '#ef4444' }}>*</span></label>
                             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
                               {Array.from({ length: extracted.num_children }, (_, i) => (
@@ -774,9 +790,14 @@ export default function Home() {
                     })()}
 
                     <div style={{ display: 'flex', gap: 10 }}>
-                      <button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); }} style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '11px', borderRadius: 10, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
-                        Retake / Re-upload
-                      </button>
+                      <label style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '11px', borderRadius: 10, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, textAlign: 'center' as const, display: 'block' }}>
+                        {fileSource === 'camera' ? (
+                          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('camera'); setExtracted(null); setUploadStep(1); } }} />
+                        ) : (
+                          <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('upload'); setExtracted(null); setUploadStep(1); } }} />
+                        )}
+                        {fileSource === 'camera' ? 'Retake photo' : 'Re-upload'}
+                      </label>
                       <button onClick={() => setUploadStep(1)} style={{ flex: 1, background: 'none', border: 'none', color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
                     </div>
                   </div>
@@ -864,7 +885,14 @@ export default function Home() {
                     {submitError && (<div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#dc2626' }}>{submitError}</div>)}
 
                     <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-                      <button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); }} style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '11px', borderRadius: 10, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>Retake / Re-upload</button>
+                      <label style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '11px', borderRadius: 10, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, textAlign: 'center' as const, display: 'block' }}>
+                        {fileSource === 'camera' ? (
+                          <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('camera'); setExtracted(null); setUploadStep(1); } }} />
+                        ) : (
+                          <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('upload'); setExtracted(null); setUploadStep(1); } }} />
+                        )}
+                        {fileSource === 'camera' ? 'Retake photo' : 'Re-upload'}
+                      </label>
                       <button onClick={() => setUploadStep(1)} style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '11px', borderRadius: 10, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>← Back</button>
                     </div>
                     <div style={{ display: 'flex', gap: 10 }}>
