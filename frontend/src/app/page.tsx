@@ -615,7 +615,7 @@ export default function Home() {
                       if (!extracted.check_in) missing.push('check-in date');
                       if (!extracted.check_out) missing.push('check-out date');
                       if (!extracted.num_adults) missing.push('number of adults');
-                      const missingChildAges = extracted.num_children > 0 && extracted.children_ages.some((a: any) => a === null || a === undefined || a === '' || a === -1);
+                      const missingChildAges = extracted.num_children > 0 && (extracted.children_ages.length < extracted.num_children || extracted.children_ages.some((a: any) => a === null || a === undefined || a === '' || a === -1));
                       if (missingChildAges) missing.push('child ages');
                       return missing.length > 0 ? (
                         <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
@@ -750,7 +750,7 @@ export default function Home() {
                       const mandatoryMissing =
                         !extracted.hotel_name || !extracted.hotel_city ||
                         !extracted.check_in || !extracted.check_out || !extracted.num_adults ||
-                        (extracted.num_children > 0 && extracted.children_ages.some((a: any) => a === null || a === undefined || a === '' || a === -1));
+                        (extracted.num_children > 0 && (extracted.children_ages.length < extracted.num_children || extracted.children_ages.some((a: any) => a === null || a === undefined || a === '' || a === -1)));
                       return (
                         <div style={{ background: NAVY, borderRadius: 14, padding: 20, marginBottom: 16 }}>
                           <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6, fontFamily: "'Sora',sans-serif" }}>Get alerted when this price drops</div>
@@ -773,7 +773,12 @@ export default function Home() {
                       );
                     })()}
 
-                    <button onClick={() => setUploadStep(1)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', width: '100%', textAlign: 'center' as const }}>← Back</button>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); }} style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '11px', borderRadius: 10, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
+                        Retake / Re-upload
+                      </button>
+                      <button onClick={() => setUploadStep(1)} style={{ flex: 1, background: 'none', border: 'none', color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
+                    </div>
                   </div>
 
                 ) : (
