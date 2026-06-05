@@ -692,17 +692,21 @@ export default function Home() {
 
                     <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Hotel details</div>
-                      <div style={grid2}>
-                        <div><label style={lbl}>Hotel name *</label><input style={inp} value={extracted.hotel_name} onChange={e => setExtracted({ ...extracted, hotel_name: e.target.value })} placeholder="e.g. Taj Dubai" /></div>
-                        <div><label style={lbl}>City *</label><input style={inp} value={extracted.hotel_city} onChange={e => setExtracted({ ...extracted, hotel_city: e.target.value })} placeholder="e.g. Dubai" /></div>
+                      <div style={{ marginBottom: 14 }}>
+                        <label style={lbl}>Hotel name *</label>
+                        <input style={inp} value={extracted.hotel_name} onChange={e => setExtracted({ ...extracted, hotel_name: e.target.value })} placeholder="e.g. Crowne Plaza Dubai Deira" />
                       </div>
                       <div style={grid2}>
                         <div><label style={lbl}>Check-in *</label><input style={inp} type="date" value={extracted.check_in} onChange={e => setExtracted({ ...extracted, check_in: e.target.value })} /></div>
                         <div><label style={lbl}>Check-out *</label><input style={inp} type="date" value={extracted.check_out} onChange={e => setExtracted({ ...extracted, check_out: e.target.value })} /></div>
                       </div>
                       <div style={grid2}>
+                        <div><label style={lbl}>City *</label><input style={inp} value={extracted.hotel_city} onChange={e => setExtracted({ ...extracted, hotel_city: e.target.value })} placeholder="e.g. Dubai" /></div>
                         <div><label style={lbl}>Room type</label><input style={inp} value={extracted.room_type} onChange={e => setExtracted({ ...extracted, room_type: e.target.value })} placeholder="e.g. Deluxe King" /></div>
-                        <div><label style={lbl}>Booked on</label><select style={inp} value={extracted.ota_name} onChange={e => setExtracted({ ...extracted, ota_name: e.target.value })}>{['MakeMyTrip','Booking.com','Agoda','Goibibo','Hotels.com','Expedia','Direct','Other'].map(o => <option key={o} value={o}>{o}</option>)}</select></div>
+                      </div>
+                      <div style={{ marginBottom: 14 }}>
+                        <label style={lbl}>Booked on</label>
+                        <select style={inp} value={extracted.ota_name} onChange={e => setExtracted({ ...extracted, ota_name: e.target.value })}>{['MakeMyTrip','Booking.com','Agoda','Goibibo','Hotels.com','Expedia','GRNConnect','Direct','Other'].map(o => <option key={o} value={o}>{o}</option>)}</select>
                       </div>
                     </div>
 
@@ -719,17 +723,17 @@ export default function Home() {
                             {[0,1,2,3,4,5,6].map(n => <option key={n} value={n}>{n === 0 ? 'No children' : n === 1 ? '1 child' : `${n} children`}</option>)}
                           </select>
                         </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'flex-end' }}>
-                          {extracted.num_children > 0 && Array.from({ length: extracted.num_children }, (_, i) => (
-                            <div key={i} style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
-                              <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>Child {i+1}</span>
-                              <select style={{ ...inp, width: 90, padding: '8px 6px' }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
-                                <option value=''>Age</option>
+                        <div>
+                          {extracted.num_children > 0 && <label style={lbl}>Ages</label>}
+                          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                            {extracted.num_children > 0 && Array.from({ length: extracted.num_children }, (_, i) => (
+                              <select key={i} style={{ ...inp, width: 90 }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
+                                <option value=''>Child {i+1}</option>
                                 <option value='0'>Under 1</option>
                                 {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a} yrs</option>)}
                               </select>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
