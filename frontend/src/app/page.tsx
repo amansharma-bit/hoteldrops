@@ -124,6 +124,7 @@ export default function Home() {
   const [submitError, setSubmitError] = useState('');
   const fileInputRef                  = useRef<HTMLInputElement>(null);
   const [extractResult, setExtractResult] = useState<any>(null);
+  const [editMode, setEditMode] = useState(false);
   const [docType, setDocType] = useState<string>('confirmed_voucher');
   const [selectedHotelIdx, setSelectedHotelIdx] = useState<number | null>(null);
   const [selectedRoomIdx, setSelectedRoomIdx] = useState<number | null>(null);
@@ -167,7 +168,7 @@ export default function Home() {
   const openModal = () => {
     setModalOpen(true); setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); setDocType('confirmed_voucher');
     setPhone(''); setEmailVal(''); setSubmitError(''); setBlockInfo(null); setWarnings({}); setLoading(false);
-    setExtractResult(null); setSelectedHotelIdx(null); setSelectedRoomIdx(null);
+    setExtractResult(null); setSelectedHotelIdx(null); setSelectedRoomIdx(null); setEditMode(false);
   };
 
   const closeModal = () => { setModalOpen(false); };
@@ -603,7 +604,7 @@ export default function Home() {
                     <div style={{ marginBottom: 20 }}>
                       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#64748b', marginBottom: 6 }}>We read your screenshot</div>
                       <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>Looks like you haven't booked yet — we'll watch this price while you decide.</div>
-                      <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                      <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
                         {extracted.hotel_name && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
@@ -638,9 +639,28 @@ export default function Home() {
                             <div style={{ fontSize: 13, color: '#64748b' }}>{extracted.num_adults} adult{extracted.num_adults > 1 ? 's' : ''}{extracted.num_children > 0 ? ` · ${extracted.num_children} child${extracted.num_children > 1 ? 'ren' : ''}` : ''}</div>
                           </div>
                         )}
-                        <button onClick={() => {}} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#94a3b8', textAlign: 'left' as const, padding: 0, fontFamily: 'inherit', textDecoration: 'underline', marginTop: 2 }}>Something looks wrong? Edit details</button>
+                        <button onClick={() => setEditMode(!editMode)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: B, textAlign: 'left' as const, padding: 0, fontFamily: 'inherit', fontWeight: 600, marginTop: 2 }}>{editMode ? '✕ Close edit' : 'Something wrong? Edit details'}</button>
                       </div>
                     </div>
+
+                    {/* Edit fields */}
+                    {editMode && extracted && (
+                      <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: '#64748b', marginBottom: 12 }}>Edit details</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                          <div><label style={lbl}>Hotel name</label><input style={inp} value={extracted.hotel_name} onChange={e => setExtracted({ ...extracted, hotel_name: e.target.value })} placeholder="e.g. Taj Dubai" /></div>
+                          <div><label style={lbl}>City</label><input style={inp} value={extracted.hotel_city} onChange={e => setExtracted({ ...extracted, hotel_city: e.target.value })} placeholder="e.g. Dubai" /></div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                          <div><label style={lbl}>Check-in</label><input style={inp} type="date" value={extracted.check_in} onChange={e => setExtracted({ ...extracted, check_in: e.target.value })} /></div>
+                          <div><label style={lbl}>Check-out</label><input style={inp} type="date" value={extracted.check_out} onChange={e => setExtracted({ ...extracted, check_out: e.target.value })} /></div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                          <div><label style={lbl}>Adults</label><select style={inp} value={extracted.num_adults} onChange={e => setExtracted({ ...extracted, num_adults: parseInt(e.target.value) })}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                          <div><label style={lbl}>Total price (₹)</label><input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: parseFloat(e.target.value) })} placeholder="e.g. 15000" /></div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* CTA */}
                     <div style={{ background: NAVY, borderRadius: 14, padding: 20, marginBottom: 16 }}>
