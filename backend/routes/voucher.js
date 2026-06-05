@@ -1,10 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const Anthropic = require('@anthropic-ai/sdk');
+const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -136,17 +134,25 @@ async function callClaude(fileBuffer, mimeType) {
     : { type: 'image', source: { type: 'base64', media_type: mimeType, data: fileBuffer.toString('base64') } };
 
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-opus-4-5',
-      max_tokens: 4096,
-      messages: [{
-        role: 'user',
-        content: [fileContent, { type: 'text', text: EXTRACTION_PROMPT }],
-      }],
-    });
-    return response.content[0]?.text || '';
+    const response = await axios.post(
+      'https://api.anthropic.com/v1/messages',
+      {
+        model: 'claude-opus-4-5-20251101',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: [fileContent, { type: 'text', text: EXTRACTION_PROMPT }] }],
+      },
+      {
+        headers: {
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        timeout: 55000,
+      }
+    );
+    return response.data.content[0]?.text || '';
   } catch (err) {
-    const errMsg = err?.message || JSON.stringify(err);
+    const errMsg = err?.response?.data ? JSON.stringify(err.response.data) : err.message;
     console.error('Claude API error:', errMsg);
     throw new Error('Claude API error: ' + errMsg);
   }
