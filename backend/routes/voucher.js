@@ -39,6 +39,8 @@ const EXTRACTION_PROMPT = [
   '- grnconnect.com or Visa2Fly logo → GRNConnect',
   '- tbo.com → TBO',
   '- GRNConnect: if guest name/PAN fields are blank = checkout_page. If filled = confirmed_voucher. NEVER classify as MakeMyTrip.',
+  '- GRNConnect ROOM LISTING page (shows multiple rooms with prices like "3133 INR", "BOOK ROOM" buttons, no guest name fields) = hotel_detail_rooms. NOT confirmed_voucher.',
+  '- GRNConnect SEARCH RESULTS page (shows multiple hotels with prices, "HIDE ROOMS" or hotel cards) = hotel_detail_rooms or search_results.',
   '',
   '## HOTEL NAME FROM URL:',
   'If hotel name is not visible on screen, read it from the URL bar.',
