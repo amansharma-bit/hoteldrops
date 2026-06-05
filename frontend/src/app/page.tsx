@@ -657,8 +657,23 @@ export default function Home() {
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                           <div><label style={lbl}>Adults</label><select style={inp} value={extracted.num_adults} onChange={e => setExtracted({ ...extracted, num_adults: parseInt(e.target.value) })}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+                          <div><label style={lbl}>Children (under 12)</label><select style={inp} value={extracted.num_children} onChange={e => { const n = parseInt(e.target.value); const ages = [...extracted.children_ages]; while (ages.length < n) ages.push(null); setExtracted({ ...extracted, num_children: n, children_ages: ages.slice(0, n) }); }}>{[0,1,2,3,4,5,6].map(n => <option key={n} value={n}>{n === 0 ? 'No children' : n === 1 ? '1 child' : `${n} children`}</option>)}</select></div>
                           <div><label style={lbl}>Total price (₹)</label><input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: parseFloat(e.target.value) })} placeholder="e.g. 15000" /></div>
                         </div>
+                        {extracted.num_children > 0 && (
+                          <div style={{ marginTop: 10 }}>
+                            <label style={lbl}>Children ages</label>
+                            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                              {Array.from({ length: extracted.num_children }, (_, i) => (
+                                <select key={i} style={{ ...inp, width: 100 }} value={extracted.children_ages[i] ?? ''} onChange={e => { const ages = [...extracted.children_ages]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value); setExtracted({ ...extracted, children_ages: ages }); }}>
+                                  <option value=''>Child {i+1} age</option>
+                                  <option value='0'>Under 1</option>
+                                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(a => <option key={a} value={a}>{a} yrs</option>)}
+                                </select>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
