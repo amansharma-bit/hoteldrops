@@ -94,7 +94,8 @@ const DESTINATION_MAP = {
 function getDestinationCode(cityName) {
   if (!cityName) return null
   const key = cityName.toLowerCase().trim().split(',')[0].trim()
-  return DESTINATION_MAP[key] ? key : null
+  // Return key if in map, otherwise return the raw city name for dynamic search
+  return key
 }
 
 function extractImageUrl(hotelObj) {
@@ -105,27 +106,30 @@ function extractImageUrl(hotelObj) {
   return null
 }
 
-async function searchHotels({ destination, checkIn, checkOut, adults = 2, children = 0, rooms = 1, maxHotels = 40 }) {
+async function searchHotels({ destination, checkIn, checkOut, adults = 2, children = 0, rooms = 1, maxHotels = 200 }) {
   const cacheKey = `search:${destination}:${checkIn}:${checkOut}:${adults}:${children}:${rooms}`
   const cached = cacheGet(cacheKey)
   if (cached) { console.log('Cache hit:', cacheKey); return cached }
 
-  const dest = DESTINATION_MAP[destination.toLowerCase()] || DESTINATION_MAP[destination]
-  if (!dest) throw new Error(`Unknown destination: ${destination}`)
+  const key = destination.toLowerCase().trim()
+  const dest = DESTINATION_MAP[key] || DESTINATION_MAP[destination] || null
+
+  // If not in map, try to infer country from city name or default to searching by city name only
+  const searchDest = dest || { country: null, city: destination.split(',')[0].trim() }
 
   const body = {
     checkin: checkIn,
     checkout: checkOut,
     currency: 'USD',
     guestNationality: 'IN',
-    countryCode: dest.country,
-    cityName: dest.city,
+    cityName: searchDest.city,
     limit: parseInt(maxHotels),
     includeHotelData: true,
     occupancies: [{ rooms: parseInt(rooms), adults: parseInt(adults), children: children > 0 ? Array(parseInt(children)).fill(5) : [] }],
   }
+  if (searchDest.country) body.countryCode = searchDest.country
 
-  console.log(`🔍 LiteAPI search: ${dest.city} (${dest.country}) | ${checkIn}→${checkOut} | ${adults} adults`)
+  console.log(`🔍 LiteAPI search: ${searchDest.city} (${searchDest.country || 'auto'}) | ${checkIn}→${checkOut} | ${adults} adults`)
 
   try {
     const res = await axios.post(`${BASE_URL}/hotels/rates`, body, {
