@@ -3,6 +3,8 @@ const router = express.Router();
 const multer = require('multer');
 const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
+let sharp;
+try { sharp = require('sharp'); } catch(e) { sharp = null; }
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -197,7 +199,21 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
       return res.status(400).json({ success: false, error: 'File must be an image or PDF' });
     }
 
-    const rawText = await callClaude(file.buffer, file.mimetype);
+    // Compress image if too large (>1MB) to avoid Anthropic API 400 errors
+    let fileBuffer = file.buffer;
+    let fileMime = file.mimetype;
+    if (sharp && file.mimetype.startsWith('image/') && file.buffer.length > 1 * 1024 * 1024) {
+      try {
+        fileBuffer = await sharp(file.buffer)
+          .resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        fileMime = 'image/jpeg';
+      } catch(e) {
+        console.error('Image compression failed, using original:', e.message);
+      }
+    }
+    const rawText = await callClaude(fileBuffer, fileMime);
 
     let parsed;
     // Step 1: try raw; Step 2: strip markdown; Step 3: find first { to last }
