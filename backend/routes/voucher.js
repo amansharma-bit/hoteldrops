@@ -132,23 +132,29 @@ async function callClaude(fileBuffer, mimeType) {
     ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: fileBuffer.toString('base64') } }
     : { type: 'image', source: { type: 'base64', media_type: mimeType, data: fileBuffer.toString('base64') } };
 
-  const response = await axios.post(
-    'https://api.anthropic.com/v1/messages',
-    {
-      model: 'claude-sonnet-4-5-20251022',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: [fileContent, { type: 'text', text: EXTRACTION_PROMPT }] }],
-    },
-    {
-      headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
+  try {
+    const response = await axios.post(
+      'https://api.anthropic.com/v1/messages',
+      {
+        model: 'claude-opus-4-5-20251101',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: [{ type: 'text', text: EXTRACTION_PROMPT }, fileContent] }],
       },
-      timeout: 55000,
-    }
-  );
-  return response.data.content[0]?.text || '';
+      {
+        headers: {
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+        },
+        timeout: 55000,
+      }
+    );
+    return response.data.content[0]?.text || '';
+  } catch (err) {
+    const errMsg = err?.response?.data ? JSON.stringify(err.response.data) : err.message;
+    console.error('Claude API error:', errMsg);
+    throw new Error('Claude API error: ' + errMsg);
+  }
 }
 
 function getDaysDiff(dateStr) {
