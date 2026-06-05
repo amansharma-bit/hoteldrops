@@ -299,7 +299,7 @@ router.post('/submit', async (req, res) => {
       total_nights: nights, num_rooms: rooms,
       num_adults: num_adults || 2,
       num_children: num_children || 0,
-      children_ages: children_ages || [],
+      children_ages: (children_ages || []).filter(a => a !== null && a !== undefined && a !== ''),
       room_type: room_type || null,
       board_basis: board_basis || 'RO',
       board_basis_label: board_basis_label || 'Room Only',
