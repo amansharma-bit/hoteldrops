@@ -84,18 +84,13 @@ function resolveDest(input) {
 }
 
 // ── Build occupancies for liteAPI ─────────────────────────────────────────────
-// liteAPI v3: occupancies = array of objects, one per room
-// Each object has: adults (int), children (array of ages)
+// Using the exact format that was confirmed working in the old hotelbeds.js
 function buildOccupancies(rooms, adults, children) {
   const r = parseInt(rooms) || 1
   const a = parseInt(adults) || 2
   const c = parseInt(children) || 0
   const childAges = c > 0 ? Array(c).fill(5) : []
-  // One occupancy object per room
-  return Array.from({ length: r }, () => ({
-    adults: a,
-    children: childAges,
-  }))
+  return [{ rooms: r, adults: a, children: childAges }]
 }
 
 // ── Supabase coords cache ─────────────────────────────────────────────────────
