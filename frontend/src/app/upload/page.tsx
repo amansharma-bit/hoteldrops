@@ -333,7 +333,7 @@ export default function UploadPage() {
 
       if (data.success) {
         sessionStorage.setItem('rebuq_booking', JSON.stringify({ extracted: { ...payload, hotel_name: form.hotel_name, hotel_city: form.hotel_city } }))
-        router.push('/confirmed')
+        setStep('success')
       } else if (data.reason === 'duplicate') {
         alert('This booking is already being tracked!')
         router.push('/dashboard')
@@ -405,6 +405,39 @@ export default function UploadPage() {
 
         {/* ── STEP: UPLOAD — redirect to homepage ── */}
         {step === 'upload' && null}
+
+        {/* ── STEP: SUCCESS ── */}
+        {step === 'success' && (
+          <div className="fade-up" style={{ textAlign: 'center' as const, padding: '40px 20px' }}>
+            <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 40 }}>✓</div>
+            <h2 className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY, marginBottom: 12 }}>We're watching your price!</h2>
+            <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.7, marginBottom: 8 }}>
+              <strong style={{ color: NAVY }}>{form.hotel_name}</strong>
+            </p>
+            <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.7, marginBottom: 32 }}>
+              We'll check the price every 6 hours. The moment it drops, you'll get a WhatsApp alert on <strong>+91 {form.phone}</strong>.
+            </p>
+            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 14, padding: '20px 24px', marginBottom: 32, textAlign: 'left' as const }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: '#64748b' }}>Check-in</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>{form.check_in}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: '#64748b' }}>Check-out</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>{form.check_out}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, color: '#64748b' }}>Price paid</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>₹{Number(form.total_price_paid).toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' as const }}>
+              <button onClick={reset} style={{ background: B, color: '#fff', border: 'none', borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>↺ Track another booking</button>
+              <button onClick={() => router.push('/dashboard')} style={{ background: '#fff', color: NAVY, border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>View my bookings →</button>
+            </div>
+          </div>
+        )}
+
 
         {/* ── STEP: HOTEL PICK (search results) ── */}
         {step === 'hotel_pick' && extractResult?.data?.hotels && (
