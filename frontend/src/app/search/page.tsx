@@ -608,10 +608,7 @@ function SearchResults(){
                         </div>
                       </div>
                     </div>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12}}>
-                      
-                      <button style={{background:B,color:"#fff",border:"none",borderRadius:10,padding:"11px 24px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Book Now</button>
-                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12}}>{hotel.hasBreakfast?<div style={{display:"inline-flex",alignItems:"center",gap:6,background:YELLOW,color:"#92400e",borderRadius:8,padding:"8px 14px",fontSize:12.5,fontWeight:600}}><IconBreakfast/> Free Breakfast</div>:<div/>}<button style={{background:B,color:"#fff",border:"none",borderRadius:10,padding:"11px 24px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Book Now</button></div>
                   </div>
                 </div>
               );
