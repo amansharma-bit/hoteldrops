@@ -237,14 +237,11 @@ router.get('/search', async (req, res) => {
       if (!netUSD) return null
       const rebuqPriceINR = Math.round(netUSD * USD_TO_INR * MARKUP)
 
-      // OTA price = suggestedSellingPrice (what OTAs charge publicly)
-      // Falls back to retailRate if suggestedSellingPrice not present
-      const sspUSD = parseFloat(
-        firstRT?.suggestedSellingPrice?.amount ||
-        firstRate?.suggestedSellingPrice?.[0]?.amount ||
-        firstRate?.retailRate?.total?.[0]?.amount || 0
-      )
-      const otaPriceINR = sspUSD ? Math.round(sspUSD * USD_TO_INR) : 0
+      // OTA price = retailRate total (suggested public selling price)
+      // rebuq price = net * markup (our wholesale + margin, always below OTA)
+      // memberSaving shown on card = otaPrice - rebuqPrice
+      const retailUSD = parseFloat(firstRate?.retailRate?.total?.[0]?.amount || 0)
+      const otaPriceINR = retailUSD ? Math.round(retailUSD * USD_TO_INR) : 0
       const memberSaving = otaPriceINR > rebuqPriceINR ? otaPriceINR - rebuqPriceINR : 0
 
       const refTag = firstRate?.cancellationPolicies?.refundableTag || null
@@ -364,7 +361,7 @@ router.get('/:code', async (req, res) => {
         const perNightINR = Math.round(totalINR / nights)
 
         // OTA price for savings display
-        const otaUSD = parseFloat(rt?.suggestedSellingPrice?.amount || rate?.suggestedSellingPrice?.[0]?.amount || rate?.retailRate?.total?.[0]?.amount || 0)
+        const otaUSD = parseFloat(rate?.retailRate?.total?.[0]?.amount || 0)
         const otaTotalINR = otaUSD ? Math.round(otaUSD * USD_TO_INR) : 0
         const memberSaving = otaTotalINR > totalINR ? otaTotalINR - totalINR : 0
 
