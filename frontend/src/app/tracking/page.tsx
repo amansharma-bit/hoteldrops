@@ -24,14 +24,14 @@ function useIsMobile() {
 
 // Real Dubai hotels from search-hotels page
 const DUBAI_HOTELS = [
-  { name: "Atlantis, The Palm", img: "https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=600&q=85&fit=crop", badge: "Member rate" },
-  { name: "Burj Al Arab", img: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&q=85&fit=crop", badge: "Luxury" },
-  { name: "Address Downtown Dubai", img: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop", badge: "Popular" },
+  { name: "Atlantis, The Palm", img: "/atlantisthepalmdubai.jpg", badge: "Member rate" },
+  { name: "Burj Al Arab", img: "/burjalarab.jpg", badge: "Luxury" },
+  { name: "Address Downtown Dubai", img: "/addressdowntown.jpg", badge: "Popular" },
 ];
 const GENERIC_HOTELS = [
-  { name: "Top-rated hotel", img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop", badge: "Member rate" },
-  { name: "Luxury stay", img: "https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop", badge: "Best value" },
-  { name: "Boutique hotel", img: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop", badge: "Popular pick" },
+  { name: "Top-rated hotel", img: "/atlantisthepalmdubai.jpg", badge: "Member rate" },
+  { name: "Luxury stay", img: "/burjalarab.jpg", badge: "Best value" },
+  { name: "Boutique hotel", img: "/jumeirahalqasr.jpg", badge: "Popular pick" },
 ];
 
 function TrackingContent() {
@@ -84,7 +84,7 @@ function TrackingContent() {
     { icon: <IcoSearch />, title: "Scanning every 6 hours", text: "Same hotel, same room, same meal plan — like-for-like comparison, no tricks." },
     { icon: <IcoMsg />, title: "Instant WhatsApp alert", text: "The moment a lower price is found, you get a direct message with a rebooking link." },
     { icon: <IcoCheck />, title: "You rebook in 2 minutes", text: "Cancel your original booking, tap our link, select your room and confirm. Done." },
-    { icon: <IcoCoin />, title: "You keep every rupee saved", text: "We earn a small success fee only when we save you money. Zero cost otherwise." },
+    { icon: <IcoCoin />, title: "You keep every rupee saved", text: "Free to use. We only earn when you save." },
   ];
 
   return (
@@ -113,8 +113,8 @@ function TrackingContent() {
       {/* HERO */}
       <div style={{ background: B, padding: isMobile ? "40px 20px" : "64px 40px" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(74,222,128,0.15)", border: "1px solid rgba(74,222,128,0.3)", padding: "6px 16px", borderRadius: 100, fontSize: 12, fontWeight: 700, color: "#4ade80", marginBottom: 28, letterSpacing: "0.04em" }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ade80", display: "inline-block" }} />
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(252,211,77,0.2)", border: "1px solid rgba(252,211,77,0.4)", padding: "6px 16px", borderRadius: 100, fontSize: 12, fontWeight: 700, color: "#FCD34D", marginBottom: 28, letterSpacing: "0.04em" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FCD34D", display: "inline-block" }} />
             PRICE TRACKER ACTIVATED
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 32 : 56, alignItems: "center" }}>
@@ -144,7 +144,7 @@ function TrackingContent() {
 
             {/* WhatsApp preview — flat icons only */}
             <div style={{ background: "#fff", borderRadius: 20, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-              <div style={{ background: "#075E54", borderRadius: "12px 12px 0 0", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, margin: "-20px -20px 16px" }}>
+              <div style={{ background: "#0f172a", borderRadius: "12px 12px 0 0", padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, margin: "-20px -20px 16px" }}>
                 <div style={{ width: 36, height: 36, background: B, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Sora',sans-serif", fontSize: 14, fontWeight: 800, color: "#fff", flexShrink: 0 }}>r.</div>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>rebuq.</div>
@@ -182,8 +182,8 @@ function TrackingContent() {
                 </div>
                 <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8, fontStyle: "italic" }}>Same room · same meals · like-for-like</div>
               </div>
-              <div style={{ background: "#dcfce7", border: "1.5px solid #86efac", borderRadius: "14px 14px 2px 14px", padding: "11px 16px", fontSize: 13, fontWeight: 700, color: "#15803d", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <div style={{ background: "#FCD34D", border: "none", borderRadius: "14px 14px 2px 14px", padding: "11px 16px", fontSize: 13, fontWeight: 700, color: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
                 YES — rebook now
               </div>
               <div style={{ marginTop: 10, fontSize: 11, color: "#94a3b8", textAlign: "center" as const }}>This is a preview — you&apos;ll get the real alert on WhatsApp</div>
