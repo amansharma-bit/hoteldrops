@@ -242,6 +242,16 @@ router.get('/search', async (req, res) => {
     console.log(`🔍 Searching: ${destination} | ${checkIn} → ${checkOut} | ${adults} adults, ${rooms} room(s)`)
 
     // ── liteAPI rates call ─────────────────────────────────────────────────────
+    // occupancies: one entry per room, each with paxes array of {age} objects
+    const adultsInt = parseInt(adults)
+    const roomsInt = parseInt(rooms)
+    const childrenInt = parseInt(children)
+    const paxes = [
+      ...Array(adultsInt).fill({ age: 30 }),
+      ...(childrenInt > 0 ? Array(childrenInt).fill({ age: 5 }) : []),
+    ]
+    const occupancies = Array(roomsInt).fill({ paxes })
+
     const body = {
       checkin: checkIn,
       checkout: checkOut,
@@ -250,19 +260,22 @@ router.get('/search', async (req, res) => {
       cityName: dest.city,
       limit: 200,
       includeHotelData: true,
-      occupancies: [{
-        rooms: parseInt(rooms),
-        adults: parseInt(adults),
-        children: children > 0 ? Array(parseInt(children)).fill(5) : [],
-      }],
+      occupancies,
     }
     if (dest.country) body.countryCode = dest.country
+
+    console.log(`🌐 liteAPI body: ${JSON.stringify(body).slice(0, 300)}`)
 
     const ratesRes = await axios.post(`${BASE_URL}/hotels/rates`, body, {
       headers: getHeaders(),
       timeout: 30000,
       validateStatus: () => true,
     })
+
+    console.log(`🌐 liteAPI status: ${ratesRes.status}`)
+    console.log(`🌐 liteAPI response keys: ${Object.keys(ratesRes.data || {})}`)
+    console.log(`🌐 liteAPI data length: ${(ratesRes.data?.data || []).length}`)
+    if (ratesRes.data?.errors) console.error('🌐 liteAPI errors:', JSON.stringify(ratesRes.data.errors))
 
     if (ratesRes.status !== 200) {
       console.error('LiteAPI rates error:', JSON.stringify(ratesRes.data).slice(0, 300))
