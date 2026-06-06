@@ -3,7 +3,7 @@ const router = express.Router()
 const axios = require('axios')
 const { createClient } = require('@supabase/supabase-js')
 
-// ── Config ────────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 const LITE_API_KEY = process.env.LITEAPI_KEY || 'sand_9a1ac97a-74b9-4917-8777-900e559a9e43'
 const BASE_URL = 'https://api.liteapi.travel/v3.0'
 const USD_TO_INR = 84
@@ -13,22 +13,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 )
 
-// ── In-memory cache (survives within a Railway instance restart cycle) ─────────
-const memCache = new Map()
-function memGet(key) {
-  const e = memCache.get(key)
-  if (!e) return null
-  if (Date.now() > e.expires) { memCache.delete(key); return null }
-  return e.data
-}
-function memSet(key, data, ttlMs) {
-  memCache.set(key, { data, expires: Date.now() + ttlMs })
-}
-const TTL_SEARCH = 60 * 60 * 1000        // 1 hour
-const TTL_ROOMS  = 30 * 60 * 1000        // 30 min
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
-
 function getHeaders() {
   return {
     'X-API-Key': LITE_API_KEY,
@@ -37,8 +21,22 @@ function getHeaders() {
   }
 }
 
-// ── Destination map ────────────────────────────────────────────────────────────
-const DESTINATION_MAP = {
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+
+// ── In-memory search cache (1 hour) ──────────────────────────────────────────
+const memCache = new Map()
+function memGet(key) {
+  const e = memCache.get(key)
+  if (!e) return null
+  if (Date.now() > e.exp) { memCache.delete(key); return null }
+  return e.data
+}
+function memSet(key, data, ttlMs = 3600000) {
+  memCache.set(key, { data, exp: Date.now() + ttlMs })
+}
+
+// ── Destination map ───────────────────────────────────────────────────────────
+const DESTINATIONS = {
   'dubai': { country: 'AE', city: 'Dubai' },
   'dubai, uae': { country: 'AE', city: 'Dubai' },
   'abu dhabi': { country: 'AE', city: 'Abu Dhabi' },
@@ -54,412 +52,312 @@ const DESTINATION_MAP = {
   'hyderabad': { country: 'IN', city: 'Hyderabad' },
   'jaipur': { country: 'IN', city: 'Jaipur' },
   'agra': { country: 'IN', city: 'Agra' },
-  'kerala': { country: 'IN', city: 'Kochi' },
   'kochi': { country: 'IN', city: 'Kochi' },
+  'kerala': { country: 'IN', city: 'Kochi' },
   'bali': { country: 'ID', city: 'Bali' },
   'singapore': { country: 'SG', city: 'Singapore' },
   'bangkok': { country: 'TH', city: 'Bangkok' },
   'phuket': { country: 'TH', city: 'Phuket' },
   'kuala lumpur': { country: 'MY', city: 'Kuala Lumpur' },
-  'hanoi': { country: 'VN', city: 'Hanoi' },
-  'ho chi minh': { country: 'VN', city: 'Ho Chi Minh City' },
   'london': { country: 'GB', city: 'London' },
   'paris': { country: 'FR', city: 'Paris' },
   'rome': { country: 'IT', city: 'Rome' },
   'barcelona': { country: 'ES', city: 'Barcelona' },
   'amsterdam': { country: 'NL', city: 'Amsterdam' },
   'madrid': { country: 'ES', city: 'Madrid' },
-  'milan': { country: 'IT', city: 'Milan' },
-  'prague': { country: 'CZ', city: 'Prague' },
-  'vienna': { country: 'AT', city: 'Vienna' },
-  'zurich': { country: 'CH', city: 'Zurich' },
-  'lisbon': { country: 'PT', city: 'Lisbon' },
-  'athens': { country: 'GR', city: 'Athens' },
   'istanbul': { country: 'TR', city: 'Istanbul' },
   'maldives': { country: 'MV', city: 'Male' },
-  'male': { country: 'MV', city: 'Male' },
   'cairo': { country: 'EG', city: 'Cairo' },
-  'marrakech': { country: 'MA', city: 'Marrakech' },
-  'nairobi': { country: 'KE', city: 'Nairobi' },
-  'cape town': { country: 'ZA', city: 'Cape Town' },
   'new york': { country: 'US', city: 'New York' },
-  'los angeles': { country: 'US', city: 'Los Angeles' },
-  'miami': { country: 'US', city: 'Miami' },
-  'cancun': { country: 'MX', city: 'Cancun' },
   'tokyo': { country: 'JP', city: 'Tokyo' },
-  'osaka': { country: 'JP', city: 'Osaka' },
-  'beijing': { country: 'CN', city: 'Beijing' },
-  'shanghai': { country: 'CN', city: 'Shanghai' },
   'hong kong': { country: 'HK', city: 'Hong Kong' },
   'seoul': { country: 'KR', city: 'Seoul' },
   'sydney': { country: 'AU', city: 'Sydney' },
-  'melbourne': { country: 'AU', city: 'Melbourne' },
-  'yerevan': { country: 'AM', city: 'Yerevan' },
-  'riyadh': { country: 'SA', city: 'Riyadh' },
   'doha': { country: 'QA', city: 'Doha' },
+  'riyadh': { country: 'SA', city: 'Riyadh' },
   'muscat': { country: 'OM', city: 'Muscat' },
 }
 
-function getDestinationCode(cityName) {
-  if (!cityName) return null
-  return cityName.toLowerCase().trim().split(',')[0].trim()
+function resolveDest(input) {
+  const key = (input || '').toLowerCase().trim().split(',')[0].trim()
+  return DESTINATIONS[key] || { country: null, city: input.split(',')[0].trim() }
 }
 
-function extractImageUrl(hotelObj) {
-  if (!hotelObj) return null
-  if (hotelObj.main_photo) return hotelObj.main_photo
-  if (hotelObj.hotelImages?.length > 0) return hotelObj.hotelImages[0].url
-  if (hotelObj.images?.length > 0) return hotelObj.images[0].url || hotelObj.images[0]
-  return null
+// ── Build occupancies for liteAPI ─────────────────────────────────────────────
+// liteAPI v3: occupancies = array of objects, one per room
+// Each object has: adults (int), children (array of ages)
+function buildOccupancies(rooms, adults, children) {
+  const r = parseInt(rooms) || 1
+  const a = parseInt(adults) || 2
+  const c = parseInt(children) || 0
+  const childAges = c > 0 ? Array(c).fill(5) : []
+  // One occupancy object per room
+  return Array.from({ length: r }, () => ({
+    adults: a,
+    children: childAges,
+  }))
 }
 
-// ── Supabase coords cache ──────────────────────────────────────────────────────
-// Reads coords for known hotel IDs from Supabase hotels_cache table.
-// For hotels not in cache, fetches from liteAPI /data/hotel sequentially
-// and stores result. This means the FIRST search for a destination is slow
-// (fetches coords one by one), but every subsequent search is instant.
-// When liteAPI changes its API structure, only this function needs updating.
-
+// ── Supabase coords cache ─────────────────────────────────────────────────────
 async function enrichWithCoords(hotels) {
   if (!hotels.length) return hotels
 
   const ids = hotels.map(h => String(h.code))
 
-  // 1. Check Supabase cache for all IDs in one query
-  const { data: cached, error } = await supabase
+  // Batch read from Supabase
+  const { data: rows, error } = await supabase
     .from('hotels_cache')
-    .select('hotel_id, latitude, longitude, amenities, facilities, star_rating')
+    .select('hotel_id, latitude, longitude, amenities, star_rating')
     .in('hotel_id', ids)
 
-  if (error) console.warn('⚠️ Supabase cache read error:', error.message)
+  if (error) console.warn('⚠️ Supabase read error:', error.message)
 
-  const cacheMap = {}
-  for (const row of (cached || [])) {
-    cacheMap[row.hotel_id] = row
-  }
+  const cached = {}
+  for (const row of (rows || [])) cached[row.hotel_id] = row
 
-  // 2. Find hotels NOT in cache
-  const missing = hotels.filter(h => !cacheMap[String(h.code)])
-  console.log(`📍 Cache: ${Object.keys(cacheMap).length} hit, ${missing.length} miss`)
+  const missing = hotels.filter(h => !cached[String(h.code)])
+  console.log(`📍 Coords cache: ${Object.keys(cached).length} hit, ${missing.length} miss`)
 
-  // 3. Fetch missing hotels from liteAPI /data/hotel sequentially (avoid rate limits)
+  // Fetch missing from liteAPI /data/hotel one by one
   if (missing.length > 0) {
-    console.log(`🌐 Fetching coords for ${missing.length} hotels from liteAPI...`)
-    const toInsert = []
-
+    const toUpsert = []
     for (const hotel of missing) {
       try {
-        await sleep(150) // 150ms between calls — safe for liteAPI rate limits
-        const res = await axios.get(
+        await sleep(200)
+        const r = await axios.get(
           `${BASE_URL}/data/hotel?hotelId=${hotel.code}`,
           { headers: getHeaders(), timeout: 8000, validateStatus: () => true }
         )
-
-        if (res.status === 200 && res.data?.data) {
-          const d = res.data.data
-          const lat = d.location?.latitude || null
-          const lng = d.location?.longitude || null
-          const amenities = (d.hotelFacilities || []).map(f => typeof f === 'string' ? f : f.name).filter(Boolean)
-          const facilities = (d.facilities || [])
-          const starRating = d.starRating ? Math.round(parseFloat(d.starRating)) : null
-
-          cacheMap[String(hotel.code)] = { hotel_id: String(hotel.code), latitude: lat, longitude: lng, amenities, facilities, star_rating: starRating }
-
-          toInsert.push({
-            hotel_id: String(hotel.code),
-            name: d.name || hotel.name,
-            latitude: lat,
-            longitude: lng,
-            amenities,
-            facilities,
-            star_rating: starRating,
-            cached_at: new Date().toISOString(),
-          })
-        } else {
-          // Store null entry so we don't retry on every search
-          toInsert.push({
-            hotel_id: String(hotel.code),
-            name: hotel.name,
-            latitude: null,
-            longitude: null,
-            amenities: [],
-            facilities: {},
-            star_rating: hotel.stars || null,
-            cached_at: new Date().toISOString(),
-          })
-          cacheMap[String(hotel.code)] = { hotel_id: String(hotel.code), latitude: null, longitude: null, amenities: [], facilities: [] }
+        const d = r.status === 200 ? r.data?.data : null
+        const row = {
+          hotel_id: String(hotel.code),
+          name: (d ? d.name : null) || hotel.name,
+          latitude: d?.location?.latitude || null,
+          longitude: d?.location?.longitude || null,
+          amenities: d ? (d.hotelFacilities || []).map(f => typeof f === 'string' ? f : f.name).filter(Boolean) : [],
+          star_rating: d?.starRating ? Math.round(parseFloat(d.starRating)) : (hotel.stars || null),
+          cached_at: new Date().toISOString(),
         }
-      } catch (err) {
-        console.warn(`⚠️ Coords fetch failed for ${hotel.code}:`, err.message)
-        cacheMap[String(hotel.code)] = { hotel_id: String(hotel.code), latitude: null, longitude: null, amenities: [], facilities: [] }
+        cached[String(hotel.code)] = row
+        toUpsert.push(row)
+      } catch (e) {
+        console.warn(`⚠️ /data/hotel failed for ${hotel.code}:`, e.message)
+        cached[String(hotel.code)] = { hotel_id: String(hotel.code), latitude: null, longitude: null, amenities: [] }
       }
     }
-
-    // Batch upsert into Supabase
-    if (toInsert.length > 0) {
-      const { error: upsertErr } = await supabase
-        .from('hotels_cache')
-        .upsert(toInsert, { onConflict: 'hotel_id' })
-      if (upsertErr) console.warn('⚠️ Supabase upsert error:', upsertErr.message)
-      else console.log(`✅ Cached ${toInsert.length} hotels in Supabase`)
+    if (toUpsert.length) {
+      const { error: uErr } = await supabase.from('hotels_cache').upsert(toUpsert, { onConflict: 'hotel_id' })
+      if (uErr) console.warn('⚠️ Supabase upsert error:', uErr.message)
+      else console.log(`✅ Cached ${toUpsert.length} hotels`)
     }
   }
 
-  // 4. Merge cache data back into hotels
+  // Merge coords back
   return hotels.map(h => {
-    const c = cacheMap[String(h.code)] || {}
+    const c = cached[String(h.code)] || {}
     return {
       ...h,
       latitude: c.latitude || h.latitude || null,
       longitude: c.longitude || h.longitude || null,
-      amenities: c.amenities?.length > 0 ? c.amenities : (h.amenities || []),
-      facilities: c.facilities || h.facilities || [],
+      amenities: c.amenities?.length ? c.amenities : (h.amenities || []),
       stars: c.star_rating || h.stars || null,
     }
   })
 }
 
-// ── GET /api/hotels/search ─────────────────────────────────────────────────────
+// ── GET /api/hotels/search ────────────────────────────────────────────────────
 router.get('/search', async (req, res) => {
   try {
-    const { destination, checkIn, checkOut, adults = 2, children = 0, rooms = 1 } = req.query
+    const {
+      destination, checkIn, checkOut,
+      adults = '2', children = '0', rooms = '1'
+    } = req.query
 
     if (!destination || !checkIn || !checkOut) {
-      return res.status(400).json({ error: 'Missing required fields: destination, checkIn, checkOut' })
+      return res.status(400).json({ error: 'destination, checkIn and checkOut are required' })
     }
 
-    // Check in-memory cache first (avoids full round-trip on repeat searches)
-    const cacheKey = `search:${destination}:${checkIn}:${checkOut}:${adults}:${children}:${rooms}`
-    const cached = memGet(cacheKey)
-    if (cached) {
-      console.log(`💾 Memory cache hit: ${cacheKey}`)
-      return res.json({ hotels: { hotels: cached, total: cached.length, checkIn, checkOut } })
+    // Memory cache check
+    const cacheKey = `s:${destination}:${checkIn}:${checkOut}:${adults}:${children}:${rooms}`
+    const hit = memGet(cacheKey)
+    if (hit) {
+      console.log(`💾 Cache hit: ${destination}`)
+      return res.json({ hotels: { hotels: hit, total: hit.length, checkIn, checkOut } })
     }
 
-    const key = destination.toLowerCase().trim().split(',')[0].trim()
-    const dest = DESTINATION_MAP[key] || { country: null, city: destination.split(',')[0].trim() }
+    const dest = resolveDest(destination)
+    console.log(`🔍 Search: ${dest.city} (${dest.country || '?'}) | ${checkIn}→${checkOut} | ${adults}A ${rooms}R`)
 
-    console.log(`🔍 Searching: ${destination} | ${checkIn} → ${checkOut} | ${adults} adults, ${rooms} room(s)`)
-
-    // ── liteAPI rates call ─────────────────────────────────────────────────────
-    // occupancies: one entry per room, each with paxes array of {age} objects
-    const adultsInt = parseInt(adults)
-    const roomsInt = parseInt(rooms)
-    const childrenInt = parseInt(children)
-    const paxes = [
-      ...Array(adultsInt).fill({ age: 30 }),
-      ...(childrenInt > 0 ? Array(childrenInt).fill({ age: 5 }) : []),
-    ]
-    const occupancies = Array(roomsInt).fill({ paxes })
-
+    // Build request body exactly per liteAPI v3 docs
     const body = {
       checkin: checkIn,
       checkout: checkOut,
       currency: 'USD',
       guestNationality: 'IN',
+      occupancies: buildOccupancies(rooms, adults, children),
       cityName: dest.city,
       limit: 200,
-      includeHotelData: true,
-      occupancies,
+      maxRatesPerHotel: 1,        // cheapest rate only — faster response
+      includeHotelData: true,     // get name/photo/address in same call
     }
     if (dest.country) body.countryCode = dest.country
 
-    console.log(`🌐 liteAPI body: ${JSON.stringify(body).slice(0, 300)}`)
+    console.log(`📤 liteAPI body: ${JSON.stringify(body)}`)
 
-    const ratesRes = await axios.post(`${BASE_URL}/hotels/rates`, body, {
+    const resp = await axios.post(`${BASE_URL}/hotels/rates`, body, {
       headers: getHeaders(),
       timeout: 30000,
       validateStatus: () => true,
     })
 
-    console.log(`🌐 liteAPI status: ${ratesRes.status}`)
-    console.log(`🌐 liteAPI response keys: ${Object.keys(ratesRes.data || {})}`)
-    console.log(`🌐 liteAPI data length: ${(ratesRes.data?.data || []).length}`)
-    if (ratesRes.data?.errors) console.error('🌐 liteAPI errors:', JSON.stringify(ratesRes.data.errors))
+    console.log(`📥 liteAPI status: ${resp.status}`)
+    console.log(`📥 liteAPI keys: ${Object.keys(resp.data || {})}`)
 
-    if (ratesRes.status !== 200) {
-      console.error('LiteAPI rates error:', JSON.stringify(ratesRes.data).slice(0, 300))
-      return res.status(500).json({ error: `LiteAPI error: ${ratesRes.status}` })
+    if (resp.status !== 200) {
+      console.error('❌ liteAPI error body:', JSON.stringify(resp.data).slice(0, 500))
+      return res.status(502).json({ error: `liteAPI returned ${resp.status}`, detail: resp.data })
     }
 
-    const rawData = ratesRes.data
-    const ratesList = rawData.data || []
-    const hotelsList = rawData.hotels || []
+    const ratesList = resp.data.data || []
+    const hotelMeta = {}
+    for (const h of (resp.data.hotels || [])) hotelMeta[h.id] = h
 
-    // Build hotel info map from the hotels[] array in the response
-    const hotelInfoMap = {}
-    for (const h of hotelsList) {
-      hotelInfoMap[h.id] = h
-    }
+    console.log(`✅ liteAPI: ${ratesList.length} rates, ${Object.keys(hotelMeta).length} hotel meta entries`)
 
-    // Map rates + static info into our hotel shape
+    // Map into our hotel shape
     let hotels = ratesList.map(h => {
-      const info = hotelInfoMap[h.hotelId] || {}
-      const firstRoomType = h.roomTypes?.[0]
-      const firstRate = firstRoomType?.rates?.[0]
+      const meta = hotelMeta[h.hotelId] || {}
+      const firstRT = h.roomTypes?.[0]
+      const firstRate = firstRT?.rates?.[0]
 
-      const minRateUSD = parseFloat(firstRate?.retailRate?.total?.[0]?.amount || 0)
+      const priceUSD = parseFloat(firstRate?.retailRate?.total?.[0]?.amount || 0)
+      const priceINR = priceUSD ? Math.round(priceUSD * USD_TO_INR) : 0
 
-      // Refundable from first rate's cancellation policy
-      const refundableTag = firstRate?.cancellationPolicies?.refundableTag || null
-      const isRefundable = refundableTag === 'RFN' ? true : refundableTag === 'NRFN' ? false : null
-
-      // Breakfast from boardType
+      const refTag = firstRate?.cancellationPolicies?.refundableTag || null
       const boardType = firstRate?.boardType || firstRate?.boardCode || 'RO'
-      const hasBreakfast = boardType !== 'RO' && boardType !== 'Room Only'
 
       return {
         code: h.hotelId,
-        name: info.name || 'Hotel',
+        name: meta.name || 'Hotel',
         city: dest.city,
-        stars: info.stars || (info.starRating ? Math.round(parseFloat(info.starRating)) : null),
-        minRate: minRateUSD ? Math.round(minRateUSD * USD_TO_INR) : 0,
-        lowestPriceINR: minRateUSD ? Math.round(minRateUSD * USD_TO_INR) : 0,
+        stars: meta.stars || (meta.starRating ? Math.round(parseFloat(meta.starRating)) : null),
+        minRate: priceINR,
+        lowestPriceINR: priceINR,
         currency: 'INR',
-        address: info.address || null,
-        imageUrl: extractImageUrl(info),
-        chain: info.chainName || null,
-        rating: info.rating || null,
-        // Coords will be filled by enrichWithCoords() below
-        latitude: info.location?.latitude || null,
-        longitude: info.location?.longitude || null,
-        isRefundable,
-        hasBreakfast,
+        address: meta.address || null,
+        imageUrl: meta.main_photo || meta.thumbnail || null,
+        chain: meta.chainName || null,
+        rating: meta.rating || null,
+        reviewCount: meta.review_count || null,
+        // coords filled by enrichWithCoords below
+        latitude: meta.location?.latitude || null,
+        longitude: meta.location?.longitude || null,
+        isRefundable: refTag === 'RFN' ? true : refTag === 'NRFN' ? false : null,
+        hasBreakfast: !['RO', 'Room Only', '', null, undefined].includes(boardType),
         amenities: [],
-        rooms: h.roomTypes || [],
-        reviews: info.rating ? [{ rate: info.rating }] : [],
+        roomTypes: h.roomTypes || [],
       }
     })
 
-    console.log(`✅ Found ${hotels.length} hotels`)
-    console.log(`📍 Hotels with coords from rates: ${hotels.filter(h => h.latitude && h.longitude).length}`)
+    console.log(`📍 Coords from rates: ${hotels.filter(h => h.latitude && h.longitude).length}`)
 
-    // ── Enrich with coords from Supabase cache / liteAPI /data/hotel ──────────
+    // Enrich with Supabase-cached coords
     hotels = await enrichWithCoords(hotels)
 
-    console.log(`📍 Hotels with coords after enrichment: ${hotels.filter(h => h.latitude && h.longitude).length}`)
-    console.log(`🖼️ Hotels with images: ${hotels.filter(h => h.imageUrl).length}`)
-    console.log(`📛 Hotels with names: ${hotels.filter(h => h.name && h.name !== 'Hotel').length}`)
+    console.log(`📍 Coords after enrichment: ${hotels.filter(h => h.latitude && h.longitude).length}`)
+    console.log(`🖼️ With images: ${hotels.filter(h => h.imageUrl).length}`)
 
-    // Cache in memory for 1 hour
-    memSet(cacheKey, hotels, TTL_SEARCH)
-
+    memSet(cacheKey, hotels)
     return res.json({ hotels: { hotels, total: hotels.length, checkIn, checkOut } })
 
   } catch (err) {
-    console.error('❌ Search error:', err.message)
+    console.error('❌ /search error:', err.message)
     return res.status(500).json({ error: err.message })
   }
 })
 
-// ── GET /api/hotels/:code ──────────────────────────────────────────────────────
+// ── GET /api/hotels/:code ─────────────────────────────────────────────────────
 router.get('/:code', async (req, res) => {
   try {
     const { code } = req.params
-    const { checkIn, checkOut, adults = 2, children = 0, rooms = 1 } = req.query
+    const { checkIn, checkOut, adults = '2', children = '0', rooms = '1' } = req.query
 
     if (!checkIn || !checkOut) {
       return res.status(400).json({ error: 'checkIn and checkOut required' })
     }
 
-    const nights = Math.max(1, Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000))
-    console.log(`🏨 Hotel detail: ${code} | ${checkIn} → ${checkOut} | ${nights} nights`)
+    const nights = Math.max(1, Math.round(
+      (new Date(checkOut) - new Date(checkIn)) / 86400000
+    ))
 
-    // Fetch hotel static content from liteAPI
-    const contentRes = await axios.get(
-      `${BASE_URL}/data/hotel?hotelId=${code}`,
-      { headers: getHeaders(), timeout: 15000, validateStatus: () => true }
-    )
+    console.log(`🏨 Hotel detail: ${code} | ${checkIn}→${checkOut} | ${nights}N`)
 
-    if (contentRes.status !== 200 || !contentRes.data?.data) {
-      return res.status(404).json({ error: 'Hotel not found' })
-    }
+    // Fetch static content
+    const [contentResp, ratesResp] = await Promise.all([
+      axios.get(`${BASE_URL}/data/hotel?hotelId=${code}`, {
+        headers: getHeaders(), timeout: 12000, validateStatus: () => true,
+      }),
+      axios.post(`${BASE_URL}/hotels/rates`, {
+        checkin: checkIn,
+        checkout: checkOut,
+        currency: 'USD',
+        guestNationality: 'IN',
+        hotelIds: [code],
+        occupancies: buildOccupancies(rooms, adults, children),
+        includeHotelData: false,
+      }, { headers: getHeaders(), timeout: 30000, validateStatus: () => true }),
+    ])
 
-    const d = contentRes.data.data
+    const d = contentResp.data?.data
+    if (!d) return res.status(404).json({ error: 'Hotel not found' })
 
     // Images
-    const images = (d.hotelImages || d.images || [])
+    const images = (d.hotelImages || [])
       .sort((a, b) => (a.order || 0) - (b.order || 0))
-      .map(img => ({ url: img.url || img, type: img.caption || 'General' }))
+      .map(img => ({ url: img.url, caption: img.caption || 'Hotel' }))
 
-    // Facilities
+    // Facilities — categorise
     const facilityGroups = { general: [], sports: [], wellness: [], dining: [], connectivity: [] }
-    const facilityList = (d.hotelFacilities || []).map(f => typeof f === 'string' ? f : f.name).filter(Boolean)
-    const sportsKw = ['pool', 'gym', 'fitness', 'tennis', 'sport', 'beach']
-    const wellnessKw = ['spa', 'sauna', 'massage', 'wellness']
-    const diningKw = ['restaurant', 'bar', 'breakfast', 'dining', 'cafe', 'coffee']
-    const connKw = ['wifi', 'internet', 'business']
-
-    for (const f of facilityList) {
+    const allFacilities = (d.hotelFacilities || []).map(f => typeof f === 'string' ? f : f.name).filter(Boolean)
+    for (const f of allFacilities) {
       const fl = f.toLowerCase()
-      if (wellnessKw.some(k => fl.includes(k))) facilityGroups.wellness.push(f)
-      else if (sportsKw.some(k => fl.includes(k))) facilityGroups.sports.push(f)
-      else if (diningKw.some(k => fl.includes(k))) facilityGroups.dining.push(f)
-      else if (connKw.some(k => fl.includes(k))) facilityGroups.connectivity.push(f)
+      if (/spa|sauna|massage|wellness/.test(fl)) facilityGroups.wellness.push(f)
+      else if (/pool|gym|fitness|tennis|sport/.test(fl)) facilityGroups.sports.push(f)
+      else if (/restaurant|bar|breakfast|dining|cafe/.test(fl)) facilityGroups.dining.push(f)
+      else if (/wifi|internet|business/.test(fl)) facilityGroups.connectivity.push(f)
       else facilityGroups.general.push(f)
     }
 
-    // Fetch room rates
-    const ratesBody = {
-      checkin: checkIn,
-      checkout: checkOut,
-      currency: 'USD',
-      guestNationality: 'IN',
-      hotelIds: [code],
-      includeHotelData: false,
-      occupancies: [{
-        rooms: parseInt(rooms),
-        adults: parseInt(adults),
-        children: children > 0 ? Array(parseInt(children)).fill(5) : [],
-      }],
-    }
-
+    // Room rates
     let roomList = []
-    try {
-      await sleep(300)
-      const ratesRes = await axios.post(`${BASE_URL}/hotels/rates`, ratesBody, {
-        headers: getHeaders(), timeout: 30000, validateStatus: () => true,
+    if (ratesResp.status === 200) {
+      const hotelData = (ratesResp.data?.data || [])[0]
+      roomList = (hotelData?.roomTypes || []).map(rt => {
+        const rate = rt.rates?.[0]
+        const priceUSD = parseFloat(rate?.retailRate?.total?.[0]?.amount || 0)
+        const totalINR = priceUSD ? Math.round(priceUSD * USD_TO_INR) : null
+        const perNightINR = totalINR ? Math.round(totalINR / nights) : null
+        const boardType = rate?.boardType || rate?.boardCode || 'RO'
+        const refTag = rate?.cancellationPolicies?.refundableTag
+
+        return {
+          offerId: rt.offerId,
+          name: rate?.name || rt.name || 'Room',
+          boardCode: boardType,
+          boardName: rate?.boardName || (boardType === 'RO' ? 'Room Only' : 'Breakfast Included'),
+          hasBreakfast: !['RO', 'Room Only'].includes(boardType),
+          maxOccupancy: rate?.maxOccupancy || parseInt(adults),
+          pricePerNight: perNightINR,
+          totalPrice: totalINR,
+          isRefundable: refTag === 'RFN',
+          refundableTag: refTag || null,
+          cancelPolicies: rate?.cancellationPolicies?.cancelPolicyInfos || [],
+          images: images.slice(0, 3).map(i => i.url),
+        }
       })
-
-      if (ratesRes.status === 200) {
-        const hotelData = (ratesRes.data.data || [])[0]
-        const roomTypes = hotelData?.roomTypes || []
-
-        roomList = roomTypes.map(rt => {
-          const rate = rt.rates?.[0]
-          const priceUSD = parseFloat(rate?.retailRate?.total?.[0]?.amount || 0)
-          const priceINR = priceUSD ? Math.round(priceUSD * USD_TO_INR) : null
-          const pricePerNight = priceINR ? Math.round(priceINR / nights) : null
-
-          const refundableTag = rate?.cancellationPolicies?.refundableTag
-          const boardType = rate?.boardType || rate?.boardCode || 'RO'
-          const hasBreakfast = boardType !== 'RO'
-
-          return {
-            roomCode: rt.offerId || rt.roomTypeId,
-            name: rate?.name || 'Room',
-            maxAdults: rate?.adultCount || parseInt(adults),
-            maxPax: (rate?.adultCount || parseInt(adults)) + (rate?.childCount || 0),
-            boardCode: boardType,
-            boardName: rate?.boardName || (hasBreakfast ? 'Breakfast Included' : 'Room Only'),
-            hasBreakfast,
-            pricePerNight,
-            totalPrice: priceINR,
-            offerId: rt.offerId,
-            cancellation: {
-              refundableTag: refundableTag || null,
-              isRefundable: refundableTag === 'RFN',
-              policies: rate?.cancellationPolicies?.cancelPolicyInfos || [],
-            },
-            images: images.slice(0, 3).map(i => i.url),
-          }
-        })
-      }
-    } catch (e) {
-      console.error('⚠️ Room rates fetch error:', e.message)
     }
 
-    const lowestRoom = roomList.reduce((min, r) => (!min || (r.pricePerNight && r.pricePerNight < min.pricePerNight)) ? r : min, null)
+    const cheapest = roomList.reduce((m, r) => (!m || (r.pricePerNight && r.pricePerNight < m.pricePerNight)) ? r : m, null)
 
     return res.json({
       success: true,
@@ -474,15 +372,18 @@ router.get('/:code', async (req, res) => {
         address: d.address || '',
         city: d.city || '',
         country: d.country || '',
-        coordinates: { latitude: d.location?.latitude, longitude: d.location?.longitude },
+        coordinates: {
+          latitude: d.location?.latitude || null,
+          longitude: d.location?.longitude || null,
+        },
         checkInTime: d.checkinCheckoutTimes?.checkin || '15:00',
         checkOutTime: d.checkinCheckoutTimes?.checkout || '12:00',
         images,
         rooms: roomList,
         facilityGroups,
-        facilityList,
-        lowestPriceINR: lowestRoom?.pricePerNight || null,
-        lowestTotalINR: lowestRoom?.totalPrice || null,
+        allFacilities,
+        lowestPriceINR: cheapest?.pricePerNight || null,
+        lowestTotalINR: cheapest?.totalPrice || null,
         nights,
         checkIn,
         checkOut,
@@ -491,7 +392,7 @@ router.get('/:code', async (req, res) => {
     })
 
   } catch (err) {
-    console.error('❌ Hotel detail error:', err.message)
+    console.error('❌ /hotel/:code error:', err.message)
     return res.status(500).json({ error: err.message })
   }
 })
