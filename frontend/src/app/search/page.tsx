@@ -293,7 +293,7 @@ function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMob
   return(
     <div style={{position:"fixed",inset:0,zIndex:8000,display:"flex",flexDirection:"column"}}>
       {/* Top bar with inline filter chips */}
-      <div ref={chipRef} style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 20px",display:"flex",alignItems:"center",gap:10,flexShrink:0,flexWrap:"nowrap",overflowX:"auto"}}>
+      <div ref={chipRef} style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 20px",display:"flex",alignItems:"center",gap:10,flexShrink:0,flexWrap:"nowrap",overflowX:"visible",position:"relative",zIndex:99999}}>
         <div style={{fontSize:14,fontWeight:700,color:NAVY,whiteSpace:"nowrap",marginRight:4}}>{hotelsWithCoords.length} hotels</div>
 
         {/* Location chip */}
@@ -571,13 +571,13 @@ function SearchResults(){
                       <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
                       {hotel.isRefundable!=null&&<span style={{fontSize:11,fontWeight:600,color:hotel.isRefundable?"#16a34a":"#dc2626",background:hotel.isRefundable?"#dcfce7":"#fee2e2",padding:"2px 7px",borderRadius:5}}>{hotel.isRefundable?"✓ Refundable":"Non-refundable"}</span>}
                       {/* Breakfast yellow pill */}
-                      {hotel.hasBreakfast&&<span style={{display:"flex",alignItems:"center",gap:4,background:YELLOW,color:"#1a1a1a",fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:5}}><IconBreakfast/> Free Breakfast</span>}
+                      
                     </div>
                     <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between"}}>
-                      <div>{price>0?(<>{hotel.memberSaving&&hotel.memberSaving>0&&<div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>{hotel.otaPriceINR&&hotel.otaPriceINR>price?`Members save ${formatINR(hotel.otaPriceINR-price)}`:"Member rate"}</div>}{hotel.otaPriceINR&&hotel.otaPriceINR>price&&<div style={{fontSize:12,color:"#94a3b8",textDecoration:"line-through"}}>{formatINR(hotel.otaPriceINR)}</div>}<div className="sora" style={{fontSize:22,fontWeight:800,color:NAVY}}>{formatINR(price)}</div><div style={{fontSize:11,color:"#64748b"}}>Taxes included · per night</div></>):<div style={{fontSize:13,color:"#64748b"}}>Price on request</div>}</div>
+                      <div>{price>0?(<>{hotel.memberSaving&&hotel.memberSaving>0&&<div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>{hotel.otaPriceINR&&hotel.otaPriceINR>price?`Members save ${formatINR(hotel.otaPriceINR-price)}`:"Member rate"}</div>}{hotel.otaPriceINR&&hotel.otaPriceINR>price&&<div style={{fontSize:12,color:"#94a3b8",textDecoration:"line-through"}}>{formatINR(hotel.otaPriceINR)}</div>}<div className="sora" style={{fontSize:22,fontWeight:800,color:NAVY}}>{formatINR(price)}</div><div style={{fontSize:11,color:"#64748b"}}>Taxes included · per night</div>{hotel.hasBreakfast&&<div style={{display:"flex",alignItems:"center",gap:4,background:YELLOW,color:"#92400e",fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:5,marginTop:4}}><IconBreakfast/> Free Breakfast</div>}</>):<div style={{fontSize:13,color:"#64748b"}}>Price on request</div>}</div>
                       <button style={{background:B,color:"#fff",border:"none",borderRadius:10,padding:"11px 20px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Book Now</button>
                     </div>
-                    <button onClick={e=>{e.stopPropagation();router.push("/upload");}} style={{marginTop:10,width:"100%",background:"#eff6ff",color:B,border:`1px solid #bfdbfe`,borderRadius:8,padding:9,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><IconBell/> Track price drop</button>
+                    
                   </div>
                 </div>
               ):(
@@ -598,18 +598,18 @@ function SearchResults(){
                             <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
                             {hotel.isRefundable!=null&&<span style={{fontSize:11,fontWeight:600,color:hotel.isRefundable?"#16a34a":"#dc2626",background:hotel.isRefundable?"#dcfce7":"#fee2e2",padding:"2px 7px",borderRadius:5}}>{hotel.isRefundable?"✓ Free Cancellation":"Non-refundable"}</span>}
                             {/* Breakfast yellow pill in card body */}
-                            {hotel.hasBreakfast&&<span style={{display:"flex",alignItems:"center",gap:4,background:YELLOW,color:"#1a1a1a",fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:5}}><IconBreakfast/> Free Breakfast</span>}
+                            
                           </div>
                           {/* Priority amenities — max 4 */}
                           {cardAmenities.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:"4px 14px",marginBottom:8}}>{cardAmenities.map((a,i)=><span key={i} style={{fontSize:12.5,color:"#475569"}}>• {a}</span>)}</div>}
                         </div>
                         <div style={{textAlign:"right",flexShrink:0}}>
-                          {price>0?(<><div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>{hotel.otaPriceINR&&hotel.otaPriceINR>price?`Members save ${formatINR(hotel.otaPriceINR-price)}`:"Member rate"}</div>{hotel.otaPriceINR&&hotel.otaPriceINR>price&&<div style={{fontSize:12,color:"#64748b",textDecoration:"line-through"}}>{formatINR(hotel.otaPriceINR)}</div>}<div className="sora" style={{fontSize:24,fontWeight:800,color:NAVY}}>{formatINR(price)}</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>Taxes included · per night</div></>):<div style={{fontSize:13,color:"#64748b"}}>Price on request</div>}
+                          {price>0?(<><div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>{hotel.otaPriceINR&&hotel.otaPriceINR>price?`Members save ${formatINR(hotel.otaPriceINR-price)}`:"Member rate"}</div>{hotel.otaPriceINR&&hotel.otaPriceINR>price&&<div style={{fontSize:12,color:"#64748b",textDecoration:"line-through"}}>{formatINR(hotel.otaPriceINR)}</div>}<div className="sora" style={{fontSize:24,fontWeight:800,color:NAVY}}>{formatINR(price)}</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>Taxes included · per night</div>{hotel.hasBreakfast&&<div style={{display:"flex",alignItems:"center",gap:4,background:YELLOW,color:"#92400e",fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:5,marginTop:6,display:"inline-flex"}}><IconBreakfast/> Free Breakfast</div>}</>):<div style={{fontSize:13,color:"#64748b"}}>Price on request</div>}
                         </div>
                       </div>
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12}}>
-                      <button onClick={e=>{e.stopPropagation();router.push("/upload");}} style={{display:"flex",alignItems:"center",gap:6,background:"#eff6ff",color:B,border:`1px solid #bfdbfe`,borderRadius:8,padding:"8px 14px",fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}><IconBell/> Track price</button>
+                      <div style={{fontSize:12,color:"#64748b"}}>Exclusive member rate</div>
                       <button style={{background:B,color:"#fff",border:"none",borderRadius:10,padding:"11px 24px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Book Now</button>
                     </div>
                   </div>
