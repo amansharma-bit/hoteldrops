@@ -423,6 +423,24 @@ function MapView({ hotels, checkIn, checkOut, guests, onClose, onHotelClick }: {
   );
 }
 
+// ── Hotel Search Input — top-level stable component, never remounts ─────────────
+function HotelSearchInput({ onSearch }: { onSearch: (v: string) => void }) {
+  const [val, setVal] = useState("");
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", marginBottom: 20 }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input
+        type="text"
+        placeholder="Search by hotel name"
+        value={val}
+        onChange={e => { setVal(e.target.value); onSearch(e.target.value); }}
+        style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 13, color: "#0f172a", background: "transparent", width: "100%" }}
+      />
+      {val && <button onClick={() => { setVal(""); onSearch(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 16, padding: 0 }}>×</button>}
+    </div>
+  );
+}
+
 // ── Main Search Results ───────────────────────────────────────────────────────
 function SearchResults() {
   const searchParams = useSearchParams();
@@ -478,7 +496,6 @@ function SearchResults() {
 
   // Hotel name search — stored in ref to avoid remount focus loss
   const [hotelSearch, setHotelSearch] = useState("");
-  const hotelSearchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -632,35 +649,20 @@ function SearchResults() {
   // ── Filters Panel — defined OUTSIDE render to prevent remount ────────────────
   const FiltersPanel = () => (
     <div>
-      {/* Hotel name search — uses ref to maintain focus */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", marginBottom: 20 }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input
-          ref={hotelSearchRef}
-          type="text"
-          placeholder="Search by hotel name"
-          value={hotelSearch}
-          onChange={e => setHotelSearch(e.target.value)}
-          style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 13, color: NAVY, background: "transparent", width: "100%" }}
-        />
-        {hotelSearch && <button onClick={() => setHotelSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: 16, padding: 0 }}>×</button>}
-      </div>
+      {/* Hotel name search — uncontrolled to prevent focus loss on re-render */}
+      <HotelSearchInput onSearch={setHotelSearch} />
 
-      {/* Location filter */}
+      {/* Location filter — clean dropdown */}
       {locations.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12 }}>Location</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {locations.map(loc => {
-              const active = filterLocation === loc;
-              return (
-                <button key={loc} onClick={() => setFilterLocation(active ? "" : loc)}
-                  style={{ fontSize: 12, padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${active ? B : "#e2e8f0"}`, background: active ? "#eff6ff" : "#fff", color: active ? B : "#475569", cursor: "pointer", fontFamily: "inherit" }}>
-                  {loc}
-                </button>
-              );
-            })}
-          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 10 }}>Location</div>
+          <select
+            value={filterLocation}
+            onChange={e => setFilterLocation(e.target.value)}
+            style={{ width: "100%", border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontFamily: "inherit", color: filterLocation ? NAVY : "#94a3b8", background: "#fff", outline: "none", cursor: "pointer" }}>
+            <option value="">All areas in {destination}</option>
+            {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+          </select>
         </div>
       )}
 
