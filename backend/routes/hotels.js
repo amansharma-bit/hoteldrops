@@ -290,6 +290,8 @@ router.get('/search', async (req, res) => {
   }
 })
 
+// This is the new /:code route — replaces everything from "// ── GET /api/hotels/:code" to "module.exports = router"
+
 // ── GET /api/hotels/:code ─────────────────────────────────────────────────────
 router.get('/:code', async (req, res) => {
   try {
@@ -306,8 +308,8 @@ router.get('/:code', async (req, res) => {
 
     console.log(`🏨 Hotel detail: ${code} | ${checkIn}→${checkOut} | ${nights}N`)
 
-    // Fetch static content
-    const [contentResp, ratesResp] = await Promise.all([
+    // Fetch static content + rates + reviews in parallel
+    const [contentResp, ratesResp, reviewsResp] = await Promise.all([
       axios.get(`${BASE_URL}/data/hotel?hotelId=${code}`, {
         headers: getHeaders(), timeout: 12000, validateStatus: () => true,
       }),
@@ -319,30 +321,72 @@ router.get('/:code', async (req, res) => {
         hotelIds: [code],
         occupancies: buildOccupancies(rooms, adults, children),
         includeHotelData: false,
+        roomMapping: true,
       }, { headers: getHeaders(), timeout: 30000, validateStatus: () => true }),
+      axios.get(`${BASE_URL}/data/reviews?hotelId=${code}&timeout=4&getSentiment=true`, {
+        headers: getHeaders(), timeout: 6000, validateStatus: () => true,
+      }),
     ])
 
     const d = contentResp.data?.data
     if (!d) return res.status(404).json({ error: 'Hotel not found' })
 
-    // Images
+    // ── Images ────────────────────────────────────────────────────────────────
     const images = (d.hotelImages || [])
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .map(img => ({ url: img.url, caption: img.caption || 'Hotel' }))
 
-    // Facilities — categorise
-    const facilityGroups = { general: [], sports: [], wellness: [], dining: [], connectivity: [] }
-    const allFacilities = (d.hotelFacilities || []).map(f => typeof f === 'string' ? f : f.name).filter(Boolean)
-    for (const f of allFacilities) {
-      const fl = f.toLowerCase()
-      if (/spa|sauna|massage|wellness/.test(fl)) facilityGroups.wellness.push(f)
-      else if (/pool|gym|fitness|tennis|sport/.test(fl)) facilityGroups.sports.push(f)
-      else if (/restaurant|bar|breakfast|dining|cafe/.test(fl)) facilityGroups.dining.push(f)
-      else if (/wifi|internet|business/.test(fl)) facilityGroups.connectivity.push(f)
-      else facilityGroups.general.push(f)
+    // ── Room static data from /data/hotel (for size, beds, amenities, photos)
+    const staticRooms = {}
+    for (const sr of (d.rooms || [])) {
+      staticRooms[sr.id] = {
+        description: sr.description || '',
+        sizeM2: sr.roomSizeSquare || null,
+        bedTypes: (sr.bedTypes || []).map(b => `${b.quantity || 1} ${b.bedType || ''}${b.bedSize ? ' (' + b.bedSize + ')' : ''}`).filter(Boolean),
+        amenities: (sr.roomAmenities || []).map(a => typeof a === 'string' ? a : a.name).filter(Boolean),
+        photos: (sr.photos || []).map(p => p.url || p.failoverPhoto).filter(Boolean),
+      }
     }
 
-    // Room rates
+    // ── Facilities ────────────────────────────────────────────────────────────
+    const allFacilities = (d.hotelFacilities || []).map(f => typeof f === 'string' ? f : f.name).filter(Boolean)
+    const facilityGroups = {
+      Access: [],
+      'Activities & Sports': [],
+      'Services & Conveniences': [],
+      'Safety & Security': [],
+      'Room Amenities': [],
+      'Safety & Cleanliness': [],
+    }
+    for (const f of allFacilities) {
+      const fl = f.toLowerCase()
+      if (/front desk|check.in|check.out|concierge|lobby|reception/.test(fl)) facilityGroups['Access'].push(f)
+      else if (/pool|gym|fitness|sport|tennis|golf|spa|sauna|massage|wellness|aqua/.test(fl)) facilityGroups['Activities & Sports'].push(f)
+      else if (/restaurant|bar|breakfast|dining|cafe|room service|laundry|dry.clean|currency|luggage|parking|airport|shuttle|wifi|internet|business/.test(fl)) facilityGroups['Services & Conveniences'].push(f)
+      else if (/security|cctv|fire|smoke|safe|safety/.test(fl)) facilityGroups['Safety & Security'].push(f)
+      else if (/clean|sanitiz|hygiene|disinfect/.test(fl)) facilityGroups['Safety & Cleanliness'].push(f)
+      else facilityGroups['Room Amenities'].push(f)
+    }
+
+    // ── Popular facilities (top 8 for overview section) ────────────────────
+    const popularFacilityKeywords = [
+      { key: /pool|swimming/i, label: 'Swimming Pool' },
+      { key: /wifi|internet/i, label: 'Free WiFi' },
+      { key: /breakfast/i, label: 'Breakfast' },
+      { key: /room service/i, label: '24/7 Room Service' },
+      { key: /fitness|gym/i, label: 'Fitness Centre' },
+      { key: /spa|massage/i, label: 'Spa & Wellness' },
+      { key: /parking/i, label: 'Parking' },
+      { key: /airport|transfer/i, label: 'Airport Transfer' },
+      { key: /restaurant/i, label: 'Restaurant' },
+      { key: /bar/i, label: 'Bar' },
+    ]
+    const popularFacilities = popularFacilityKeywords
+      .filter(pk => allFacilities.some(f => pk.key.test(f)))
+      .map(pk => pk.label)
+      .slice(0, 8)
+
+    // ── Room rates with roomMapping ────────────────────────────────────────
     let roomList = []
     if (ratesResp.status === 200) {
       const hotelData = (ratesResp.data?.data || [])[0]
@@ -350,18 +394,16 @@ router.get('/:code', async (req, res) => {
         const rate = rt.rates?.[0]
         if (!rate) return null
 
-        // Exclude pay-at-hotel rooms
+        // Exclude pay-at-hotel
         const taxes = rate?.taxesAndFees || []
         const hasPayAtHotel = Array.isArray(taxes) && taxes.some(t => t.included === false)
         if (hasPayAtHotel) return null
 
-        // net + 10% markup = rebuq selling price
         const netUSD = parseFloat(rate?.retailRate?.total?.[0]?.amount || rate?.net || 0)
         if (!netUSD) return null
         const totalINR = Math.round(netUSD * USD_TO_INR * MARKUP)
         const perNightINR = Math.round(totalINR / nights)
 
-        // OTA price for savings display
         const otaUSD = parseFloat(rate?.retailRate?.total?.[0]?.amount || 0)
         const otaTotalINR = otaUSD ? Math.round(otaUSD * USD_TO_INR) : 0
         const memberSaving = otaTotalINR > totalINR ? otaTotalINR - totalINR : 0
@@ -369,13 +411,28 @@ router.get('/:code', async (req, res) => {
         const boardType = rate?.boardType || rate?.boardCode || 'RO'
         const refTag = rate?.cancellationPolicies?.refundableTag
 
+        // Merge static room data via mappedRoomId
+        const mappedId = rt.mappedRoomId || null
+        const staticRoom = mappedId ? (staticRooms[mappedId] || {}) : {}
+
+        // Room photos: prefer static room photos, fall back to hotel images
+        const roomPhotos = staticRoom.photos?.length
+          ? staticRoom.photos.slice(0, 5)
+          : images.slice(0, 3).map(i => i.url)
+
         return {
           offerId: rt.offerId,
+          mappedRoomId: mappedId,
           name: rate?.name || rt.name || 'Room',
+          description: staticRoom.description || '',
           boardCode: boardType,
           boardName: rate?.boardName || (boardType === 'RO' ? 'Room Only' : 'Breakfast Included'),
           hasBreakfast: !['RO', 'Room Only'].includes(boardType),
           maxOccupancy: rate?.maxOccupancy || parseInt(adults),
+          sizeM2: staticRoom.sizeM2 || null,
+          bedTypes: staticRoom.bedTypes || [],
+          amenities: staticRoom.amenities || [],
+          photos: roomPhotos,
           pricePerNight: perNightINR,
           totalPrice: totalINR,
           otaTotalINR,
@@ -384,12 +441,29 @@ router.get('/:code', async (req, res) => {
           isRefundable: refTag === 'RFN',
           refundableTag: refTag || null,
           cancelPolicies: rate?.cancellationPolicies?.cancelPolicyInfos || [],
-          images: images.slice(0, 3).map(i => i.url),
         }
       }).filter(Boolean)
     }
 
     const cheapest = roomList.reduce((m, r) => (!m || (r.pricePerNight && r.pricePerNight < m.pricePerNight)) ? r : m, null)
+
+    // ── Reviews ───────────────────────────────────────────────────────────────
+    let reviews = []
+    let sentimentAnalysis = null
+    if (reviewsResp.status === 200 && reviewsResp.data?.data) {
+      const rd = reviewsResp.data.data
+      reviews = (Array.isArray(rd) ? rd : (rd.reviews || [])).slice(0, 10).map(r => ({
+        score: r.averageScore || null,
+        name: r.name || 'Guest',
+        country: r.country || '',
+        type: r.type || '',
+        date: r.date ? r.date.substring(0, 10) : '',
+        headline: r.headline || '',
+        pros: r.pros || '',
+        cons: r.cons || '',
+      }))
+      sentimentAnalysis = rd.sentimentAnalysis || reviewsResp.data?.sentimentAnalysis || null
+    }
 
     return res.json({
       success: true,
@@ -397,6 +471,7 @@ router.get('/:code', async (req, res) => {
         code: d.id || code,
         name: d.name,
         description: d.hotelDescription || '',
+        importantInfo: d.hotelImportantInformation || '',
         stars: d.starRating ? Math.round(parseFloat(d.starRating)) : null,
         rating: d.rating || null,
         reviewCount: d.reviewCount || null,
@@ -414,12 +489,16 @@ router.get('/:code', async (req, res) => {
         rooms: roomList,
         facilityGroups,
         allFacilities,
+        popularFacilities,
         lowestPriceINR: cheapest?.pricePerNight || null,
         lowestTotalINR: cheapest?.totalPrice || null,
+        cheapestRoom: cheapest || null,
         nights,
         checkIn,
         checkOut,
         adults: parseInt(adults),
+        reviews,
+        sentimentAnalysis,
       }
     })
 
