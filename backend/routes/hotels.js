@@ -192,9 +192,10 @@ router.get('/search', async (req, res) => {
       guestNationality: 'IN',
       occupancies: buildOccupancies(rooms, adults, children),
       cityName: dest.city,
-      limit: 200,
+      limit: 50,
       maxRatesPerHotel: 1,        // cheapest rate only — faster response
       includeHotelData: true,     // get name/photo/address in same call
+      timeout: 8,                 // cut off after 8s, return what we have
     }
     if (dest.country) body.countryCode = dest.country
 
