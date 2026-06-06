@@ -99,10 +99,10 @@ const DOWS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 function codeToNum(code:string|number):number{if(typeof code==="number")return code;let h=0;for(let i=0;i<code.length;i++){h=((h<<5)-h)+code.charCodeAt(i);h|=0;}return Math.abs(h);}
 
 // SVG Icons
-const IconBreakfast=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>;
+const IconBreakfast=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>;
 const IconBell=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>;
 
-interface Hotel{code:string|number;name:string;stars:number|null;minRate:number;currency:string;imageUrl?:string;address?:string;chain?:string;rating?:number|null;latitude?:number|null;longitude?:number|null;amenities?:string[];isRefundable?:boolean|null;hasBreakfast?:boolean;lowestPriceINR?:number;}
+interface Hotel{code:string|number;name:string;stars:number|null;minRate:number;currency:string;imageUrl?:string;address?:string;chain?:string;rating?:number|null;latitude?:number|null;longitude?:number|null;amenities?:string[];isRefundable?:boolean|null;hasBreakfast?:boolean;lowestPriceINR?:number;otaPriceINR?:number;memberSaving?:number;taxesIncluded?:boolean;}
 interface GuestState{rooms:number;adults:number;children:number;childAges:number[];}
 
 const FALLBACK_IMGS=["https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=85&fit=crop"];
@@ -210,6 +210,20 @@ function BottomSheet({title,onClose,children,onClear}:{title:string;onClose:()=>
   </div></>);
 }
 
+
+// ── ChipDropdown — top-level so it never remounts ─────────────────────────────
+function ChipDropdown({id,label,openChip,setOpenChip,children}:{id:string;label:string;openChip:string|null;setOpenChip:(v:string|null)=>void;children:React.ReactNode}){
+  const isOpen=openChip===id;
+  return(
+    <div style={{position:"relative"}}>
+      <button onClick={()=>setOpenChip(isOpen?null:id)} style={{display:"flex",alignItems:"center",gap:6,background:isOpen?"#eff6ff":"#fff",border:`1.5px solid ${isOpen?B:"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:isOpen?B:NAVY,whiteSpace:"nowrap"}}>
+        {label} <span style={{fontSize:10}}>▼</span>
+      </button>
+      {isOpen&&<div style={{position:"absolute",top:"calc(100% + 6px)",left:0,minWidth:220,background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.16)",zIndex:100,padding:14,maxHeight:320,overflowY:"auto"}}>{children}</div>}
+    </div>
+  );
+}
+
 // ── Map View ──────────────────────────────────────────────────────────────────
 function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMobile}:{hotels:Hotel[];checkIn:string;checkOut:string;filterProps:FiltersPanelProps;onClose:()=>void;onHotelClick:(h:Hotel)=>void;isMobile:boolean;}){
   const mapRef=useRef<HTMLDivElement>(null);
@@ -267,17 +281,7 @@ function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMob
   );
 
   // Desktop: split with inline filter chips in top bar
-  const ChipDropdown=({id,label,children}:{id:string;label:string;children:React.ReactNode})=>{
-    const isOpen=openChip===id;
-    return(
-      <div style={{position:"relative"}}>
-        <button onClick={()=>setOpenChip(isOpen?null:id)} style={{display:"flex",alignItems:"center",gap:6,background:isOpen?"#eff6ff":"#fff",border:`1.5px solid ${isOpen?B:"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:isOpen?B:NAVY,whiteSpace:"nowrap"}}>
-          {label} <span style={{fontSize:10}}>▼</span>
-        </button>
-        {isOpen&&<div style={{position:"absolute",top:"calc(100% + 6px)",left:0,minWidth:220,background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.16)",zIndex:100,padding:14,maxHeight:320,overflowY:"auto"}}>{children}</div>}
-      </div>
-    );
-  };
+
 
   const CB=({active,onClick,label}:{active:boolean;onClick:()=>void;label:string})=>(
     <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",cursor:"pointer"}}>
@@ -293,28 +297,28 @@ function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMob
         <div style={{fontSize:14,fontWeight:700,color:NAVY,whiteSpace:"nowrap",marginRight:4}}>{hotelsWithCoords.length} hotels</div>
 
         {/* Location chip */}
-        {filterProps.areaOptions.length>0&&<ChipDropdown id="loc" label={filterProps.filterLocation||"Location"}>
+        {filterProps.areaOptions.length>0&&<ChipDropdown id="loc" label={filterProps.filterLocation||"Location"} openChip={openChip} setOpenChip={setOpenChip}>
           {filterProps.areaOptions.map(a=><CB key={a} active={filterProps.filterLocation===a} onClick={()=>{filterProps.setFilterLocation(filterProps.filterLocation===a?"":a);setOpenChip(null);}} label={a}/>)}
         </ChipDropdown>}
 
         {/* Price chip */}
-        <ChipDropdown id="price" label={filterProps.filterPriceMax||filterProps.filterPriceMin?"Price ✓":"Price"}>
+        <ChipDropdown id="price" label={filterProps.filterPriceMax||filterProps.filterPriceMin?"Price ✓":"Price"} openChip={openChip} setOpenChip={setOpenChip}>
           {([{label:"Under ₹5,000",min:null,max:5000},{label:"₹5,000–₹10,000",min:5000,max:10000},{label:"₹10,000–₹20,000",min:10000,max:20000},{label:"₹20,000–₹40,000",min:20000,max:40000},{label:"₹40,000+",min:40000,max:null}] as {label:string;min:number|null;max:number|null}[]).map(({label,min,max})=>{const a=filterProps.filterPriceMin===min&&filterProps.filterPriceMax===max;return<CB key={label} active={a} onClick={()=>{a?filterProps.setPriceRange(null,null):filterProps.setPriceRange(min,max);setOpenChip(null);}} label={label}/>;})}</ChipDropdown>
 
         {/* Stars chip */}
-        <ChipDropdown id="stars" label={filterProps.filterStars.length>0?`Stars ✓`:"Stars"}>
+        <ChipDropdown id="stars" label={filterProps.filterStars.length>0?`Stars ✓`:"Stars"} openChip={openChip} setOpenChip={setOpenChip}>
           {[5,4,3,2,1].map(s=>{const a=filterProps.filterStars.includes(s);return<CB key={s} active={a} onClick={()=>filterProps.setFilterStars(a?filterProps.filterStars.filter(x=>x!==s):[...filterProps.filterStars,s])} label={`${"★".repeat(s)} ${s} Star`}/>;})}</ChipDropdown>
 
         {/* Rating chip */}
-        <ChipDropdown id="rating" label={filterProps.filterRating?`Rating ${filterProps.filterRating}+`:"Rating"}>
+        <ChipDropdown id="rating" label={filterProps.filterRating?`Rating ${filterProps.filterRating}+`:"Rating"} openChip={openChip} setOpenChip={setOpenChip}>
           {[{label:"Exceptional 9+",min:9},{label:"Excellent 8+",min:8},{label:"Very Good 7+",min:7}].map(({label,min})=><CB key={min} active={filterProps.filterRating===min} onClick={()=>{filterProps.setFilterRating(filterProps.filterRating===min?null:min);setOpenChip(null);}} label={label}/>)}</ChipDropdown>
 
         {/* Toggle chips */}
         <button onClick={()=>filterProps.setFilterRefundable(!filterProps.filterRefundable)} style={{display:"flex",alignItems:"center",gap:6,background:filterProps.filterRefundable?"#dcfce7":"#fff",border:`1.5px solid ${filterProps.filterRefundable?"#16a34a":"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:filterProps.filterRefundable?"#16a34a":NAVY,whiteSpace:"nowrap"}}>
-          {filterProps.filterRefundable&&"✓ "}Free cancel
+          {filterProps.filterRefundable&&"✓ "}Free Cancellation
         </button>
         <button onClick={()=>filterProps.setFilterBreakfast(!filterProps.filterBreakfast)} style={{display:"flex",alignItems:"center",gap:6,background:filterProps.filterBreakfast?YELLOW:"#fff",border:`1.5px solid ${filterProps.filterBreakfast?"#d97706":"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:filterProps.filterBreakfast?"#92400e":NAVY,whiteSpace:"nowrap"}}>
-          {filterProps.filterBreakfast&&"✓ "}Breakfast
+          {filterProps.filterBreakfast&&"✓ "}Free Breakfast
         </button>
 
         <div style={{flex:1}}/>
@@ -471,7 +475,7 @@ function SearchResults(){
           {/* Destination with autocomplete */}
           <div ref={destRef} className="sfd" style={{padding:"0 20px",borderRight:"1px solid #e2e8f0",display:"flex",flexDirection:"column",justifyContent:"center",borderRadius:"12px 0 0 12px",position:"relative"}}>
             <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Destination</div>
-            <input value={destInput} onChange={e=>handleDestInput(e.target.value)} onFocus={()=>{if(destInput.length>=1)setShowDestDrop(true);}} onKeyDown={e=>{if(e.key==="Enter"){setShowDestDrop(false);handleSearch();}}} placeholder="City or destination" style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:15,fontWeight:600,color:NAVY,background:"transparent",padding:0,width:"100%"}}/>
+            <input value={destInput} onChange={e=>handleDestInput(e.target.value)} onFocus={()=>{if(destInput.length>=1)setShowDestDrop(true);}} onBlur={()=>{setTimeout(()=>{if(!destInput.trim())setDestInput(destination);setShowDestDrop(false);},200);}} onKeyDown={e=>{if(e.key==="Enter"){setShowDestDrop(false);handleSearch();}if(e.key==="Escape"){setDestInput(destination);setShowDestDrop(false);}}} placeholder="City or destination" style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:15,fontWeight:600,color:NAVY,background:"transparent",padding:0,width:"100%"}}/>{destInput&&<button onClick={()=>{setDestInput("");setDestSuggestions([]);setShowDestDrop(false);}} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:18,padding:"0 4px",flexShrink:0,lineHeight:1}}>×</button>}
             {showDestDrop&&destSuggestions.length>0&&<div style={{position:"absolute",top:"calc(100% + 10px)",left:0,width:"100%",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.14)",zIndex:9999,maxHeight:280,overflowY:"auto"}}>
               {destSuggestions.map(d=><div key={d.key} onClick={()=>selectDest(d)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",borderBottom:"1px solid #f8fafc",transition:"background 0.1s"}} onMouseEnter={e=>(e.currentTarget.style.background="#f8fafc")} onMouseLeave={e=>(e.currentTarget.style.background="#fff")}>
                 <span style={{fontSize:20}}>{d.flag}</span>
@@ -551,7 +555,7 @@ function SearchResults(){
             </div>}
 
             {!loading&&!error&&user&&paginatedHotels.map((hotel,idx)=>{
-              const rating=hotel.rating||getRating(hotel.code);const discount=getDiscount(hotel.code);const price=priceINR(hotel);const wasPrice=price>0?Math.round(price*(1+discount/100)):0;const globalIdx=(page-1)*perPage+idx;const cardAmenities=getCardAmenities(hotel);const area=getAreaFromCoords(hotel.latitude,hotel.longitude);
+              const rating=hotel.rating||getRating(hotel.code);const discount=getDiscount(hotel.code);const price=priceINR(hotel);const globalIdx=(page-1)*perPage+idx;const cardAmenities=getCardAmenities(hotel);const area=getAreaFromCoords(hotel.latitude,hotel.longitude);
               return isMobile?(
                 <div key={String(hotel.code)} className="hcard-m" onClick={()=>handleHotelClick(hotel)}>
                   <div style={{position:"relative",height:200}}>
@@ -567,7 +571,7 @@ function SearchResults(){
                       <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
                       {hotel.isRefundable!=null&&<span style={{fontSize:11,fontWeight:600,color:hotel.isRefundable?"#16a34a":"#dc2626",background:hotel.isRefundable?"#dcfce7":"#fee2e2",padding:"2px 7px",borderRadius:5}}>{hotel.isRefundable?"✓ Refundable":"Non-refundable"}</span>}
                       {/* Breakfast yellow pill */}
-                      {hotel.hasBreakfast&&<span style={{display:"flex",alignItems:"center",gap:4,background:YELLOW,color:"#1a1a1a",fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:5}}><IconBreakfast/> Breakfast</span>}
+                      {hotel.hasBreakfast&&<span style={{display:"flex",alignItems:"center",gap:4,background:YELLOW,color:"#1a1a1a",fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:5}}><IconBreakfast/> Free Breakfast</span>}
                     </div>
                     <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between"}}>
                       <div>{price>0?(<><div style={{fontSize:12,color:"#94a3b8",textDecoration:"line-through"}}>{formatINR(wasPrice)}</div><div className="sora" style={{fontSize:22,fontWeight:800,color:NAVY}}>{formatINR(price)}</div><div style={{fontSize:11,color:"#64748b"}}>+ taxes · per night</div></>):<div style={{fontSize:13,color:"#64748b"}}>Price on request</div>}</div>
@@ -594,13 +598,13 @@ function SearchResults(){
                             <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
                             {hotel.isRefundable!=null&&<span style={{fontSize:11,fontWeight:600,color:hotel.isRefundable?"#16a34a":"#dc2626",background:hotel.isRefundable?"#dcfce7":"#fee2e2",padding:"2px 7px",borderRadius:5}}>{hotel.isRefundable?"✓ Free Cancellation":"Non-refundable"}</span>}
                             {/* Breakfast yellow pill in card body */}
-                            {hotel.hasBreakfast&&<span style={{display:"flex",alignItems:"center",gap:4,background:YELLOW,color:"#1a1a1a",fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:5}}><IconBreakfast/> Breakfast</span>}
+                            {hotel.hasBreakfast&&<span style={{display:"flex",alignItems:"center",gap:4,background:YELLOW,color:"#1a1a1a",fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:5}}><IconBreakfast/> Free Breakfast</span>}
                           </div>
                           {/* Priority amenities — max 4 */}
                           {cardAmenities.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:"4px 14px",marginBottom:8}}>{cardAmenities.map((a,i)=><span key={i} style={{fontSize:12.5,color:"#475569"}}>• {a}</span>)}</div>}
                         </div>
                         <div style={{textAlign:"right",flexShrink:0}}>
-                          {price>0?(<><div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>{discount}% off</div><div style={{fontSize:12,color:"#64748b",textDecoration:"line-through"}}>{formatINR(wasPrice)}</div><div className="sora" style={{fontSize:24,fontWeight:800,color:NAVY}}>{formatINR(price)}</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>+ taxes · per night</div></>):<div style={{fontSize:13,color:"#64748b"}}>Price on request</div>}
+                          {price>0?(<><div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>{hotel.memberSaving&&hotel.memberSaving>0?`Members save ${formatINR(hotel.memberSaving)}`:`${discount}% off`}</div>{hotel.otaPriceINR&&hotel.otaPriceINR>price&&<div style={{fontSize:12,color:"#64748b",textDecoration:"line-through"}}>{formatINR(hotel.otaPriceINR)}</div>}<div className="sora" style={{fontSize:24,fontWeight:800,color:NAVY}}>{formatINR(price)}</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>Taxes included · per night</div></>):<div style={{fontSize:13,color:"#64748b"}}>Price on request</div>}
                         </div>
                       </div>
                     </div>
