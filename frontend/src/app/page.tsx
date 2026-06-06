@@ -107,7 +107,7 @@ export default function Home() {
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
 
   const [modalOpen, setModalOpen]     = useState(false);
-  const [uploadStep, setUploadStep]   = useState<1 | 2 | 'hotel_pick' | 'room_pick' | 'blocked'>(1);
+  const [uploadStep, setUploadStep]   = useState<1 | 2 | 'hotel_pick' | 'room_pick' | 'blocked' | 'success'>(1);
   const [blockInfo, setBlockInfo]     = useState<{reason:string;message?:string}|null>(null);
   const [warnings, setWarnings]       = useState<Record<string,any>>({});
   const [file, setFile]               = useState<File | null>(null);
@@ -375,8 +375,7 @@ export default function Home() {
       }
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to submit');
       sessionStorage.setItem('rebuq_booking', JSON.stringify({ extracted, bookingId: json.booking_id }));
-      closeModal();
-      router.push('/confirmed');
+      setUploadStep('success');
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     }
@@ -603,6 +602,38 @@ export default function Home() {
                       </div>
                     </button>
                   ))}
+                </div>
+              </div>
+            )}
+
+
+            {uploadStep === 'success' && (
+              <div style={{ padding: '32px 24px', textAlign: 'center' }}>
+                <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 36 }}>✓</div>
+                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 10 }}>We're watching your price!</div>
+                <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.7, marginBottom: 8 }}>
+                  <strong style={{ color: '#0f172a' }}>{extracted?.hotel_name}</strong>
+                </p>
+                <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.7, marginBottom: 24 }}>
+                  We'll alert you on WhatsApp the moment the price drops.
+                </p>
+                <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 12, padding: '16px 20px', marginBottom: 24, textAlign: 'left' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 13, color: '#64748b' }}>Check-in</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{extracted?.check_in}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontSize: 13, color: '#64748b' }}>Check-out</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{extracted?.check_out}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 13, color: '#64748b' }}>Price paid</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>₹{Number(extracted?.total_price_paid || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button onClick={() => { closeModal(); setUploadStep(1); }} style={{ background: '#1447b8', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>↺ Track another</button>
+                  <button onClick={() => { closeModal(); router.push('/dashboard'); }} style={{ background: '#fff', color: '#0f172a', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '11px 22px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>View my bookings →</button>
                 </div>
               </div>
             )}
