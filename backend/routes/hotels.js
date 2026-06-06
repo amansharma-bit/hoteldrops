@@ -6,7 +6,8 @@ const { createClient } = require('@supabase/supabase-js')
 // ── Constants ─────────────────────────────────────────────────────────────────
 const LITE_API_KEY = process.env.LITEAPI_KEY || 'sand_9a1ac97a-74b9-4917-8777-900e559a9e43'
 const BASE_URL = 'https://api.liteapi.travel/v3.0'
-const USD_TO_INR = 84
+const USD_TO_INR = 97
+const MARKUP = 1.10  // 10% rebuq margin on net rate
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -224,9 +225,22 @@ router.get('/search', async (req, res) => {
       const meta = hotelMeta[h.hotelId] || {}
       const firstRT = h.roomTypes?.[0]
       const firstRate = firstRT?.rates?.[0]
+      if (!firstRate) return null
 
-      const priceUSD = parseFloat(firstRate?.retailRate?.total?.[0]?.amount || 0)
-      const priceINR = priceUSD ? Math.round(priceUSD * USD_TO_INR) : 0
+      // Exclude pay-at-hotel: skip if any taxesAndFees has included:false
+      const taxes = firstRate?.taxesAndFees || []
+      const hasPayAtHotel = Array.isArray(taxes) && taxes.some(t => t.included === false)
+      if (hasPayAtHotel) return null
+
+      // Use net rate + 10% markup as rebuq selling price
+      const netUSD = parseFloat(firstRate?.retailRate?.total?.[0]?.amount || firstRate?.net || 0)
+      if (!netUSD) return null
+      const rebuqPriceINR = Math.round(netUSD * USD_TO_INR * MARKUP)
+
+      // OTA suggested selling price for "Members save X" calculation
+      const otaUSD = parseFloat(firstRate?.suggestedSellingPrice?.[0]?.amount || firstRate?.retailRate?.total?.[0]?.amount || 0)
+      const otaPriceINR = otaUSD ? Math.round(otaUSD * USD_TO_INR) : 0
+      const memberSaving = otaPriceINR > rebuqPriceINR ? otaPriceINR - rebuqPriceINR : 0
 
       const refTag = firstRate?.cancellationPolicies?.refundableTag || null
       const boardType = firstRate?.boardType || firstRate?.boardCode || 'RO'
@@ -236,23 +250,25 @@ router.get('/search', async (req, res) => {
         name: meta.name || 'Hotel',
         city: dest.city,
         stars: meta.stars || (meta.starRating ? Math.round(parseFloat(meta.starRating)) : null),
-        minRate: priceINR,
-        lowestPriceINR: priceINR,
+        minRate: rebuqPriceINR,
+        lowestPriceINR: rebuqPriceINR,
+        otaPriceINR,           // OTA public price — for "Members save X"
+        memberSaving,          // actual INR saving vs OTA
         currency: 'INR',
         address: meta.address || null,
         imageUrl: meta.main_photo || meta.thumbnail || null,
         chain: meta.chainName || null,
         rating: meta.rating || null,
         reviewCount: meta.review_count || null,
-        // coords filled by enrichWithCoords below
         latitude: meta.location?.latitude || null,
         longitude: meta.location?.longitude || null,
         isRefundable: refTag === 'RFN' ? true : refTag === 'NRFN' ? false : null,
         hasBreakfast: !['RO', 'Room Only', '', null, undefined].includes(boardType),
+        taxesIncluded: true,   // taxes are included since we excluded pay-at-hotel
         amenities: [],
         roomTypes: h.roomTypes || [],
       }
-    })
+    }).filter(Boolean)  // remove nulls (pay-at-hotel excluded)
 
     console.log(`📍 Coords from rates: ${hotels.filter(h => h.latitude && h.longitude).length}`)
 
@@ -329,9 +345,24 @@ router.get('/:code', async (req, res) => {
       const hotelData = (ratesResp.data?.data || [])[0]
       roomList = (hotelData?.roomTypes || []).map(rt => {
         const rate = rt.rates?.[0]
-        const priceUSD = parseFloat(rate?.retailRate?.total?.[0]?.amount || 0)
-        const totalINR = priceUSD ? Math.round(priceUSD * USD_TO_INR) : null
-        const perNightINR = totalINR ? Math.round(totalINR / nights) : null
+        if (!rate) return null
+
+        // Exclude pay-at-hotel rooms
+        const taxes = rate?.taxesAndFees || []
+        const hasPayAtHotel = Array.isArray(taxes) && taxes.some(t => t.included === false)
+        if (hasPayAtHotel) return null
+
+        // net + 10% markup = rebuq selling price
+        const netUSD = parseFloat(rate?.retailRate?.total?.[0]?.amount || rate?.net || 0)
+        if (!netUSD) return null
+        const totalINR = Math.round(netUSD * USD_TO_INR * MARKUP)
+        const perNightINR = Math.round(totalINR / nights)
+
+        // OTA price for savings display
+        const otaUSD = parseFloat(rate?.suggestedSellingPrice?.[0]?.amount || rate?.retailRate?.total?.[0]?.amount || 0)
+        const otaTotalINR = otaUSD ? Math.round(otaUSD * USD_TO_INR) : 0
+        const memberSaving = otaTotalINR > totalINR ? otaTotalINR - totalINR : 0
+
         const boardType = rate?.boardType || rate?.boardCode || 'RO'
         const refTag = rate?.cancellationPolicies?.refundableTag
 
@@ -344,12 +375,15 @@ router.get('/:code', async (req, res) => {
           maxOccupancy: rate?.maxOccupancy || parseInt(adults),
           pricePerNight: perNightINR,
           totalPrice: totalINR,
+          otaTotalINR,
+          memberSaving,
+          taxesIncluded: true,
           isRefundable: refTag === 'RFN',
           refundableTag: refTag || null,
           cancelPolicies: rate?.cancellationPolicies?.cancelPolicyInfos || [],
           images: images.slice(0, 3).map(i => i.url),
         }
-      })
+      }).filter(Boolean)
     }
 
     const cheapest = roomList.reduce((m, r) => (!m || (r.pricePerNight && r.pricePerNight < m.pricePerNight)) ? r : m, null)
