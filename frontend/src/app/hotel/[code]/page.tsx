@@ -14,115 +14,72 @@ const B = "#1447b8";
 const NAVY = "#0f172a";
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(true);
+  const [m, setM] = useState(false);
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 960);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
+    const c = () => setM(window.innerWidth < 960);
+    c(); window.addEventListener("resize", c);
+    return () => window.removeEventListener("resize", c);
   }, []);
-  return isMobile;
+  return m;
 }
 
-function formatINR(n: number) {
-  return "₹" + Math.round(n).toLocaleString("en-IN");
+const fmtINR = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
+
+// Flat SVG icons for facilities
+const FAC_ICONS: Record<string, string> = {
+  "Swimming Pool": "M3 12h18M3 8c0 0 3-4 9-4s9 4 9 4M3 16c0 0 3 4 9 4s9-4 9-4",
+  "Free WiFi": "M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01",
+  "Breakfast": "M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3",
+  "24/7 Room Service": "M3 11l19-9-9 19-2-8-8-2z",
+  "Fitness Centre": "M18 7v13M6 7v13M3 10h18M3 14h18",
+  "Spa & Wellness": "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  "Parking": "M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2M12 17l-5 5 5-5 5 5-5-5",
+  "Airport Transfer": "M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2C4.2 5 3.5 5.3 3.1 5.9L2 7l9 3.4L8.5 13H5L4 14l5 2 2 5 1-1 .5-3.5L16 18l3.2.8c.6.2 1.3-.1 1.7-.7l.1-.9z",
+  "Restaurant": "M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3",
+  "Bar": "M8 22V12M8 12C8 7 4 3.5 4 3.5h8S8 7 8 12zM16 22V13M20 13c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2 2-.9 2-2z",
+};
+
+function FacIcon({ name, size = 22 }: { name: string; size?: number }) {
+  const d = FAC_ICONS[name] || "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5";
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} />
+    </svg>
+  );
 }
 
-function distLabel(m: number) {
-  if (m >= 1000) return (m / 1000).toFixed(1) + " km";
-  return m + " m";
-}
-
-interface Room {
-  roomCode: string; name: string; type: string; characteristic: string;
-  maxAdults: number; size: number | null; bedrooms: number | null;
-  hasBalcony: boolean; bedType: string | null; amenities: string[];
-  images: string[]; pricePerNight: number | null; totalPrice: number | null;
-  boardCode: string | null; boardName: string | null;
-  cancellation: { type: string; from: string | null } | null;
-}
-
-interface Hotel {
-  code: number; name: string; description: string; stars: string; chain: string;
-  address: string; city: string; country: string;
-  coordinates: { latitude: number; longitude: number };
-  checkInTime: string; checkOutTime: string; totalRooms: number; floors: number;
-  images: { url: string; type: string }[]; rooms: Room[];
-  facilityGroups: Record<string, string[]>;
-  boards: { code: string; name: string }[];
-  distances: { label: string; distance: number }[];
-  interestPoints: { name: string; distance: number }[];
-  lowestPriceINR: number | null; lowestTotalINR: number | null;
-  nights: number; checkIn: string; checkOut: string; adults: number;
-}
-
-interface SimilarHotel {
-  code: number; name: string; stars: string; city: string;
-  images: { url: string }[]; lowestPriceINR: number | null;
-}
-
-const RATING_BARS = [
-  { label: "Cleanliness", score: 9.4 }, { label: "Service", score: 9.2 },
-  { label: "Location", score: 9.5 }, { label: "Amenities", score: 9.6 },
-  { label: "Value", score: 8.7 }, { label: "Comfort", score: 9.3 },
-];
-
-const REVIEWS = [
-  { title: "Absolutely incredible experience", score: "10.0", text: "The Aquaventure was a highlight for the kids and the private beach was stunning. Room service was prompt and the butler service for our suite was impeccable. Will definitely return.", author: "Priya M.", type: "Family", location: "India", date: "April 2026" },
-  { title: "Best hotel in Dubai, hands down", score: "9.5", text: "We celebrated our anniversary here and the hotel went above and beyond. The room was enormous, views were spectacular, and the breakfast spread was extraordinary. Worth every rupee.", author: "Rahul & Neha S.", type: "Couple", location: "Mumbai", date: "March 2026" },
-  { title: "Great for families", score: "9.0", text: "Kids loved the waterpark. Check-in was smooth, staff were incredibly helpful with everything. Dining options are excellent.", author: "Vikram T.", type: "Family", location: "Bengaluru", date: "February 2026" },
-];
-
-const FACILITY_GROUPS = [
-  { title: "Pool & Beach", items: ["Private beach access", "Aquaventure Waterpark", "Outdoor pool", "Infinity pool", "Kids pool"] },
-  { title: "Dining", items: ["21 restaurants & bars", "Nobu Dubai", "Bread Street Kitchen", "24-hour room service"] },
-  { title: "Wellness", items: ["Spa & wellness centre", "Gym & fitness centre", "Sauna & steam room", "Yoga classes"] },
-  { title: "Services", items: ["24-hour concierge", "Butler service", "Airport transfer", "Valet parking"] },
-  { title: "Connectivity", items: ["Free high-speed WiFi", "Business centre", "Meeting rooms"] },
-  { title: "Family", items: ["Kids club", "Babysitting service", "Kids menu", "Lost Chambers Aquarium"] },
-];
-
-const POLICIES = [
-  { label: "Children", value: "All children welcome. Infants (0-2) stay free." },
-  { label: "Pets", value: "Pets not allowed" },
-  { label: "Smoking", value: "Non-smoking rooms available. Designated smoking areas only." },
-  { label: "Property", value: "104 rooms. 18 floors. Airport: 40 min. Free WiFi." },
-];
+// Traveller type flag
+const TYPE_FLAG: Record<string, string> = {
+  family: "👨‍👩‍👧", couple: "👫", solo: "🧳", business: "💼", group: "👥",
+  "young couple": "👫", "family with young children": "👨‍👩‍👧‍👦",
+};
 
 function HotelDetailContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-
-  const [user, setUser] = useState<{ name: string } | null>(null);
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        const meta = data.user.user_metadata;
-        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member" });
-      }
-    });
-  }, []);
-
   const isMobile = useIsMobile();
+
   const code = params.code as string;
-  const checkIn  = searchParams.get("checkIn")  || "";
+  const checkIn  = searchParams.get("checkIn") || "";
   const checkOut = searchParams.get("checkOut") || "";
-  const adults   = searchParams.get("adults")   || "2";
-  const offerId  = searchParams.get("offerId")  || "";
-  const saving   = searchParams.get("saving")   || "";
+  const adults   = searchParams.get("adults") || "2";
+  const offerId  = searchParams.get("offerId") || "";
+  const saving   = searchParams.get("saving") || "";
   const newPrice = searchParams.get("newPrice") || "";
   const oldPrice = searchParams.get("oldPrice") || "";
 
-  const [hotel, setHotel] = useState<Hotel | null>(null);
+  const [user, setUser] = useState<{ name: string } | null>(null);
+  const [hotel, setHotel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIdx, setLightboxIdx] = useState(0);
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
-  const [selectedRoomName, setSelectedRoomName] = useState<string>("");
-  const [similarHotels, setSimilarHotels] = useState<SimilarHotel[]>([]);
+  const [roomPhotoIdx, setRoomPhotoIdx] = useState<Record<string, number>>({});
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState(0);
+  const [reviewFilter, setReviewFilter] = useState("all");
+  const [similarHotels, setSimilarHotels] = useState<any[]>([]);
   const [editCheckIn, setEditCheckIn] = useState(checkIn);
   const [editCheckOut, setEditCheckOut] = useState(checkOut);
   const [editAdults, setEditAdults] = useState(adults);
@@ -133,89 +90,102 @@ function HotelDetailContent() {
   const [calMode, setCalMode] = useState<"checkin"|"checkout">("checkin");
   const [calMonthOffset, setCalMonthOffset] = useState(0);
 
-  // Sync edit fields when URL params change
-  useEffect(() => { setEditCheckIn(checkIn); }, [checkIn]);
-  useEffect(() => { setEditCheckOut(checkOut); }, [checkOut]);
-  useEffect(() => { setEditAdults(adults); }, [adults]);
-
   const refSearchBar = useRef<HTMLDivElement>(null);
   const refOverview  = useRef<HTMLDivElement>(null);
   const refRooms     = useRef<HTMLDivElement>(null);
-  const refReviews   = useRef<HTMLDivElement>(null);
-  const refFacilities = useRef<HTMLDivElement>(null);
   const refLocation  = useRef<HTMLDivElement>(null);
+  const refReviews   = useRef<HTMLDivElement>(null);
+  const refFacilities= useRef<HTMLDivElement>(null);
   const refPolicies  = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        const m = data.user.user_metadata;
+        setUser({ name: m?.full_name || m?.name || data.user.email?.split("@")[0] || "Member" });
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     if (!checkIn || !checkOut) return;
-    fetch(API + "/" + code + "?checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults)
+    fetch(`${API}/${code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&rooms=${editRooms}&children=${editChildren}`)
       .then(r => r.json())
       .then(d => {
         if (d.success) {
           setHotel(d.hotel);
-          if (d.hotel.rooms?.[0]) {
-            setSelectedRoom(d.hotel.rooms[0].roomCode);
-            setSelectedRoomName(d.hotel.rooms[0].name + (d.hotel.rooms[0].boardName ? " · " + d.hotel.rooms[0].boardName : ""));
-          }
-          fetch(API + "?checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults + "&destination=" + encodeURIComponent(d.hotel.city) + "&limit=3")
+          if (d.hotel.rooms?.[0]) setSelectedRoom(d.hotel.rooms[0].offerId);
+          fetch(`${API}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&destination=${encodeURIComponent(d.hotel.city)}&limit=3`)
             .then(r2 => r2.json())
-            .then(d2 => { if (d2.success) setSimilarHotels((d2.hotels || []).filter((h: SimilarHotel) => h.code !== d.hotel.code).slice(0, 3)); })
+            .then(d2 => { if (d2.success) setSimilarHotels((d2.hotels?.hotels || []).filter((h: any) => h.code !== d.hotel.code).slice(0, 3)); })
             .catch(() => {});
-        } else {
-          setError(d.error);
-        }
+        } else { setError(d.error); }
       })
       .catch(() => setError("Could not connect to server"))
       .finally(() => setLoading(false));
   }, [code, checkIn, checkOut, adults]);
 
-  const goToSection = (tab: string) => {
+  const goTo = (tab: string) => {
     setActiveTab(tab);
     const map: Record<string, React.RefObject<HTMLDivElement>> = {
-      overview: refOverview, rooms: refRooms, reviews: refReviews,
-      facilities: refFacilities, location: refLocation, policies: refPolicies,
+      overview: refOverview, rooms: refRooms, location: refLocation,
+      reviews: refReviews, facilities: refFacilities, policies: refPolicies,
     };
     const ref = map[tab];
     if (ref?.current) {
-      const navH    = 60;
-      const offerH  = offerId && saving ? 60 : 0;
-      const searchH = refSearchBar.current?.offsetHeight ?? 80;
-      const tabsH   = 50;
-      const offset  = navH + offerH + searchH + tabsH + 8;
-      const top = ref.current.getBoundingClientRect().top + window.pageYOffset - offset;
-      window.scrollTo({ top, behavior: "smooth" });
+      const offset = 60 + (offerId && saving ? 60 : 0) + (refSearchBar.current?.offsetHeight || 80) + 52;
+      window.scrollTo({ top: ref.current.getBoundingClientRect().top + window.pageYOffset - offset, behavior: "smooth" });
     }
   };
 
-  const openLightbox = (idx: number) => { setLightboxIdx(idx); setLightboxOpen(true); document.body.style.overflow = "hidden"; };
+  const openLightbox = (i: number) => { setLightboxIdx(i); setLightboxOpen(true); document.body.style.overflow = "hidden"; };
   const closeLightbox = () => { setLightboxOpen(false); document.body.style.overflow = ""; };
-  const navLightbox = (dir: number) => { if (!hotel) return; setLightboxIdx(prev => (prev + dir + hotel.images.length) % hotel.images.length); };
+  const navLight = (dir: number) => { if (!hotel) return; setLightboxIdx(p => (p + dir + hotel.images.length) % hotel.images.length); };
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeLightbox();
-      if (e.key === "ArrowLeft") navLightbox(-1);
-      if (e.key === "ArrowRight") navLightbox(1);
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") closeLightbox(); if (e.key === "ArrowLeft") navLight(-1); if (e.key === "ArrowRight") navLight(1); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
   }, [hotel]);
 
-  const stars = hotel?.stars?.includes("5") ? 5 : hotel?.stars?.includes("4") ? 4 : 3;
-  const bestRoom = hotel?.rooms?.[0];
-  const selectedRoomData = hotel?.rooms?.find(r => r.roomCode === selectedRoom) || bestRoom;
-  const displayPrice = selectedRoomData?.pricePerNight || hotel?.lowestPriceINR;
-  const fallbackImg = hotel?.images?.[0]?.url || "";
-  const W: React.CSSProperties = { maxWidth: 1100, margin: "0 auto", padding: "0 32px" };
-  const inp: React.CSSProperties = { border: "none", outline: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 600, color: NAVY, background: "transparent", width: "100%", overflow: "hidden", textOverflow: "ellipsis" };
+  const selectedRoomData = hotel?.rooms?.find((r: any) => r.offerId === selectedRoom) || hotel?.rooms?.[0];
+  const stars = Math.min(5, Math.max(1, Math.round(parseFloat(hotel?.stars || "4"))));
+  const overallRating = hotel?.rating || (hotel?.sentimentAnalysis?.categories?.reduce((s: number, c: any) => s + c.rating, 0) / (hotel?.sentimentAnalysis?.categories?.length || 1));
+  const filteredReviews = (hotel?.reviews || []).filter((r: any) => reviewFilter === "all" || r.type?.toLowerCase().includes(reviewFilter));
 
-  const CSS = "* { box-sizing: border-box; margin: 0; padding: 0; } .sora { font-family: 'Sora', sans-serif; } @keyframes spin { to { transform: rotate(360deg); } } .tab-btn { flex: 1; padding: 14px 8px; text-align: center; font-size: 13.5px; font-weight: 500; color: #64748b; cursor: pointer; border: none; background: none; font-family: inherit; border-bottom: 2px solid transparent; transition: all .15s; } .tab-btn.active { color: #1447b8; font-weight: 600; border-bottom: 2px solid #1447b8; background: #eff6ff; } .tab-btn:hover:not(.active) { color: #0f172a; background: #f8fafc; } .card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 24px; margin-bottom: 20px; } .fac-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; padding: 4px 0; } .rooms-table { width: 100%; border-collapse: collapse; } .rooms-table th { padding: 11px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; text-align: left; border-bottom: 1.5px solid #e2e8f0; background: #f8fafc; } .rooms-table td { padding: 14px; font-size: 13.5px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; } .select-btn { border: 1.5px solid #1447b8; color: #1447b8; background: #fff; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; } .select-btn.sel { background: #1447b8; color: #fff; } .sim-card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; overflow: hidden; cursor: pointer; transition: all .2s; } .sim-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.1); transform: translateY(-2px); } .room-card { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 12px; } .room-card.selected { background: #f0f7ff; border-color: #1447b8; }";
+  const CSS = `
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .sora { font-family: 'Sora', sans-serif; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .tab-btn { padding: 14px 16px; font-size: 13.5px; font-weight: 500; color: #64748b; cursor: pointer; border: none; background: none; font-family: inherit; border-bottom: 2.5px solid transparent; transition: all .15s; white-space: nowrap; }
+    .tab-btn.active { color: ${B}; font-weight: 700; border-bottom-color: ${B}; }
+    .tab-btn:hover:not(.active) { color: ${NAVY}; }
+    .card { background: #fff; border-radius: 14px; border: 1.5px solid #e2e8f0; padding: 28px; margin-bottom: 20px; }
+    .room-row { display: grid; grid-template-columns: 280px 1fr auto; gap: 0; border: 1.5px solid #e2e8f0; border-radius: 14px; overflow: hidden; margin-bottom: 14px; background: #fff; transition: box-shadow .2s; }
+    .room-row:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .room-row.selected { border-color: ${B}; background: #f0f7ff; }
+    .select-btn { border: 1.5px solid ${B}; color: ${B}; background: #fff; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; }
+    .select-btn:hover, .select-btn.sel { background: ${B}; color: #fff; }
+    .sim-card { background: #fff; border-radius: 12px; border: 1.5px solid #e2e8f0; overflow: hidden; cursor: pointer; transition: all .2s; }
+    .sim-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.1); transform: translateY(-2px); }
+    .pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+    .pill-green { background: #f0fdf4; color: #166534; }
+    .pill-red { background: #fef2f2; color: #991b1b; }
+    .pill-blue { background: #eff6ff; color: ${B}; }
+    .pill-gray { background: #f8fafc; color: #64748b; }
+    .fac-icon-box { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 12px; border: 1.5px solid #e2e8f0; border-radius: 12px; font-size: 12px; color: #374151; text-align: center; min-width: 90px; cursor: default; }
+    .review-filter-btn { padding: 6px 14px; border-radius: 100px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .review-filter-btn.active { background: ${NAVY}; color: #fff; border-color: ${NAVY}; }
+    .sentiment-bar { height: 6px; background: #e2e8f0; border-radius: 100px; overflow: hidden; flex: 1; }
+    .sentiment-fill { height: 100%; border-radius: 100px; background: ${B}; }
+  `;
 
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter',sans-serif" }}>
       <style dangerouslySetInnerHTML={{ __html: "@keyframes spin{to{transform:rotate(360deg)}}" }} />
       <div style={{ textAlign: "center" }}>
-        <div style={{ width: 36, height: 36, border: "3px solid #bfdbfe", borderTop: "3px solid " + B, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
+        <div style={{ width: 36, height: 36, border: "3px solid #bfdbfe", borderTop: `3px solid ${B}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
         <div style={{ fontSize: 13, color: "#64748b" }}>Loading hotel...</div>
       </div>
     </div>
@@ -223,115 +193,98 @@ function HotelDetailContent() {
 
   if (error || !hotel) return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
-      <div style={{ fontSize: 40 }}>🏨</div>
       <div style={{ fontSize: 15, fontWeight: 600 }}>Could not load hotel</div>
       <div style={{ fontSize: 13, color: "#64748b" }}>{error}</div>
       <button onClick={() => router.back()} style={{ background: B, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>Go back</button>
     </div>
   );
 
+  const W = { maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 16px" : "0 32px" };
+  const topOffset = 60 + (offerId && saving ? 60 : 0);
+
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif", background: "#f8fafc", color: "#1e293b", fontSize: 15, lineHeight: 1.6 }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#f8fafc", color: "#1e293b", fontSize: 15 }}>
+      <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
+      {/* LIGHTBOX */}
       {lightboxOpen && (
-        <div onClick={closeLightbox} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
-          <button onClick={closeLightbox} style={{ position: "absolute", top: 20, right: 28, color: "#fff", fontSize: 32, cursor: "pointer", background: "none", border: "none" }}>x</button>
-          <img src={hotel.images[lightboxIdx]?.url || fallbackImg} alt="" onClick={e => e.stopPropagation()} style={{ maxWidth: "90vw", maxHeight: "80vh", objectFit: "contain", borderRadius: 8 }} />
+        <div onClick={closeLightbox} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.93)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
+          <button onClick={closeLightbox} style={{ position: "absolute", top: 20, right: 28, color: "#fff", fontSize: 28, cursor: "pointer", background: "none", border: "none" }}>✕</button>
+          <img src={hotel.images[lightboxIdx]?.url} alt="" onClick={e => e.stopPropagation()} style={{ maxWidth: "88vw", maxHeight: "78vh", objectFit: "contain", borderRadius: 8 }} />
           <div onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 16 }}>
-            <button onClick={() => navLightbox(-1)} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", width: 44, height: 44, borderRadius: "50%", fontSize: 20, cursor: "pointer" }}>‹</button>
+            <button onClick={() => navLight(-1)} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", width: 44, height: 44, borderRadius: "50%", fontSize: 20, cursor: "pointer" }}>‹</button>
             <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>{lightboxIdx + 1} / {hotel.images.length}</span>
-            <button onClick={() => navLightbox(1)} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", width: 44, height: 44, borderRadius: "50%", fontSize: 20, cursor: "pointer" }}>›</button>
+            <button onClick={() => navLight(1)} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", width: 44, height: 44, borderRadius: "50%", fontSize: 20, cursor: "pointer" }}>›</button>
           </div>
         </div>
       )}
 
       {/* NAV */}
       <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", height: 60, position: "sticky", top: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
-        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: NAVY, textDecoration: "none", flexShrink: 0 }}>rebuq<span style={{ color: B }}>.</span></a>
+        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
         {!isMobile && (
           <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
             <a href="/search-hotels" style={{ fontSize: 14, color: B, textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a>
             {user ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => router.push("/dashboard")}>
                 <div style={{ width: 32, height: 32, borderRadius: "50%", background: B, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
                 <span style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{user.name.split(" ")[0]}</span>
               </div>
             ) : (
-              <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: NAVY, background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Log in / Sign up</button>
+              <button onClick={() => router.push("/signin")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Sign in</button>
             )}
           </div>
         )}
-        {isMobile && (
-          <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: B, background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Log in</button>
-        )}
       </nav>
 
-      {/* OFFER BANNER — shown only when coming from price drop alert */}
+      {/* OFFER BANNER */}
       {offerId && saving && (
         <div style={{ background: "#16a34a", padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 12, position: "sticky", top: 60, zIndex: 290 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 24 }}>🎉</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
             <div>
               <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: "#fff" }}>rebuq found you a better deal!</div>
-              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
-                You paid <span style={{ textDecoration: "line-through" }}>₹{Number(oldPrice).toLocaleString("en-IN")}</span> — new price is <strong>₹{Number(newPrice).toLocaleString("en-IN")}</strong> · Select a room below and book
-              </div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>You paid <span style={{ textDecoration: "line-through" }}>₹{Number(oldPrice).toLocaleString("en-IN")}</span> — new price is <strong>₹{Number(newPrice).toLocaleString("en-IN")}</strong></div>
             </div>
           </div>
-          <div style={{ background: "#fff", color: "#16a34a", fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, padding: "8px 20px", borderRadius: 10, flexShrink: 0 }}>
-            Save ₹{Number(saving).toLocaleString("en-IN")}
-          </div>
+          <div style={{ background: "#fff", color: "#16a34a", fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, padding: "8px 20px", borderRadius: 10 }}>Save ₹{Number(saving).toLocaleString("en-IN")}</div>
         </div>
       )}
 
       {/* SEARCH BAR */}
-      <div ref={refSearchBar} style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "10px 32px", position: "sticky", top: offerId && saving ? 120 : 60, zIndex: 250, overflow: "visible" }}>
-        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: 72, overflow: "visible", position: "relative" }}>
-
-          {/* Hotel name — read only */}
-          <div style={{ padding: "0 24px", borderRight: "1px solid #e2e8f0", borderRadius: "16px 0 0 16px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or Hotel</div>
-            <div style={{ fontSize: 15, fontWeight: 500, color: NAVY }}>{hotel.name}</div>
+      <div ref={refSearchBar} style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "10px 32px", position: "sticky", top: topOffset, zIndex: 250, overflow: "visible" }}>
+        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: 68, overflow: "visible", position: "relative" }}>
+          <div style={{ padding: "0 24px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Hotel</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hotel.name}</div>
           </div>
-
-          {/* Check-in */}
-          <div style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer" }}
-            onClick={() => { setCalMode("checkin"); setCalOpen(true); }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
-            <div style={{ fontSize: editCheckIn ? 15 : 14, fontWeight: editCheckIn ? 700 : 400, color: editCheckIn ? NAVY : "#94a3b8" }}>{editCheckIn ? new Date(editCheckIn + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }) : "Add date"}</div>
-          </div>
-
-          {/* Check-out */}
-          <div style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer" }}
-            onClick={() => { setCalMode("checkout"); setCalOpen(true); }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-out</div>
-            <div style={{ fontSize: editCheckOut ? 15 : 14, fontWeight: editCheckOut ? 700 : 400, color: editCheckOut ? NAVY : "#94a3b8" }}>{editCheckOut ? new Date(editCheckOut + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }) : "Add date"}</div>
-          </div>
-
-          {/* Rooms & Guests */}
-          <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", cursor: "pointer" }}
-            onClick={() => setGuestDropOpen(p => !p)}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Rooms &amp; Guests</div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: NAVY, display: "flex", alignItems: "center", gap: 4 }}>
-              <span>{editRooms} Room{parseInt(editRooms) > 1 ? "s" : ""} · {parseInt(editAdults)} Adult{parseInt(editAdults) > 1 ? "s" : ""}{parseInt(editChildren) > 0 ? ` · ${editChildren} Child${parseInt(editChildren) > 1 ? "ren" : ""}` : ""}</span>
-              <span style={{ fontSize: 9, color: "#94a3b8" }}>▼</span>
+          {[
+            { label: "Check-in", val: editCheckIn, mode: "checkin" as const, fmt: (v: string) => v ? new Date(v + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }) : "Add date" },
+            { label: "Check-out", val: editCheckOut, mode: "checkout" as const, fmt: (v: string) => v ? new Date(v + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }) : "Add date" },
+          ].map(f => (
+            <div key={f.label} style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer" }}
+              onClick={() => { setCalMode(f.mode); setCalOpen(true); }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>{f.label}</div>
+              <div style={{ fontSize: 14, fontWeight: f.val ? 700 : 400, color: f.val ? NAVY : "#94a3b8" }}>{f.fmt(f.val)}</div>
             </div>
+          ))}
+          <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer", position: "relative" }} onClick={() => setGuestDropOpen(p => !p)}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Rooms & Guests</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{editRooms} Room · {editAdults} Adult{parseInt(editAdults) > 1 ? "s" : ""}</div>
             {guestDropOpen && (
-              <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 320, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 20 }}>
+              <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 300, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 20 }}>
                 {[
-                  { label: "Rooms", sub: "Minimum 1", min: 1, max: 4, val: parseInt(editRooms), setVal: (v: number) => setEditRooms(String(v)) },
-                  { label: "Adults", sub: "Age 13+", min: 1, max: 16, val: parseInt(editAdults), setVal: (v: number) => setEditAdults(String(v)) },
-                  { label: "Children", sub: "Age 0–12", min: 0, max: 8, val: parseInt(editChildren), setVal: (v: number) => setEditChildren(String(v)) },
+                  { label: "Rooms", min: 1, max: 4, val: parseInt(editRooms), set: (v: number) => setEditRooms(String(v)) },
+                  { label: "Adults", min: 1, max: 16, val: parseInt(editAdults), set: (v: number) => setEditAdults(String(v)) },
+                  { label: "Children", min: 0, max: 8, val: parseInt(editChildren), set: (v: number) => setEditChildren(String(v)) },
                 ].map(item => (
-                  <div key={item.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0", borderBottom: "1px solid #f1f5f9" }}>
-                    <div><div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{item.label}</div><div style={{ fontSize: 12, color: "#94a3b8" }}>{item.sub}</div></div>
+                  <div key={item.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{item.label}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <button disabled={item.val <= item.min} onClick={e => { e.stopPropagation(); item.setVal(Math.max(item.min, item.val - 1)); }}
-                        style={{ width: 32, height: 32, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: item.val <= item.min ? 0.3 : 1, fontFamily: "inherit" }}>−</button>
+                      <button disabled={item.val <= item.min} onClick={e => { e.stopPropagation(); item.set(Math.max(item.min, item.val - 1)); }} style={{ width: 30, height: 30, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 16, cursor: "pointer", opacity: item.val <= item.min ? 0.3 : 1, fontFamily: "inherit" }}>−</button>
                       <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" as const }}>{item.val}</span>
-                      <button disabled={item.val >= item.max} onClick={e => { e.stopPropagation(); item.setVal(Math.min(item.max, item.val + 1)); }}
-                        style={{ width: 32, height: 32, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: item.val >= item.max ? 0.3 : 1, fontFamily: "inherit" }}>+</button>
+                      <button disabled={item.val >= item.max} onClick={e => { e.stopPropagation(); item.set(Math.min(item.max, item.val + 1)); }} style={{ width: 30, height: 30, borderRadius: 6, border: "1.5px solid #cbd5e1", background: "#fff", fontSize: 16, cursor: "pointer", opacity: item.val >= item.max ? 0.3 : 1, fontFamily: "inherit" }}>+</button>
                     </div>
                   </div>
                 ))}
@@ -339,59 +292,45 @@ function HotelDetailContent() {
               </div>
             )}
           </div>
-
-          {/* Search button */}
-          <button onClick={() => { setGuestDropOpen(false); router.push("/search?destination=" + encodeURIComponent(hotel.city) + "&checkIn=" + editCheckIn + "&checkOut=" + editCheckOut + "&adults=" + editAdults + "&rooms=" + editRooms + "&children=" + editChildren); }}
-            style={{ background: "#FCD34D", color: "#1a1a1a", border: "none", padding: "0 28px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "'Sora',sans-serif", borderRadius: "0 16px 16px 0", flexShrink: 0, whiteSpace: "nowrap" as const }}>
+          <button onClick={() => router.push(`/search?destination=${encodeURIComponent(hotel.city)}&checkIn=${editCheckIn}&checkOut=${editCheckOut}&adults=${editAdults}&rooms=${editRooms}`)}
+            style={{ background: "#FCD34D", color: NAVY, border: "none", padding: "0 28px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Sora',sans-serif", borderRadius: "0 14px 14px 0" }}>
             Search
           </button>
-
         </div>
-
-        {/* Desktop calendar */}
+        {calOpen && <div onClick={() => setCalOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 9998 }} />}
         {calOpen && (
-          <div onClick={() => setCalOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 9998 }} />
-        )}
-        {calOpen && (
-          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: "32px", width: 620, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,0.16)", zIndex: 9999, padding: 22 }}
-            onClick={e => e.stopPropagation()}>
+          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: "32px", width: 620, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,0.16)", zIndex: 9999, padding: 22 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <button onClick={() => setCalMonthOffset(p => Math.max(0, p - 1))} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#64748b" }}>‹</button>
-              <span style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 15, color: NAVY }}>
-                {calMode === "checkin" ? "Select check-in date" : "Select check-out date"}
-              </span>
+              <span style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 14, color: NAVY }}>{calMode === "checkin" ? "Select check-in" : "Select check-out"}</span>
               <button onClick={() => setCalMonthOffset(p => p + 1)} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#64748b" }}>›</button>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-              {[0, 1].map(offset => {
-                const d = new Date(new Date().getFullYear(), new Date().getMonth() + calMonthOffset + offset);
-                const year = d.getFullYear(); const month = d.getMonth();
-                const days = new Date(year, month + 1, 0).getDate();
-                const firstDow = new Date(year, month, 1).getDay();
-                const todayStr = new Date().toISOString().split("T")[0];
+              {[0, 1].map(off => {
+                const d = new Date(new Date().getFullYear(), new Date().getMonth() + calMonthOffset + off);
+                const y = d.getFullYear(); const mo = d.getMonth();
+                const days = new Date(y, mo + 1, 0).getDate();
+                const firstDow = new Date(y, mo, 1).getDay();
+                const today = new Date().toISOString().split("T")[0];
                 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
                 return (
-                  <div key={offset}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: NAVY, textAlign: "center", marginBottom: 12 }}>{MONTHS[month]} {year}</div>
+                  <div key={off}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: NAVY, textAlign: "center", marginBottom: 10 }}>{MONTHS[mo]} {y}</div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
-                      {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => <div key={d} style={{ textAlign: "center", fontSize: 11, color: "#94a3b8", paddingBottom: 8 }}>{d}</div>)}
+                      {["Su","Mo","Tu","We","Th","Fr","Sa"].map(d => <div key={d} style={{ textAlign: "center", fontSize: 10, color: "#94a3b8", paddingBottom: 6 }}>{d}</div>)}
                       {Array.from({ length: firstDow }).map((_, i) => <div key={`e${i}`} />)}
                       {Array.from({ length: days }).map((_, i) => {
                         const day = i + 1;
-                        const ds = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-                        const isDisabled = ds < todayStr;
-                        const isStart = ds === editCheckIn;
-                        const isEnd = ds === editCheckOut;
-                        const isInRange = !!(editCheckIn && editCheckOut && ds > editCheckIn && ds < editCheckOut);
-                        let bg = "transparent"; let clr = isDisabled ? "#cbd5e1" : NAVY; let br = "50%";
-                        if (isStart || isEnd) { bg = B; clr = "#fff"; }
-                        else if (isInRange) { bg = "#dbeafe"; clr = B; br = "0"; }
+                        const ds = `${y}-${String(mo+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+                        const disabled = ds < today;
+                        const isStart = ds === editCheckIn; const isEnd = ds === editCheckOut;
+                        const inRange = !!(editCheckIn && editCheckOut && ds > editCheckIn && ds < editCheckOut);
                         return (
                           <div key={day} onClick={() => {
-                            if (isDisabled) return;
+                            if (disabled) return;
                             if (calMode === "checkin") { setEditCheckIn(ds); setEditCheckOut(""); setCalMode("checkout"); }
                             else { if (ds <= editCheckIn) return; setEditCheckOut(ds); setCalOpen(false); }
-                          }} style={{ height: 36, display: "flex", alignItems: "center", justifyContent: "center", background: bg, color: clr, borderRadius: br, fontSize: 13, cursor: isDisabled ? "not-allowed" : "pointer", opacity: isDisabled ? 0.35 : 1 }}>{day}</div>
+                          }} style={{ height: 34, display: "flex", alignItems: "center", justifyContent: "center", background: (isStart||isEnd) ? B : inRange ? "#dbeafe" : "transparent", color: (isStart||isEnd) ? "#fff" : inRange ? B : disabled ? "#cbd5e1" : NAVY, borderRadius: (isStart||isEnd) ? "50%" : inRange ? "0" : "50%", fontSize: 12, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.35 : 1 }}>{day}</div>
                         );
                       })}
                     </div>
@@ -399,317 +338,418 @@ function HotelDetailContent() {
                 );
               })}
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
-              <button onClick={() => { setEditCheckIn(""); setEditCheckOut(""); setCalMode("checkin"); }} style={{ background: "none", border: "none", fontSize: 13, color: "#94a3b8", cursor: "pointer", fontFamily: "inherit" }}>Clear dates</button>
-            </div>
           </div>
         )}
-
       </div>
+
       <div style={W}>
         {/* BREADCRUMB */}
         <div style={{ padding: "12px 0", fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
           <button onClick={() => router.push("/search-hotels")} style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>Hotels</button>
           <span>›</span>
-          <button onClick={() => router.push("/search?destination=" + encodeURIComponent(hotel.city) + "&checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults)} style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>{hotel.city}</button>
+          <button onClick={() => router.push(`/search?destination=${encodeURIComponent(hotel.city)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`)} style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>{hotel.city}</button>
           <span>›</span>
-          <strong style={{ color: "#1e293b", fontWeight: 500 }}>{hotel.name}</strong>
+          <strong style={{ color: NAVY, fontWeight: 500 }}>{hotel.name}</strong>
         </div>
 
+        {/* HOTEL NAME + STARS */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const }}>
-              <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 22 : 26, fontWeight: 800, color: NAVY }}>{hotel.name}</h1>
-              <span style={{ color: "#f59e0b", fontSize: 18 }}>{"★".repeat(stars)}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, marginBottom: 6 }}>
+              <h1 className="sora" style={{ fontSize: isMobile ? 22 : 28, fontWeight: 800, color: NAVY }}>{hotel.name}</h1>
+              <span style={{ color: "#f59e0b", fontSize: 16 }}>{"★".repeat(stars)}</span>
+              {hotel.rating && (
+                <span style={{ background: B, color: "#fff", fontSize: 13, fontWeight: 700, padding: "3px 10px", borderRadius: 8 }}>{parseFloat(hotel.rating).toFixed(1)}</span>
+              )}
             </div>
-            <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>
-              📍 {hotel.address}, {hotel.city}, {hotel.country}
-              <button onClick={() => goToSection("location")} style={{ color: B, fontWeight: 500, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13, marginLeft: 8 }}>Show on map</button>
+            <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              {hotel.address}, {hotel.city}, {hotel.country}
+              <button onClick={() => goTo("location")} style={{ color: B, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>View on map</button>
             </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
-            <button style={{ width: 40, height: 40, borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#fff", cursor: "pointer", fontSize: 16 }}>⬆</button>
-            <button style={{ width: 40, height: 40, borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#fff", cursor: "pointer", fontSize: 16 }}>♡</button>
           </div>
         </div>
 
-        {/* PHOTO GRID */}
-        <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gridTemplateRows: "220px 220px", gap: 8, marginBottom: 24, borderRadius: 14, overflow: "hidden" }}>
-          <div style={{ gridRow: "1/3", position: "relative", cursor: "pointer", overflow: "hidden", borderRadius: 12 }} onClick={() => openLightbox(0)}>
-            <img src={hotel.images[0]?.url || fallbackImg} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            <div style={{ position: "absolute", bottom: 14, left: 14, background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 20 }}>
-              📸 +{hotel.images.length} Photos
+        {/* PHOTO GRID + DEAL BOX */}
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 340px", gap: 16, marginBottom: 24, alignItems: "start" }}>
+          {/* Photos */}
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gridTemplateRows: "220px 220px", gap: 6, borderRadius: 14, overflow: "hidden" }}>
+            <div style={{ gridRow: "1/3", overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openLightbox(0)}>
+              <img src={hotel.images[0]?.url} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <div style={{ position: "absolute", bottom: 12, left: 12, background: "rgba(0,0,0,0.55)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 20, display: "flex", alignItems: "center", gap: 6 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                See all {hotel.images.length} photos
+              </div>
             </div>
+            {[1, 2].map(i => (
+              <div key={i} style={{ overflow: "hidden", cursor: "pointer" }} onClick={() => openLightbox(i)}>
+                <img src={hotel.images[i]?.url || hotel.images[0]?.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              </div>
+            ))}
           </div>
-          <div style={{ cursor: "pointer", overflow: "hidden", borderRadius: 10 }} onClick={() => openLightbox(1)}>
-            <img src={hotel.images[1]?.url || fallbackImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          </div>
-          <div style={{ background: "#fff", display: "flex", flexDirection: "column", justifyContent: "center", padding: "20px 22px", position: "relative", zIndex: 1 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#16a34a", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 100, marginBottom: 10, width: "fit-content" }}>
-              Member price · Save up to 28%
+
+          {/* Recommended deal box */}
+          <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 22, boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#eff6ff", color: B, fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 100, marginBottom: 14 }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Recommended Deal
             </div>
+            {hotel.cheapestRoom && (
+              <>
+                <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+                  {hotel.cheapestRoom.photos?.[0] && (
+                    <img src={hotel.cheapestRoom.photos[0]} alt="" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 8, flexShrink: 0 }} />
+                  )}
+                  <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, lineHeight: 1.4 }}>{hotel.cheapestRoom.name}</div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+                  {hotel.cheapestRoom.isRefundable && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#16a34a", fontWeight: 600 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
+                      Free Cancellation
+                    </div>
+                  )}
+                  {hotel.cheapestRoom.hasBreakfast && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b" }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
+                      Breakfast Included
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
             {hotel.lowestPriceINR ? (
               <>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 2 }}>
-                  <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 28, fontWeight: 800, color: NAVY }}>{formatINR(hotel.lowestPriceINR)}</span>
-                  <span style={{ fontSize: 13, color: "#94a3b8", textDecoration: "line-through" }}>{formatINR(Math.round(hotel.lowestPriceINR * 1.28))}</span>
+                  <span className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY }}>{fmtINR(hotel.lowestPriceINR)}</span>
                 </div>
-                <div style={{ fontSize: 11.5, color: "#64748b", marginBottom: 12 }}>per night · {hotel.nights} nights</div>
+                <div style={{ fontSize: 12, color: "#64748b", marginBottom: 14 }}>per night · taxes included</div>
               </>
-            ) : (
-              <div style={{ fontSize: 14, color: "#64748b", marginBottom: 12 }}>Select dates to see price</div>
-            )}
-            <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 14 }}>
-              {["✓ Free cancellation available", "✓ No payment needed today"].map((item, i) => (
-                <div key={i} style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>{item}</div>
-              ))}
-            </div>
-            <button onClick={() => goToSection("rooms")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: 11, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 7, width: "100%" }}>View best deal →</button>
-            <button onClick={() => goToSection("rooms")} style={{ background: "#f8fafc", color: B, border: "1.5px solid #dbeafe", borderRadius: 8, padding: 9, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>See all room options ↓</button>
+            ) : <div style={{ fontSize: 14, color: "#64748b", marginBottom: 14 }}>Select dates for price</div>}
+            <button onClick={() => goTo("rooms")} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }}>Reserve a Room →</button>
+            <button onClick={() => goTo("rooms")} style={{ width: "100%", background: "#f8fafc", color: B, border: "1.5px solid #dbeafe", borderRadius: 10, padding: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>View all rooms ↓</button>
           </div>
         </div>
 
         {/* TABS */}
-        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, display: "flex", overflow: "hidden", marginBottom: 20, position: "sticky", top: offerId && saving ? 180 : 140, zIndex: 200 }}>
-          {[["overview", "Overview"], ["rooms", "Rooms"], ["reviews", "Reviews"], ["facilities", "Facilities"], ["location", "Location"], ["policies", "Policies"]].map(([id, label]) => (
-            <button key={id} className={"tab-btn" + (activeTab === id ? " active" : "")} onClick={() => goToSection(id)}>{label}</button>
+        <div style={{ background: "#fff", borderBottom: "1.5px solid #e2e8f0", display: "flex", overflow: "auto", marginBottom: 20, position: "sticky", top: topOffset + (refSearchBar.current?.offsetHeight || 80), zIndex: 200, borderRadius: "12px 12px 0 0" }}>
+          {[["overview","Overview"],["rooms","Rooms"],["location","Location"],["reviews","Reviews"],["facilities","Facilities"],["policies","Policies"]].map(([id, label]) => (
+            <button key={id} className={"tab-btn" + (activeTab === id ? " active" : "")} onClick={() => goTo(id)}>{label}</button>
           ))}
         </div>
 
-        {/* OVERVIEW */}
+        {/* ── OVERVIEW ─────────────────────────────────────────────────────── */}
         <div className="card" ref={refOverview}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 18 }}>
-            <div style={{ background: B, color: "#fff", borderRadius: 12, width: 64, height: 64, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 24, fontWeight: 800, lineHeight: 1 }}>9.1</div>
-              <div style={{ fontSize: 11, opacity: 0.8 }}>/10</div>
-            </div>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 32 }}>
             <div>
-              <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY }}>Exceptional</div>
-              <div style={{ fontSize: 13, color: "#64748b", marginTop: 2 }}>Based on verified guest reviews</div>
-            </div>
-          </div>
-          <p style={{ fontSize: 14.5, color: "#64748b", lineHeight: 1.75, marginBottom: 24 }}>{hotel.description}</p>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: "16px 32px" }}>
-            {RATING_BARS.map(rb => (
-              <div key={rb.label}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#1e293b", marginBottom: 5, fontWeight: 500 }}>
-                  <span>{rb.label}</span><span style={{ fontWeight: 700, color: NAVY }}>{rb.score}</span>
-                </div>
-                <div style={{ height: 5, background: "#e2e8f0", borderRadius: 100, overflow: "hidden" }}>
-                  <div style={{ height: "100%", background: B, borderRadius: 100, width: (rb.score * 10) + "%" }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+              <h2 className="sora" style={{ fontSize: 18, fontWeight: 700, color: NAVY, marginBottom: 12 }}>About</h2>
+              {/* Description filter pills */}
+              <p style={{ fontSize: 13.5, color: "#64748b", lineHeight: 1.8, marginBottom: 20 }} dangerouslySetInnerHTML={{ __html: (hotel.description || "").replace(/<[^>]+>/g, "").slice(0, 400) + ((hotel.description?.length || 0) > 400 ? "..." : "") }} />
 
-        {/* ROOMS */}
-        <div className="card" ref={refRooms}>
-          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Select your room</div>
-          {isMobile ? (
-            // MOBILE: Card layout
-            <div>
-              {hotel.rooms.map(room => {
-                const isSel = selectedRoom === room.roomCode;
-                const isFree = !room.cancellation || room.cancellation.type === "free";
-                return (
-                  <div key={room.roomCode} className={"room-card" + (isSel ? " selected" : "")}
-                    onClick={() => { setSelectedRoom(room.roomCode); setSelectedRoomName(room.name + (room.boardName ? " · " + room.boardName : "")); }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, color: NAVY, fontSize: 14, marginBottom: 3 }}>{room.name}</div>
-                        <div style={{ fontSize: 12, color: "#64748b" }}>{room.size ? room.size + " m²" : ""}{room.bedType ? " · " + room.bedType : ""}</div>
+              {/* Popular Facilities */}
+              {hotel.popularFacilities?.length > 0 && (
+                <>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Popular Facilities</h3>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10 }}>
+                    {hotel.popularFacilities.map((f: string) => (
+                      <div key={f} className="fac-icon-box" style={{ color: NAVY }}>
+                        <FacIcon name={f} size={22} />
+                        <span style={{ fontSize: 11, color: "#475569", fontWeight: 500 }}>{f}</span>
                       </div>
-                      <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
-                        {room.pricePerNight
-                          ? <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 800, color: NAVY }}>{formatINR(room.pricePerNight)}<span style={{ fontSize: 10, color: "#64748b", fontWeight: 400 }}>/night</span></div>
-                          : <div style={{ fontSize: 13, color: "#64748b" }}>On request</div>}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
-                      {room.boardName
-                        ? <span style={{ background: "#f0fdf4", color: "#166634", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 100 }}>{room.boardName}</span>
-                        : <span style={{ background: "#f8fafc", color: "#64748b", fontSize: 11, padding: "3px 8px", borderRadius: 100 }}>Room only</span>}
-                      <span style={{ background: isFree ? "#f0fdf4" : "#fef2f2", color: isFree ? "#166534" : "#991b1b", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 100 }}>
-                        {isFree ? "✓ Free cancel" : "Non-refundable"}
-                      </span>
-                      {isSel && <span style={{ background: B, color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, marginLeft: "auto" }}>✓ Selected</span>}
-                      {!isSel && <span style={{ border: "1.5px solid " + B, color: B, fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, marginLeft: "auto", cursor: "pointer" }}>Select</span>}
-                    </div>
+                    ))}
                   </div>
-                );
-              })}
+                </>
+              )}
             </div>
-          ) : (
-            // DESKTOP: Table layout
-            <table className="rooms-table">
-              <thead>
-                <tr>
-                  <th style={{ width: "35%" }}>Room Type</th>
-                  <th style={{ width: "18%" }}>Board</th>
-                  <th style={{ width: "17%" }}>Cancellation</th>
-                  <th style={{ width: "20%", textAlign: "right" }}>Price/night</th>
-                  <th style={{ width: "10%", textAlign: "center" }}>Select</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hotel.rooms.map(room => {
-                  const isSel = selectedRoom === room.roomCode;
-                  const isFree = !room.cancellation || room.cancellation.type === "free";
-                  return (
-                    <tr key={room.roomCode} style={{ background: isSel ? "#f0f7ff" : "" }}>
-                      <td>
-                        <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, color: NAVY, fontSize: 14, marginBottom: 3 }}>{room.name}</div>
-                        <div style={{ fontSize: 12, color: "#64748b" }}>{room.size ? room.size + " m²" : ""}{room.bedType ? " · " + room.bedType : ""}</div>
-                      </td>
-                      <td>
-                        {room.boardName
-                          ? <span style={{ background: "#f0fdf4", color: "#166634", fontSize: 12, fontWeight: 600, padding: "3px 8px", borderRadius: 100 }}>{room.boardName}</span>
-                          : <span style={{ background: "#f8fafc", color: "#64748b", fontSize: 12, padding: "3px 8px", borderRadius: 100 }}>Room only</span>}
-                      </td>
-                      <td>
-                        <span style={{ background: isFree ? "#f0fdf4" : "#fef2f2", color: isFree ? "#166534" : "#991b1b", fontSize: 12, fontWeight: 600, padding: "3px 8px", borderRadius: 100 }}>
-                          {isFree ? "Free cancel" : "Non-refundable"}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: "right" }}>
-                        {room.pricePerNight ? (
-                          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, color: NAVY }}>{formatINR(room.pricePerNight)}</div>
-                        ) : <div style={{ fontSize: 13, color: "#64748b" }}>On request</div>}
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <button className={"select-btn" + (isSel ? " sel" : "")}
-                          onClick={() => { setSelectedRoom(room.roomCode); setSelectedRoomName(room.name + (room.boardName ? " · " + room.boardName : "")); }}>
-                          {isSel ? "Selected" : "Select"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-          {selectedRoomData && displayPrice && (
-            <div style={{ marginTop: 20, background: "#f0f7ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 12, color: B, fontWeight: 600, marginBottom: 2 }}>Selected: {selectedRoomName}</div>
-                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: NAVY }}>{formatINR(displayPrice)}<span style={{ fontSize: 12, color: "#64748b", fontFamily: "inherit", fontWeight: 400 }}>/night</span></div>
-              </div>
-              <button onClick={() => router.push("/checkout?hotel=" + encodeURIComponent(hotel.name) + "&checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults + "&room=" + encodeURIComponent(selectedRoomName) + "&price=" + displayPrice + (offerId ? "&offerId=" + offerId : ""))}
-                style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-                Book Now →
-              </button>
-            </div>
-          )}
-        </div>
 
-        {/* REVIEWS */}
-        <div className="card" ref={refReviews}>
-          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Guest Reviews</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 48, fontWeight: 800, color: NAVY, lineHeight: 1 }}>9.1</div>
             <div>
-              <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY }}>Exceptional</div>
-              <div style={{ fontSize: 13, color: "#64748b" }}>Based on 2,341 verified reviews</div>
+              {/* Rating + sentiment */}
+              {hotel.rating && (
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+                  <div style={{ background: B, color: "#fff", borderRadius: 12, width: 64, height: 64, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <div className="sora" style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{parseFloat(hotel.rating).toFixed(1)}</div>
+                    <div style={{ fontSize: 10, opacity: 0.8 }}>/10</div>
+                  </div>
+                  <div>
+                    <div className="sora" style={{ fontSize: 18, fontWeight: 700, color: NAVY }}>
+                      {parseFloat(hotel.rating) >= 9 ? "Exceptional" : parseFloat(hotel.rating) >= 8 ? "Excellent" : parseFloat(hotel.rating) >= 7 ? "Very Good" : "Good"}
+                    </div>
+                    {hotel.reviewCount && <div style={{ fontSize: 13, color: "#64748b" }}>{hotel.reviewCount.toLocaleString()} reviews</div>}
+                  </div>
+                </div>
+              )}
+
+              {/* Sentiment categories */}
+              {hotel.sentimentAnalysis?.categories?.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                  {hotel.sentimentAnalysis.categories.map((cat: any) => (
+                    <div key={cat.name}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: NAVY, marginBottom: 4, fontWeight: 500 }}>
+                        <span>{cat.name}</span><span style={{ fontWeight: 700 }}>{cat.rating?.toFixed(1)}</span>
+                      </div>
+                      <div className="sentiment-bar">
+                        <div className="sentiment-fill" style={{ width: (cat.rating / 10 * 100) + "%" }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Guests are saying */}
+              {hotel.sentimentAnalysis?.pros?.length > 0 && (
+                <div style={{ marginTop: 20 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 10 }}>Guests are saying</div>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                    {hotel.sentimentAnalysis.pros.slice(0, 6).map((p: string) => (
+                      <span key={p} style={{ background: "#f0fdf4", color: "#166534", fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 100, border: "1px solid #bbf7d0" }}>{p}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-          {REVIEWS.map((r, i) => (
-            <div key={i} style={{ borderBottom: i < REVIEWS.length - 1 ? "1px solid #f1f5f9" : "none", padding: "20px 0" }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 4, display: "flex", alignItems: "center", gap: 10 }}>
-                {r.title}
-                <span style={{ background: NAVY, color: "#fff", fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 6 }}>{r.score}</span>
-              </div>
-              <div style={{ fontSize: 13.5, color: "#64748b", lineHeight: 1.65, marginBottom: 8 }}>{r.text}</div>
-              <div style={{ fontSize: 12, color: "#94a3b8" }}>{r.author} · {r.type} · {r.location} · {r.date}</div>
-            </div>
-          ))}
         </div>
 
-        {/* FACILITIES */}
+        {/* ── ROOMS ────────────────────────────────────────────────────────── */}
+        <div className="card" ref={refRooms}>
+          <h2 className="sora" style={{ fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 20 }}>Select your room</h2>
+          {hotel.rooms.length === 0 && <div style={{ color: "#64748b", fontSize: 14 }}>No rooms available for selected dates.</div>}
+          {hotel.rooms.map((room: any) => {
+            const isSel = selectedRoom === room.offerId;
+            const photoIdx = roomPhotoIdx[room.offerId] || 0;
+            return (
+              <div key={room.offerId} className={"room-row" + (isSel ? " selected" : "")} onClick={() => setSelectedRoom(room.offerId)}>
+                {/* Left: photo + name + details */}
+                <div style={{ position: "relative" }}>
+                  {room.photos?.length > 0 ? (
+                    <>
+                      <img src={room.photos[photoIdx]} alt={room.name} style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }} />
+                      {room.photos.length > 1 && (
+                        <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 4 }}>
+                          {room.photos.slice(0, 5).map((_: any, i: number) => (
+                            <div key={i} onClick={e => { e.stopPropagation(); setRoomPhotoIdx(prev => ({ ...prev, [room.offerId]: i })); }}
+                              style={{ width: 6, height: 6, borderRadius: "50%", background: i === photoIdx ? "#fff" : "rgba(255,255,255,0.5)", cursor: "pointer" }} />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ width: "100%", height: 200, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </div>
+                  )}
+                  <div style={{ padding: "14px 16px" }}>
+                    <div className="sora" style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 6, lineHeight: 1.3 }}>{room.name}</div>
+                    <div style={{ display: "flex", gap: 12, fontSize: 12, color: "#64748b", marginBottom: 10 }}>
+                      {room.sizeM2 && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                        {room.sizeM2} m²
+                      </span>}
+                      {room.bedTypes?.[0] && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4v16M22 4v16M2 12h20M2 8h20"/></svg>
+                        {room.bedTypes[0]}
+                      </span>}
+                      {room.maxOccupancy && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                        Sleeps {room.maxOccupancy}
+                      </span>}
+                    </div>
+                    {room.amenities?.length > 0 && (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 8px" }}>
+                        {room.amenities.slice(0, 6).map((a: string) => (
+                          <div key={a} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#374151" }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            {a}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Middle: board + cancellation options */}
+                <div style={{ padding: "20px 24px", borderLeft: "1px solid #f1f5f9", display: "flex", flexDirection: "column" as const, gap: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 4 }}>Options</div>
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                    <span className={"pill " + (room.isRefundable ? "pill-green" : "pill-red")}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      {room.isRefundable ? "Free Cancellation" : "Non-refundable"}
+                    </span>
+                    <span className={"pill " + (room.hasBreakfast ? "pill-green" : "pill-gray")}>
+                      {room.hasBreakfast ? "Breakfast included" : "Room only"}
+                    </span>
+                    <span className="pill pill-blue">Taxes included</span>
+                  </div>
+                  {room.boardName && <div style={{ fontSize: 12, color: "#64748b" }}>{room.boardName}</div>}
+                </div>
+
+                {/* Right: price + select */}
+                <div style={{ padding: "20px 20px", borderLeft: "1px solid #f1f5f9", display: "flex", flexDirection: "column" as const, alignItems: "flex-end", justifyContent: "space-between", minWidth: 160 }}>
+                  <div style={{ textAlign: "right" }}>
+                    {room.pricePerNight ? (
+                      <>
+                        <div className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY }}>{fmtINR(room.pricePerNight)}</div>
+                        <div style={{ fontSize: 11, color: "#64748b" }}>per night</div>
+                        <div style={{ fontSize: 11, color: "#64748b" }}>Total: {fmtINR(room.totalPrice)}</div>
+                      </>
+                    ) : <div style={{ fontSize: 13, color: "#64748b" }}>On request</div>}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, width: "100%" }}>
+                    <button className={"select-btn" + (isSel ? " sel" : "")}
+                      onClick={e => { e.stopPropagation(); setSelectedRoom(room.offerId); }}>{isSel ? "✓ Selected" : "Select"}</button>
+                    {isSel && (
+                      <button onClick={e => { e.stopPropagation(); router.push(`/checkout?hotel=${encodeURIComponent(hotel.name)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&room=${encodeURIComponent(room.name)}&price=${room.pricePerNight}&offerId=${room.offerId}`); }}
+                        style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>Book Now →</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── LOCATION ─────────────────────────────────────────────────────── */}
+        <div className="card" ref={refLocation}>
+          <h2 className="sora" style={{ fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Explore the Area</h2>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#64748b" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              {hotel.address}, {hotel.city}
+            </div>
+            <a href={`https://www.google.com/maps?q=${hotel.coordinates?.latitude},${hotel.coordinates?.longitude}`} target="_blank" rel="noopener noreferrer"
+              style={{ color: B, fontWeight: 600, fontSize: 13, textDecoration: "none" }}>View on Google Maps ↗</a>
+          </div>
+          {hotel.coordinates?.latitude && (
+            <iframe src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3000!2d${hotel.coordinates.longitude}!3d${hotel.coordinates.latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2z!5e0!3m2!1sen!2sin!4v1`}
+              width="100%" height="320" style={{ border: "none", borderRadius: 12, display: "block" }} allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+          )}
+        </div>
+
+        {/* ── REVIEWS ──────────────────────────────────────────────────────── */}
+        <div className="card" ref={refReviews}>
+          <h2 className="sora" style={{ fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Guest Reviews</h2>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "280px 1fr", gap: 32, marginBottom: 24 }}>
+            {/* Left: rating + categories */}
+            <div>
+              {hotel.rating && (
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+                  <div className="sora" style={{ fontSize: 52, fontWeight: 800, color: NAVY, lineHeight: 1 }}>{parseFloat(hotel.rating).toFixed(1)}</div>
+                  <div>
+                    <div className="sora" style={{ fontSize: 18, fontWeight: 700, color: NAVY }}>{parseFloat(hotel.rating) >= 9 ? "Exceptional" : parseFloat(hotel.rating) >= 8 ? "Excellent" : "Very Good"}</div>
+                    {hotel.reviewCount && <div style={{ fontSize: 13, color: "#64748b" }}>{hotel.reviewCount.toLocaleString()} Ratings</div>}
+                  </div>
+                </div>
+              )}
+              {hotel.sentimentAnalysis?.categories?.map((cat: any) => (
+                <div key={cat.name} style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: NAVY, marginBottom: 3 }}>
+                    <span style={{ fontWeight: 600 }}>{cat.name}</span><span style={{ fontWeight: 700 }}>{cat.rating?.toFixed(1)}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.5, marginBottom: 4 }}>{cat.description?.slice(0, 80)}...</div>
+                  <div className="sentiment-bar"><div className="sentiment-fill" style={{ width: (cat.rating / 10 * 100) + "%" }} /></div>
+                </div>
+              ))}
+            </div>
+
+            {/* Right: individual reviews */}
+            <div>
+              {/* Filter pills */}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, marginBottom: 20 }}>
+                {["all", "family", "couple", "business", "solo"].map(f => (
+                  <button key={f} className={"review-filter-btn" + (reviewFilter === f ? " active" : "")} onClick={() => setReviewFilter(f)}>
+                    {f === "all" ? `All Reviews (${hotel.reviews?.length || 0})` : f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+              </div>
+              {filteredReviews.length === 0 && <div style={{ fontSize: 13, color: "#94a3b8" }}>No reviews for this filter.</div>}
+              {filteredReviews.map((r: any, i: number) => (
+                <div key={i} style={{ borderBottom: i < filteredReviews.length - 1 ? "1px solid #f1f5f9" : "none", padding: "18px 0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: NAVY }}>{r.headline || "Guest Review"}</div>
+                    <span style={{ background: NAVY, color: "#fff", fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 6, flexShrink: 0, marginLeft: 8 }}>{r.score?.toFixed(1) || "—"}</span>
+                  </div>
+                  {r.pros && <div style={{ fontSize: 13, color: "#16a34a", marginBottom: 3 }}>+ {r.pros}</div>}
+                  {r.cons && <div style={{ fontSize: 13, color: "#dc2626", marginBottom: 6 }}>− {r.cons}</div>}
+                  <div style={{ fontSize: 12, color: "#94a3b8", display: "flex", alignItems: "center", gap: 6 }}>
+                    <span>{TYPE_FLAG[r.type?.toLowerCase()] || "👤"}</span>
+                    <span>{r.name} · {r.type} · {r.country?.toUpperCase()} · {r.date?.substring(0, 7)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── FACILITIES ───────────────────────────────────────────────────── */}
         <div className="card" ref={refFacilities}>
-          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 20 }}>Hotel Facilities</div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: "24px 32px" }}>
-            {(hotel.facilityGroups && Object.keys(hotel.facilityGroups).length > 0
-              ? Object.entries(hotel.facilityGroups).slice(0, 6).map(([key, items]) => ({ title: key, items: items as string[] }))
-              : FACILITY_GROUPS
-            ).map((group, i) => (
-              <div key={i}>
-                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 10 }}>{group.title}</div>
-                {group.items.slice(0, 5).map((item, j) => (
-                  <div key={j} className="fac-item">{item}</div>
+          <h2 className="sora" style={{ fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 24 }}>Hotel Facilities</h2>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)", gap: "28px 40px" }}>
+            {Object.entries(hotel.facilityGroups || {}).filter(([, items]) => (items as string[]).length > 0).map(([group, items]) => (
+              <div key={group}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <div className="sora" style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{group}</div>
+                </div>
+                {(items as string[]).map((item, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: "#374151", padding: "4px 0" }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    {item}
+                  </div>
                 ))}
               </div>
             ))}
           </div>
         </div>
 
-        {/* LOCATION */}
-        <div className="card" ref={refLocation}>
-          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Location</div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <span style={{ fontSize: 13.5, color: "#64748b" }}>📍 {hotel.address}, {hotel.city}</span>
-            <a href={"https://www.google.com/maps?q=" + hotel.coordinates?.latitude + "," + hotel.coordinates?.longitude} target="_blank" rel="noopener noreferrer" style={{ color: B, fontWeight: 500, fontSize: 13, textDecoration: "none" }}>Open in Google Maps ↗</a>
-          </div>
-          {hotel.coordinates?.latitude && (
-            <iframe
-              src={"https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3000!2d" + hotel.coordinates.longitude + "!3d" + hotel.coordinates.latitude + "!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2z!5e0!3m2!1sen!2sin!4v1"}
-              width="100%" height="240"
-              style={{ border: "none", borderRadius: 12, display: "block", marginBottom: 14 }}
-              allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
-          )}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {hotel.distances.map((d, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "9px 12px", background: "#f8fafc", borderRadius: 8, fontSize: 13 }}>
-                <span style={{ color: "#64748b" }}>{d.label}</span>
-                <span style={{ fontWeight: 700, color: NAVY }}>{distLabel(d.distance)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* POLICIES */}
+        {/* ── POLICIES ─────────────────────────────────────────────────────── */}
         <div className="card" ref={refPolicies}>
-          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 16 }}>Hotel Policies</div>
+          <h2 className="sora" style={{ fontSize: 20, fontWeight: 700, color: NAVY, marginBottom: 20 }}>Hotel Policies</h2>
           {[
-            { label: "Check-in", value: "From " + (hotel.checkInTime || "15:00") + " · Early check-in on request" },
-            { label: "Check-out", value: "Until " + (hotel.checkOutTime || "12:00") + " · Late check-out on request" },
-            ...POLICIES,
+            { label: "Check-in", icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z", value: `From ${hotel.checkInTime}` },
+            { label: "Check-out", icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z", value: `Until ${hotel.checkOutTime}` },
+            ...(hotel.importantInfo ? [{ label: "Property Policies", icon: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8", value: hotel.importantInfo.replace(/<[^>]+>/g, "").slice(0, 500) }] : []),
           ].map((p, i, arr) => (
-            <div key={i} style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "160px 1fr", gap: 16, padding: "14px 0", borderBottom: i < arr.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{p.label}</div>
-              <div style={{ fontSize: 13.5, color: "#64748b", lineHeight: 1.65 }}>{p.value}</div>
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: 16, padding: "16px 0", borderBottom: i < arr.length - 1 ? "1px solid #f1f5f9" : "none", alignItems: "flex-start" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: NAVY }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round"><path d={p.icon} /></svg>
+                {p.label}
+              </div>
+              <div style={{ fontSize: 13.5, color: "#64748b", lineHeight: 1.7 }}>{p.value}</div>
             </div>
           ))}
         </div>
 
         {/* TRACK BANNER */}
-        <div style={{ background: B, borderRadius: 12, padding: "24px 28px", marginBottom: 20 }}>
-          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Already booked this hotel?</div>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.7, marginBottom: 14 }}>Upload your voucher and our AI watches the price 24/7. WhatsApp alert the moment it drops.</p>
-          <button onClick={() => router.push("/")} style={{ background: "#fff", color: B, border: "none", padding: "10px 22px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+        <div style={{ background: `linear-gradient(135deg, ${NAVY} 0%, ${B} 100%)`, borderRadius: 14, padding: isMobile ? "24px 20px" : "28px 36px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 20 }}>
+          <div>
+            <div className="sora" style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Already booked this hotel?</div>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.7, maxWidth: 420 }}>Upload your voucher — we watch the price 24/7 and alert you on WhatsApp the moment it drops.</p>
+          </div>
+          <button onClick={() => router.push("/")} style={{ background: "#FCD34D", color: NAVY, border: "none", padding: "12px 24px", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const }}>
             Upload voucher → Track price
           </button>
         </div>
 
         {/* SIMILAR HOTELS */}
         <div style={{ marginBottom: 40 }}>
-          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 20 }}>People also viewed</div>
+          <h2 className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 20 }}>People also viewed</h2>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20 }}>
             {(similarHotels.length > 0 ? similarHotels : [
-              { code: 1, name: "Burj Al Arab", city: "Dubai, UAE", stars: "5", images: [{ url: "https://images.pexels.com/photos/189296/pexels-photo-189296.jpeg?auto=compress&cs=tinysrgb&w=600&fit=crop&h=400" }], lowestPriceINR: 84000 },
-              { code: 2, name: "Jumeirah Al Qasr", city: "Dubai, UAE", stars: "5", images: [{ url: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop" }], lowestPriceINR: 31800 },
-              { code: 3, name: "Address Downtown", city: "Dubai, UAE", stars: "5", images: [{ url: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop" }], lowestPriceINR: 37400 },
-            ] as SimilarHotel[]).map((h, i) => (
-              <div key={i} className="sim-card" onClick={() => router.push("/hotel/" + h.code + "?checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults)}>
-                <div style={{ height: 160, overflow: "hidden" }}>
-                  <img src={h.images[0]?.url} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              { code: "lp1", name: "Burj Al Arab", city: "Dubai, UAE", stars: "5", imageUrl: "/burjalarab.jpg", rebuqPriceINR: 84000, rating: 9.5 },
+              { code: "lp2", name: "Jumeirah Al Qasr", city: "Dubai, UAE", stars: "5", imageUrl: "/jumeirahalqasr.jpg", rebuqPriceINR: 31800, rating: 9.2 },
+              { code: "lp3", name: "Address Downtown", city: "Dubai, UAE", stars: "5", imageUrl: "/addressdowntown.jpg", rebuqPriceINR: 37400, rating: 9.0 },
+            ]).map((h: any, i: number) => (
+              <div key={i} className="sim-card" onClick={() => router.push(`/hotel/${h.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`)}>
+                <div style={{ height: 170, overflow: "hidden" }}>
+                  <img src={h.imageUrl || h.images?.[0]?.url} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </div>
                 <div style={{ padding: "14px 16px" }}>
-                  <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 3 }}>{h.name}</div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>📍 {h.city}</div>
-                  {h.lowestPriceINR && (
-                    <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, color: NAVY }}>{formatINR(h.lowestPriceINR)}<span style={{ fontSize: 11, color: "#64748b", fontFamily: "inherit", fontWeight: 400 }}>/night</span></div>
-                  )}
+                  <div className="sora" style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 3 }}>{h.name}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{h.city}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    {(h.rebuqPriceINR || h.lowestPriceINR) && <div className="sora" style={{ fontSize: 18, fontWeight: 800, color: NAVY }}>{fmtINR(h.rebuqPriceINR || h.lowestPriceINR)}<span style={{ fontSize: 11, color: "#64748b", fontFamily: "inherit", fontWeight: 400 }}>/night</span></div>}
+                    {h.rating && <span style={{ background: B, color: "#fff", fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 6 }}>{parseFloat(h.rating).toFixed(1)}</span>}
+                  </div>
                 </div>
               </div>
             ))}
@@ -722,7 +762,7 @@ function HotelDetailContent() {
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap" as const, flexDirection: isMobile ? "column" : "row" }}>
             <div>
-              <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 10 }}>rebuq<span style={{ color: B }}>.</span></div>
+              <div className="sora" style={{ fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 10 }}>rebuq<span style={{ color: B }}>.</span></div>
               <p style={{ fontSize: 13.5, color: "#94a3b8", maxWidth: 260, lineHeight: 1.6 }}>AI-powered hotel price monitoring for Indian travelers. Never overpay for a hotel again.</p>
             </div>
             <div style={{ display: "flex", gap: isMobile ? 28 : 48, flexDirection: isMobile ? "column" : "row" }}>
@@ -734,20 +774,21 @@ function HotelDetailContent() {
               ))}
             </div>
           </div>
-          <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
+          <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24 }}>
             <span style={{ fontSize: 13, color: "#475569" }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
           </div>
         </div>
       </footer>
 
-      {isMobile && displayPrice && (
+      {/* MOBILE STICKY FOOTER */}
+      {isMobile && selectedRoomData?.pricePerNight && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: "1px solid #e2e8f0", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, zIndex: 99 }}>
           <div>
-            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 700, color: NAVY }}>{formatINR(displayPrice)}</div>
-            <div style={{ fontSize: 10, color: "#64748b" }}>per night</div>
+            <div className="sora" style={{ fontSize: 20, fontWeight: 800, color: NAVY }}>{fmtINR(selectedRoomData.pricePerNight)}</div>
+            <div style={{ fontSize: 10, color: "#64748b" }}>per night · taxes included</div>
           </div>
-          <button onClick={() => router.push("/checkout?hotel=" + encodeURIComponent(hotel.name) + "&checkIn=" + checkIn + "&checkOut=" + checkOut + "&adults=" + adults + "&room=" + encodeURIComponent(selectedRoomName) + "&price=" + displayPrice + (offerId ? "&offerId=" + offerId : ""))}
-            style={{ background: B, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Book Now →</button>
+          <button onClick={() => router.push(`/checkout?hotel=${encodeURIComponent(hotel.name)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&room=${encodeURIComponent(selectedRoomData.name)}&price=${selectedRoomData.pricePerNight}&offerId=${selectedRoomData.offerId}`)}
+            style={{ background: B, color: "#fff", border: "none", padding: "12px 22px", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Book Now →</button>
         </div>
       )}
     </div>
