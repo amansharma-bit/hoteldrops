@@ -7,7 +7,7 @@ const { createClient } = require('@supabase/supabase-js')
 const LITE_API_KEY = process.env.LITEAPI_KEY || 'sand_9a1ac97a-74b9-4917-8777-900e559a9e43'
 const BASE_URL = 'https://api.liteapi.travel/v3.0'
 const USD_TO_INR = 97
-const MARKUP = 1.10  // 10% rebuq margin on net rate
+const MARKUP = 1.00  // 0% markup — showing raw wholesale price for investor demo
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
