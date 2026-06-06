@@ -430,6 +430,7 @@ export default function Home() {
                     blockInfo?.reason === 'checkin_passed' ? '📅 Check-in already passed' :
                     blockInfo?.reason === 'duplicate' ? '✅ Already tracking' :
                     blockInfo?.reason === 'network_error' ? '⚠️ Connection issue' :
+                    uploadStep === 'success' ? '✅ Booking tracked!' :
                     '⚠️ We need your attention'}
                 </div>
                 <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
@@ -620,11 +621,11 @@ export default function Home() {
                 <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 12, padding: '16px 20px', marginBottom: 24, textAlign: 'left' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span style={{ fontSize: 13, color: '#64748b' }}>Check-in</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{extracted?.check_in}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{extracted?.check_in ? new Date(extracted.check_in + 'T00:00:00').toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) : '-'}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span style={{ fontSize: 13, color: '#64748b' }}>Check-out</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{extracted?.check_out}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{extracted?.check_out ? new Date(extracted.check_out + 'T00:00:00').toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) : '-'}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 13, color: '#64748b' }}>Price paid</span>
