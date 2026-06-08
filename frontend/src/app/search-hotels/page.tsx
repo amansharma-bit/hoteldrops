@@ -170,6 +170,8 @@ export default function SearchHotelsPage() {
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState<GuestState>({ rooms: 1, adults: 2, children: 0, childAges: [] });
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [cityResults, setCityResults] = useState<{flag:string;city:string;country:string;img:string}[]>([]);
+  const [cityLoading, setCityLoading] = useState(false);
   const [activeCity, setActiveCity] = useState("All Hotels");
   const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
@@ -186,13 +188,38 @@ export default function SearchHotelsPage() {
   const statsAnimated = useRef(false);
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
-  // Filtered suggestions based on input
-  const filteredSuggestions = destination.length > 0
+  // Live city search via liteAPI, fallback to local list
+  const filteredSuggestions = cityResults.length > 0
+    ? cityResults
+    : destination.length > 0
     ? DESTINATIONS.filter(d =>
         `${d.city}`.toLowerCase().includes(destination.toLowerCase()) ||
         `${d.country}`.toLowerCase().includes(destination.toLowerCase())
       ).slice(0, 8)
     : DESTINATIONS.slice(0, 8);
+
+  useEffect(() => {
+    if (destination.length < 2) { setCityResults([]); return; }
+    const timer = setTimeout(async () => {
+      setCityLoading(true);
+      try {
+        const res = await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/cities?q=${encodeURIComponent(destination)}`);
+        const data = await res.json();
+        if (data.cities?.length > 0) {
+          setCityResults(data.cities.map((c: any) => ({
+            flag: c.flag || "🌍",
+            city: c.city || c.name,
+            country: c.country || c.countryName || "",
+            img: "/dubai.jpg"
+          })));
+        } else {
+          setCityResults([]);
+        }
+      } catch { setCityResults([]); }
+      finally { setCityLoading(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [destination]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
