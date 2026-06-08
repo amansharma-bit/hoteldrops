@@ -94,6 +94,63 @@ function buildOccupancies(rooms, adults, children) {
   return [{ rooms: r, adults: a, children: childAges }]
 }
 
+// ── Parse room name into clean name + size + amenities ───────────────────────
+function parseRoomName(rawName) {
+  if (!rawName) return { displayName: 'Room', sizeM2: null, parsedAmenities: [] }
+  
+  const parts = rawName.split(',')
+  
+  // Clean display name — first segment, title case
+  const displayName = parts[0]
+    .trim()
+    .toLowerCase()
+    .replace(/\w/g, l => l.toUpperCase())
+  
+  // Extract size — look for pattern like "40 SQM" or "40SQM"
+  const sizeMatch = rawName.match(/(\d+)\s*SQM/i)
+  const sizeM2 = sizeMatch ? parseInt(sizeMatch[1]) : null
+  
+  // Parse amenities from all parts after first comma
+  const amenityTokens = parts.slice(1).join('/').split(/[,\/]/)
+  const AMENITY_MAP = {
+    'wifi': 'Free WiFi', 'wi-fi': 'Free WiFi',
+    'espresso': 'Espresso Machine', 'coffee': 'Coffee Maker',
+    'tea kettle': 'Tea Kettle', 'kettle': 'Electric Kettle',
+    'minibar': 'Minibar', 'mini bar': 'Minibar',
+    'hdtv': 'HD TV', 'tv': 'Flat-screen TV',
+    'usb port': 'USB Ports', 'usb': 'USB Ports',
+    'iron': 'Iron & Board', 'iron-board': 'Iron & Board',
+    'balcony': 'Balcony', 'terrace': 'Terrace',
+    'bathtub': 'Bathtub', 'shower': 'Shower',
+    'safe': 'In-room Safe', 'safety': 'In-room Safe',
+    'air condition': 'Air Conditioning', 'a/c': 'Air Conditioning',
+    'breakfast': 'Breakfast Included',
+    'ocean view': 'Ocean View', 'sea view': 'Sea View',
+    'city view': 'City View', 'pool view': 'Pool View',
+    'king bed': 'King Bed', 'queen bed': 'Queen Bed',
+    'twin bed': 'Twin Beds', 'double bed': 'Double Bed',
+    'sofa bed': 'Sofa Bed',
+    'kitchen': 'Kitchen', 'kitchenette': 'Kitchenette',
+    'desk': 'Work Desk', 'work desk': 'Work Desk',
+  }
+  
+  const parsedAmenities = []
+  const seen = new Set()
+  for (const token of amenityTokens) {
+    const t = token.trim().toLowerCase()
+    if (!t || t.match(/^\d+\s*sqm$/i)) continue
+    for (const [key, label] of Object.entries(AMENITY_MAP)) {
+      if (t.includes(key) && !seen.has(label)) {
+        seen.add(label)
+        parsedAmenities.push(label)
+      }
+    }
+  }
+  
+  return { displayName, sizeM2, parsedAmenities }
+}
+
+
 // ── Supabase coords cache ─────────────────────────────────────────────────────
 async function enrichWithCoords(hotels) {
   if (!hotels.length) return hotels
@@ -466,18 +523,26 @@ router.get('/:code', async (req, res) => {
           ? staticRoom.photos.slice(0, 5)
           : images.slice(0, 3).map(i => i.url)
 
+        // Parse clean name + size + amenities from raw supplier name
+        const rawName = rate?.name || rt.name || 'Room'
+        const parsed = parseRoomName(rawName)
+        const finalSizeM2 = staticRoom.sizeM2 || parsed.sizeM2
+        const finalAmenities = staticRoom.amenities?.length ? staticRoom.amenities : parsed.parsedAmenities
+        const finalBedTypes = staticRoom.bedTypes?.length ? staticRoom.bedTypes : []
+
         return {
           offerId: rt.offerId,
           mappedRoomId: mappedId,
-          name: rate?.name || rt.name || 'Room',
+          rawName,
+          name: parsed.displayName,
           description: staticRoom.description || '',
           boardCode: boardType,
           boardName: rate?.boardName || (boardType === 'RO' ? 'Room Only' : 'Breakfast Included'),
           hasBreakfast: !['RO', 'Room Only'].includes(boardType),
           maxOccupancy: rate?.maxOccupancy || parseInt(adults),
-          sizeM2: staticRoom.sizeM2 || null,
-          bedTypes: staticRoom.bedTypes || [],
-          amenities: staticRoom.amenities || [],
+          sizeM2: finalSizeM2,
+          bedTypes: finalBedTypes,
+          amenities: finalAmenities,
           photos: roomPhotos,
           pricePerNight: perNightINR,
           totalPrice: totalINR,
