@@ -354,13 +354,23 @@ router.get('/:code', async (req, res) => {
         photos: (sr.photos || []).sort((a,b) => (b.score||0)-(a.score||0)).map(p => p.url || p.failoverPhoto).filter(p => p && p.startsWith('http')).slice(0, 5),
       }
       // Index by all possible ID fields for robust matching
-      if (sr.id) staticRooms[sr.id] = roomData
-      if (sr.roomId) staticRooms[sr.roomId] = roomData
-      if (sr.name) staticRooms[sr.name.toLowerCase().trim()] = roomData
-      // Also index by normalised name (no spaces, lowercase) for fuzzy match
-      if (sr.name) staticRooms[sr.name.toLowerCase().replace(/[^a-z0-9]/g, '')] = roomData
+      // Index by every possible ID format — string, number, both
+      const roomId = sr.id || sr.roomId
+      if (roomId !== undefined && roomId !== null) {
+        staticRooms[roomId] = roomData          // native type
+        staticRooms[String(roomId)] = roomData  // as string
+        staticRooms[Number(roomId)] = roomData  // as number
+      }
+      if (sr.name) {
+        staticRooms[sr.name.toLowerCase().trim()] = roomData
+        staticRooms[sr.name.toLowerCase().replace(/[^a-z0-9]/g, '')] = roomData
+      }
+      if (sr.roomName) {
+        staticRooms[sr.roomName.toLowerCase().trim()] = roomData
+        staticRooms[sr.roomName.toLowerCase().replace(/[^a-z0-9]/g, '')] = roomData
+      }
     }
-    console.log(`📦 Static rooms indexed: ${Object.keys(staticRooms).length} keys — IDs: ${Object.keys(staticRooms).slice(0,5).join(', ')}`)
+    console.log(`📦 Static rooms: ${Object.keys(staticRooms).length} keys. Sample IDs: ${Object.keys(staticRooms).filter(k => /^[0-9]+$/.test(k)).slice(0,4).join(', ')}`)
 
     // ── Facilities ────────────────────────────────────────────────────────────
     const allFacilities = (d.hotelFacilities || []).map(f => typeof f === 'string' ? f : f.name).filter(Boolean)
@@ -434,19 +444,22 @@ router.get('/:code', async (req, res) => {
         const mappedId = rt.mappedRoomId || rt.roomId || null
         const roomName = (rate?.name || rt.name || '').toLowerCase().trim()
         const normName = roomName.replace(/[^a-z0-9]/g, '')
-        const staticRoom = (mappedId && staticRooms[mappedId])
+        const staticRoom = (mappedId !== null && staticRooms[mappedId] !== undefined)
           ? staticRooms[mappedId]
+          : (mappedId !== null && staticRooms[String(mappedId)] !== undefined)
+          ? staticRooms[String(mappedId)]
+          : (mappedId !== null && staticRooms[Number(mappedId)] !== undefined)
+          ? staticRooms[Number(mappedId)]
           : (roomName && staticRooms[roomName])
           ? staticRooms[roomName]
           : (normName && staticRooms[normName])
           ? staticRooms[normName]
           : (() => {
-              // Last resort: find best partial name match
               const keys = Object.keys(staticRooms)
-              const match = keys.find(k => k.includes(normName.slice(0,8)) || normName.includes(k.slice(0,8)))
+              const match = keys.find(k => normName.length > 4 && (k.includes(normName.slice(0,6)) || normName.includes(k.replace(/[^a-z0-9]/g,'').slice(0,6))))
               return match ? staticRooms[match] : {}
             })()
-        console.log(`🔗 "${roomName}" mappedId=${mappedId} → size:${staticRoom.sizeM2}, amenities:${staticRoom.amenities?.length||0}, photos:${staticRoom.photos?.length||0}`)
+        console.log(`🔗 "${roomName}" id=${mappedId} → matched:${Object.keys(staticRoom).length > 0} size:${staticRoom.sizeM2||'-'} amenities:${staticRoom.amenities?.length||0} photos:${staticRoom.photos?.length||0}`)
 
         // Room photos: prefer static room photos, fall back to hotel images
         const roomPhotos = staticRoom.photos?.length
