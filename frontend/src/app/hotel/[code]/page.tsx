@@ -317,7 +317,7 @@ function HotelDetailContent() {
       </div>
 
       {/* PAGE BODY */}
-      <div style={{ padding: isMobile ? "0 16px" : "0 40px" }}>
+      <div style={{ padding: isMobile ? "0 16px" : "0 40px", maxWidth: "100%" }}>
 
         {/* BREADCRUMB */}
         <div style={{ padding: "12px 0", fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
@@ -461,7 +461,7 @@ function HotelDetailContent() {
         </div>
 
         {/* ── ROOMS ───────────────────────────────────────────────────────── */}
-        <div style={{ background: "#fff", borderRadius: 14, border: "1.5px solid #e2e8f0", marginBottom: 20 }} ref={refRooms}>
+        <div style={{ background: "#fff", borderRadius: 14, border: "1.5px solid #e2e8f0", marginBottom: 20, width: "100%", overflow: "hidden" }} ref={refRooms}>
 
           {/* Header */}
           <div style={{ padding: "18px 24px", borderBottom: "1.5px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 12 }}>
@@ -496,7 +496,7 @@ function HotelDetailContent() {
               return (
                 <div key={roomName} style={{ borderBottom: groupIdx < allGroups.length - 1 ? "2px solid #e2e8f0" : "none" }}>
                   {/* Grid: left photo col spans all rate rows, right has one row per rate */}
-                  <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gridTemplateRows: `repeat(${n}, auto)` }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "300px minmax(0,1fr)", gridTemplateRows: `repeat(${n}, auto)` }}>
 
                     {/* LEFT — spans all rows */}
                     <div style={{ gridRow: `1 / ${n + 1}`, borderRight: "1px solid #e2e8f0", padding: 16, display: "flex", flexDirection: "column" as const }}>
@@ -593,10 +593,6 @@ function HotelDetailContent() {
                                   Breakfast
                                 </span>
                               )}
-                              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: "#64748b" }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
-                                Taxes included
-                              </span>
                             </div>
                           </div>
 
@@ -611,7 +607,8 @@ function HotelDetailContent() {
                               )}
                               <div className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY }}>{fmtINR(room.pricePerNight)}</div>
                               <div style={{ fontSize: 11, color: "#64748b" }}>per night</div>
-                              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>Total: {fmtINR(room.totalPrice)}</div>
+                              <div style={{ fontSize: 11, color: "#64748b" }}>Total: {fmtINR(room.totalPrice)}</div>
+                              <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 600, marginBottom: 10 }}>✓ Taxes included</div>
                             </div>
                             <button
                               onClick={() => isSel
