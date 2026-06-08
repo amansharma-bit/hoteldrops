@@ -171,6 +171,7 @@ export default function SearchHotelsPage() {
   const [guests, setGuests] = useState<GuestState>({ rooms: 1, adults: 2, children: 0, childAges: [] });
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [selectedHotelId, setSelectedHotelId] = useState<string|null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [activeCity, setActiveCity] = useState("All Hotels");
   const [tickerIdx, setTickerIdx] = useState(0);
@@ -311,6 +312,11 @@ export default function SearchHotelsPage() {
     setSearchError("");
     if (!destination) { setSearchError("Please enter a destination or hotel name"); return; }
     if (!checkIn) { setSearchError("Please select a check-in date"); return; }
+    // If a specific hotel was selected, go directly to hotel detail
+    if (selectedHotelId && checkIn && checkOut) {
+      window.open(`/hotel/${selectedHotelId}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}`, '_blank');
+      return;
+    }
     if (!checkOut) { setSearchError("Please select a check-out date"); return; }
     requireAuth(() => {
       const params = new URLSearchParams({ destination, checkIn, checkOut, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), ...(guests.childAges.length > 0 ? { childAges: guests.childAges.join(",") } : {}) });
@@ -383,15 +389,19 @@ export default function SearchHotelsPage() {
         {filteredSuggestions.map((d, i) => (
           <div key={i} className="sugg-item" onMouseDown={() => {
               if (d.type === 'hotel' && (d as any).hotelId) {
-                // Direct hotel — go straight to hotel detail page
-                // Use today+7 as default dates if none selected
-                const ci = checkIn || new Date(Date.now() + 86400000).toISOString().split('T')[0];
-                const co = checkOut || new Date(Date.now() + 2*86400000).toISOString().split('T')[0];
-                window.open(`/hotel/${(d as any).hotelId}?checkIn=${ci}&checkOut=${co}&adults=2`, '_blank');
+                setDestination(d.name);
+                setSelectedHotelId((d as any).hotelId);
               } else {
                 setDestination(`${d.name}, ${d.subtext}`);
+                setSelectedHotelId(null);
               }
-              setSearchResults([]); setShowSuggestions(false);
+              setSearchResults([]);
+              setShowSuggestions(false);
+              // Auto-open check-in calendar
+              setTimeout(() => {
+                setCalMode("checkin");
+                setCalOpen(true);
+              }, 100);
             }}
             style={{ padding: "11px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontSize: 14, color: NAVY, borderBottom: i < filteredSuggestions.length - 1 ? "1px solid #f8fafc" : "none" }}>
             <span style={{ fontSize: 22, flexShrink: 0 }}>{d.flag || (d.type === 'hotel' ? '🏨' : '🌍')}</span>
