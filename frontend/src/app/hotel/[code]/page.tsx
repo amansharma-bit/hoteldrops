@@ -65,6 +65,7 @@ function HotelDetailContent() {
   const [lightboxIdx, setLightboxIdx] = useState(0);
   const [reviewFilter, setReviewFilter] = useState("all");
   const [showFullDesc, setShowFullDesc] = useState(false);
+  const [expandedAmenities, setExpandedAmenities] = useState<string|null>(null);
   const [roomFilter, setRoomFilter] = useState<string|null>(null);
   const [similarHotels, setSimilarHotels] = useState<any[]>([]);
   const [editCheckIn, setEditCheckIn] = useState(checkIn);
@@ -270,7 +271,7 @@ function HotelDetailContent() {
             )}
           </div>
           <button onClick={() => router.push(`/search?destination=${encodeURIComponent(hotel.city)}&checkIn=${editCheckIn}&checkOut=${editCheckOut}&adults=${editAdults}&rooms=${editRooms}`)}
-            style={{ background: "#fff", color: NAVY, border: "none", borderLeft: "1px solid #e2e8f0", padding: "0 28px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Sora',sans-serif", borderRadius: "0 12px 12px 0" }}>
+            style={{ background: "#FCD34D", color: NAVY, border: "none", borderLeft: "1px solid #e2e8f0", padding: "0 28px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Sora',sans-serif", borderRadius: "0 12px 12px 0" }}>
             Search
           </button>
         </div>
@@ -499,7 +500,7 @@ function HotelDetailContent() {
 
                     {/* LEFT — spans all rate rows */}
                     <div style={{ gridRow: `1 / ${n + 1}`, paddingRight: 24, paddingTop: 20, paddingBottom: 20, borderRight: "1px solid #e2e8f0" }}>
-                      {/* Photo */}
+                      {/* Photo with arrows */}
                       <div style={{ position: "relative", height: 240, borderRadius: 10, overflow: "hidden", marginBottom: 14 }}>
                         <img
                           src={photos[pIdx] || hotel.images?.[0]?.url}
@@ -508,11 +509,26 @@ function HotelDetailContent() {
                           onError={(e) => { (e.target as HTMLImageElement).src = hotel.images?.[0]?.url || ""; }}
                         />
                         {photos.length > 1 && (
-                          <div onClick={() => setRoomPhotoIdx((p: any) => ({ ...p, [roomName]: (pIdx + 1) % photos.length }))}
-                            style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 16, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                            {pIdx + 1}/{photos.length}
-                          </div>
+                          <>
+                            <button onClick={(e) => { e.stopPropagation(); setRoomPhotoIdx((p: any) => ({ ...p, [roomName]: (pIdx - 1 + photos.length) % photos.length })); }}
+                              style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, borderRadius: "50%", background: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setRoomPhotoIdx((p: any) => ({ ...p, [roomName]: (pIdx + 1) % photos.length })); }}
+                              style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, borderRadius: "50%", background: "#fff", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                            </button>
+                            <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 16, display: "flex", alignItems: "center", gap: 4 }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                              {pIdx + 1}/{photos.length}
+                            </div>
+                            <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
+                              {photos.slice(0, 5).map((_: any, i: number) => (
+                                <div key={i} onClick={() => setRoomPhotoIdx((p: any) => ({ ...p, [roomName]: i }))}
+                                  style={{ width: i === pIdx ? 16 : 6, height: 6, borderRadius: 3, background: i === pIdx ? "#fff" : "rgba(255,255,255,0.5)", cursor: "pointer", transition: "width 0.2s" }} />
+                              ))}
+                            </div>
+                          </>
                         )}
                       </div>
 
@@ -544,7 +560,24 @@ function HotelDetailContent() {
                           </div>
                         </div>
                       )}
-                      <button onClick={() => goTo("facilities")} style={{ fontSize: 13, color: B, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, marginTop: 8 }}>View Details</button>
+                      <button
+                        onClick={() => setExpandedAmenities(expandedAmenities === roomName ? null : roomName)}
+                        style={{ fontSize: 13, color: B, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, marginTop: 8 }}>
+                        {expandedAmenities === roomName ? "Hide amenities ↑" : "View Details ↓"}
+                      </button>
+                      {expandedAmenities === roomName && first.amenities?.length > 0 && (
+                        <div style={{ marginTop: 10, padding: 12, background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 8 }}>All Room Amenities</div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px" }}>
+                            {first.amenities.map((a: string) => (
+                              <div key={a} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#374151" }}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                {a}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* RIGHT — one row per rate */}
@@ -557,7 +590,7 @@ function HotelDetailContent() {
                         : "Room Only";
 
                       return (
-                        <div key={room.offerId} style={{ display: "grid", gridTemplateColumns: "1fr 220px", borderBottom: rIdx < filteredRates.length - 1 ? "1px solid #f1f5f9" : "none", background: isSel ? "#f0f7ff" : "#fff" }}>
+                        <div key={room.offerId} style={{ display: "grid", gridTemplateColumns: "1fr 220px", borderBottom: rIdx < filteredRates.length - 1 ? "1px solid #f1f5f9" : "none", background: "#fff" }}>
                           {/* Options */}
                           <div style={{ padding: "20px 20px", borderRight: "1px solid #f1f5f9" }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 10 }}>{rateLabel}</div>
