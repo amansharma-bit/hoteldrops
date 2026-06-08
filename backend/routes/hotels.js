@@ -58,6 +58,135 @@ const COUNTRY_NAMES = {
   JO:'Jordan', MU:'Mauritius', RU:'Russia',
 }
 
+
+// ── City name → flag + country (fallback when liteAPI doesn't return countryCode) ──
+const CITY_LOOKUP = {
+  'dubai': { flag: '🇦🇪', country: 'United Arab Emirates' },
+  'abu dhabi': { flag: '🇦🇪', country: 'United Arab Emirates' },
+  'sharjah': { flag: '🇦🇪', country: 'United Arab Emirates' },
+  'ajman': { flag: '🇦🇪', country: 'United Arab Emirates' },
+  'mumbai': { flag: '🇮🇳', country: 'India' },
+  'new delhi': { flag: '🇮🇳', country: 'India' },
+  'delhi': { flag: '🇮🇳', country: 'India' },
+  'goa': { flag: '🇮🇳', country: 'India' },
+  'bangalore': { flag: '🇮🇳', country: 'India' },
+  'bengaluru': { flag: '🇮🇳', country: 'India' },
+  'jaipur': { flag: '🇮🇳', country: 'India' },
+  'hyderabad': { flag: '🇮🇳', country: 'India' },
+  'chennai': { flag: '🇮🇳', country: 'India' },
+  'kolkata': { flag: '🇮🇳', country: 'India' },
+  'agra': { flag: '🇮🇳', country: 'India' },
+  'kochi': { flag: '🇮🇳', country: 'India' },
+  'pune': { flag: '🇮🇳', country: 'India' },
+  'ahmedabad': { flag: '🇮🇳', country: 'India' },
+  'amritsar': { flag: '🇮🇳', country: 'India' },
+  'udaipur': { flag: '🇮🇳', country: 'India' },
+  'varanasi': { flag: '🇮🇳', country: 'India' },
+  'shimla': { flag: '🇮🇳', country: 'India' },
+  'manali': { flag: '🇮🇳', country: 'India' },
+  'singapore': { flag: '🇸🇬', country: 'Singapore' },
+  'bangkok': { flag: '🇹🇭', country: 'Thailand' },
+  'phuket': { flag: '🇹🇭', country: 'Thailand' },
+  'chiang mai': { flag: '🇹🇭', country: 'Thailand' },
+  'pattaya': { flag: '🇹🇭', country: 'Thailand' },
+  'bali': { flag: '🇮🇩', country: 'Indonesia' },
+  'jakarta': { flag: '🇮🇩', country: 'Indonesia' },
+  'lombok': { flag: '🇮🇩', country: 'Indonesia' },
+  'kuala lumpur': { flag: '🇲🇾', country: 'Malaysia' },
+  'penang': { flag: '🇲🇾', country: 'Malaysia' },
+  'london': { flag: '🇬🇧', country: 'United Kingdom' },
+  'manchester': { flag: '🇬🇧', country: 'United Kingdom' },
+  'edinburgh': { flag: '🇬🇧', country: 'United Kingdom' },
+  'paris': { flag: '🇫🇷', country: 'France' },
+  'nice': { flag: '🇫🇷', country: 'France' },
+  'lyon': { flag: '🇫🇷', country: 'France' },
+  'rome': { flag: '🇮🇹', country: 'Italy' },
+  'milan': { flag: '🇮🇹', country: 'Italy' },
+  'venice': { flag: '🇮🇹', country: 'Italy' },
+  'florence': { flag: '🇮🇹', country: 'Italy' },
+  'barcelona': { flag: '🇪🇸', country: 'Spain' },
+  'madrid': { flag: '🇪🇸', country: 'Spain' },
+  'seville': { flag: '🇪🇸', country: 'Spain' },
+  'amsterdam': { flag: '🇳🇱', country: 'Netherlands' },
+  'istanbul': { flag: '🇹🇷', country: 'Turkey' },
+  'ankara': { flag: '🇹🇷', country: 'Turkey' },
+  'tokyo': { flag: '🇯🇵', country: 'Japan' },
+  'osaka': { flag: '🇯🇵', country: 'Japan' },
+  'kyoto': { flag: '🇯🇵', country: 'Japan' },
+  'hong kong': { flag: '🇭🇰', country: 'Hong Kong' },
+  'seoul': { flag: '🇰🇷', country: 'South Korea' },
+  'busan': { flag: '🇰🇷', country: 'South Korea' },
+  'sydney': { flag: '🇦🇺', country: 'Australia' },
+  'melbourne': { flag: '🇦🇺', country: 'Australia' },
+  'doha': { flag: '🇶🇦', country: 'Qatar' },
+  'muscat': { flag: '🇴🇲', country: 'Oman' },
+  'riyadh': { flag: '🇸🇦', country: 'Saudi Arabia' },
+  'jeddah': { flag: '🇸🇦', country: 'Saudi Arabia' },
+  'maldives': { flag: '🇲🇻', country: 'Maldives' },
+  'male': { flag: '🇲🇻', country: 'Maldives' },
+  'cairo': { flag: '🇪🇬', country: 'Egypt' },
+  'new york': { flag: '🇺🇸', country: 'United States' },
+  'los angeles': { flag: '🇺🇸', country: 'United States' },
+  'miami': { flag: '🇺🇸', country: 'United States' },
+  'las vegas': { flag: '🇺🇸', country: 'United States' },
+  'berlin': { flag: '🇩🇪', country: 'Germany' },
+  'munich': { flag: '🇩🇪', country: 'Germany' },
+  'frankfurt': { flag: '🇩🇪', country: 'Germany' },
+  'vienna': { flag: '🇦🇹', country: 'Austria' },
+  'zurich': { flag: '🇨🇭', country: 'Switzerland' },
+  'geneva': { flag: '🇨🇭', country: 'Switzerland' },
+  'lisbon': { flag: '🇵🇹', country: 'Portugal' },
+  'porto': { flag: '🇵🇹', country: 'Portugal' },
+  'athens': { flag: '🇬🇷', country: 'Greece' },
+  'santorini': { flag: '🇬🇷', country: 'Greece' },
+  'mykonos': { flag: '🇬🇷', country: 'Greece' },
+  'prague': { flag: '🇨🇿', country: 'Czech Republic' },
+  'stockholm': { flag: '🇸🇪', country: 'Sweden' },
+  'oslo': { flag: '🇳🇴', country: 'Norway' },
+  'copenhagen': { flag: '🇩🇰', country: 'Denmark' },
+  'helsinki': { flag: '🇫🇮', country: 'Finland' },
+  'brussels': { flag: '🇧🇪', country: 'Belgium' },
+  'toronto': { flag: '🇨🇦', country: 'Canada' },
+  'vancouver': { flag: '🇨🇦', country: 'Canada' },
+  'auckland': { flag: '🇳🇿', country: 'New Zealand' },
+  'colombo': { flag: '🇱🇰', country: 'Sri Lanka' },
+  'kathmandu': { flag: '🇳🇵', country: 'Nepal' },
+  'mexico city': { flag: '🇲🇽', country: 'Mexico' },
+  'rio de janeiro': { flag: '🇧🇷', country: 'Brazil' },
+  'nairobi': { flag: '🇰🇪', country: 'Kenya' },
+  'manama': { flag: '🇧🇭', country: 'Bahrain' },
+  'kuwait city': { flag: '🇰🇼', country: 'Kuwait' },
+  'amman': { flag: '🇯🇴', country: 'Jordan' },
+  'mauritius': { flag: '🇲🇺', country: 'Mauritius' },
+  'hanoi': { flag: '🇻🇳', country: 'Vietnam' },
+  'ho chi minh': { flag: '🇻🇳', country: 'Vietnam' },
+  'manila': { flag: '🇵🇭', country: 'Philippines' },
+  'beijing': { flag: '🇨🇳', country: 'China' },
+  'shanghai': { flag: '🇨🇳', country: 'China' },
+  'marrakech': { flag: '🇲🇦', country: 'Morocco' },
+  'dubai marina': { flag: '🇦🇪', country: 'United Arab Emirates' },
+  'dubai mall': { flag: '🇦🇪', country: 'United Arab Emirates' },
+  'downtown dubai': { flag: '🇦🇪', country: 'United Arab Emirates' },
+  'palm jumeirah': { flag: '🇦🇪', country: 'United Arab Emirates' },
+  'deira': { flag: '🇦🇪', country: 'United Arab Emirates' },
+  'dubai hills': { flag: '🇦🇪', country: 'United Arab Emirates' },
+  'dubai silicon oasis': { flag: '🇦🇪', country: 'United Arab Emirates' },
+  'jumeirah': { flag: '🇦🇪', country: 'United Arab Emirates' },
+}
+
+function getCityInfo(name) {
+  if (!name) return null
+  const lower = name.toLowerCase().trim()
+  // Exact match first
+  if (CITY_LOOKUP[lower]) return CITY_LOOKUP[lower]
+  // Check if name contains a known city key
+  const keys = Object.keys(CITY_LOOKUP).sort((a, b) => b.length - a.length)
+  for (const key of keys) {
+    if (lower.includes(key)) return CITY_LOOKUP[key]
+  }
+  return null
+}
+
 const HOTEL_CITIES = [
   { city: 'Dubai', country: 'AE' }, { city: 'Mumbai', country: 'IN' },
   { city: 'New Delhi', country: 'IN' }, { city: 'Goa', country: 'IN' },
@@ -206,11 +335,14 @@ router.get('/suggest', async (req, res) => {
     if (resp.status === 200 && resp.data?.data) {
       cities = resp.data.data.slice(0, 6).map(place => {
         const countryCode = place.countryCode || place.country_code || ''
-        const countryName = place.countryName || place.country || COUNTRY_NAMES[countryCode] || ''
-        const flag = COUNTRY_FLAGS[countryCode] || ''
+        const placeName = place.name || place.displayName || q
+        // Use countryCode first, fall back to city name lookup
+        const cityInfo = getCityInfo(placeName)
+        const countryName = place.countryName || place.country || COUNTRY_NAMES[countryCode] || cityInfo?.country || ''
+        const flag = COUNTRY_FLAGS[countryCode] || cityInfo?.flag || '🌍'
         return {
           type: 'city',
-          name: place.name || place.displayName || q,
+          name: placeName,
           countryName,
           countryCode,
           flag,
