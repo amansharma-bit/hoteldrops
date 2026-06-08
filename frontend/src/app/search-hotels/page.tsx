@@ -170,7 +170,7 @@ export default function SearchHotelsPage() {
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState<GuestState>({ rooms: 1, adults: 2, children: 0, childAges: [] });
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [searchResults, setSearchResults] = useState<{type:string;name:string;subtext:string;flag:string;hotelId?:string;city?:string;countryCode?:string}[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [activeCity, setActiveCity] = useState("All Hotels");
   const [tickerIdx, setTickerIdx] = useState(0);
@@ -189,7 +189,7 @@ export default function SearchHotelsPage() {
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
   // Combined search — cities + hotels
-  const localSuggestions = destination.length > 0
+  const localSuggestions: any[] = destination.length > 0
     ? DESTINATIONS.filter(d =>
         `${d.city}`.toLowerCase().includes(destination.toLowerCase()) ||
         `${d.country}`.toLowerCase().includes(destination.toLowerCase())
@@ -373,12 +373,12 @@ export default function SearchHotelsPage() {
       <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 9999, maxHeight: 280, overflowY: "auto" as const, marginTop: 4, ...style }}>
         {filteredSuggestions.map((d, i) => (
           <div key={i} className="sugg-item" onMouseDown={() => {
-              if (d.type === 'hotel' && d.hotelId) {
+              if (d.type === 'hotel' && (d as any).hotelId) {
                 // Direct hotel — go straight to hotel detail page
                 // Use today+7 as default dates if none selected
                 const ci = checkIn || new Date(Date.now() + 86400000).toISOString().split('T')[0];
                 const co = checkOut || new Date(Date.now() + 2*86400000).toISOString().split('T')[0];
-                window.open(`/hotel/${d.hotelId}?checkIn=${ci}&checkOut=${co}&adults=2`, '_blank');
+                window.open(`/hotel/${(d as any).hotelId}?checkIn=${ci}&checkOut=${co}&adults=2`, '_blank');
               } else {
                 setDestination(`${d.name}, ${d.subtext}`);
               }
