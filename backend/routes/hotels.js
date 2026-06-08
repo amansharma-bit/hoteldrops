@@ -46,8 +46,22 @@ const COUNTRY_FLAGS = {
   MU:'🇲🇺', RU:'🇷🇺',
 }
 
+// ── Country code → full name lookup ──────────────────────────────────────────
+const COUNTRY_NAMES = {
+  AE: 'United Arab Emirates', IN: 'India', SG: 'Singapore', TH: 'Thailand',
+  ID: 'Indonesia', MY: 'Malaysia', GB: 'United Kingdom', FR: 'France',
+  IT: 'Italy', ES: 'Spain', NL: 'Netherlands', TR: 'Turkey', MV: 'Maldives',
+  ZA: 'South Africa', US: 'United States', JP: 'Japan', HK: 'Hong Kong',
+  KR: 'South Korea', AU: 'Australia', QA: 'Qatar', OM: 'Oman', SA: 'Saudi Arabia',
+  VN: 'Vietnam', PH: 'Philippines', CN: 'China', EG: 'Egypt', MA: 'Morocco',
+  DE: 'Germany', AT: 'Austria', CH: 'Switzerland', PT: 'Portugal', GR: 'Greece',
+  CZ: 'Czech Republic', SE: 'Sweden', NO: 'Norway', DK: 'Denmark', FI: 'Finland',
+  BE: 'Belgium', CA: 'Canada', NZ: 'New Zealand', LK: 'Sri Lanka', NP: 'Nepal',
+  MX: 'Mexico', BR: 'Brazil', KE: 'Kenya', BH: 'Bahrain', KW: 'Kuwait',
+  JO: 'Jordan', MU: 'Mauritius', RU: 'Russia',
+}
+
 // ── Top cities hotel cache — pre-fetched at startup ───────────────────────────
-// Only used for hotel name search in /suggest
 const HOTEL_CITIES = [
   { city: 'Dubai', country: 'AE' },
   { city: 'Mumbai', country: 'IN' },
@@ -72,7 +86,6 @@ const HOTEL_CITIES = [
   { city: 'Barcelona', country: 'ES' },
 ]
 
-// HOTEL_CACHE: { name, city, country, hotelId, flag }
 let HOTEL_CACHE = []
 
 async function buildHotelIndex() {
@@ -216,35 +229,39 @@ function getPlaceType(place) {
 }
 
 // ── GET /api/hotels/suggest?q= ────────────────────────────────────────────────
-// Calls liteAPI /data/places for city autocomplete (returns placeId)
-// Searches HOTEL_CACHE for hotel name autocomplete (returns hotelId)
 router.get('/suggest', async (req, res) => {
   const { q } = req.query
   if (!q || q.length < 2) return res.json({ cities: [], hotels: [] })
 
   const query = q.toLowerCase().trim()
 
-  // 1. City suggestions — call liteAPI /data/places (Google Places backed, returns placeId)
+  // 1. City suggestions — call liteAPI /data/places
   let cities = []
   try {
     const resp = await axios.get(`${BASE_URL}/data/places?textQuery=${encodeURIComponent(q)}`, {
       headers: getHeaders(), timeout: 5000, validateStatus: () => true,
     })
     if (resp.status === 200 && resp.data?.data) {
-      cities = resp.data.data.slice(0, 5).map(place => ({
-        type: 'city',
-        name: place.name || place.displayName || q,
-        subtext: place.countryName || place.country || '',
-        placeId: place.placeId || place.place_id,
-        countryCode: place.countryCode || '',
-        placeType: getPlaceType(place), // city | airport | station | area | hotel
-      })).filter(c => c.placeId)
+      cities = resp.data.data.slice(0, 5).map(place => {
+        const countryCode = place.countryCode || place.country_code || ''
+        // Build subtext: use countryName from API, fallback to our COUNTRY_NAMES map using countryCode
+        const countryName = place.countryName || place.country || COUNTRY_NAMES[countryCode] || countryCode || ''
+        return {
+          type: 'city',
+          name: place.name || place.displayName || q,
+          subtext: countryName,
+          placeId: place.placeId || place.place_id,
+          countryCode,
+          flag: COUNTRY_FLAGS[countryCode] || '🌍',
+          placeType: getPlaceType(place),
+        }
+      }).filter(c => c.placeId)
     }
   } catch (e) {
     console.warn(`⚠️ /data/places error: ${e.message}`)
   }
 
-  // 2. Hotel suggestions — search HOTEL_CACHE by name (returns hotelId)
+  // 2. Hotel suggestions — search HOTEL_CACHE by name
   const hotels = HOTEL_CACHE
     .filter(h => h.name.toLowerCase().includes(query))
     .sort((a, b) => {
@@ -258,7 +275,7 @@ router.get('/suggest', async (req, res) => {
     .map(h => ({
       type: 'hotel',
       name: h.name,
-      subtext: `${h.city}, ${h.country}`,
+      subtext: `${h.city}, ${COUNTRY_NAMES[h.countryCode] || h.country}`,
       placeType: 'hotel',
       hotelId: h.hotelId,
     }))
@@ -268,14 +285,13 @@ router.get('/suggest', async (req, res) => {
 })
 
 // ── GET /api/hotels/search ────────────────────────────────────────────────────
-// Accepts either: placeId (city search) OR hotelId (direct hotel search)
 router.get('/search', async (req, res) => {
   try {
     const {
       destination, checkIn, checkOut,
       adults = '2', children = '0', rooms = '1',
-      placeId,    // city placeId from /suggest
-      hotelId,    // specific hotel ID from /suggest
+      placeId,
+      hotelId,
     } = req.query
 
     if (!checkIn || !checkOut) {
@@ -289,7 +305,6 @@ router.get('/search', async (req, res) => {
       return res.json({ hotels: { hotels: hit, total: hit.length, checkIn, checkOut } })
     }
 
-    // Build liteAPI request body
     const body = {
       checkin: checkIn,
       checkout: checkOut,
@@ -303,17 +318,13 @@ router.get('/search', async (req, res) => {
     }
 
     if (hotelId) {
-      // Direct hotel search — user selected a specific hotel
       body.hotelIds = [hotelId]
       body.limit = 1
       console.log(`🏨 Hotel search: hotelId=${hotelId}`)
     } else if (placeId) {
-      // City search using placeId — most reliable method
       body.placeId = placeId
       console.log(`🌍 City search: placeId=${placeId}`)
     } else if (destination) {
-      // Fallback: if no placeId/hotelId, this will likely fail for non-mapped cities
-      // but keeping as last resort
       console.warn(`⚠️ No placeId or hotelId — using raw destination: ${destination}`)
       return res.status(400).json({ error: 'Please select a destination from the dropdown' })
     } else {
