@@ -20,7 +20,7 @@ function useIsMobile() {
 }
 
 const fmtINR = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
-const fmtDate = (s: string) => { try { return new Date(s + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }); } catch { return s; } };
+const fmtDate = (s: string) => { try { if (!s) return ''; const d = new Date(s); if (isNaN(d.getTime())) return ''; return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return ''; } };
 
 const FAC_PATHS: Record<string, string> = {
   "Swimming Pool": "M3 12h18M3 8c0 0 3-4 9-4s9 4 9 4M3 16c0 0 3 4 9 4s9-4 9-4",
@@ -64,6 +64,7 @@ function HotelDetailContent() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState(0);
   const [reviewFilter, setReviewFilter] = useState("all");
+  const [roomFilter, setRoomFilter] = useState<string|null>(null);
   const [similarHotels, setSimilarHotels] = useState<any[]>([]);
   const [editCheckIn, setEditCheckIn] = useState(checkIn);
   const [editCheckOut, setEditCheckOut] = useState(checkOut);
@@ -324,6 +325,13 @@ function HotelDetailContent() {
           <strong style={{ color: NAVY, fontWeight: 500 }}>{hotel.name}</strong>
         </div>
 
+        {/* TABS */}
+        <div style={{ background: "#fff", borderBottom: "2px solid #e2e8f0", display: "flex", overflow: "auto", marginBottom: 20, position: "sticky", top: topOffset + (refSearchBar.current?.offsetHeight || 80), zIndex: 200, borderRadius: 0 }}>
+          {[["overview","Overview"],["rooms","Rooms"],["location","Location"],["reviews","Reviews"],["facilities","Facilities"],["policies","Policies"]].map(([id, label]) => (
+            <button key={id} className={"tab-btn" + (activeTab === id ? " active" : "")} onClick={() => goTo(id)}>{label}</button>
+          ))}
+        </div>
+
         {/* HOTEL NAME */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, marginBottom: 6 }}>
@@ -375,7 +383,7 @@ function HotelDetailContent() {
                   <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#16a34a", fontWeight: 600 }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                     Free Cancellation
-                    {hotel.cheapestRoom?.freeCancelUntil && <span style={{ fontWeight: 400, color: "#64748b", fontSize: 12 }}>until {fmtDate(hotel.cheapestRoom.freeCancelUntil)}</span>}
+                    {hotel.cheapestRoom?.freeCancelUntil && fmtDate(hotel.cheapestRoom.freeCancelUntil) && <span style={{ fontWeight: 400, color: "#64748b", fontSize: 12 }}>until {fmtDate(hotel.cheapestRoom.freeCancelUntil)}</span>}
                   </div>
                 )}
                 {hotel.cheapestRoom?.hasBreakfast && (
@@ -435,12 +443,7 @@ function HotelDetailContent() {
           </div>
         </div>
 
-        {/* TABS */}
-        <div style={{ background: "#fff", borderBottom: "2px solid #e2e8f0", display: "flex", overflow: "auto", marginBottom: 20, position: "sticky", top: topOffset + (refSearchBar.current?.offsetHeight || 80), zIndex: 200 }}>
-          {[["overview","Overview"],["rooms","Rooms"],["location","Location"],["reviews","Reviews"],["facilities","Facilities"],["policies","Policies"]].map(([id, label]) => (
-            <button key={id} className={"tab-btn" + (activeTab === id ? " active" : "")} onClick={() => goTo(id)}>{label}</button>
-          ))}
-        </div>
+
 
         {/* ── OVERVIEW ─────────────────────────────────────────────────────── */}
         <div className="card" ref={refOverview}>
@@ -484,7 +487,7 @@ function HotelDetailContent() {
             </div>
           )}
 
-          {hotel.rooms.map((room: any, idx: number) => {
+          {hotel.rooms.filter((room: any) => !roomFilter || (roomFilter === "free" ? room.isRefundable : room.hasBreakfast)).map((room: any, idx: number) => {
             const isSel = selectedOffer === room.offerId;
             const pIdx = roomPhotoIdx[room.offerId] || 0;
             const photos = room.photos?.length ? room.photos : [hotel.images?.[0]?.url].filter(Boolean);
@@ -544,7 +547,7 @@ function HotelDetailContent() {
                       <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#16a34a", fontWeight: 600 }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="20 6 9 17 4 12"/></svg>
                         Free Cancellation
-                        {room.freeCancelUntil && <span style={{ fontWeight: 400, color: "#64748b", fontSize: 12 }}>until {fmtDate(room.freeCancelUntil)}</span>}
+                        {room.freeCancelUntil && fmtDate(room.freeCancelUntil) && <span style={{ fontWeight: 400, color: "#64748b", fontSize: 12 }}>until {fmtDate(room.freeCancelUntil)}</span>}
                       </div>
                     )}
                     {!room.isRefundable && (
@@ -713,7 +716,7 @@ function HotelDetailContent() {
               { code: "lp2", name: "Jumeirah Al Qasr", city: "Dubai, UAE", imageUrl: "/jumeirahalqasr.jpg", rebuqPriceINR: 31800, rating: "9.2" },
               { code: "lp3", name: "Address Downtown", city: "Dubai, UAE", imageUrl: "/addressdowntown.jpg", rebuqPriceINR: 37400, rating: "9.0" },
             ]).map((h: any, i: number) => (
-              <div key={i} className="sim-card" onClick={() => router.push(`/hotel/${h.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`)}>
+              <div key={i} className="sim-card" onClick={() => window.open(`/hotel/${h.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`, "_blank")}>
                 <div style={{ height: 170, overflow: "hidden" }}>
                   <img src={h.imageUrl || h.images?.[0]?.url} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </div>
