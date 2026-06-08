@@ -207,9 +207,7 @@ export default function SearchHotelsPage() {
         setSuggestions({
           cities: data.cities || [],
           hotels: data.hotels || [],
-          areas: data.areas || [],
-          landmarks: data.landmarks || [],
-          airport: data.airport || null,
+          areas: [], landmarks: [], airport: null,
         });
       } catch { setSuggestions(defaultSuggestions); }
     }, 300);
@@ -440,65 +438,34 @@ export default function SearchHotelsPage() {
   );
 
   const SuggestionDropdown = ({ style }: { style?: React.CSSProperties }) => {
-    if (!showSuggestions || !hasSuggestions) return null;
-    const primaryCity = suggestions.cities[0];
+    if (!showSuggestions || (!suggestions.cities.length && !suggestions.hotels.length)) return null;
     return (
-      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.13)", zIndex: 9999, maxHeight: 420, overflowY: "auto", marginTop: 4, ...style }}>
-
-        {/* Primary city */}
-        {primaryCity && (
-          <Row
-            icon={<IconCity />}
-            name={`${primaryCity.flag || ''} ${primaryCity.name}`}
-            subtext={primaryCity.subtext ? `City · ${primaryCity.subtext}` : 'City'}
-            onClick={() => handleSelect(primaryCity, 'city')}
-            isCity
-          />
-        )}
-
-        {/* Areas */}
-        {suggestions.areas.length > 0 && (
-          <>
-            <SectionLabel label="Popular areas" />
-            {suggestions.areas.map((a: any, i: number) => (
-              <Row key={i} icon={<IconPin />} name={a.name} subtext={`Area · ${primaryCity?.name || ''}`} onClick={() => handleSelect(a, 'area')} />
-            ))}
-          </>
-        )}
-
-        {/* Landmarks */}
-        {suggestions.landmarks.length > 0 && (
-          <>
-            <SectionLabel label="Landmarks" />
-            {suggestions.landmarks.map((l: any, i: number) => (
-              <Row key={i} icon={<IconStar />} name={l.name} subtext={`Landmark · ${primaryCity?.name || ''}`} onClick={() => handleSelect(l, 'landmark')} />
-            ))}
-          </>
-        )}
-
-        {/* Airport */}
-        {suggestions.airport && (
-          <>
-            <SectionLabel label="Airport" />
-            <Row icon={<IconPlane />} name={suggestions.airport.name} subtext={`Airport · ${primaryCity?.name || ''}`} onClick={() => handleSelect(suggestions.airport, 'airport')} />
-          </>
-        )}
-
-        {/* Hotels */}
+      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.13)", zIndex: 9999, maxHeight: 380, overflowY: "auto", marginTop: 4, ...style }}>
+        {suggestions.cities.map((c: any, i: number) => (
+          <div key={i} onMouseDown={() => handleSelect(c, 'city')}
+            style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
+            onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>{c.flag || "🌍"}</span>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{c.name}</div>
+              <div style={{ fontSize: 12, color: "#94a3b8" }}>{c.countryName || ""}</div>
+            </div>
+          </div>
+        ))}
         {suggestions.hotels.length > 0 && (
           <>
-            <SectionLabel label="Hotels" />
+            <div style={{ padding: "5px 16px 3px", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", borderTop: "1px solid #f1f5f9", background: "#f8fafc" }}>Hotels</div>
             {suggestions.hotels.map((h: any, i: number) => (
               <div key={i} onMouseDown={() => handleSelect(h, 'hotel')}
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 14px", cursor: "pointer", borderBottom: "0.5px solid #f8fafc" }}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                <div style={{ color: "#64748b", flexShrink: 0 }}><IconHotel /></div>
+                <span style={{ fontSize: 18, flexShrink: 0 }}>{h.flag || "🏨"}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: NAVY, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.name}</div>
-                  <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 1 }}>{h.subtext}</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: NAVY, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" }}>{h.name}</div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>{h.city}{h.countryName ? `, ${h.countryName}` : ""}</div>
                 </div>
-                <span style={{ fontSize: 11, background: "#eff6ff", color: B, padding: "2px 8px", borderRadius: 20, fontWeight: 600, flexShrink: 0 }}>Hotel</span>
               </div>
             ))}
           </>
