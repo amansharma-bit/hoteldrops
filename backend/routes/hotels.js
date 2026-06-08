@@ -361,7 +361,7 @@ router.get('/cities', async (req, res) => {
 
     if (resp.status !== 200 || !resp.data?.data) return res.json({ cities: [] })
 
-    const COUNTRY_FLAGS: Record<string,string> = {
+    const COUNTRY_FLAGS = {
       AE:'🇦🇪', IN:'🇮🇳', SG:'🇸🇬', TH:'🇹🇭', ID:'🇮🇩', MY:'🇲🇾', GB:'🇬🇧',
       FR:'🇫🇷', IT:'🇮🇹', ES:'🇪🇸', NL:'🇳🇱', TR:'🇹🇷', MV:'🇲🇻', ZA:'🇿🇦',
       US:'🇺🇸', JP:'🇯🇵', HK:'🇭🇰', KR:'🇰🇷', AU:'🇦🇺', QA:'🇶🇦', OM:'🇴🇲',
