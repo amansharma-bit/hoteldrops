@@ -29,9 +29,11 @@ function formatDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 }
+
 function toDateStr(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
+
 function getDaysInMonth(y: number, m: number): number { return new Date(y, m + 1, 0).getDate(); }
 function getFirstDow(y: number, m: number): number { return new Date(y, m, 1).getDay(); }
 
@@ -65,8 +67,6 @@ const DESTINATIONS = [
   { flag: "🇮🇳", city: "Mumbai", country: "India", img: "/mumbai.jpg" },
 ];
 
-// Static hotel cards — each has a searchName for display + hotelId for direct search
-// hotelId will be resolved via /suggest at click time if not known
 const HOTELS_BY_CITY: Record<string, Array<{
   name: string; loc: string; city: string; stars: number; rating: string;
   tags: string[]; was: string; now: string; save: string;
@@ -136,6 +136,7 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
 };
 
 const CITY_FILTERS = ["All Hotels", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai"];
+
 const STATS = [
   { id: 0, target: 4200, prefix: "", suffix: "+", label: "Member deals live right now" },
   { id: 1, target: 18, prefix: "₹", suffix: "Cr", label: "Saved for members" },
@@ -145,13 +146,36 @@ const STATS = [
 
 interface GuestState { rooms: number; adults: number; children: number; childAges: number[]; }
 
-// What we store when user selects from autocomplete
 interface Selection {
-  label: string;        // display text in input
+  label: string;
   type: 'city' | 'hotel';
-  placeId?: string;     // for cities
-  hotelId?: string;     // for hotels
+  placeId?: string;
+  hotelId?: string;
 }
+
+// ── SVG icons per place type ──────────────────────────────────────────────────
+const PLACE_CFG: Record<string, { bg: string; color: string; label: string; svg: React.ReactNode }> = {
+  city: {
+    bg: "#E6F1FB", color: "#185FA5", label: "City",
+    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#185FA5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="9" width="5" height="12"/><rect x="9" y="5" width="6" height="16"/><rect x="16" y="11" width="5" height="10"/><line x1="1" y1="21" x2="23" y2="21"/></svg>
+  },
+  airport: {
+    bg: "#E1F5EE", color: "#0F6E56", label: "Airport",
+    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
+  },
+  station: {
+    bg: "#FAEEDA", color: "#854F0B", label: "Station",
+    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="13" rx="2"/><path d="M4 11h16"/><path d="M8 16l-2 4"/><path d="M16 16l2 4"/><circle cx="9" cy="7.5" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>
+  },
+  hotel: {
+    bg: "#FBEAF0", color: "#993556", label: "Hotel",
+    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#993556" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v11"/><path d="M3 11h18"/><path d="M21 7v11"/><rect x="7" y="7" width="10" height="4" rx="2"/><path d="M7 18v2"/><path d="M17 18v2"/></svg>
+  },
+  area: {
+    bg: "#F1EFE8", color: "#5F5E5A", label: "Area",
+    svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5F5E5A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+  },
+};
 
 export default function SearchHotelsPage() {
   const router = useRouter();
@@ -160,8 +184,8 @@ export default function SearchHotelsPage() {
   const defaults = getDefaultDates();
 
   const [user, setUser] = useState<{ name: string } | null>(null);
-  const [inputText, setInputText] = useState("");           // what user typed
-  const [selection, setSelection] = useState<Selection | null>(null); // what user selected
+  const [inputText, setInputText] = useState("");
+  const [selection, setSelection] = useState<Selection | null>(null);
   const [checkIn, setCheckIn] = useState(defaults.checkIn);
   const [checkOut, setCheckOut] = useState(defaults.checkOut);
   const [guests, setGuests] = useState<GuestState>({ rooms: 1, adults: 2, children: 0, childAges: [] });
@@ -177,17 +201,16 @@ export default function SearchHotelsPage() {
   const [calMode, setCalMode] = useState<"checkin"|"checkout">("checkin");
   const [calMonthOffset, setCalMonthOffset] = useState(0);
   const [guestOpen, setGuestOpen] = useState(false);
+
   const calRef = useRef<HTMLDivElement>(null);
   const guestRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
   const statsAnimated = useRef(false);
 
-  // Default suggestions — top cities shown when input is empty
   const defaultSuggestions = DESTINATIONS.map(d => ({
     type: 'city', name: d.city, subtext: d.country, flag: d.flag, placeId: null, placeType: 'city',
   }));
 
-  // Fetch suggestions from backend as user types
   useEffect(() => {
     if (!inputText || inputText.length === 0) {
       setSuggestions(defaultSuggestions);
@@ -297,8 +320,6 @@ export default function SearchHotelsPage() {
     if (data.session) action(); else router.push(`/signin?redirect=/search-hotels`);
   };
 
-  // ── THE CORE SEARCH FUNCTION ──────────────────────────────────────────────
-  // Always uses placeId (city) or hotelId (hotel) — never raw text
   const doSearch = (sel: Selection, ci: string, co: string) => {
     requireAuth(() => {
       const params = new URLSearchParams({
@@ -307,15 +328,12 @@ export default function SearchHotelsPage() {
         ...(guests.childAges.length > 0 ? { childAges: guests.childAges.join(",") } : {}),
       });
       if (sel.type === 'hotel' && sel.hotelId) {
-        // Hotel selected → go directly to hotel detail page
         router.push(`/hotel/${sel.hotelId}?${params.toString()}`);
       } else if (sel.type === 'city' && sel.placeId) {
-        // City selected with placeId → search results
         params.set('placeId', sel.placeId);
         params.set('destination', sel.label);
         router.push(`/search?${params.toString()}`);
       } else {
-        // City selected but no placeId (default suggestions) — use name as fallback
         params.set('destination', sel.label);
         router.push(`/search?${params.toString()}`);
       }
@@ -330,7 +348,6 @@ export default function SearchHotelsPage() {
     doSearch(selection, checkIn, checkOut);
   };
 
-  // Hotel card click — look up hotelId via /suggest, then search
   const handleHotelCardClick = async (hotelName: string, city: string) => {
     requireAuth(async () => {
       const ci = checkIn || defaults.checkIn;
@@ -342,25 +359,21 @@ export default function SearchHotelsPage() {
           h.name.toLowerCase().includes(hotelName.toLowerCase().slice(0, 15))
         );
         if (match?.hotelId) {
-          // Found the hotel ID — go directly to hotel detail
           const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children) });
           router.push(`/hotel/${match.hotelId}?${params.toString()}`);
         } else {
-          // Fallback — search the city
           const cityMatch = (data.cities || []).find((c: any) => c.name?.toLowerCase().includes(city.toLowerCase()));
           const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: city });
           if (cityMatch?.placeId) params.set('placeId', cityMatch.placeId);
           router.push(`/search?${params.toString()}`);
         }
       } catch {
-        // Last fallback
         const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: city });
         router.push(`/search?${params.toString()}`);
       }
     });
   };
 
-  // Destination card click — look up placeId via /suggest
   const handleDestCardClick = async (cityName: string) => {
     requireAuth(async () => {
       const ci = checkIn || defaults.checkIn;
@@ -437,74 +450,94 @@ export default function SearchHotelsPage() {
     .fs { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; flex-direction: column; animation: slideInRight 0.22s ease; }
     .ybtn:hover { background: #e6b800 !important; }
     .sugg-item:hover { background: #f0f7ff !important; }
+    .sugg-item-sub:hover { background: #f8fafc !important; }
   `;
 
-  // SVG icons per place type — no emoji, crisp at all sizes
-  const PLACE_CFG: Record<string, { bg: string; color: string; label: string; svg: React.ReactNode }> = {
-    city: {
-      bg: "#E6F1FB", color: "#185FA5", label: "City",
-      svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#185FA5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="9" width="5" height="12"/><rect x="9" y="5" width="6" height="16"/><rect x="16" y="11" width="5" height="10"/><line x1="1" y1="21" x2="23" y2="21"/></svg>
-    },
-    airport: {
-      bg: "#E1F5EE", color: "#0F6E56", label: "Airport",
-      svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
-    },
-    station: {
-      bg: "#FAEEDA", color: "#854F0B", label: "Station",
-      svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="13" rx="2"/><path d="M4 11h16"/><path d="M8 16l-2 4"/><path d="M16 16l2 4"/><circle cx="9" cy="7.5" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>
-    },
-    hotel: {
-      bg: "#FBEAF0", color: "#993556", label: "Hotel",
-      svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#993556" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v11"/><path d="M3 11h18"/><path d="M21 7v11"/><rect x="7" y="7" width="10" height="4" rx="2"/><path d="M7 18v2"/><path d="M17 18v2"/></svg>
-    },
-    area: {
-      bg: "#F1EFE8", color: "#5F5E5A", label: "Area",
-      svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5F5E5A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-    },
-  };
+  // ── Ixigo-style dropdown ──────────────────────────────────────────────────
+  // First city result is "primary", rest are indented sub-items
+  const SuggestionDropdown = ({ style }: { style?: React.CSSProperties }) => {
+    if (!showSuggestions || suggestions.length === 0) return null;
 
-  const PlaceIcon = ({ placeType }: { placeType: string }) => {
-    const cfg = PLACE_CFG[placeType] || PLACE_CFG.city;
+    const cities = suggestions.filter(s => s.type === 'city');
+    const hotelItems = suggestions.filter(s => s.type === 'hotel');
+    const primaryCity = cities[0] || null;
+    const subCities = cities.slice(1);
+
+    const handleSelect = (s: any) => {
+      setSelection({ label: s.name, type: s.type, placeId: s.placeId || undefined, hotelId: s.hotelId || undefined });
+      setInputText(s.name);
+      setShowSuggestions(false);
+      setTimeout(() => { setCalMode("checkin"); setCalOpen(true); }, 100);
+    };
+
     return (
-      <div style={{ width: 40, height: 40, borderRadius: 10, background: cfg.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        {cfg.svg}
-      </div>
-    );
-  };
+      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.13)", zIndex: 9999, maxHeight: 400, overflowY: "auto", marginTop: 4, ...style }}>
 
-  const SuggestionDropdown = ({ style }: { style?: React.CSSProperties }) => (
-    showSuggestions && suggestions.length > 0 ? (
-      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 9999, maxHeight: 360, overflowY: "auto" as const, marginTop: 4, ...style }}>
-        {suggestions.map((s, i) => {
-          const placeType: string = (s as any).placeType || (s.type === 'hotel' ? 'hotel' : 'city');
-          const cfg = PLACE_CFG[placeType] || PLACE_CFG.city;
-          const country = (s as any).subtext || '';
-          const typeLabel = cfg.label !== 'City' ? cfg.label : '';
-          // Build subtext: "City · Sweden" or "Airport · Sweden" or "Hotel · Dubai"
-          const subtext = [typeLabel, country].filter(Boolean).join(' · ');
+        {/* Primary city row */}
+        {primaryCity && (
+          <div className="sugg-item" onMouseDown={() => handleSelect(primaryCity)}
+            style={{ padding: "12px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, borderBottom: (subCities.length > 0 || hotelItems.length > 0) ? "1px solid #f1f5f9" : "none" }}>
+            <div style={{ width: 44, height: 44, borderRadius: 10, background: PLACE_CFG['city'].bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {PLACE_CFG['city'].svg}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: NAVY }}>{primaryCity.name}</div>
+              <div style={{ fontSize: 12, color: "#64748b", marginTop: 1 }}>
+                City{primaryCity.subtext ? ` · ${primaryCity.subtext}` : ''}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sub-results: other cities (areas, airports) indented */}
+        {subCities.map((s: any, i: number) => {
+          const placeType = s.placeType || 'area';
+          const cfg = PLACE_CFG[placeType] || PLACE_CFG.area;
+          const typeLabel = placeType.charAt(0).toUpperCase() + placeType.slice(1);
+          const subtext = primaryCity ? `${typeLabel} · ${primaryCity.name}${primaryCity.subtext ? ', ' + primaryCity.subtext : ''}` : `${typeLabel}${s.subtext ? ' · ' + s.subtext : ''}`;
+          const isLast = i === subCities.length - 1 && hotelItems.length === 0;
           return (
-            <div key={i} className="sugg-item"
-              onMouseDown={() => {
-                setSelection({ label: s.name, type: s.type, placeId: (s as any).placeId || undefined, hotelId: (s as any).hotelId || undefined });
-                setInputText(s.name);
-                setShowSuggestions(false);
-                setTimeout(() => { setCalMode("checkin"); setCalOpen(true); }, 100);
-              }}
-              style={{ padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, borderBottom: i < suggestions.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-              <PlaceIcon placeType={placeType} />
+            <div key={i} className="sugg-item-sub" onMouseDown={() => handleSelect(s)}
+              style={{ padding: "10px 14px 10px 32px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, borderBottom: isLast ? "none" : "1px solid #f1f5f9", background: "#fafafa" }}>
+              {/* Arrow indent */}
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, opacity: 0.35 }}>
+                <path d="M3 3 Q3 9 9 9 M9 9 L6 6 M9 9 L6 12" stroke="#64748b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: cfg.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {cfg.svg}
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</div>
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 1 }}>{subtext}</div>
+                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>{subtext}</div>
               </div>
-              {placeType === 'hotel' && (
-                <span style={{ fontSize: 11, background: "#eff6ff", color: B, padding: "2px 8px", borderRadius: 20, fontWeight: 600, flexShrink: 0 }}>Hotel</span>
-              )}
             </div>
           );
         })}
+
+        {/* Hotel results */}
+        {hotelItems.length > 0 && (
+          <>
+            {(primaryCity || subCities.length > 0) && (
+              <div style={{ padding: "6px 14px", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", background: "#f8fafc", borderTop: "1px solid #f1f5f9", borderBottom: "1px solid #f1f5f9" }}>Hotels</div>
+            )}
+            {hotelItems.map((s: any, i: number) => (
+              <div key={i} className="sugg-item" onMouseDown={() => handleSelect(s)}
+                style={{ padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, borderBottom: i < hotelItems.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: PLACE_CFG.hotel.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {PLACE_CFG.hotel.svg}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>{s.subtext}</div>
+                </div>
+                <span style={{ fontSize: 11, background: "#eff6ff", color: B, padding: "2px 8px", borderRadius: 20, fontWeight: 600, flexShrink: 0 }}>Hotel</span>
+              </div>
+            ))}
+          </>
+        )}
       </div>
-    ) : null
-  );
+    );
+  };
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, overflowX: "hidden" }}>
@@ -610,6 +643,7 @@ export default function SearchHotelsPage() {
             </button>
           )}
         </nav>
+
         {isMobile && menuOpen && (
           <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 199, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
             <button onClick={() => { router.push("/search-hotels"); setMenuOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
@@ -675,7 +709,7 @@ export default function SearchHotelsPage() {
                       onChange={e => { setInputText(e.target.value); setSelection(null); setShowSuggestions(true); setSearchError(""); }}
                       onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                       style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 15, fontWeight: 500, color: NAVY, background: "transparent", padding: 0, width: "100%" }} />
-                    <SuggestionDropdown style={{ width: 400 }} />
+                    <SuggestionDropdown style={{ width: 420 }} />
                   </div>
                   <div className="sfield" style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkin" ? "#f0f7ff" : "transparent" }} onClick={() => { setCalMode("checkin"); setCalOpen(true); setCalMonthOffset(0); }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
@@ -723,6 +757,7 @@ export default function SearchHotelsPage() {
                   <button className="ybtn" onClick={handleSearch} style={{ background: YELLOW, color: "#1a1a1a", border: "none", padding: "0 36px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", borderRadius: "0 16px 16px 0", whiteSpace: "nowrap" as const, minWidth: 130 }}>Search</button>
                 </div>
               )}
+
               {!isMobile && calOpen && (
                 <div ref={calRef} onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", left: "34%", width: 680, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 24 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
@@ -742,6 +777,7 @@ export default function SearchHotelsPage() {
                   </div>
                 </div>
               )}
+
               {searchError && (
                 <div style={{ padding: "10px 20px", background: "#fef2f2", borderTop: "1px solid #fecaca", borderRadius: "0 0 16px 16px", fontSize: 13, color: "#dc2626", display: "flex", alignItems: "center", gap: 6 }}>
                   ⚠ {searchError}
@@ -857,34 +893,10 @@ export default function SearchHotelsPage() {
           <div style={{ background: "#fff", borderRadius: 16, padding: 28, boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
             <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 5 }}>Already booked? Check for a drop</div>
             <div style={{ fontSize: 12.5, color: "#64748b", marginBottom: 16 }}>Takes 30 seconds. We handle the rest.</div>
-            <button onClick={() => router.push("/")} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 13, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Upload my booking →</button>
-            <div style={{ textAlign: "center", fontSize: 11.5, color: "#64748b", marginTop: 10 }}>Free to check · Pay only if we save you money</div>
+            <button onClick={() => router.push("/")} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 13, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Upload My Booking Voucher</button>
           </div>
         </div>
       </div>
-
-      {/* FOOTER */}
-      <footer style={{ background: NAVY, padding: isMobile ? "40px 20px 24px" : "48px 40px 32px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap" as const, flexDirection: isMobile ? "column" : "row" }}>
-            <div>
-              <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 10 }}>rebuq<span style={{ color: B }}>.</span></div>
-              <p style={{ fontSize: 13.5, color: "#94a3b8", maxWidth: 260, lineHeight: 1.6 }}>AI-powered hotel price monitoring for Indian travelers. Never overpay for a hotel again.</p>
-            </div>
-            <div style={{ display: "flex", gap: isMobile ? 28 : 48, flexDirection: isMobile ? "column" : "row" }}>
-              {[{ title: "Product", links: ["How it works", "Results", "Why rebuq", "Exclusive Member Deals"] }, { title: "Company", links: ["About", "Privacy", "Terms"] }].map(col => (
-                <div key={col.title}>
-                  <h4 style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const, color: "#64748b", marginBottom: 14 }}>{col.title}</h4>
-                  {col.links.map(l => <a key={l} href="#" style={{ display: "block", fontSize: 14, color: "#94a3b8", textDecoration: "none", marginBottom: 10 }}>{l}</a>)}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
-            <span style={{ fontSize: 13, color: "#475569" }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
