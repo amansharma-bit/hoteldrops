@@ -355,7 +355,8 @@ router.get('/cities', async (req, res) => {
     const { q } = req.query
     if (!q || q.length < 2) return res.json({ cities: [] })
 
-    const resp = await axios.get(`${BASE_URL}/data/cities?countryCode=&name=${encodeURIComponent(q)}&limit=10`, {
+    // Use /data/places for free-text city search (Google Places backed)
+    const resp = await axios.get(`${BASE_URL}/data/places?textQuery=${encodeURIComponent(q)}`, {
       headers: getHeaders(), timeout: 5000, validateStatus: () => true,
     })
 
@@ -372,12 +373,21 @@ router.get('/cities', async (req, res) => {
       NZ:'🇳🇿', LK:'🇱🇰', NP:'🇳🇵', BT:'🇧🇹', PK:'🇵🇰', BD:'🇧🇩',
     }
 
-    const cities = (resp.data.data || []).map((city) => ({
-      city: city.name || city.city,
-      country: city.countryName || city.country || city.countryCode,
-      countryCode: city.countryCode,
-      flag: COUNTRY_FLAGS[city.countryCode] || '🌍',
-    })).filter((c) => c.city)
+    const places = resp.data.data || []
+    const cities = places.slice(0, 8).map((place) => {
+      const countryCode = place.countryCode || place.country_code || ''
+      const name = place.name || place.city || place.displayName || q
+      const country = place.countryName || place.country || countryCode
+      return {
+        city: name,
+        country,
+        countryCode,
+        flag: COUNTRY_FLAGS[countryCode.toUpperCase()] || '🌍',
+        placeId: place.placeId || place.place_id || null,
+        lat: place.latitude || place.lat || null,
+        lon: place.longitude || place.lon || null,
+      }
+    }).filter((c) => c.city)
 
     return res.json({ cities })
   } catch (err) {
