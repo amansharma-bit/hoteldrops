@@ -400,6 +400,47 @@ router.get('/search', async (req, res) => {
 
 // This is the new /:code route — replaces everything from "// ── GET /api/hotels/:code" to "module.exports = router"
 
+
+// ── GET /api/hotels/search?q=:query — search by hotel name ───────────────────
+router.get('/search', async (req, res) => {
+  try {
+    const { q } = req.query
+    if (!q || q.length < 2) return res.json({ hotels: [], cities: [] })
+
+    // Search cities from cache
+    const query = q.toLowerCase().trim()
+    const cities = CITY_CACHE
+      .filter(c => c.city.toLowerCase().startsWith(query) || c.city.toLowerCase().includes(query))
+      .sort((a, b) => a.city.toLowerCase().startsWith(query) ? -1 : 1)
+      .slice(0, 4)
+      .map(c => ({ type: 'city', name: c.city, subtext: c.country, flag: c.flag, countryCode: c.countryCode }))
+
+    // Search hotels by name via liteAPI
+    const resp = await axios.get(`${BASE_URL}/data/hotels?hotelName=${encodeURIComponent(q)}&limit=5`, {
+      headers: getHeaders(), timeout: 6000, validateStatus: () => true,
+    })
+
+    let hotels = []
+    if (resp.status === 200 && resp.data?.data) {
+      hotels = resp.data.data.slice(0, 5).map(h => ({
+        type: 'hotel',
+        name: h.name,
+        subtext: [h.city, h.country].filter(Boolean).join(', '),
+        hotelId: h.id || h.hotelId,
+        city: h.city,
+        country: h.country,
+        countryCode: h.countryCode,
+        flag: COUNTRY_FLAGS[h.countryCode] || '🏨',
+      }))
+    }
+
+    return res.json({ hotels, cities, total: hotels.length + cities.length })
+  } catch (err) {
+    console.error('Hotel search error:', err.message)
+    return res.json({ hotels: [], cities: [] })
+  }
+})
+
 // ── GET /api/hotels/cities?q=:query ──────────────────────────────────────────
 router.get('/cities', (req, res) => {
   const { q } = req.query
