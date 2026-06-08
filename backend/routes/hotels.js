@@ -339,14 +339,19 @@ router.get('/:code', async (req, res) => {
     // ── Room static data from /data/hotel (for size, beds, amenities, photos)
     const staticRooms = {}
     for (const sr of (d.rooms || [])) {
-      staticRooms[sr.id] = {
+      const roomData = {
         description: sr.description || '',
         sizeM2: sr.roomSizeSquare || null,
-        bedTypes: (sr.bedTypes || []).map(b => `${b.quantity || 1} ${b.bedType || ''}${b.bedSize ? ' (' + b.bedSize + ')' : ''}`).filter(Boolean),
-        amenities: (sr.roomAmenities || []).map(a => typeof a === 'string' ? a : a.name).filter(Boolean),
-        photos: (sr.photos || []).map(p => p.url || p.failoverPhoto).filter(Boolean),
+        bedTypes: (sr.bedTypes || []).map(b => [b.quantity > 1 ? b.quantity + ' ' : '', b.bedType || '', b.bedSize ? ' (' + b.bedSize + ')' : ''].join('')).filter(Boolean),
+        amenities: (sr.roomAmenities || []).map(a => typeof a === 'string' ? a : a.name).filter(Boolean).slice(0, 8),
+        photos: (sr.photos || []).sort((a,b) => (b.score||0)-(a.score||0)).map(p => p.url || p.failoverPhoto).filter(p => p && p.startsWith('http')).slice(0, 5),
       }
+      // Index by all possible ID fields for robust matching
+      if (sr.id) staticRooms[sr.id] = roomData
+      if (sr.roomId) staticRooms[sr.roomId] = roomData
+      if (sr.name) staticRooms[sr.name.toLowerCase().trim()] = roomData
     }
+    console.log(`📦 Static rooms indexed: ${Object.keys(staticRooms).length} keys`)
 
     // ── Facilities ────────────────────────────────────────────────────────────
     const allFacilities = (d.hotelFacilities || []).map(f => typeof f === 'string' ? f : f.name).filter(Boolean)
@@ -390,6 +395,11 @@ router.get('/:code', async (req, res) => {
     let roomList = []
     if (ratesResp.status === 200) {
       const hotelData = (ratesResp.data?.data || [])[0]
+      if (hotelData?.roomTypes?.[0]) {
+        const sample = hotelData.roomTypes[0]
+        console.log(`🏷️ Sample roomType keys: ${Object.keys(sample).join(', ')}`)
+        console.log(`🏷️ mappedRoomId: ${sample.mappedRoomId}, roomId: ${sample.roomId}, offerId: ${sample.offerId}`)
+      }
       roomList = (hotelData?.roomTypes || []).map(rt => {
         const rate = rt.rates?.[0]
         if (!rate) return null
@@ -411,9 +421,15 @@ router.get('/:code', async (req, res) => {
         const boardType = rate?.boardType || rate?.boardCode || 'RO'
         const refTag = rate?.cancellationPolicies?.refundableTag
 
-        // Merge static room data via mappedRoomId
-        const mappedId = rt.mappedRoomId || null
-        const staticRoom = mappedId ? (staticRooms[mappedId] || {}) : {}
+        // Merge static room data via mappedRoomId — try multiple match strategies
+        const mappedId = rt.mappedRoomId || rt.roomId || null
+        const roomName = (rate?.name || rt.name || '').toLowerCase().trim()
+        const staticRoom = (mappedId && staticRooms[mappedId])
+          ? staticRooms[mappedId]
+          : (roomName && staticRooms[roomName])
+          ? staticRooms[roomName]
+          : {}
+        if (mappedId) console.log(`🔗 Room ${mappedId} → staticRoom keys: ${Object.keys(staticRoom).length}, size: ${staticRoom.sizeM2}, amenities: ${staticRoom.amenities?.length}, photos: ${staticRoom.photos?.length}`)
 
         // Room photos: prefer static room photos, fall back to hotel images
         const roomPhotos = staticRoom.photos?.length
