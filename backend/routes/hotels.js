@@ -36,6 +36,57 @@ function memSet(key, data, ttlMs = 3600000) {
   memCache.set(key, { data, exp: Date.now() + ttlMs })
 }
 
+
+// ── City cache — pre-fetched at startup ──────────────────────────────────────
+let CITY_CACHE = []  // flat array of { city, country, countryCode, flag }
+
+const COUNTRY_FLAGS = {
+  AE:'🇦🇪', IN:'🇮🇳', SG:'🇸🇬', TH:'🇹🇭', ID:'🇮🇩', MY:'🇲🇾', GB:'🇬🇧',
+  FR:'🇫🇷', IT:'🇮🇹', ES:'🇪🇸', NL:'🇳🇱', TR:'🇹🇷', MV:'🇲🇻', ZA:'🇿🇦',
+  US:'🇺🇸', JP:'🇯🇵', HK:'🇭🇰', KR:'🇰🇷', AU:'🇦🇺', QA:'🇶🇦', OM:'🇴🇲',
+  SA:'🇸🇦', VN:'🇻🇳', PH:'🇵🇭', CN:'🇨🇳', EG:'🇪🇬', MA:'🇲🇦', ZA:'🇿🇦',
+  DE:'🇩🇪', AT:'🇦🇹', CH:'🇨🇭', PT:'🇵🇹', GR:'🇬🇷', CZ:'🇨🇿', SE:'🇸🇪',
+  NO:'🇳🇴', DK:'🇩🇰', FI:'🇫🇮', BE:'🇧🇪', CA:'🇨🇦', NZ:'🇳🇿', LK:'🇱🇰',
+  NP:'🇳🇵', MX:'🇲🇽', BR:'🇧🇷', AR:'🇦🇷', KE:'🇰🇪', TZ:'🇹🇿', RU:'🇷🇺',
+  MU:'🇲🇺', SC:'🇸🇨', BH:'🇧🇭', KW:'🇰🇼', JO:'🇯🇴', LB:'🇱🇧',
+}
+
+// Top countries Indians travel to
+const PREFETCH_COUNTRIES = [
+  'AE','IN','SG','TH','ID','MY','GB','FR','IT','ES',
+  'TR','MV','US','JP','AU','QA','OM','SA','VN','GR',
+  'DE','AT','CH','PT','ZA','HK','KR','NZ','NL','SE',
+]
+
+async function prefetchCities() {
+  console.log('🌍 Prefetching cities for', PREFETCH_COUNTRIES.length, 'countries...')
+  const allCities = []
+  for (const cc of PREFETCH_COUNTRIES) {
+    try {
+      const resp = await axios.get(`${BASE_URL}/data/cities?countryCode=${cc}`, {
+        headers: getHeaders(), timeout: 8000, validateStatus: () => true,
+      })
+      if (resp.status === 200 && resp.data?.data) {
+        const cities = resp.data.data.map(c => ({
+          city: c.name || c.city,
+          country: c.countryName || c.country || cc,
+          countryCode: cc,
+          flag: COUNTRY_FLAGS[cc] || '🌍',
+        })).filter(c => c.city)
+        allCities.push(...cities)
+      }
+      await sleep(120) // respect rate limits
+    } catch (e) {
+      console.log(`⚠️ Cities fetch failed for ${cc}: ${e.message}`)
+    }
+  }
+  CITY_CACHE = allCities
+  console.log(`✅ City cache loaded: ${CITY_CACHE.length} cities across ${PREFETCH_COUNTRIES.length} countries`)
+}
+
+// Start prefetch after 2 seconds (let server boot first)
+setTimeout(prefetchCities, 2000)
+
 // ── Destination map ───────────────────────────────────────────────────────────
 const DESTINATIONS = {
   'dubai': { country: 'AE', city: 'Dubai' },
@@ -350,7 +401,28 @@ router.get('/search', async (req, res) => {
 // This is the new /:code route — replaces everything from "// ── GET /api/hotels/:code" to "module.exports = router"
 
 // ── GET /api/hotels/cities?q=:query ──────────────────────────────────────────
-router.get('/cities', async (req, res) => {
+router.get('/cities', (req, res) => {
+  const { q } = req.query
+  if (!q || q.length < 2) return res.json({ cities: [] })
+
+  const query = q.toLowerCase().trim()
+  const results = CITY_CACHE
+    .filter(c => c.city.toLowerCase().startsWith(query) || c.city.toLowerCase().includes(query))
+    .sort((a, b) => {
+      // Prioritise cities that start with query
+      const aStarts = a.city.toLowerCase().startsWith(query)
+      const bStarts = b.city.toLowerCase().startsWith(query)
+      if (aStarts && !bStarts) return -1
+      if (!aStarts && bStarts) return 1
+      return a.city.localeCompare(b.city)
+    })
+    .slice(0, 8)
+
+  return res.json({ cities: results, total: CITY_CACHE.length })
+})
+
+// ── GET /api/hotels/cities_disabled?q=:query ─────────────────────────────────
+router.get('/cities_disabled', async (req, res) => {
   try {
     const { q } = req.query
     if (!q || q.length < 2) return res.json({ cities: [] })
