@@ -461,27 +461,27 @@ function HotelDetailContent() {
         </div>
 
         {/* ── ROOMS ───────────────────────────────────────────────────────── */}
-        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", marginBottom: 20, overflow: "hidden", marginLeft: isMobile ? -16 : -40, marginRight: isMobile ? -16 : -40, borderRadius: 0 }} ref={refRooms}>
+        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", marginBottom: 20, overflow: "hidden", marginLeft: isMobile ? -16 : -40, marginRight: isMobile ? -16 : -40 }} ref={refRooms}>
 
           {/* Header */}
-          <div style={{ padding: "18px 24px", borderBottom: "1.5px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 12 }}>
+          <div style={{ padding: "18px 40px", borderBottom: "1.5px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 12 }}>
             <h2 className="sora" style={{ fontSize: 20, fontWeight: 700, color: NAVY }}>Select your room</h2>
             <div style={{ display: "flex", gap: 8 }}>
               {([["Free Cancellation","free"],["Breakfast Included","breakfast"]] as [string,string][]).map(([label,val]) => (
                 <button key={val} onClick={() => setRoomFilter((p: any) => p === val ? null : val)}
-                  style={{ padding: "5px 14px", borderRadius: 100, border: `1.5px solid ${roomFilter === val ? B : "#e2e8f0"}`, fontSize: 12, fontWeight: 600, color: roomFilter === val ? B : "#374151", cursor: "pointer", background: roomFilter === val ? "#eff6ff" : "#fff", fontFamily: "inherit" }}>{label}</button>
+                  style={{ padding: "6px 16px", borderRadius: 100, border: `1.5px solid ${roomFilter === val ? B : "#e2e8f0"}`, fontSize: 13, fontWeight: 600, color: roomFilter === val ? B : "#374151", cursor: "pointer", background: roomFilter === val ? "#eff6ff" : "#fff", fontFamily: "inherit" }}>{label}</button>
               ))}
             </div>
           </div>
 
           {/* Column headers */}
-          <div style={{ display: "grid", gridTemplateColumns: "300px 1fr 200px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-            <div style={{ padding: "10px 16px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>{Object.keys(groupedRooms).length} Room Types</div>
+          <div style={{ display: "grid", gridTemplateColumns: "520px 1fr 220px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", padding: "0 40px" }}>
+            <div style={{ padding: "10px 0", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>{Object.keys(groupedRooms).length} Room Type{Object.keys(groupedRooms).length !== 1 ? "s" : ""}</div>
             <div style={{ padding: "10px 16px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>Options</div>
-            <div style={{ padding: "10px 16px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.07em", textAlign: "right" as const }}>Price</div>
+            <div style={{ padding: "10px 0", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.07em", textAlign: "right" as const }}>Price</div>
           </div>
 
-          {/* One card per room group */}
+          {/* Room groups */}
           {Object.entries(groupedRooms)
             .filter(([, rates]) => !roomFilter || (rates as any[]).some((r: any) => roomFilter === "free" ? r.isRefundable : r.hasBreakfast))
             .map(([roomName, rates], groupIdx, allGroups) => {
@@ -494,14 +494,13 @@ function HotelDetailContent() {
               const n = filteredRates.length;
 
               return (
-                <div key={roomName} style={{ borderBottom: groupIdx < allGroups.length - 1 ? "2px solid #e2e8f0" : "none" }}>
-                  {/* Grid: left photo col spans all rate rows, right has one row per rate */}
-                  <div style={{ display: "grid", gridTemplateColumns: "300px minmax(0,1fr)", gridTemplateRows: `repeat(${n}, auto)` }}>
+                <div key={roomName} style={{ borderBottom: groupIdx < allGroups.length - 1 ? "2px solid #e2e8f0" : "none", padding: "0 40px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "520px minmax(0,1fr)", gridTemplateRows: `repeat(${n}, auto)` }}>
 
-                    {/* LEFT — spans all rows */}
-                    <div style={{ gridRow: `1 / ${n + 1}`, borderRight: "1px solid #e2e8f0", padding: 16, display: "flex", flexDirection: "column" as const }}>
+                    {/* LEFT — spans all rate rows */}
+                    <div style={{ gridRow: `1 / ${n + 1}`, paddingRight: 24, paddingTop: 20, paddingBottom: 20, borderRight: "1px solid #e2e8f0" }}>
                       {/* Photo */}
-                      <div style={{ position: "relative", height: 180, borderRadius: 10, overflow: "hidden", marginBottom: 12, flexShrink: 0 }}>
+                      <div style={{ position: "relative", height: 240, borderRadius: 10, overflow: "hidden", marginBottom: 14 }}>
                         <img
                           src={photos[pIdx] || hotel.images?.[0]?.url}
                           alt={cleanName}
@@ -509,68 +508,56 @@ function HotelDetailContent() {
                           onError={(e) => { (e.target as HTMLImageElement).src = hotel.images?.[0]?.url || ""; }}
                         />
                         {photos.length > 1 && (
-                          <div
-                            onClick={() => setRoomPhotoIdx((p: any) => ({ ...p, [roomName]: (pIdx + 1) % photos.length }))}
-                            style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                          <div onClick={() => setRoomPhotoIdx((p: any) => ({ ...p, [roomName]: (pIdx + 1) % photos.length }))}
+                            style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 16, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                             {pIdx + 1}/{photos.length}
                           </div>
                         )}
                       </div>
 
-                      {/* Room name */}
-                      <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 6, lineHeight: 1.3 }}>{cleanName}</div>
-
-                      {/* Size + bed inline */}
-                      <div style={{ display: "flex", gap: 14, fontSize: 12, color: "#64748b", marginBottom: 4, flexWrap: "wrap" as const }}>
-                        {first.sizeM2 && <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                      <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>{cleanName}</div>
+                      <div style={{ display: "flex", gap: 16, fontSize: 13, color: "#64748b", marginBottom: 6, flexWrap: "wrap" as const }}>
+                        {first.sizeM2 && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
                           {first.sizeM2} sq. mt.
                         </span>}
-                        {first.bedTypes?.[0] && <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4v16M22 4v16M2 12h20"/></svg>
+                        {first.bedTypes?.[0] && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4v16M22 4v16M2 12h20"/></svg>
                           {first.bedTypes[0]}
                         </span>}
+                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                          Sleeps {first.maxOccupancy || 2}
+                        </span>
                       </div>
 
-                      {/* Sleeps */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#64748b", marginBottom: 10 }}>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                        Sleeps {first.maxOccupancy || 2}
-                      </div>
-
-                      {/* Amenity checklist */}
                       {first.amenities?.length > 0 && (
-                        <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 10, marginBottom: 10 }}>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 8px" }}>
+                        <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 10, marginTop: 6, marginBottom: 10 }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px" }}>
                             {first.amenities.slice(0, 6).map((a: string) => (
-                              <div key={a} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#374151" }}>
-                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                              <div key={a} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: "#374151" }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                                 {a}
                               </div>
                             ))}
                           </div>
                         </div>
                       )}
-
-                      <button onClick={() => goTo("facilities")} style={{ fontSize: 12, color: B, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, textAlign: "left" as const, marginTop: "auto" }}>View Details</button>
+                      <button onClick={() => goTo("facilities")} style={{ fontSize: 13, color: B, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0, marginTop: 8 }}>View Details</button>
                     </div>
 
                     {/* RIGHT — one row per rate */}
                     {filteredRates.map((room: any, rIdx: number) => {
                       const isSel = selectedOffer === room.offerId;
-                      const discountPct = room.otaTotalINR > room.totalPrice
-                        ? Math.round((1 - room.totalPrice / room.otaTotalINR) * 100)
-                        : null;
-                      const rateLabel = room.isRefundable && room.hasBreakfast
-                        ? "Room With Free Cancellation, Breakfast"
+                      const discountPct = room.otaTotalINR > room.totalPrice ? Math.round((1 - room.totalPrice / room.otaTotalINR) * 100) : null;
+                      const rateLabel = room.isRefundable && room.hasBreakfast ? "Room With Free Cancellation, Breakfast"
                         : room.isRefundable ? "Room With Free Cancellation"
                         : room.hasBreakfast ? "Room Only, Breakfast"
                         : "Room Only";
 
                       return (
-                        <div key={room.offerId} style={{ display: "grid", gridTemplateColumns: "1fr 200px", borderBottom: rIdx < filteredRates.length - 1 ? "1px solid #f1f5f9" : "none", background: isSel ? "#f0f7ff" : "#fff" }}>
-
+                        <div key={room.offerId} style={{ display: "grid", gridTemplateColumns: "1fr 220px", borderBottom: rIdx < filteredRates.length - 1 ? "1px solid #f1f5f9" : "none", background: isSel ? "#f0f7ff" : "#fff" }}>
                           {/* Options */}
                           <div style={{ padding: "20px 20px", borderRight: "1px solid #f1f5f9" }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 10 }}>{rateLabel}</div>
@@ -608,14 +595,14 @@ function HotelDetailContent() {
                               <div className="sora" style={{ fontSize: 22, fontWeight: 800, color: NAVY }}>{fmtINR(room.pricePerNight)}</div>
                               <div style={{ fontSize: 11, color: "#64748b" }}>per night</div>
                               <div style={{ fontSize: 11, color: "#64748b" }}>Total: {fmtINR(room.totalPrice)}</div>
-                              <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 600, marginBottom: 10 }}>✓ Taxes included</div>
+                              <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>✓ Taxes included</div>
                             </div>
                             <button
                               onClick={() => isSel
                                 ? router.push(`/checkout?hotel=${encodeURIComponent(hotel.name)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&room=${encodeURIComponent(room.name)}&price=${room.pricePerNight}&offerId=${room.offerId}`)
                                 : setSelectedOffer(room.offerId)
                               }
-                              style={{ background: isSel ? NAVY : "#FCD34D", color: isSel ? "#fff" : NAVY, border: "none", borderRadius: 8, padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                              style={{ background: isSel ? NAVY : "#FCD34D", color: isSel ? "#fff" : NAVY, border: "none", borderRadius: 8, padding: "11px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%", marginTop: 12 }}>
                               {isSel ? "Book Now →" : "Reserve 1 Room"}
                             </button>
                           </div>
