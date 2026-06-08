@@ -350,8 +350,10 @@ router.get('/:code', async (req, res) => {
       if (sr.id) staticRooms[sr.id] = roomData
       if (sr.roomId) staticRooms[sr.roomId] = roomData
       if (sr.name) staticRooms[sr.name.toLowerCase().trim()] = roomData
+      // Also index by normalised name (no spaces, lowercase) for fuzzy match
+      if (sr.name) staticRooms[sr.name.toLowerCase().replace(/[^a-z0-9]/g, '')] = roomData
     }
-    console.log(`📦 Static rooms indexed: ${Object.keys(staticRooms).length} keys`)
+    console.log(`📦 Static rooms indexed: ${Object.keys(staticRooms).length} keys — IDs: ${Object.keys(staticRooms).slice(0,5).join(', ')}`)
 
     // ── Facilities ────────────────────────────────────────────────────────────
     const allFacilities = (d.hotelFacilities || []).map(f => typeof f === 'string' ? f : f.name).filter(Boolean)
@@ -424,12 +426,20 @@ router.get('/:code', async (req, res) => {
         // Merge static room data via mappedRoomId — try multiple match strategies
         const mappedId = rt.mappedRoomId || rt.roomId || null
         const roomName = (rate?.name || rt.name || '').toLowerCase().trim()
+        const normName = roomName.replace(/[^a-z0-9]/g, '')
         const staticRoom = (mappedId && staticRooms[mappedId])
           ? staticRooms[mappedId]
           : (roomName && staticRooms[roomName])
           ? staticRooms[roomName]
-          : {}
-        if (mappedId) console.log(`🔗 Room ${mappedId} → staticRoom keys: ${Object.keys(staticRoom).length}, size: ${staticRoom.sizeM2}, amenities: ${staticRoom.amenities?.length}, photos: ${staticRoom.photos?.length}`)
+          : (normName && staticRooms[normName])
+          ? staticRooms[normName]
+          : (() => {
+              // Last resort: find best partial name match
+              const keys = Object.keys(staticRooms)
+              const match = keys.find(k => k.includes(normName.slice(0,8)) || normName.includes(k.slice(0,8)))
+              return match ? staticRooms[match] : {}
+            })()
+        console.log(`🔗 "${roomName}" mappedId=${mappedId} → size:${staticRoom.sizeM2}, amenities:${staticRoom.amenities?.length||0}, photos:${staticRoom.photos?.length||0}`)
 
         // Room photos: prefer static room photos, fall back to hotel images
         const roomPhotos = staticRoom.photos?.length
@@ -457,6 +467,14 @@ router.get('/:code', async (req, res) => {
           isRefundable: refTag === 'RFN',
           refundableTag: refTag || null,
           cancelPolicies: rate?.cancellationPolicies?.cancelPolicyInfos || [],
+          freeCancelUntil: (() => {
+            const policies = rate?.cancellationPolicies?.cancelPolicyInfos || []
+            const freePolicy = policies.find(p => p.cancelCharge === 0 || p.amount === 0)
+            if (freePolicy?.cancelTime) return freePolicy.cancelTime.split('T')[0]
+            if (refTag === 'RFN' && rate?.cancellationPolicies?.cancelPolicyInfos?.[0]?.cancelTime)
+              return rate.cancellationPolicies.cancelPolicyInfos[0].cancelTime.split('T')[0]
+            return null
+          })(),
         }
       }).filter(Boolean)
     }
