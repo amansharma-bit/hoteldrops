@@ -199,7 +199,7 @@ function HotelDetailContent() {
     </div>
   );
 
-  const W = { maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 16px" : "0 32px" };
+  const W = { maxWidth: "100%", padding: isMobile ? "0 16px" : "0 40px" };
   const topOffset = 60 + (offerId && saving ? 60 : 0);
 
   return (
@@ -253,7 +253,7 @@ function HotelDetailContent() {
       )}
 
       {/* SEARCH BAR */}
-      <div ref={refSearchBar} style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "10px 32px", position: "sticky", top: topOffset, zIndex: 250, overflow: "visible" }}>
+      <div ref={refSearchBar} style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "10px 40px", position: "sticky", top: topOffset, zIndex: 250, overflow: "visible" }}>
         <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: 68, overflow: "visible", position: "relative" }}>
           <div style={{ padding: "0 24px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Hotel</div>
@@ -293,7 +293,7 @@ function HotelDetailContent() {
             )}
           </div>
           <button onClick={() => router.push(`/search?destination=${encodeURIComponent(hotel.city)}&checkIn=${editCheckIn}&checkOut=${editCheckOut}&adults=${editAdults}&rooms=${editRooms}`)}
-            style={{ background: "#FCD34D", color: NAVY, border: "none", padding: "0 28px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Sora',sans-serif", borderRadius: "0 14px 14px 0" }}>
+            style={{ background: "#fff", color: NAVY, border: "none", borderLeft: "1px solid #e2e8f0", padding: "0 28px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Sora',sans-serif", borderRadius: "0 14px 14px 0" }}>
             Search
           </button>
         </div>
@@ -521,9 +521,9 @@ function HotelDetailContent() {
               <div key={room.offerId} className={"room-row" + (isSel ? " selected" : "")} onClick={() => setSelectedRoom(room.offerId)}>
                 {/* Left: photo + name + details */}
                 <div style={{ position: "relative" }}>
-                  {room.photos?.length > 0 ? (
+                  {(room.photos?.length > 0 || hotel.images?.length > 0) ? (
                     <>
-                      <img src={room.photos[photoIdx]} alt={room.name} style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }} />
+                      <img src={room.photos?.[photoIdx] || hotel.images?.[0]?.url} alt={room.name} style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }} />
                       {room.photos.length > 1 && (
                         <div style={{ position: "absolute", bottom: 8, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 4 }}>
                           {room.photos.slice(0, 5).map((_: any, i: number) => (
@@ -541,9 +541,9 @@ function HotelDetailContent() {
                   <div style={{ padding: "14px 16px" }}>
                     <div className="sora" style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 6, lineHeight: 1.3 }}>{room.name}</div>
                     <div style={{ display: "flex", gap: 12, fontSize: 12, color: "#64748b", marginBottom: 10 }}>
-                      {room.sizeM2 && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      {(room.sizeM2 || room.name?.match(/\d+SQM/i)) && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-                        {room.sizeM2} m²
+                        {room.sizeM2 || (room.name?.match(/(\d+)\s*SQM/i)?.[1])} m²
                       </span>}
                       {room.bedTypes?.[0] && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4v16M22 4v16M2 12h20M2 8h20"/></svg>
