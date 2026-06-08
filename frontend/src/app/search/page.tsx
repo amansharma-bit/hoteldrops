@@ -11,7 +11,6 @@ const B = "#1447b8";
 const NAVY = "#0f172a";
 const YELLOW = "#FCD34D";
 
-// ── Destination list with flags ───────────────────────────────────────────────
 const DESTINATIONS: { label: string; key: string; flag: string; country: string; city: string }[] = [
   { label:"Dubai", key:"dubai", flag:"🇦🇪", country:"AE", city:"Dubai" },
   { label:"Abu Dhabi", key:"abu dhabi", flag:"🇦🇪", country:"AE", city:"Abu Dhabi" },
@@ -49,7 +48,6 @@ const DESTINATIONS: { label: string; key: string; flag: string; country: string;
   { label:"Cairo", key:"cairo", flag:"🇪🇬", country:"EG", city:"Cairo" },
 ];
 
-// ── Dubai area bounding boxes ─────────────────────────────────────────────────
 const DUBAI_AREAS: [string, number, number, number, number][] = [
   ["Palm Jumeirah",       25.095, 25.130, 55.117, 55.165],
   ["Dubai Marina",        25.065, 25.095, 55.130, 55.160],
@@ -98,16 +96,13 @@ const MONTHS=["January","February","March","April","May","June","July","August",
 const DOWS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 function codeToNum(code:string|number):number{if(typeof code==="number")return code;let h=0;for(let i=0;i<code.length;i++){h=((h<<5)-h)+code.charCodeAt(i);h|=0;}return Math.abs(h);}
 
-// SVG Icons
 const IconBreakfast=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>;
-const IconBell=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>;
 
 interface Hotel{code:string|number;name:string;stars:number|null;minRate:number;currency:string;imageUrl?:string;address?:string;chain?:string;rating?:number|null;latitude?:number|null;longitude?:number|null;amenities?:string[];isRefundable?:boolean|null;hasBreakfast?:boolean;lowestPriceINR?:number;otaPriceINR?:number;memberSaving?:number;taxesIncluded?:boolean;}
 interface GuestState{rooms:number;adults:number;children:number;childAges:number[];}
 
 const FALLBACK_IMGS=["https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=85&fit=crop"];
 
-// ── FiltersPanel — top-level component ───────────────────────────────────────
 interface FiltersPanelProps{destination:string;areaOptions:string[];filterLocation:string;setFilterLocation:(v:string)=>void;filterPriceMin:number|null;filterPriceMax:number|null;setPriceRange:(min:number|null,max:number|null)=>void;filterRefundable:boolean;setFilterRefundable:(v:boolean)=>void;filterBreakfast:boolean;setFilterBreakfast:(v:boolean)=>void;filterRating:number|null;setFilterRating:(v:number|null)=>void;filterStars:number[];setFilterStars:(v:number[])=>void;filterFacilities:string[];setFilterFacilities:(v:string[])=>void;hasActiveFilters:boolean;clearAllFilters:()=>void;onHotelSearch:(v:string)=>void;}
 
 function FiltersPanel({areaOptions,filterLocation,setFilterLocation,filterPriceMin,filterPriceMax,setPriceRange,filterRefundable,setFilterRefundable,filterBreakfast,setFilterBreakfast,filterRating,setFilterRating,filterStars,setFilterStars,filterFacilities,setFilterFacilities,hasActiveFilters,clearAllFilters,onHotelSearch}:FiltersPanelProps){
@@ -136,7 +131,6 @@ function FiltersPanel({areaOptions,filterLocation,setFilterLocation,filterPriceM
   );
 }
 
-// ── Calendar ──────────────────────────────────────────────────────────────────
 function CalendarScreen({checkIn,checkOut,onSelect,onClose}:{checkIn:string;checkOut:string;onSelect:(ci:string,co:string)=>void;onClose:()=>void;}){
   const today=new Date();const[mode,setMode]=useState<"checkin"|"checkout">(checkIn?"checkout":"checkin");const[ci,setCi]=useState(checkIn);const[co,setCo]=useState(checkOut);
   const todayStr=toDateStr(today.getFullYear(),today.getMonth(),today.getDate());
@@ -158,7 +152,6 @@ function CalendarScreen({checkIn,checkOut,onSelect,onClose}:{checkIn:string;chec
   </div>);
 }
 
-// ── Guests Screen ─────────────────────────────────────────────────────────────
 function GuestsScreen({guests,onSelect,onClose}:{guests:GuestState;onSelect:(g:GuestState)=>void;onClose:()=>void;}){
   const[g,setG]=useState(guests);
   const upd=(key:"rooms"|"adults"|"children",val:number)=>setG(prev=>{const n={...prev,[key]:val};if(key==="children"){const ages=[...prev.childAges];if(val>ages.length){while(ages.length<val)ages.push(5);}else ages.splice(val);n.childAges=ages;}return n;});
@@ -184,7 +177,6 @@ function GuestsScreen({guests,onSelect,onClose}:{guests:GuestState;onSelect:(g:G
   </div>);
 }
 
-// ── Auth Modal ────────────────────────────────────────────────────────────────
 function AuthModal({onClose}:{onClose:()=>void}){
   const[loading,setLoading]=useState(false);
   const handleGoogle=async()=>{setLoading(true);const{error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.href}});if(error){setLoading(false);alert("Sign in failed.");}};
@@ -198,7 +190,6 @@ function AuthModal({onClose}:{onClose:()=>void}){
   </div></>);
 }
 
-// ── Bottom Sheet ──────────────────────────────────────────────────────────────
 function BottomSheet({title,onClose,children,onClear}:{title:string;onClose:()=>void;children:React.ReactNode;onClear?:()=>void;}){
   return(<><div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:8888}}/><div style={{position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderRadius:"20px 20px 0 0",zIndex:9999,maxHeight:"85vh",display:"flex",flexDirection:"column"}}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"18px 20px 14px",borderBottom:"1px solid #f1f5f9",flexShrink:0}}><button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:"#94a3b8"}}>×</button><div style={{fontWeight:700,fontSize:17,color:NAVY}}>{title}</div><div style={{width:20}}/></div>
@@ -210,8 +201,6 @@ function BottomSheet({title,onClose,children,onClear}:{title:string;onClose:()=>
   </div></>);
 }
 
-
-// ── ChipDropdown — top-level so it never remounts ─────────────────────────────
 function ChipDropdown({id,label,openChip,setOpenChip,children}:{id:string;label:string;openChip:string|null;setOpenChip:(v:string|null)=>void;children:React.ReactNode}){
   const isOpen=openChip===id;
   return(
@@ -224,7 +213,6 @@ function ChipDropdown({id,label,openChip,setOpenChip,children}:{id:string;label:
   );
 }
 
-// ── Map View ──────────────────────────────────────────────────────────────────
 function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMobile}:{hotels:Hotel[];checkIn:string;checkOut:string;filterProps:FiltersPanelProps;onClose:()=>void;onHotelClick:(h:Hotel)=>void;isMobile:boolean;}){
   const mapRef=useRef<HTMLDivElement>(null);
   const mapInstanceRef=useRef<any>(null);
@@ -267,7 +255,6 @@ function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMob
 
   const handleMapSearch=(q:string)=>{markersRef.current.forEach(({el,hotel})=>{el.style.display=!q||hotel.name.toLowerCase().includes(q.toLowerCase())?"block":"none";});if(q&&mapInstanceRef.current){const h=hotelsWithCoords.find(h=>h.name.toLowerCase().includes(q.toLowerCase()));if(h)mapInstanceRef.current.flyTo({center:[h.longitude!,h.latitude!],zoom:14,speed:1.5});}};
 
-  // Mobile: fullscreen
   if(isMobile)return(
     <div style={{position:"fixed",inset:0,zIndex:8000,display:"flex",flexDirection:"column"}}>
       <div style={{position:"absolute",top:12,right:12,zIndex:10}}><button onClick={onClose} style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:NAVY,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>✕ Close map</button></div>
@@ -280,9 +267,6 @@ function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMob
     </div>
   );
 
-  // Desktop: split with inline filter chips in top bar
-
-
   const CB=({active,onClick,label}:{active:boolean;onClick:()=>void;label:string})=>(
     <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",cursor:"pointer"}}>
       <div style={{width:15,height:15,border:`1.5px solid ${active?B:"#e2e8f0"}`,borderRadius:3,background:active?B:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{active&&<svg width="9" height="9" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}</div>
@@ -292,41 +276,23 @@ function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMob
 
   return(
     <div style={{position:"fixed",inset:0,zIndex:8000,display:"flex",flexDirection:"column"}}>
-      {/* Top bar with inline filter chips */}
       <div ref={chipRef} style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 20px",display:"flex",alignItems:"center",gap:10,flexShrink:0,flexWrap:"nowrap",overflowX:"visible",position:"relative",zIndex:99999}}>
         <div style={{fontSize:14,fontWeight:700,color:NAVY,whiteSpace:"nowrap",marginRight:4}}>{hotelsWithCoords.length} hotels</div>
-
-        {/* Location chip */}
         {filterProps.areaOptions.length>0&&<ChipDropdown id="loc" label={filterProps.filterLocation||"Location"} openChip={openChip} setOpenChip={setOpenChip}>
           {filterProps.areaOptions.map(a=><CB key={a} active={filterProps.filterLocation===a} onClick={()=>{filterProps.setFilterLocation(filterProps.filterLocation===a?"":a);setOpenChip(null);}} label={a}/>)}
         </ChipDropdown>}
-
-        {/* Price chip */}
         <ChipDropdown id="price" label={filterProps.filterPriceMax||filterProps.filterPriceMin?"Price ✓":"Price"} openChip={openChip} setOpenChip={setOpenChip}>
           {([{label:"Under ₹5,000",min:null,max:5000},{label:"₹5,000–₹10,000",min:5000,max:10000},{label:"₹10,000–₹20,000",min:10000,max:20000},{label:"₹20,000–₹40,000",min:20000,max:40000},{label:"₹40,000+",min:40000,max:null}] as {label:string;min:number|null;max:number|null}[]).map(({label,min,max})=>{const a=filterProps.filterPriceMin===min&&filterProps.filterPriceMax===max;return<CB key={label} active={a} onClick={()=>{a?filterProps.setPriceRange(null,null):filterProps.setPriceRange(min,max);setOpenChip(null);}} label={label}/>;})}</ChipDropdown>
-
-        {/* Stars chip */}
         <ChipDropdown id="stars" label={filterProps.filterStars.length>0?`Stars ✓`:"Stars"} openChip={openChip} setOpenChip={setOpenChip}>
           {[5,4,3,2,1].map(s=>{const a=filterProps.filterStars.includes(s);return<CB key={s} active={a} onClick={()=>filterProps.setFilterStars(a?filterProps.filterStars.filter(x=>x!==s):[...filterProps.filterStars,s])} label={`${"★".repeat(s)} ${s} Star`}/>;})}</ChipDropdown>
-
-        {/* Rating chip */}
         <ChipDropdown id="rating" label={filterProps.filterRating?`Rating ${filterProps.filterRating}+`:"Rating"} openChip={openChip} setOpenChip={setOpenChip}>
           {[{label:"Exceptional 9+",min:9},{label:"Excellent 8+",min:8},{label:"Very Good 7+",min:7}].map(({label,min})=><CB key={min} active={filterProps.filterRating===min} onClick={()=>{filterProps.setFilterRating(filterProps.filterRating===min?null:min);setOpenChip(null);}} label={label}/>)}</ChipDropdown>
-
-        {/* Toggle chips */}
-        <button onClick={()=>filterProps.setFilterRefundable(!filterProps.filterRefundable)} style={{display:"flex",alignItems:"center",gap:6,background:filterProps.filterRefundable?"#dcfce7":"#fff",border:`1.5px solid ${filterProps.filterRefundable?"#16a34a":"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:filterProps.filterRefundable?"#16a34a":NAVY,whiteSpace:"nowrap"}}>
-          {filterProps.filterRefundable&&"✓ "}Free Cancellation
-        </button>
-        <button onClick={()=>filterProps.setFilterBreakfast(!filterProps.filterBreakfast)} style={{display:"flex",alignItems:"center",gap:6,background:filterProps.filterBreakfast?YELLOW:"#fff",border:`1.5px solid ${filterProps.filterBreakfast?"#d97706":"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:filterProps.filterBreakfast?"#92400e":NAVY,whiteSpace:"nowrap"}}>
-          {filterProps.filterBreakfast&&"✓ "}Free Breakfast
-        </button>
-
+        <button onClick={()=>filterProps.setFilterRefundable(!filterProps.filterRefundable)} style={{display:"flex",alignItems:"center",gap:6,background:filterProps.filterRefundable?"#dcfce7":"#fff",border:`1.5px solid ${filterProps.filterRefundable?"#16a34a":"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:filterProps.filterRefundable?"#16a34a":NAVY,whiteSpace:"nowrap"}}>{filterProps.filterRefundable&&"✓ "}Free Cancellation</button>
+        <button onClick={()=>filterProps.setFilterBreakfast(!filterProps.filterBreakfast)} style={{display:"flex",alignItems:"center",gap:6,background:filterProps.filterBreakfast?YELLOW:"#fff",border:`1.5px solid ${filterProps.filterBreakfast?"#d97706":"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:filterProps.filterBreakfast?"#92400e":NAVY,whiteSpace:"nowrap"}}>{filterProps.filterBreakfast&&"✓ "}Free Breakfast</button>
         <div style={{flex:1}}/>
         <button onClick={onClose} style={{background:NAVY,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>✕ Close map</button>
       </div>
-
       <div style={{flex:1,display:"flex",overflow:"hidden"}}>
-        {/* Left: hotel list */}
         <div style={{width:360,flexShrink:0,display:"flex",flexDirection:"column",background:"#f8fafc",borderRight:"1px solid #e2e8f0"}}>
           <div style={{padding:"10px 12px",borderBottom:"1px solid #e2e8f0",background:"#fff",flexShrink:0}}>
             <div style={{display:"flex",alignItems:"center",gap:8,background:"#f8fafc",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"8px 12px"}}>
@@ -357,8 +323,6 @@ function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMob
             })}
           </div>
         </div>
-
-        {/* Right: map */}
         <div style={{flex:1,position:"relative"}}>
           <div ref={mapRef} style={{width:"100%",height:"100%"}}/>
           {selectedHotel&&(
@@ -399,27 +363,35 @@ function SearchResults(){
   const[mobileSheet,setMobileSheet]=useState<"filter"|"sort"|null>(null);
   const[desktopCalOpen,setDesktopCalOpen]=useState(false);const[desktopCalMode,setDesktopCalMode]=useState<"checkin"|"checkout">("checkin");
   const[desktopCalOffset,setDesktopCalOffset]=useState(0);const[desktopGuestOpen,setDesktopGuestOpen]=useState(false);
-  // Destination autocomplete
   const[destInput,setDestInput]=useState(destination);const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);
   const destRef=useRef<HTMLDivElement>(null);const desktopCalRef=useRef<HTMLDivElement>(null);const desktopGuestRef=useRef<HTMLDivElement>(null);
 
-  // Filter state
   const[filterStars,setFilterStars]=useState<number[]>([]);const[filterBreakfast,setFilterBreakfast]=useState(false);const[filterRefundable,setFilterRefundable]=useState(false);const[filterRating,setFilterRating]=useState<number|null>(null);const[filterPriceMin,setFilterPriceMin]=useState<number|null>(null);const[filterPriceMax,setFilterPriceMax]=useState<number|null>(null);const[filterFacilities,setFilterFacilities]=useState<string[]>([]);const[filterLocation,setFilterLocation]=useState("");const[hotelSearch,setHotelSearch]=useState("");
 
   useEffect(()=>{supabase.auth.getUser().then(({data})=>{if(data.user){const m=data.user.user_metadata;setUser({name:m?.full_name||m?.name||data.user.email?.split("@")[0]||"Member"});}});supabase.auth.onAuthStateChange((_,session)=>{if(session?.user){const m=session.user.user_metadata;setUser({name:m?.full_name||m?.name||session.user.email?.split("@")[0]||"Member"});setShowAuthModal(false);}});},[]);
-
   useEffect(()=>{const handler=(e:MouseEvent)=>{if(desktopCalRef.current&&!desktopCalRef.current.contains(e.target as Node))setDesktopCalOpen(false);if(desktopGuestRef.current&&!desktopGuestRef.current.contains(e.target as Node))setDesktopGuestOpen(false);if(destRef.current&&!destRef.current.contains(e.target as Node))setShowDestDrop(false);};document.addEventListener("mousedown",handler);return()=>document.removeEventListener("mousedown",handler);},[]);
 
   const handleDestInput=(val:string)=>{setDestInput(val);if(val.length>=1){const q=val.toLowerCase();setDestSuggestions(DESTINATIONS.filter(d=>d.label.toLowerCase().includes(q)||d.key.includes(q)));setShowDestDrop(true);}else{setDestSuggestions([]);setShowDestDrop(false);}};
   const selectDest=(d:typeof DESTINATIONS[0])=>{setDestInput(d.label);setDestination(d.label);setShowDestDrop(false);};
 
-  const fetchHotels=useCallback(async(dest?:string,ci?:string,co?:string,g?:GuestState)=>{
+  // ── THE KEY FIX: fetchHotels now reads placeId from URL and passes it to backend ──
+  const fetchHotels=useCallback(async(dest?:string,ci?:string,co?:string,g?:GuestState,pid?:string)=>{
     const d=dest||destination,c1=ci||checkIn,c2=co||checkOut,gs=g||guests;
+    const placeId=pid!==undefined?pid:(searchParams.get("placeId")||"");
     if(!c1||!c2){setLoading(false);setError("Please select check-in and check-out dates.");return;}
     setLoading(true);setError(null);setPage(1);
-    try{const res=await fetch(`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}&rooms=${gs.rooms}`,{cache:"no-store"});const data=await res.json();if(data.hotels?.hotels)setHotels(data.hotels.hotels);else setError(data.error||"No hotels found.");}catch{setError("Could not connect to server.");}
+    try{
+      // Use placeId if available (most reliable), otherwise fall back to destination text
+      const url=placeId
+        ?`${API}/search?placeId=${encodeURIComponent(placeId)}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}&rooms=${gs.rooms}`
+        :`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}&rooms=${gs.rooms}`;
+      const res=await fetch(url,{cache:"no-store"});
+      const data=await res.json();
+      if(data.hotels?.hotels)setHotels(data.hotels.hotels);
+      else setError(data.error||"No hotels found.");
+    }catch{setError("Could not connect to server.");}
     setLoading(false);
-  },[destination,checkIn,checkOut,guests]);
+  },[destination,checkIn,checkOut,guests,searchParams]);
 
   useEffect(()=>{fetchHotels();},[]);
 
@@ -437,15 +409,25 @@ function SearchResults(){
   const hasActiveFilters=filterStars.length>0||filterBreakfast||filterRefundable||filterRating!==null||filterPriceMax!==null||filterPriceMin!==null||filterFacilities.length>0||!!filterLocation||!!hotelSearch;
 
   const filteredHotels=useMemo(()=>hotels.filter(h=>{const price=priceINR(h);if(hotelSearch&&!h.name.toLowerCase().includes(hotelSearch.toLowerCase()))return false;if(filterStars.length>0&&!filterStars.includes(h.stars||0))return false;if(filterBreakfast&&!h.hasBreakfast)return false;if(filterRefundable&&h.isRefundable!==true)return false;if(filterRating!==null){const r=h.rating||getRating(h.code);if(r<filterRating)return false;}if(filterPriceMin!==null&&price<filterPriceMin)return false;if(filterPriceMax!==null&&price>filterPriceMax)return false;if(filterFacilities.length>0){const am=(h.amenities||[]).map(a=>a.toLowerCase());if(!filterFacilities.every(f=>am.some(a=>a.includes(f.toLowerCase()))))return false;}if(filterLocation){const area=getAreaFromCoords(h.latitude,h.longitude);if(area!==filterLocation)return false;}return true;}),[hotels,hotelSearch,filterStars,filterBreakfast,filterRefundable,filterRating,filterPriceMin,filterPriceMax,filterFacilities,filterLocation]);
-
   const sortedHotels=useMemo(()=>[...filteredHotels].sort((a,b)=>{if(sortBy==="price-low")return priceINR(a)-priceINR(b);if(sortBy==="price-high")return priceINR(b)-priceINR(a);if(sortBy==="rating")return(b.rating||getRating(b.code))-(a.rating||getRating(a.code));if(sortBy==="stars")return(b.stars||0)-(a.stars||0);return 0;}),[filteredHotels,sortBy]);
 
   const perPage=10;const paginatedHotels=sortedHotels.slice((page-1)*perPage,page*perPage);const totalPages=Math.ceil(sortedHotels.length/perPage);
 
   const filterProps:FiltersPanelProps={destination,areaOptions,filterLocation,setFilterLocation,filterPriceMin,filterPriceMax,setPriceRange:(min,max)=>{setFilterPriceMin(min);setFilterPriceMax(max);},filterRefundable,setFilterRefundable,filterBreakfast,setFilterBreakfast,filterRating,setFilterRating,filterStars,setFilterStars,filterFacilities,setFilterFacilities,hasActiveFilters,clearAllFilters,onHotelSearch:setHotelSearch};
 
-  const handleSearch=()=>{if(!user){setShowAuthModal(true);return;}const d=destInput.trim()||destination;setDestination(d);fetchHotels(d,checkIn,checkOut,guests);const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});router.replace(`/search?${p.toString()}`);};
-  const handleHotelClick=(hotel:Hotel)=>{if(!user){setShowAuthModal(true);return;}window.open(`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}`, '_blank');};
+  // ── THE KEY FIX: handleSearch preserves placeId in URL ──
+  const handleSearch=()=>{
+    if(!user){setShowAuthModal(true);return;}
+    const d=destInput.trim()||destination;
+    setDestination(d);
+    const currentPlaceId=searchParams.get("placeId")||"";
+    fetchHotels(d,checkIn,checkOut,guests,currentPlaceId);
+    const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
+    if(currentPlaceId)p.set("placeId",currentPlaceId);
+    router.replace(`/search?${p.toString()}`);
+  };
+
+  const handleHotelClick=(hotel:Hotel)=>{if(!user){setShowAuthModal(true);return;}window.open(`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}`,'_blank');};
 
   const desktopDayClick=(ds:string)=>{if(desktopCalMode==="checkin"){setCheckIn(ds);setCheckOut("");setDesktopCalMode("checkout");}else{if(ds<=checkIn)return;setCheckOut(ds);setDesktopCalOpen(false);}};
   const renderDesktopMonth=(year:number,month:number)=>{const todayStr=toDateStr(today.getFullYear(),today.getMonth(),today.getDate());const days=getDaysInMonth(year,month);const firstDow=getFirstDow(year,month);return(<div key={`${year}-${month}`} style={{flex:1}}><div style={{fontWeight:700,fontSize:15,color:NAVY,textAlign:"center",marginBottom:12}}>{MONTHS[month]} {year}</div><div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>{DOWS.map(d=><div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"#94a3b8",paddingBottom:6}}>{d}</div>)}{Array.from({length:firstDow}).map((_,i)=><div key={`e${i}`}/>)}{Array.from({length:days}).map((_,i)=>{const day=i+1;const ds=toDateStr(year,month,day);const isDisabled=ds<todayStr;let bg="transparent",clr=isDisabled?"#cbd5e1":NAVY,br="50%",fw=400;if(ds===checkIn&&!!checkOut){bg=B;clr="#fff";br="50% 0 0 50%";fw=700;}else if(ds===checkOut){bg=B;clr="#fff";br="0 50% 50% 0";fw=700;}else if(ds===checkIn&&!checkOut){bg=B;clr="#fff";br="50%";fw=700;}else if(checkIn&&checkOut&&ds>checkIn&&ds<checkOut){bg="#dbeafe";clr=B;br="0";}else if(ds===todayStr)clr=B;return<div key={day} onClick={()=>!isDisabled&&desktopDayClick(ds)} style={{height:34,display:"flex",alignItems:"center",justifyContent:"center",background:bg,color:clr,borderRadius:br,fontWeight:fw,fontSize:13,cursor:isDisabled?"not-allowed":"pointer",opacity:isDisabled?0.35:1}}>{day}</div>;})}</div></div>);};
@@ -472,7 +454,6 @@ function SearchResults(){
 
       {!isMobile&&<div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 32px",position:"sticky",top:60,zIndex:200}}>
         <div style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:14,display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1.3fr auto",alignItems:"stretch",height:64,overflow:"visible",position:"relative",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
-          {/* Destination with autocomplete */}
           <div ref={destRef} className="sfd" style={{padding:"0 20px",borderRight:"1px solid #e2e8f0",display:"flex",flexDirection:"column",justifyContent:"center",borderRadius:"12px 0 0 12px",position:"relative"}}>
             <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Destination</div>
             <div style={{display:"flex",alignItems:"center",gap:4}}><input value={destInput} onChange={e=>handleDestInput(e.target.value)} onFocus={()=>{setDestFocused(true);if(destInput.length>=1)setShowDestDrop(true);}} onBlur={()=>{setTimeout(()=>{setDestFocused(false);if(!destInput.trim())setDestInput(destination);setShowDestDrop(false);},200);}} onKeyDown={e=>{if(e.key==="Enter"){setShowDestDrop(false);handleSearch();}if(e.key==="Escape"){setDestInput(destination);setShowDestDrop(false);}}} placeholder="City or destination" style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:15,fontWeight:600,color:NAVY,background:"transparent",padding:0,flex:1}}/>{destInput&&destFocused&&<button onClick={()=>{setDestInput("");setDestSuggestions([]);setShowDestDrop(false);}} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:18,padding:"0 2px",flexShrink:0,lineHeight:1}}>×</button>}</div>
@@ -560,7 +541,6 @@ function SearchResults(){
                 <div key={String(hotel.code)} className="hcard-m" onClick={()=>handleHotelClick(hotel)}>
                   <div style={{position:"relative",height:200}}>
                     <img src={getImg(hotel,globalIdx)} alt={hotel.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} onError={e=>{(e.target as HTMLImageElement).src=FALLBACK_IMGS[globalIdx%FALLBACK_IMGS.length];}}/>
-                    {/* No heart icon — removed */}
                     <div style={{position:"absolute",top:12,left:12,background:"rgba(255,255,255,0.95)",color:NAVY,fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:6}}>↗ Trending</div>
                   </div>
                   <div style={{padding:"14px 16px 16px"}}>
@@ -570,21 +550,17 @@ function SearchResults(){
                       <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:12,fontWeight:700,padding:"3px 8px",borderRadius:6}}>{rating.toFixed(1)}</span>
                       <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
                       {hotel.isRefundable!=null&&<span style={{fontSize:11,fontWeight:600,color:hotel.isRefundable?"#16a34a":"#dc2626",background:hotel.isRefundable?"#dcfce7":"#fee2e2",padding:"2px 7px",borderRadius:5}}>{hotel.isRefundable?"✓ Refundable":"Non-refundable"}</span>}
-                      {/* Breakfast yellow pill */}
-                      
                     </div>
                     <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between"}}>
                       <div>{price>0?(<>{hotel.otaPriceINR&&hotel.otaPriceINR>price?<div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>Members save {formatINR(hotel.otaPriceINR-price)}</div>:<div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>{discount}% off</div>}<div style={{fontSize:12,color:"#94a3b8",textDecoration:"line-through"}}>{formatINR(hotel.otaPriceINR&&hotel.otaPriceINR>price?hotel.otaPriceINR:Math.round(price*(1+discount/100)))}</div><div className="sora" style={{fontSize:22,fontWeight:800,color:NAVY}}>{formatINR(price)}</div><div style={{fontSize:11,color:"#64748b"}}>Taxes included · per night</div></>):<div style={{fontSize:13,color:"#64748b"}}>Price on request</div>}</div>
                       <button style={{background:B,color:"#fff",border:"none",borderRadius:10,padding:"11px 20px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Book Now</button>
                     </div>
-                    
                   </div>
                 </div>
               ):(
                 <div key={String(hotel.code)} className="hcard" onClick={()=>handleHotelClick(hotel)}>
                   <div className="hcard-img">
                     <img src={getImg(hotel,globalIdx)} alt={hotel.name} onError={e=>{(e.target as HTMLImageElement).src=FALLBACK_IMGS[globalIdx%FALLBACK_IMGS.length];}}/>
-                    {/* Only Trending badge on image — no heart, no breakfast */}
                     <div style={{position:"absolute",top:10,left:10,background:"rgba(255,255,255,0.95)",color:NAVY,fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:6}}>↗ Trending</div>
                   </div>
                   <div style={{padding:"18px 20px 18px 22px",display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
@@ -597,10 +573,7 @@ function SearchResults(){
                             <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:12.5,fontWeight:700,padding:"3px 8px",borderRadius:6}}>{rating.toFixed(1)}</span>
                             <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
                             {hotel.isRefundable!=null&&<span style={{fontSize:11,fontWeight:600,color:hotel.isRefundable?"#16a34a":"#dc2626",background:hotel.isRefundable?"#dcfce7":"#fee2e2",padding:"2px 7px",borderRadius:5}}>{hotel.isRefundable?"✓ Free Cancellation":"Non-refundable"}</span>}
-                            {/* Breakfast yellow pill in card body */}
-                            
                           </div>
-                          {/* Priority amenities — max 4 */}
                           {cardAmenities.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:"4px 14px",marginBottom:8}}>{cardAmenities.map((a,i)=><span key={i} style={{fontSize:12.5,color:"#475569"}}>• {a}</span>)}</div>}
                         </div>
                         <div style={{textAlign:"right",flexShrink:0}}>
