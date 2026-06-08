@@ -385,11 +385,12 @@ export default function SearchHotelsPage() {
               setSearchResults([]); setShowSuggestions(false);
             }}
             style={{ padding: "11px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontSize: 14, color: NAVY, borderBottom: i < filteredSuggestions.length - 1 ? "1px solid #f8fafc" : "none" }}>
-            <span style={{ fontSize: 22, flexShrink: 0 }}>{d.flag}</span>
-            <div>
-              <div style={{ fontWeight: 600 }}>{d.city}</div>
-              <div style={{ fontSize: 12, color: "#64748b" }}>{d.country}</div>
+            <span style={{ fontSize: 22, flexShrink: 0 }}>{d.flag || (d.type === 'hotel' ? '🏨' : '🌍')}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600 }}>{d.name || d.city}</div>
+              <div style={{ fontSize: 12, color: "#64748b" }}>{d.subtext || d.country}{d.type === 'hotel' ? ' · Hotel' : ''}</div>
             </div>
+            {d.type === 'hotel' && <span style={{ fontSize: 10, background: "#eff6ff", color: "#1447b8", padding: "2px 6px", borderRadius: 4, fontWeight: 600, flexShrink: 0 }}>Hotel</span>}
           </div>
         ))}
       </div>
