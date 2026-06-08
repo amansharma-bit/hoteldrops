@@ -49,7 +49,6 @@ interface Booking {
 
 type Section = "overview" | "price-monitor" | "my-bookings" | "trips" | "notifications" | "settings";
 
-// ── Toggle switch ────────────────────────────────────────────────────────────
 function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
   return (
     <div onClick={onChange} style={{ width: 48, height: 26, borderRadius: 13, background: on ? B : "#e2e8f0", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
@@ -58,7 +57,6 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
   );
 }
 
-// ── SVG icons ────────────────────────────────────────────────────────────────
 const Icon = ({ d, size = 16, color = "#64748b", stroke = 1.5 }: { d: string; size?: number; color?: string; stroke?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
     <path d={d} />
@@ -88,7 +86,6 @@ const ICONS = {
   star:      "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z",
 };
 
-// Demo data
 const DEMO_WATCH: Booking[] = [
   { id: "w1", hotel_name: "Manand Hotel", hotel_city: "Yerevan, Armenia", check_in: "2026-06-03", check_out: "2026-06-09", original_price: 6174, status: "tracking", last_checked_at: new Date(Date.now() - 3600000).toISOString(), nights: 6, room_type: "Standard Room", created_at: new Date().toISOString(), platform: "Agoda", ref_no: "2013580651", offers: [{ id: "o1", offer_price: 5420, customer_saving: 754, status: "sent" }] },
   { id: "w2", hotel_name: "The Leela Palace", hotel_city: "New Delhi, India", check_in: "2026-07-15", check_out: "2026-07-18", original_price: 18500, status: "drop_found", last_checked_at: new Date(Date.now() - 86400000).toISOString(), nights: 3, room_type: "Deluxe Room", created_at: new Date().toISOString(), platform: "Booking.com", ref_no: "8821934", offers: [{ id: "o2", offer_price: 16200, customer_saving: 2300, status: "sent" }] },
@@ -115,11 +112,9 @@ export default function Dashboard() {
   const [watchBookings, setWatchBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDemo, setIsDemo] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
-  // User info
   const [user, setUser] = useState<{ name: string; email: string; initials: string } | null>(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -130,19 +125,11 @@ export default function Dashboard() {
   const [passport, setPassport] = useState("");
   const [profileSaved, setProfileSaved] = useState(false);
 
-  // Notification prefs
   const [notifPriceDrops, setNotifPriceDrops] = useState(true);
   const [notifBookingUpdates, setNotifBookingUpdates] = useState(true);
   const [notifDeals, setNotifDeals] = useState(false);
   const [notifSMS, setNotifSMS] = useState(true);
 
-  // Settings
-  const [currentPass, setCurrentPass] = useState("");
-  const [newPass, setNewPass] = useState("");
-  const [confirmPass, setConfirmPass] = useState("");
-  const [passSaved, setPassSaved] = useState(false);
-
-  // Booking tabs
   const [bookingTab, setBookingTab] = useState<"all" | "upcoming" | "completed" | "cancelled">("all");
 
   useEffect(() => {
@@ -189,7 +176,6 @@ export default function Dashboard() {
   ];
 
   const inp: React.CSSProperties = { width: "100%", border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "11px 14px", fontSize: 14, fontFamily: "inherit", color: NAVY, outline: "none", background: "#fff" };
-
   const filteredBookings = DEMO_BOOKINGS.filter(b => bookingTab === "all" || b.status === bookingTab);
 
   const SectionTitle = ({ title, sub }: { title: string; sub: string }) => (
@@ -219,11 +205,8 @@ export default function Dashboard() {
         .setting-row:hover { background: #f8fafc; }
       `}</style>
 
-      {/* ── TOP NAV ── */}
       <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px", position: "sticky", top: 0, zIndex: 300 }}>
-        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: NAVY, textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-          rebuq<span style={{ color: B }}>.</span>
-        </a>
+        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
         {!isMobile && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 100, padding: "5px 14px" }}>
             <div style={{ width: 7, height: 7, background: "#16a34a", borderRadius: "50%", animation: "pulse 1.5s infinite" }} />
@@ -250,13 +233,10 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      {/* ── PROFILE HEADER BAND ── */}
       <div style={{ background: "linear-gradient(135deg,#1e3a8a 0%,#1447b8 60%,#2563eb 100%)", padding: isMobile ? "24px 20px" : "28px 40px", position: "relative", overflow: "hidden" }}>
-        {/* Subtle grid overlay */}
         <div style={{ position: "absolute", inset: 0, opacity: 0.08, backgroundImage: "linear-gradient(rgba(255,255,255,0.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.3) 1px,transparent 1px)", backgroundSize: "48px 48px" }} />
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" as const }}>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-            {/* Avatar */}
             <div style={{ position: "relative" }}>
               <div style={{ width: isMobile ? 60 : 72, height: isMobile ? 60 : 72, borderRadius: 16, background: "rgba(255,255,255,0.18)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 22 : 26, fontWeight: 800, color: "#fff" }}>
                 {user?.initials || "M"}
@@ -265,7 +245,6 @@ export default function Dashboard() {
                 <Icon d={ICONS.edit} size={11} color="#fff" stroke={2} />
               </button>
             </div>
-            {/* User info */}
             <div>
               <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 20 : 26, fontWeight: 800, color: "#fff", marginBottom: 6 }}>{user?.name || "Member"}</div>
               <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 20, flexWrap: "wrap" as const }}>
@@ -290,7 +269,6 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          {/* Total savings */}
           <div style={{ textAlign: isMobile ? "left" : "right" as const }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 4 }}>TOTAL SAVINGS</div>
             <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 28 : 36, fontWeight: 800, color: GOLD }}>{formatINR(totalSaved || 3054)}</div>
@@ -299,7 +277,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── MOBILE SIDEBAR OVERLAY ── */}
       {isMobile && mobileSidebarOpen && (
         <>
           <div onClick={() => setMobileSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 400 }} />
@@ -326,10 +303,8 @@ export default function Dashboard() {
         </>
       )}
 
-      {/* ── MAIN LAYOUT ── */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "20px 16px 40px" : "28px 32px 60px", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "240px 1fr", gap: 24, alignItems: "flex-start" }}>
 
-        {/* ── SIDEBAR (desktop) ── */}
         {!isMobile && (
           <div style={{ position: "sticky", top: 78 }}>
             <Card style={{ overflow: "hidden" }}>
@@ -350,13 +325,9 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── CONTENT AREA ── */}
         <div>
-
-          {/* ══════════ OVERVIEW ══════════ */}
           {section === "overview" && (
             <div>
-              {/* 4 stat cards */}
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
                 {[
                   { icon: ICONS.monitor,  val: bookingsMonitored, label: "Bookings Monitored", color: B,       bg: "#eff6ff" },
@@ -373,8 +344,6 @@ export default function Dashboard() {
                   </Card>
                 ))}
               </div>
-
-              {/* Personal Information */}
               <Card style={{ padding: 24, marginBottom: 20 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: NAVY, fontFamily: "'Sora',sans-serif" }}>Personal Information</div>
@@ -398,8 +367,6 @@ export default function Dashboard() {
                   ))}
                 </div>
               </Card>
-
-              {/* Recent Activity */}
               <Card style={{ padding: 24 }}>
                 <div style={{ fontSize: 16, fontWeight: 700, color: NAVY, fontFamily: "'Sora',sans-serif", marginBottom: 18 }}>Recent Activity</div>
                 {DEMO_ACTIVITY.map((a, i) => (
@@ -417,7 +384,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ══════════ PRICE MONITOR ══════════ */}
           {section === "price-monitor" && (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
@@ -430,14 +396,12 @@ export default function Dashboard() {
                   {activeWatch} Active
                 </div>
               </div>
-
               {isDemo && (
                 <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 16px", marginBottom: 16, fontSize: 12.5, color: "#92400e", display: "flex", alignItems: "center", gap: 8 }}>
                   👀 <span><strong>Demo mode</strong> — Upload a real voucher to start tracking.</span>
                   <button onClick={() => router.push("/upload")} style={{ marginLeft: "auto", background: "#d97706", color: "#fff", border: "none", padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Upload now →</button>
                 </div>
               )}
-
               {loading ? (
                 <div style={{ textAlign: "center", padding: 60 }}>
                   <div style={{ width: 32, height: 32, border: `3px solid #bfdbfe`, borderTop: `3px solid ${B}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto" }} />
@@ -445,7 +409,6 @@ export default function Dashboard() {
               ) : watchBookings.map(b => {
                 const offer = b.offers?.[0];
                 const isDropFound = ["drop_found", "offer_sent"].includes(b.status);
-                const isSaved = b.status === "rebooked";
                 const badgeMap: Record<string, { label: string; bg: string; color: string }> = {
                   tracking:   { label: "Tracking",    bg: "#dbeafe", color: B },
                   drop_found: { label: "Saved ↓",     bg: "#dcfce7", color: "#16a34a" },
@@ -458,7 +421,6 @@ export default function Dashboard() {
                 return (
                   <Card key={b.id} style={{ marginBottom: 16, overflow: "hidden" }}>
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr auto", gap: 0 }}>
-                      {/* Left */}
                       <div style={{ padding: 22 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" as const }}>
                           <div style={{ fontSize: 16, fontWeight: 700, color: NAVY, fontFamily: "'Sora',sans-serif" }}>{b.hotel_name}</div>
@@ -487,24 +449,17 @@ export default function Dashboard() {
                             </div>
                           ))}
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#64748b" }}>
-                          <Icon d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" size={13} color="#94a3b8" />
-                          Free cancellation deadline: {b.check_in}
-                        </div>
                       </div>
-                      {/* Right — price panel */}
                       <div style={{ background: "#f8fafc", borderLeft: isMobile ? "none" : "1px solid #e2e8f0", borderTop: isMobile ? "1px solid #e2e8f0" : "none", padding: "20px 22px", display: "flex", flexDirection: "column" as const, alignItems: isMobile ? "flex-start" : "flex-end" as const, justifyContent: "center", minWidth: 160, gap: 4 }}>
                         <div style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em" }}>YOU PAID</div>
                         <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 700, color: offer ? "#94a3b8" : NAVY, textDecoration: offer ? "line-through" : "none" }}>{formatINR(b.original_price)}</div>
-                        {offer && (
-                          <>
-                            <div style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginTop: 6 }}>CURRENT PRICE</div>
-                            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 700, color: NAVY }}>{formatINR(offer.offer_price)}</div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#16a34a", fontWeight: 700, marginTop: 2 }}>
-                              <Icon d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" size={13} color="#16a34a" /> Save {formatINR(offer.customer_saving)}
-                            </div>
-                          </>
-                        )}
+                        {offer && (<>
+                          <div style={{ fontSize: 10.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginTop: 6 }}>CURRENT PRICE</div>
+                          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 700, color: NAVY }}>{formatINR(offer.offer_price)}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#16a34a", fontWeight: 700, marginTop: 2 }}>
+                            <Icon d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" size={13} color="#16a34a" /> Save {formatINR(offer.customer_saving)}
+                          </div>
+                        </>)}
                         {!offer && b.status === "tracking" && (
                           <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#64748b", marginTop: 4 }}>
                             <Icon d={ICONS.eye} size={13} color="#94a3b8" /> Watching
@@ -512,24 +467,19 @@ export default function Dashboard() {
                         )}
                       </div>
                     </div>
-                    {/* Footer actions */}
                     <div style={{ padding: "14px 22px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "flex-end", gap: 10 }}>
                       <button style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>View Details</button>
-                      {(isDropFound || isSaved) && (
-                        <button style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Claim Refund</button>
-                      )}
+                      {isDropFound && <button style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Claim Refund</button>}
                     </div>
                   </Card>
                 );
               })}
-
               <button onClick={() => router.push("/upload")} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 8 }}>
                 + Upload new booking to track
               </button>
             </div>
           )}
 
-          {/* ══════════ MY BOOKINGS ══════════ */}
           {section === "my-bookings" && (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
@@ -539,8 +489,6 @@ export default function Dashboard() {
                 </div>
                 <button onClick={() => router.push("/search-hotels")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>+ New booking</button>
               </div>
-
-              {/* Tabs */}
               <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
                 {(["all","upcoming","completed","cancelled"] as const).map(t => (
                   <button key={t} onClick={() => setBookingTab(t)}
@@ -549,14 +497,13 @@ export default function Dashboard() {
                   </button>
                 ))}
               </div>
-
               {filteredBookings.length === 0 ? (
                 <Card style={{ padding: 40, textAlign: "center" as const }}>
                   <div style={{ fontSize: 36, marginBottom: 12 }}>🏨</div>
                   <div style={{ fontSize: 15, fontWeight: 600, color: NAVY, marginBottom: 6 }}>No {bookingTab} bookings</div>
                   <button onClick={() => router.push("/search-hotels")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12 }}>Search hotels →</button>
                 </Card>
-              ) : filteredBookings.map((b, i) => (
+              ) : filteredBookings.map((b) => (
                 <Card key={b.id} style={{ marginBottom: 14, padding: 22 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap" as const, gap: 10 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -577,9 +524,9 @@ export default function Dashboard() {
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "8px 16px", marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #f1f5f9" }}>
                     {[
-                      { label: "CHECK-IN",    val: fmtDate(b.check_in) },
-                      { label: "CHECK-OUT",   val: fmtDate(b.check_out) },
-                      { label: "NIGHTS",      val: `${b.nights} nights` },
+                      { label: "CHECK-IN", val: fmtDate(b.check_in) },
+                      { label: "CHECK-OUT", val: fmtDate(b.check_out) },
+                      { label: "NIGHTS", val: `${b.nights} nights` },
                       { label: "BOOKING REF", val: b.booking_ref },
                     ].map((f, fi) => (
                       <div key={fi}>
@@ -610,11 +557,9 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ══════════ TRIPS ══════════ */}
           {section === "trips" && (
             <div>
               <SectionTitle title="My Trips" sub="Your upcoming and past travel history" />
-
               <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 12 }}>UPCOMING</div>
               {DEMO_BOOKINGS.filter(b => b.status === "upcoming").map(b => (
                 <Card key={b.id} style={{ padding: 18, marginBottom: 12, display: "flex", alignItems: "center", gap: 16 }}>
@@ -635,7 +580,6 @@ export default function Dashboard() {
                   </div>
                 </Card>
               ))}
-
               <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "24px 0 12px" }}>PAST TRIPS</div>
               {DEMO_BOOKINGS.filter(b => b.status === "completed").map(b => (
                 <Card key={b.id} style={{ padding: 18, marginBottom: 12, display: "flex", alignItems: "center", gap: 16 }}>
@@ -659,11 +603,9 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ══════════ NOTIFICATIONS ══════════ */}
           {section === "notifications" && (
             <div>
               <SectionTitle title="Notifications" sub="Manage how and when you hear from us" />
-
               <Card style={{ marginBottom: 20 }}>
                 {[
                   { label: "Price Drop Alerts", desc: "Get notified when we detect a price drop on your monitored bookings", icon: ICONS.monitor, val: notifPriceDrops, set: setNotifPriceDrops },
@@ -683,7 +625,6 @@ export default function Dashboard() {
                   </div>
                 ))}
               </Card>
-
               <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 12 }}>RECENT NOTIFICATIONS</div>
               <Card>
                 {[
@@ -703,30 +644,25 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ══════════ SETTINGS ══════════ */}
           {section === "settings" && (
             <div>
               <SectionTitle title="Account Settings" sub="Manage your account preferences and security" />
-
-              {/* Security */}
               <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 10 }}>SECURITY</div>
               <Card style={{ marginBottom: 20 }}>
                 {[
-                  { label: "Change Password", sub: "Last changed 3 months ago", btn: "Update", action: () => {} },
-                  { label: "Two-Factor Authentication", sub: "Add an extra layer of security", btn: "Enable", action: () => {} },
-                  { label: "Login Activity", sub: "View recent sign-in sessions", btn: "View", action: () => {} },
+                  { label: "Change Password", sub: "Last changed 3 months ago", btn: "Update" },
+                  { label: "Two-Factor Authentication", sub: "Add an extra layer of security", btn: "Enable" },
+                  { label: "Login Activity", sub: "View recent sign-in sessions", btn: "View" },
                 ].map((row, i, arr) => (
                   <div key={i} className="setting-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px", borderBottom: i < arr.length - 1 ? "1px solid #f8fafc" : "none" }}>
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{row.label}</div>
                       <div style={{ fontSize: 12.5, color: "#64748b", marginTop: 2 }}>{row.sub}</div>
                     </div>
-                    <button onClick={row.action} style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>{row.btn}</button>
+                    <button style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "7px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>{row.btn}</button>
                   </div>
                 ))}
               </Card>
-
-              {/* Preferences */}
               <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 10 }}>PREFERENCES</div>
               <Card style={{ marginBottom: 20 }}>
                 {[
@@ -743,8 +679,6 @@ export default function Dashboard() {
                   </div>
                 ))}
               </Card>
-
-              {/* Personal info edit */}
               <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 10 }}>PERSONAL INFORMATION</div>
               <Card style={{ padding: 22, marginBottom: 20 }}>
                 <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 18 }}>
@@ -768,8 +702,6 @@ export default function Dashboard() {
                   {profileSaved ? "✓ Saved!" : "Save changes"}
                 </button>
               </Card>
-
-              {/* Privacy */}
               <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 10 }}>PRIVACY</div>
               <Card style={{ marginBottom: 20 }}>
                 <div className="setting-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px", borderBottom: "1px solid #f8fafc" }}>
@@ -789,11 +721,9 @@ export default function Dashboard() {
               </Card>
             </div>
           )}
-
         </div>
       </div>
 
-      {/* FOOTER */}
       <footer style={{ background: "#fff", borderTop: "1px solid #e2e8f0", padding: isMobile ? "20px 16px" : "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" as const, gap: 12 }}>
         <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 16, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
         <div style={{ display: "flex", gap: 24 }}>
