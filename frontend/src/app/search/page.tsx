@@ -11,6 +11,18 @@ const B = "#1447b8";
 const NAVY = "#0f172a";
 const YELLOW = "#FCD34D";
 
+// ── Haversine distance ────────────────────────────────────────────────────────
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function formatDistance(km: number): string {
+  return km < 1 ? `${Math.round(km*1000)} m` : `${km.toFixed(1)} km`;
+}
+
 const DESTINATIONS: { label: string; key: string; flag: string; country: string; city: string }[] = [
   { label:"Dubai", key:"dubai", flag:"🇦🇪", country:"AE", city:"Dubai" },
   { label:"Abu Dhabi", key:"abu dhabi", flag:"🇦🇪", country:"AE", city:"Abu Dhabi" },
@@ -49,24 +61,15 @@ const DESTINATIONS: { label: string; key: string; flag: string; country: string;
 ];
 
 const DUBAI_AREAS: [string, number, number, number, number][] = [
-  ["Palm Jumeirah",       25.095, 25.130, 55.117, 55.165],
-  ["Dubai Marina",        25.065, 25.095, 55.130, 55.160],
-  ["JBR",                 25.073, 25.090, 55.120, 55.138],
-  ["Downtown Dubai",      25.185, 25.202, 55.270, 55.295],
-  ["Business Bay",        25.173, 25.192, 55.280, 55.310],
-  ["DIFC",                25.205, 25.220, 55.270, 55.285],
-  ["Deira",               25.255, 25.290, 55.295, 55.340],
-  ["Bur Dubai",           25.230, 25.260, 55.280, 55.320],
-  ["Sheikh Zayed Road",   25.200, 25.230, 55.260, 55.285],
-  ["Al Barsha",           25.095, 25.130, 55.165, 55.210],
-  ["Jumeirah",            25.155, 25.205, 55.215, 55.265],
-  ["Dubai Creek Harbour", 25.195, 25.225, 55.330, 55.365],
-  ["City Walk",           25.195, 25.215, 55.245, 55.270],
-  ["Dubai Hills",         25.115, 25.155, 55.220, 55.270],
-  ["Al Jadaf",            25.215, 25.240, 55.330, 55.360],
-  ["Festival City",       25.220, 25.250, 55.350, 55.385],
-  ["Al Qusais",           25.250, 25.285, 55.355, 55.400],
-  ["Jebel Ali",           24.970, 25.040, 55.040, 55.120],
+  ["Palm Jumeirah",25.095,25.130,55.117,55.165],["Dubai Marina",25.065,25.095,55.130,55.160],
+  ["JBR",25.073,25.090,55.120,55.138],["Downtown Dubai",25.185,25.202,55.270,55.295],
+  ["Business Bay",25.173,25.192,55.280,55.310],["DIFC",25.205,25.220,55.270,55.285],
+  ["Deira",25.255,25.290,55.295,55.340],["Bur Dubai",25.230,25.260,55.280,55.320],
+  ["Sheikh Zayed Road",25.200,25.230,55.260,55.285],["Al Barsha",25.095,25.130,55.165,55.210],
+  ["Jumeirah",25.155,25.205,55.215,55.265],["Dubai Creek Harbour",25.195,25.225,55.330,55.365],
+  ["City Walk",25.195,25.215,55.245,55.270],["Dubai Hills",25.115,25.155,55.220,55.270],
+  ["Al Jadaf",25.215,25.240,55.330,55.360],["Festival City",25.220,25.250,55.350,55.385],
+  ["Al Qusais",25.250,25.285,55.355,55.400],["Jebel Ali",24.970,25.040,55.040,55.120],
 ];
 
 function getAreaFromCoords(lat?: number|null, lng?: number|null): string|null {
@@ -106,8 +109,7 @@ const FALLBACK_IMGS=["https://images.unsplash.com/photo-1512453979798-5ea266f888
 interface FiltersPanelProps{destination:string;areaOptions:string[];filterLocation:string;setFilterLocation:(v:string)=>void;filterPriceMin:number|null;filterPriceMax:number|null;setPriceRange:(min:number|null,max:number|null)=>void;filterRefundable:boolean;setFilterRefundable:(v:boolean)=>void;filterBreakfast:boolean;setFilterBreakfast:(v:boolean)=>void;filterRating:number|null;setFilterRating:(v:number|null)=>void;filterStars:number[];setFilterStars:(v:number[])=>void;filterFacilities:string[];setFilterFacilities:(v:string[])=>void;hasActiveFilters:boolean;clearAllFilters:()=>void;onHotelSearch:(v:string)=>void;}
 
 function FiltersPanel({areaOptions,filterLocation,setFilterLocation,filterPriceMin,filterPriceMax,setPriceRange,filterRefundable,setFilterRefundable,filterBreakfast,setFilterBreakfast,filterRating,setFilterRating,filterStars,setFilterStars,filterFacilities,setFilterFacilities,hasActiveFilters,clearAllFilters,onHotelSearch}:FiltersPanelProps){
-  const [showMore,setShowMore]=useState(false);
-  const [sv,setSv]=useState("");
+  const [showMore,setShowMore]=useState(false);const [sv,setSv]=useState("");
   const CB=({active,onClick}:{active:boolean;onClick:()=>void})=><div onClick={onClick} style={{width:16,height:16,border:`1.5px solid ${active?B:"#e2e8f0"}`,borderRadius:4,background:active?B:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer"}}>{active&&<svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}</div>;
   const RB=({active,onClick}:{active:boolean;onClick:()=>void})=><div onClick={onClick} style={{width:16,height:16,border:`1.5px solid ${active?B:"#e2e8f0"}`,borderRadius:"50%",background:active?B:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer"}}>{active&&<div style={{width:6,height:6,borderRadius:"50%",background:"#fff"}}/>}</div>;
   const Row=({children,onClick}:{children:React.ReactNode;onClick:()=>void})=><div onClick={onClick} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,cursor:"pointer"}}>{children}</div>;
@@ -203,145 +205,45 @@ function BottomSheet({title,onClose,children,onClear}:{title:string;onClose:()=>
 
 function ChipDropdown({id,label,openChip,setOpenChip,children}:{id:string;label:string;openChip:string|null;setOpenChip:(v:string|null)=>void;children:React.ReactNode}){
   const isOpen=openChip===id;
-  return(
-    <div style={{position:"relative"}}>
-      <button onClick={()=>setOpenChip(isOpen?null:id)} style={{display:"flex",alignItems:"center",gap:6,background:isOpen?"#eff6ff":"#fff",border:`1.5px solid ${isOpen?B:"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:isOpen?B:NAVY,whiteSpace:"nowrap"}}>
-        {label} <span style={{fontSize:10}}>▼</span>
-      </button>
-      {isOpen&&<div style={{position:"absolute",top:"calc(100% + 6px)",left:0,minWidth:220,background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.16)",zIndex:99999,padding:14,maxHeight:320,overflowY:"auto"}}>{children}</div>}
-    </div>
-  );
+  return(<div style={{position:"relative"}}><button onClick={()=>setOpenChip(isOpen?null:id)} style={{display:"flex",alignItems:"center",gap:6,background:isOpen?"#eff6ff":"#fff",border:`1.5px solid ${isOpen?B:"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:isOpen?B:NAVY,whiteSpace:"nowrap"}}>{label} <span style={{fontSize:10}}>▼</span></button>
+    {isOpen&&<div style={{position:"absolute",top:"calc(100% + 6px)",left:0,minWidth:220,background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.16)",zIndex:99999,padding:14,maxHeight:320,overflowY:"auto"}}>{children}</div>}
+  </div>);
 }
 
 function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMobile}:{hotels:Hotel[];checkIn:string;checkOut:string;filterProps:FiltersPanelProps;onClose:()=>void;onHotelClick:(h:Hotel)=>void;isMobile:boolean;}){
-  const mapRef=useRef<HTMLDivElement>(null);
-  const mapInstanceRef=useRef<any>(null);
-  const markersRef=useRef<{el:HTMLElement;hotel:Hotel;pinDiv:HTMLElement}[]>([]);
-  const listRef=useRef<HTMLDivElement>(null);
-  const[selectedHotel,setSelectedHotel]=useState<Hotel|null>(null);
-  const[openChip,setOpenChip]=useState<string|null>(null);
-  const chipRef=useRef<HTMLDivElement>(null);
+  const mapRef=useRef<HTMLDivElement>(null);const mapInstanceRef=useRef<any>(null);const markersRef=useRef<{el:HTMLElement;hotel:Hotel;pinDiv:HTMLElement}[]>([]);const listRef=useRef<HTMLDivElement>(null);
+  const[selectedHotel,setSelectedHotel]=useState<Hotel|null>(null);const[openChip,setOpenChip]=useState<string|null>(null);const chipRef=useRef<HTMLDivElement>(null);
   const NIGHTS=checkIn&&checkOut?Math.max(1,Math.round((new Date(checkOut).getTime()-new Date(checkIn).getTime())/86400000)):1;
   const hotelsWithCoords=hotels.filter(h=>h.latitude&&h.longitude);
-
   useEffect(()=>{const handler=(e:MouseEvent)=>{if(openChip&&chipRef.current&&!chipRef.current.contains(e.target as Node)){setOpenChip(null);}};document.addEventListener("mousedown",handler);return()=>document.removeEventListener("mousedown",handler);},[openChip]);
-
-  const selectHotel=(hotel:Hotel)=>{
-    setSelectedHotel(hotel);
-    markersRef.current.forEach(({pinDiv})=>{pinDiv.style.background="#fff";pinDiv.style.color=NAVY;pinDiv.style.transform="scale(1)";});
-    const found=markersRef.current.find(m=>String(m.hotel.code)===String(hotel.code));
-    if(found){found.pinDiv.style.background=YELLOW;found.pinDiv.style.color=NAVY;found.pinDiv.style.transform="scale(1.15)";}
-    if(hotel.latitude&&hotel.longitude&&mapInstanceRef.current)mapInstanceRef.current.flyTo({center:[hotel.longitude,hotel.latitude],zoom:14,speed:1.5});
-    if(listRef.current){const card=listRef.current.querySelector(`[data-hotel="${hotel.code}"]`) as HTMLElement;if(card)card.scrollIntoView({behavior:"smooth",block:"nearest"});}
-  };
-
-  useEffect(()=>{
-    if(!mapRef.current)return;
-    const initMap=()=>{
-      const mapboxgl=(window as any).mapboxgl;if(!mapboxgl)return;
-      mapboxgl.accessToken=MAPBOX_TOKEN;
-      const cLng=hotelsWithCoords.length>0?hotelsWithCoords.reduce((s,h)=>s+(h.longitude||0),0)/hotelsWithCoords.length:55.2708;
-      const cLat=hotelsWithCoords.length>0?hotelsWithCoords.reduce((s,h)=>s+(h.latitude||0),0)/hotelsWithCoords.length:25.2048;
-      const map=new mapboxgl.Map({container:mapRef.current,style:"mapbox://styles/mapbox/streets-v12",center:[cLng,cLat],zoom:11});
-      mapInstanceRef.current=map;
-      const addMarkers=()=>{hotelsWithCoords.forEach(hotel=>{const price=Math.round((hotel.lowestPriceINR||hotel.minRate||0)/NIGHTS);if(!price)return;const el=document.createElement("div");const pinDiv=document.createElement("div");pinDiv.style.cssText=`background:#fff;color:${NAVY};padding:5px 10px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.18);border:1.5px solid #e2e8f0;cursor:pointer;transition:all 0.15s;`;pinDiv.textContent=`₹${price.toLocaleString("en-IN")}`;el.appendChild(pinDiv);el.addEventListener("click",()=>selectHotel(hotel));new mapboxgl.Marker({element:el,anchor:"bottom"}).setLngLat([hotel.longitude!,hotel.latitude!]).addTo(map);markersRef.current.push({el,hotel,pinDiv});});};
-      if(map.loaded())addMarkers();else map.on("load",addMarkers);
-    };
-    if(!document.querySelector('link[href*="mapbox-gl"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css";document.head.appendChild(l);}
-    if((window as any).mapboxgl){initMap();return()=>{if(mapInstanceRef.current)mapInstanceRef.current.remove();};}
-    const s=document.createElement("script");s.src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js";s.onload=initMap;document.head.appendChild(s);
-    return()=>{if(mapInstanceRef.current)mapInstanceRef.current.remove();};
-  },[]);
-
+  const selectHotel=(hotel:Hotel)=>{setSelectedHotel(hotel);markersRef.current.forEach(({pinDiv})=>{pinDiv.style.background="#fff";pinDiv.style.color=NAVY;pinDiv.style.transform="scale(1)";});const found=markersRef.current.find(m=>String(m.hotel.code)===String(hotel.code));if(found){found.pinDiv.style.background=YELLOW;found.pinDiv.style.color=NAVY;found.pinDiv.style.transform="scale(1.15)";}if(hotel.latitude&&hotel.longitude&&mapInstanceRef.current)mapInstanceRef.current.flyTo({center:[hotel.longitude,hotel.latitude],zoom:14,speed:1.5});if(listRef.current){const card=listRef.current.querySelector(`[data-hotel="${hotel.code}"]`) as HTMLElement;if(card)card.scrollIntoView({behavior:"smooth",block:"nearest"});}};
+  useEffect(()=>{if(!mapRef.current)return;const initMap=()=>{const mapboxgl=(window as any).mapboxgl;if(!mapboxgl)return;mapboxgl.accessToken=MAPBOX_TOKEN;const cLng=hotelsWithCoords.length>0?hotelsWithCoords.reduce((s,h)=>s+(h.longitude||0),0)/hotelsWithCoords.length:55.2708;const cLat=hotelsWithCoords.length>0?hotelsWithCoords.reduce((s,h)=>s+(h.latitude||0),0)/hotelsWithCoords.length:25.2048;const map=new mapboxgl.Map({container:mapRef.current,style:"mapbox://styles/mapbox/streets-v12",center:[cLng,cLat],zoom:11});mapInstanceRef.current=map;const addMarkers=()=>{hotelsWithCoords.forEach(hotel=>{const price=Math.round((hotel.lowestPriceINR||hotel.minRate||0)/NIGHTS);if(!price)return;const el=document.createElement("div");const pinDiv=document.createElement("div");pinDiv.style.cssText=`background:#fff;color:${NAVY};padding:5px 10px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.18);border:1.5px solid #e2e8f0;cursor:pointer;transition:all 0.15s;`;pinDiv.textContent=`₹${price.toLocaleString("en-IN")}`;el.appendChild(pinDiv);el.addEventListener("click",()=>selectHotel(hotel));new mapboxgl.Marker({element:el,anchor:"bottom"}).setLngLat([hotel.longitude!,hotel.latitude!]).addTo(map);markersRef.current.push({el,hotel,pinDiv});});};if(map.loaded())addMarkers();else map.on("load",addMarkers);};if(!document.querySelector('link[href*="mapbox-gl"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css";document.head.appendChild(l);}if((window as any).mapboxgl){initMap();return()=>{if(mapInstanceRef.current)mapInstanceRef.current.remove();};}const s=document.createElement("script");s.src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js";s.onload=initMap;document.head.appendChild(s);return()=>{if(mapInstanceRef.current)mapInstanceRef.current.remove();};},[]);
   const handleMapSearch=(q:string)=>{markersRef.current.forEach(({el,hotel})=>{el.style.display=!q||hotel.name.toLowerCase().includes(q.toLowerCase())?"block":"none";});if(q&&mapInstanceRef.current){const h=hotelsWithCoords.find(h=>h.name.toLowerCase().includes(q.toLowerCase()));if(h)mapInstanceRef.current.flyTo({center:[h.longitude!,h.latitude!],zoom:14,speed:1.5});}};
-
-  if(isMobile)return(
-    <div style={{position:"fixed",inset:0,zIndex:8000,display:"flex",flexDirection:"column"}}>
-      <div style={{position:"absolute",top:12,right:12,zIndex:10}}><button onClick={onClose} style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:NAVY,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>✕ Close map</button></div>
-      <div ref={mapRef} style={{width:"100%",height:"100%"}}/>
-      {selectedHotel&&<div style={{position:"absolute",bottom:20,left:16,right:16,background:"#fff",borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.2)",overflow:"hidden",zIndex:10,display:"flex"}}>
-        <img src={selectedHotel.imageUrl||FALLBACK_IMGS[0]} alt={selectedHotel.name} style={{width:90,height:90,objectFit:"cover",flexShrink:0}}/>
-        <div style={{padding:"10px 12px",flex:1}}><div style={{fontWeight:700,fontSize:13,color:NAVY,marginBottom:2}}>{selectedHotel.name}</div><div style={{fontSize:18,fontWeight:800,color:NAVY}}>{formatINR(Math.round((selectedHotel.lowestPriceINR||selectedHotel.minRate||0)/NIGHTS))}</div><div style={{fontSize:11,color:"#64748b"}}>per night</div></div>
-        <button onClick={()=>onHotelClick(selectedHotel)} style={{background:B,color:"#fff",border:"none",padding:"0 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>View</button>
-      </div>}
+  const CB=({active,onClick,label}:{active:boolean;onClick:()=>void;label:string})=>(<div onClick={onClick} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",cursor:"pointer"}}><div style={{width:15,height:15,border:`1.5px solid ${active?B:"#e2e8f0"}`,borderRadius:3,background:active?B:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{active&&<svg width="9" height="9" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}</div><span style={{fontSize:13,color:"#1e293b"}}>{label}</span></div>);
+  if(isMobile)return(<div style={{position:"fixed",inset:0,zIndex:8000,display:"flex",flexDirection:"column"}}><div style={{position:"absolute",top:12,right:12,zIndex:10}}><button onClick={onClose} style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:NAVY,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>✕ Close map</button></div><div ref={mapRef} style={{width:"100%",height:"100%"}}/>{selectedHotel&&<div style={{position:"absolute",bottom:20,left:16,right:16,background:"#fff",borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.2)",overflow:"hidden",zIndex:10,display:"flex"}}><img src={selectedHotel.imageUrl||FALLBACK_IMGS[0]} alt={selectedHotel.name} style={{width:90,height:90,objectFit:"cover",flexShrink:0}}/><div style={{padding:"10px 12px",flex:1}}><div style={{fontWeight:700,fontSize:13,color:NAVY,marginBottom:2}}>{selectedHotel.name}</div><div style={{fontSize:18,fontWeight:800,color:NAVY}}>{formatINR(Math.round((selectedHotel.lowestPriceINR||selectedHotel.minRate||0)/NIGHTS))}</div><div style={{fontSize:11,color:"#64748b"}}>per night</div></div><button onClick={()=>onHotelClick(selectedHotel)} style={{background:B,color:"#fff",border:"none",padding:"0 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>View</button></div>}</div>);
+  return(<div style={{position:"fixed",inset:0,zIndex:8000,display:"flex",flexDirection:"column"}}>
+    <div ref={chipRef} style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 20px",display:"flex",alignItems:"center",gap:10,flexShrink:0,flexWrap:"nowrap",overflowX:"visible",position:"relative",zIndex:99999}}>
+      <div style={{fontSize:14,fontWeight:700,color:NAVY,whiteSpace:"nowrap",marginRight:4}}>{hotelsWithCoords.length} hotels</div>
+      {filterProps.areaOptions.length>0&&<ChipDropdown id="loc" label={filterProps.filterLocation||"Location"} openChip={openChip} setOpenChip={setOpenChip}>{filterProps.areaOptions.map(a=><CB key={a} active={filterProps.filterLocation===a} onClick={()=>{filterProps.setFilterLocation(filterProps.filterLocation===a?"":a);setOpenChip(null);}} label={a}/>)}</ChipDropdown>}
+      <ChipDropdown id="price" label={filterProps.filterPriceMax||filterProps.filterPriceMin?"Price ✓":"Price"} openChip={openChip} setOpenChip={setOpenChip}>{([{label:"Under ₹5,000",min:null,max:5000},{label:"₹5,000–₹10,000",min:5000,max:10000},{label:"₹10,000–₹20,000",min:10000,max:20000},{label:"₹20,000–₹40,000",min:20000,max:40000},{label:"₹40,000+",min:40000,max:null}] as {label:string;min:number|null;max:number|null}[]).map(({label,min,max})=>{const a=filterProps.filterPriceMin===min&&filterProps.filterPriceMax===max;return<CB key={label} active={a} onClick={()=>{a?filterProps.setPriceRange(null,null):filterProps.setPriceRange(min,max);setOpenChip(null);}} label={label}/>;})}</ChipDropdown>
+      <ChipDropdown id="stars" label={filterProps.filterStars.length>0?`Stars ✓`:"Stars"} openChip={openChip} setOpenChip={setOpenChip}>{[5,4,3,2,1].map(s=>{const a=filterProps.filterStars.includes(s);return<CB key={s} active={a} onClick={()=>filterProps.setFilterStars(a?filterProps.filterStars.filter(x=>x!==s):[...filterProps.filterStars,s])} label={`${"★".repeat(s)} ${s} Star`}/>;})}</ChipDropdown>
+      <ChipDropdown id="rating" label={filterProps.filterRating?`Rating ${filterProps.filterRating}+`:"Rating"} openChip={openChip} setOpenChip={setOpenChip}>{[{label:"Exceptional 9+",min:9},{label:"Excellent 8+",min:8},{label:"Very Good 7+",min:7}].map(({label,min})=><CB key={min} active={filterProps.filterRating===min} onClick={()=>{filterProps.setFilterRating(filterProps.filterRating===min?null:min);setOpenChip(null);}} label={label}/>)}</ChipDropdown>
+      <button onClick={()=>filterProps.setFilterRefundable(!filterProps.filterRefundable)} style={{display:"flex",alignItems:"center",gap:6,background:filterProps.filterRefundable?"#dcfce7":"#fff",border:`1.5px solid ${filterProps.filterRefundable?"#16a34a":"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:filterProps.filterRefundable?"#16a34a":NAVY,whiteSpace:"nowrap"}}>{filterProps.filterRefundable&&"✓ "}Free Cancellation</button>
+      <button onClick={()=>filterProps.setFilterBreakfast(!filterProps.filterBreakfast)} style={{display:"flex",alignItems:"center",gap:6,background:filterProps.filterBreakfast?YELLOW:"#fff",border:`1.5px solid ${filterProps.filterBreakfast?"#d97706":"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:filterProps.filterBreakfast?"#92400e":NAVY,whiteSpace:"nowrap"}}>{filterProps.filterBreakfast&&"✓ "}Free Breakfast</button>
+      <div style={{flex:1}}/>
+      <button onClick={onClose} style={{background:NAVY,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>✕ Close map</button>
     </div>
-  );
-
-  const CB=({active,onClick,label}:{active:boolean;onClick:()=>void;label:string})=>(
-    <div onClick={onClick} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",cursor:"pointer"}}>
-      <div style={{width:15,height:15,border:`1.5px solid ${active?B:"#e2e8f0"}`,borderRadius:3,background:active?B:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{active&&<svg width="9" height="9" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}</div>
-      <span style={{fontSize:13,color:"#1e293b"}}>{label}</span>
-    </div>
-  );
-
-  return(
-    <div style={{position:"fixed",inset:0,zIndex:8000,display:"flex",flexDirection:"column"}}>
-      <div ref={chipRef} style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 20px",display:"flex",alignItems:"center",gap:10,flexShrink:0,flexWrap:"nowrap",overflowX:"visible",position:"relative",zIndex:99999}}>
-        <div style={{fontSize:14,fontWeight:700,color:NAVY,whiteSpace:"nowrap",marginRight:4}}>{hotelsWithCoords.length} hotels</div>
-        {filterProps.areaOptions.length>0&&<ChipDropdown id="loc" label={filterProps.filterLocation||"Location"} openChip={openChip} setOpenChip={setOpenChip}>
-          {filterProps.areaOptions.map(a=><CB key={a} active={filterProps.filterLocation===a} onClick={()=>{filterProps.setFilterLocation(filterProps.filterLocation===a?"":a);setOpenChip(null);}} label={a}/>)}
-        </ChipDropdown>}
-        <ChipDropdown id="price" label={filterProps.filterPriceMax||filterProps.filterPriceMin?"Price ✓":"Price"} openChip={openChip} setOpenChip={setOpenChip}>
-          {([{label:"Under ₹5,000",min:null,max:5000},{label:"₹5,000–₹10,000",min:5000,max:10000},{label:"₹10,000–₹20,000",min:10000,max:20000},{label:"₹20,000–₹40,000",min:20000,max:40000},{label:"₹40,000+",min:40000,max:null}] as {label:string;min:number|null;max:number|null}[]).map(({label,min,max})=>{const a=filterProps.filterPriceMin===min&&filterProps.filterPriceMax===max;return<CB key={label} active={a} onClick={()=>{a?filterProps.setPriceRange(null,null):filterProps.setPriceRange(min,max);setOpenChip(null);}} label={label}/>;})}</ChipDropdown>
-        <ChipDropdown id="stars" label={filterProps.filterStars.length>0?`Stars ✓`:"Stars"} openChip={openChip} setOpenChip={setOpenChip}>
-          {[5,4,3,2,1].map(s=>{const a=filterProps.filterStars.includes(s);return<CB key={s} active={a} onClick={()=>filterProps.setFilterStars(a?filterProps.filterStars.filter(x=>x!==s):[...filterProps.filterStars,s])} label={`${"★".repeat(s)} ${s} Star`}/>;})}</ChipDropdown>
-        <ChipDropdown id="rating" label={filterProps.filterRating?`Rating ${filterProps.filterRating}+`:"Rating"} openChip={openChip} setOpenChip={setOpenChip}>
-          {[{label:"Exceptional 9+",min:9},{label:"Excellent 8+",min:8},{label:"Very Good 7+",min:7}].map(({label,min})=><CB key={min} active={filterProps.filterRating===min} onClick={()=>{filterProps.setFilterRating(filterProps.filterRating===min?null:min);setOpenChip(null);}} label={label}/>)}</ChipDropdown>
-        <button onClick={()=>filterProps.setFilterRefundable(!filterProps.filterRefundable)} style={{display:"flex",alignItems:"center",gap:6,background:filterProps.filterRefundable?"#dcfce7":"#fff",border:`1.5px solid ${filterProps.filterRefundable?"#16a34a":"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:filterProps.filterRefundable?"#16a34a":NAVY,whiteSpace:"nowrap"}}>{filterProps.filterRefundable&&"✓ "}Free Cancellation</button>
-        <button onClick={()=>filterProps.setFilterBreakfast(!filterProps.filterBreakfast)} style={{display:"flex",alignItems:"center",gap:6,background:filterProps.filterBreakfast?YELLOW:"#fff",border:`1.5px solid ${filterProps.filterBreakfast?"#d97706":"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:filterProps.filterBreakfast?"#92400e":NAVY,whiteSpace:"nowrap"}}>{filterProps.filterBreakfast&&"✓ "}Free Breakfast</button>
-        <div style={{flex:1}}/>
-        <button onClick={onClose} style={{background:NAVY,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>✕ Close map</button>
+    <div style={{flex:1,display:"flex",overflow:"hidden"}}>
+      <div style={{width:360,flexShrink:0,display:"flex",flexDirection:"column",background:"#f8fafc",borderRight:"1px solid #e2e8f0"}}>
+        <div style={{padding:"10px 12px",borderBottom:"1px solid #e2e8f0",background:"#fff",flexShrink:0}}><div style={{display:"flex",alignItems:"center",gap:8,background:"#f8fafc",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"8px 12px"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search hotel on map..." onChange={e=>handleMapSearch(e.target.value)} style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:13,color:NAVY,background:"transparent",width:"100%"}}/></div></div>
+        <div ref={listRef} style={{flex:1,overflowY:"auto",padding:10}}>{hotels.map((hotel,idx)=>{const price=Math.round((hotel.lowestPriceINR||hotel.minRate||0)/NIGHTS);const rating=hotel.rating||[9.1,8.9,9.4,9.3,8.7,9.0,8.8,9.2][codeToNum(hotel.code)%8];const isSelected=selectedHotel?.code===hotel.code;return(<div key={String(hotel.code)} data-hotel={hotel.code} onClick={()=>selectHotel(hotel)} style={{background:"#fff",borderRadius:12,border:`1.5px solid ${isSelected?B:"#e2e8f0"}`,marginBottom:8,overflow:"hidden",cursor:"pointer",display:"flex",minHeight:96,transition:"border-color 0.15s"}}><img src={hotel.imageUrl||FALLBACK_IMGS[idx%FALLBACK_IMGS.length]} alt={hotel.name} style={{width:96,height:96,objectFit:"cover",flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).src=FALLBACK_IMGS[idx%FALLBACK_IMGS.length];}}/><div style={{padding:"10px 12px",flex:1,minWidth:0,display:"flex",flexDirection:"column",justifyContent:"space-between"}}><div style={{fontSize:13,fontWeight:700,color:NAVY,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{hotel.name}</div><div style={{fontSize:12,color:"#f59e0b"}}>{hotel.stars?"★".repeat(hotel.stars):""}</div><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:11,fontWeight:700,padding:"1px 7px",borderRadius:4}}>{rating.toFixed(1)}</span>{hotel.isRefundable&&<span style={{fontSize:10,color:"#16a34a",background:"#dcfce7",padding:"1px 6px",borderRadius:3}}>✓ Free cancel</span>}</div><div style={{fontSize:15,fontWeight:800,color:NAVY}}>{price>0?formatINR(price):"—"}</div></div></div>);})}</div>
       </div>
-      <div style={{flex:1,display:"flex",overflow:"hidden"}}>
-        <div style={{width:360,flexShrink:0,display:"flex",flexDirection:"column",background:"#f8fafc",borderRight:"1px solid #e2e8f0"}}>
-          <div style={{padding:"10px 12px",borderBottom:"1px solid #e2e8f0",background:"#fff",flexShrink:0}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,background:"#f8fafc",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"8px 12px"}}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="text" placeholder="Search hotel on map..." onChange={e=>handleMapSearch(e.target.value)} style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:13,color:NAVY,background:"transparent",width:"100%"}}/>
-            </div>
-          </div>
-          <div ref={listRef} style={{flex:1,overflowY:"auto",padding:10}}>
-            {hotels.map((hotel,idx)=>{
-              const price=Math.round((hotel.lowestPriceINR||hotel.minRate||0)/NIGHTS);
-              const rating=hotel.rating||[9.1,8.9,9.4,9.3,8.7,9.0,8.8,9.2][codeToNum(hotel.code)%8];
-              const isSelected=selectedHotel?.code===hotel.code;
-              return(
-                <div key={String(hotel.code)} data-hotel={hotel.code} onClick={()=>selectHotel(hotel)}
-                  style={{background:"#fff",borderRadius:12,border:`1.5px solid ${isSelected?B:"#e2e8f0"}`,marginBottom:8,overflow:"hidden",cursor:"pointer",display:"flex",minHeight:96,transition:"border-color 0.15s"}}>
-                  <img src={hotel.imageUrl||FALLBACK_IMGS[idx%FALLBACK_IMGS.length]} alt={hotel.name} style={{width:96,height:96,objectFit:"cover",flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).src=FALLBACK_IMGS[idx%FALLBACK_IMGS.length];}}/>
-                  <div style={{padding:"10px 12px",flex:1,minWidth:0,display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
-                    <div style={{fontSize:13,fontWeight:700,color:NAVY,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{hotel.name}</div>
-                    <div style={{fontSize:12,color:"#f59e0b"}}>{hotel.stars?"★".repeat(hotel.stars):""}</div>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:11,fontWeight:700,padding:"1px 7px",borderRadius:4}}>{rating.toFixed(1)}</span>
-                      {hotel.isRefundable&&<span style={{fontSize:10,color:"#16a34a",background:"#dcfce7",padding:"1px 6px",borderRadius:3}}>✓ Free cancel</span>}
-                    </div>
-                    <div style={{fontSize:15,fontWeight:800,color:NAVY}}>{price>0?formatINR(price):"—"}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        <div style={{flex:1,position:"relative"}}>
-          <div ref={mapRef} style={{width:"100%",height:"100%"}}/>
-          {selectedHotel&&(
-            <div style={{position:"absolute",bottom:20,left:"50%",transform:"translateX(-50%)",width:"min(320px,90%)",background:"#fff",borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.2)",overflow:"hidden",zIndex:10}}>
-              <button onClick={()=>{setSelectedHotel(null);markersRef.current.forEach(({pinDiv})=>{pinDiv.style.background="#fff";pinDiv.style.color=NAVY;pinDiv.style.transform="scale(1)";});}} style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,0.5)",color:"#fff",border:"none",borderRadius:"50%",width:26,height:26,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1}}>×</button>
-              <img src={selectedHotel.imageUrl||FALLBACK_IMGS[0]} alt={selectedHotel.name} style={{width:"100%",height:130,objectFit:"cover",display:"block"}}/>
-              <div style={{padding:"12px 14px"}}>
-                <div style={{fontWeight:700,fontSize:14,color:NAVY,marginBottom:6}}>{selectedHotel.name}</div>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <div><div style={{fontSize:18,fontWeight:800,color:NAVY}}>{formatINR(Math.round((selectedHotel.lowestPriceINR||selectedHotel.minRate||0)/NIGHTS))}</div><div style={{fontSize:11,color:"#64748b"}}>per night</div></div>
-                  <button onClick={()=>onHotelClick(selectedHotel)} style={{background:B,color:"#fff",border:"none",borderRadius:8,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>View Hotel</button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+      <div style={{flex:1,position:"relative"}}>
+        <div ref={mapRef} style={{width:"100%",height:"100%"}}/>
+        {selectedHotel&&(<div style={{position:"absolute",bottom:20,left:"50%",transform:"translateX(-50%)",width:"min(320px,90%)",background:"#fff",borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.2)",overflow:"hidden",zIndex:10}}><button onClick={()=>{setSelectedHotel(null);markersRef.current.forEach(({pinDiv})=>{pinDiv.style.background="#fff";pinDiv.style.color=NAVY;pinDiv.style.transform="scale(1)";});}} style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,0.5)",color:"#fff",border:"none",borderRadius:"50%",width:26,height:26,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1}}>×</button><img src={selectedHotel.imageUrl||FALLBACK_IMGS[0]} alt={selectedHotel.name} style={{width:"100%",height:130,objectFit:"cover",display:"block"}}/><div style={{padding:"12px 14px"}}><div style={{fontWeight:700,fontSize:14,color:NAVY,marginBottom:6}}>{selectedHotel.name}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div><div style={{fontSize:18,fontWeight:800,color:NAVY}}>{formatINR(Math.round((selectedHotel.lowestPriceINR||selectedHotel.minRate||0)/NIGHTS))}</div><div style={{fontSize:11,color:"#64748b"}}>per night</div></div><button onClick={()=>onHotelClick(selectedHotel)} style={{background:B,color:"#fff",border:"none",borderRadius:8,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>View Hotel</button></div></div></div>)}
       </div>
     </div>
-  );
+  </div>);
 }
 
 export default function SearchPage(){
@@ -365,28 +267,28 @@ function SearchResults(){
   const[desktopCalOffset,setDesktopCalOffset]=useState(0);const[desktopGuestOpen,setDesktopGuestOpen]=useState(false);
   const[destInput,setDestInput]=useState(destination);const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);
   const destRef=useRef<HTMLDivElement>(null);const desktopCalRef=useRef<HTMLDivElement>(null);const desktopGuestRef=useRef<HTMLDivElement>(null);
-
   const[filterStars,setFilterStars]=useState<number[]>([]);const[filterBreakfast,setFilterBreakfast]=useState(false);const[filterRefundable,setFilterRefundable]=useState(false);const[filterRating,setFilterRating]=useState<number|null>(null);const[filterPriceMin,setFilterPriceMin]=useState<number|null>(null);const[filterPriceMax,setFilterPriceMax]=useState<number|null>(null);const[filterFacilities,setFilterFacilities]=useState<string[]>([]);const[filterLocation,setFilterLocation]=useState("");const[hotelSearch,setHotelSearch]=useState("");
+
+  // ── Distance reference point from URL ────────────────────────────────────
+  const refLat = searchParams.get("refLat") ? parseFloat(searchParams.get("refLat")!) : null;
+  const refLng = searchParams.get("refLng") ? parseFloat(searchParams.get("refLng")!) : null;
+  const refLabel = searchParams.get("refLabel") || null;
 
   useEffect(()=>{supabase.auth.getUser().then(({data})=>{if(data.user){const m=data.user.user_metadata;setUser({name:m?.full_name||m?.name||data.user.email?.split("@")[0]||"Member"});}});supabase.auth.onAuthStateChange((_,session)=>{if(session?.user){const m=session.user.user_metadata;setUser({name:m?.full_name||m?.name||session.user.email?.split("@")[0]||"Member"});setShowAuthModal(false);}});},[]);
   useEffect(()=>{const handler=(e:MouseEvent)=>{if(desktopCalRef.current&&!desktopCalRef.current.contains(e.target as Node))setDesktopCalOpen(false);if(desktopGuestRef.current&&!desktopGuestRef.current.contains(e.target as Node))setDesktopGuestOpen(false);if(destRef.current&&!destRef.current.contains(e.target as Node))setShowDestDrop(false);};document.addEventListener("mousedown",handler);return()=>document.removeEventListener("mousedown",handler);},[]);
-
   const handleDestInput=(val:string)=>{setDestInput(val);if(val.length>=1){const q=val.toLowerCase();setDestSuggestions(DESTINATIONS.filter(d=>d.label.toLowerCase().includes(q)||d.key.includes(q)));setShowDestDrop(true);}else{setDestSuggestions([]);setShowDestDrop(false);}};
   const selectDest=(d:typeof DESTINATIONS[0])=>{setDestInput(d.label);setDestination(d.label);setShowDestDrop(false);};
 
-  // ── THE KEY FIX: fetchHotels now reads placeId from URL and passes it to backend ──
   const fetchHotels=useCallback(async(dest?:string,ci?:string,co?:string,g?:GuestState,pid?:string)=>{
     const d=dest||destination,c1=ci||checkIn,c2=co||checkOut,gs=g||guests;
     const placeId=pid!==undefined?pid:(searchParams.get("placeId")||"");
     if(!c1||!c2){setLoading(false);setError("Please select check-in and check-out dates.");return;}
     setLoading(true);setError(null);setPage(1);
     try{
-      // Use placeId if available (most reliable), otherwise fall back to destination text
       const url=placeId
         ?`${API}/search?placeId=${encodeURIComponent(placeId)}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}&rooms=${gs.rooms}`
         :`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}&rooms=${gs.rooms}`;
-      const res=await fetch(url,{cache:"no-store"});
-      const data=await res.json();
+      const res=await fetch(url,{cache:"no-store"});const data=await res.json();
       if(data.hotels?.hotels)setHotels(data.hotels.hotels);
       else setError(data.error||"No hotels found.");
     }catch{setError("Could not connect to server.");}
@@ -404,22 +306,38 @@ function SearchResults(){
   const guestSummary=(g:GuestState)=>`${g.rooms} Room${g.rooms>1?"s":""} · ${g.adults} Adult${g.adults>1?"s":""}${g.children>0?` · ${g.children} Child${g.children>1?"ren":""}` :""}`;
   const getCardAmenities=(hotel:Hotel)=>PRIORITY_AMENITIES.filter(p=>(hotel.amenities||[]).some(a=>a.toLowerCase().includes(p.toLowerCase())));
 
+  // ── Distance helper ───────────────────────────────────────────────────────
+  const getDistanceLabel = (hotel: Hotel): string | null => {
+    if (!refLat || !refLng || !hotel.latitude || !hotel.longitude) return null;
+    return formatDistance(haversineKm(refLat, refLng, hotel.latitude, hotel.longitude));
+  };
+
   const areaOptions=useMemo(()=>{const found=new Set<string>();hotels.forEach(h=>{const a=getAreaFromCoords(h.latitude,h.longitude);if(a)found.add(a);});return DUBAI_AREAS.map(([n])=>n).filter(n=>found.has(n));},[hotels]);
   const clearAllFilters=()=>{setFilterStars([]);setFilterBreakfast(false);setFilterRefundable(false);setFilterRating(null);setFilterPriceMax(null);setFilterPriceMin(null);setFilterFacilities([]);setFilterLocation("");setHotelSearch("");};
   const hasActiveFilters=filterStars.length>0||filterBreakfast||filterRefundable||filterRating!==null||filterPriceMax!==null||filterPriceMin!==null||filterFacilities.length>0||!!filterLocation||!!hotelSearch;
 
   const filteredHotels=useMemo(()=>hotels.filter(h=>{const price=priceINR(h);if(hotelSearch&&!h.name.toLowerCase().includes(hotelSearch.toLowerCase()))return false;if(filterStars.length>0&&!filterStars.includes(h.stars||0))return false;if(filterBreakfast&&!h.hasBreakfast)return false;if(filterRefundable&&h.isRefundable!==true)return false;if(filterRating!==null){const r=h.rating||getRating(h.code);if(r<filterRating)return false;}if(filterPriceMin!==null&&price<filterPriceMin)return false;if(filterPriceMax!==null&&price>filterPriceMax)return false;if(filterFacilities.length>0){const am=(h.amenities||[]).map(a=>a.toLowerCase());if(!filterFacilities.every(f=>am.some(a=>a.includes(f.toLowerCase()))))return false;}if(filterLocation){const area=getAreaFromCoords(h.latitude,h.longitude);if(area!==filterLocation)return false;}return true;}),[hotels,hotelSearch,filterStars,filterBreakfast,filterRefundable,filterRating,filterPriceMin,filterPriceMax,filterFacilities,filterLocation]);
-  const sortedHotels=useMemo(()=>[...filteredHotels].sort((a,b)=>{if(sortBy==="price-low")return priceINR(a)-priceINR(b);if(sortBy==="price-high")return priceINR(b)-priceINR(a);if(sortBy==="rating")return(b.rating||getRating(b.code))-(a.rating||getRating(a.code));if(sortBy==="stars")return(b.stars||0)-(a.stars||0);return 0;}),[filteredHotels,sortBy]);
+
+  const sortedHotels=useMemo(()=>[...filteredHotels].sort((a,b)=>{
+    if(sortBy==="price-low")return priceINR(a)-priceINR(b);
+    if(sortBy==="price-high")return priceINR(b)-priceINR(a);
+    if(sortBy==="rating")return(b.rating||getRating(b.code))-(a.rating||getRating(a.code));
+    if(sortBy==="stars")return(b.stars||0)-(a.stars||0);
+    // If reference point exists, sort by distance by default
+    if(refLat&&refLng){
+      const da=a.latitude&&a.longitude?haversineKm(refLat,refLng,a.latitude,a.longitude):9999;
+      const db=b.latitude&&b.longitude?haversineKm(refLat,refLng,b.latitude,b.longitude):9999;
+      return da-db;
+    }
+    return 0;
+  }),[filteredHotels,sortBy,refLat,refLng]);
 
   const perPage=10;const paginatedHotels=sortedHotels.slice((page-1)*perPage,page*perPage);const totalPages=Math.ceil(sortedHotels.length/perPage);
-
   const filterProps:FiltersPanelProps={destination,areaOptions,filterLocation,setFilterLocation,filterPriceMin,filterPriceMax,setPriceRange:(min,max)=>{setFilterPriceMin(min);setFilterPriceMax(max);},filterRefundable,setFilterRefundable,filterBreakfast,setFilterBreakfast,filterRating,setFilterRating,filterStars,setFilterStars,filterFacilities,setFilterFacilities,hasActiveFilters,clearAllFilters,onHotelSearch:setHotelSearch};
 
-  // ── THE KEY FIX: handleSearch preserves placeId in URL ──
   const handleSearch=()=>{
     if(!user){setShowAuthModal(true);return;}
-    const d=destInput.trim()||destination;
-    setDestination(d);
+    const d=destInput.trim()||destination;setDestination(d);
     const currentPlaceId=searchParams.get("placeId")||"";
     fetchHotels(d,checkIn,checkOut,guests,currentPlaceId);
     const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
@@ -428,9 +346,14 @@ function SearchResults(){
   };
 
   const handleHotelClick=(hotel:Hotel)=>{if(!user){setShowAuthModal(true);return;}window.open(`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}`,'_blank');};
-
   const desktopDayClick=(ds:string)=>{if(desktopCalMode==="checkin"){setCheckIn(ds);setCheckOut("");setDesktopCalMode("checkout");}else{if(ds<=checkIn)return;setCheckOut(ds);setDesktopCalOpen(false);}};
-  const renderDesktopMonth=(year:number,month:number)=>{const todayStr=toDateStr(today.getFullYear(),today.getMonth(),today.getDate());const days=getDaysInMonth(year,month);const firstDow=getFirstDow(year,month);return(<div key={`${year}-${month}`} style={{flex:1}}><div style={{fontWeight:700,fontSize:15,color:NAVY,textAlign:"center",marginBottom:12}}>{MONTHS[month]} {year}</div><div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>{DOWS.map(d=><div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"#94a3b8",paddingBottom:6}}>{d}</div>)}{Array.from({length:firstDow}).map((_,i)=><div key={`e${i}`}/>)}{Array.from({length:days}).map((_,i)=>{const day=i+1;const ds=toDateStr(year,month,day);const isDisabled=ds<todayStr;let bg="transparent",clr=isDisabled?"#cbd5e1":NAVY,br="50%",fw=400;if(ds===checkIn&&!!checkOut){bg=B;clr="#fff";br="50% 0 0 50%";fw=700;}else if(ds===checkOut){bg=B;clr="#fff";br="0 50% 50% 0";fw=700;}else if(ds===checkIn&&!checkOut){bg=B;clr="#fff";br="50%";fw=700;}else if(checkIn&&checkOut&&ds>checkIn&&ds<checkOut){bg="#dbeafe";clr=B;br="0";}else if(ds===todayStr)clr=B;return<div key={day} onClick={()=>!isDisabled&&desktopDayClick(ds)} style={{height:34,display:"flex",alignItems:"center",justifyContent:"center",background:bg,color:clr,borderRadius:br,fontWeight:fw,fontSize:13,cursor:isDisabled?"not-allowed":"pointer",opacity:isDisabled?0.35:1}}>{day}</div>;})}</div></div>);};
+
+  const renderDesktopMonth=(year:number,month:number)=>{
+    const todayStr=toDateStr(today.getFullYear(),today.getMonth(),today.getDate());
+    const days=getDaysInMonth(year,month);const firstDow=getFirstDow(year,month);
+    return(<div key={`${year}-${month}`} style={{flex:1}}><div style={{fontWeight:700,fontSize:15,color:NAVY,textAlign:"center",marginBottom:12}}>{MONTHS[month]} {year}</div><div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>{DOWS.map(d=><div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"#94a3b8",paddingBottom:6}}>{d}</div>)}{Array.from({length:firstDow}).map((_,i)=><div key={`e${i}`}/>)}{Array.from({length:days}).map((_,i)=>{const day=i+1;const ds=toDateStr(year,month,day);const isDisabled=ds<todayStr;let bg="transparent",clr=isDisabled?"#cbd5e1":NAVY,br="50%",fw=400;if(ds===checkIn&&!!checkOut){bg=B;clr="#fff";br="50% 0 0 50%";fw=700;}else if(ds===checkOut){bg=B;clr="#fff";br="0 50% 50% 0";fw=700;}else if(ds===checkIn&&!checkOut){bg=B;clr="#fff";br="50%";fw=700;}else if(checkIn&&checkOut&&ds>checkIn&&ds<checkOut){bg="#dbeafe";clr=B;br="0";}else if(ds===todayStr)clr=B;return<div key={day} onClick={()=>!isDisabled&&desktopDayClick(ds)} style={{height:34,display:"flex",alignItems:"center",justifyContent:"center",background:bg,color:clr,borderRadius:br,fontWeight:fw,fontSize:13,cursor:isDisabled?"not-allowed":"pointer",opacity:isDisabled?0.35:1}}>{day}</div>;})}</div></div>);
+  };
+
   const d1=new Date(today.getFullYear(),today.getMonth()+desktopCalOffset);
   const d2=new Date(today.getFullYear(),today.getMonth()+desktopCalOffset+1);
 
@@ -450,6 +373,12 @@ function SearchResults(){
         {!isMobile&&<div style={{display:"flex",gap:24,alignItems:"center"}}><a href="/search-hotels" style={{fontSize:14,color:B,textDecoration:"none",fontWeight:600}}>Exclusive Member Deals</a>{user?<div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>window.location.href="/dashboard"}><div style={{width:32,height:32,borderRadius:"50%",background:B,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700}}>{user.name[0].toUpperCase()}</div><span style={{fontSize:14,fontWeight:600,color:NAVY}}>{user.name.split(" ")[0]}</span></div>:<button onClick={()=>setShowAuthModal(true)} style={{background:B,color:"#fff",border:"none",borderRadius:8,padding:"8px 18px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Sign in</button>}</div>}
       </nav>
 
+      {/* Distance reference banner */}
+      {refLabel&&<div style={{background:"#eff6ff",borderBottom:"1px solid #bfdbfe",padding:"8px 32px",fontSize:13,color:B,fontWeight:500,display:"flex",alignItems:"center",gap:6}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        Showing hotels near <strong>{refLabel}</strong> — sorted by distance
+      </div>}
+
       {isMobile&&<div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 16px",position:"sticky",top:60,zIndex:200,display:"flex",alignItems:"center",gap:10}}><button onClick={()=>router.back()} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:"#64748b",flexShrink:0}}>←</button><div style={{flex:1,background:"#f8fafc",border:"1.5px solid #e2e8f0",borderRadius:100,padding:"10px 16px",display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setShowCal(true)}><div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:700,color:NAVY,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{destination}</div><div style={{fontSize:12,color:"#64748b",whiteSpace:"nowrap"}}>{checkIn&&checkOut?`${formatDateShort(checkIn)} – ${formatDateShort(checkOut)}`:"Select dates"} · {guestSummary(guests)}</div></div></div></div>}
 
       {!isMobile&&<div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 32px",position:"sticky",top:60,zIndex:200}}>
@@ -457,12 +386,7 @@ function SearchResults(){
           <div ref={destRef} className="sfd" style={{padding:"0 20px",borderRight:"1px solid #e2e8f0",display:"flex",flexDirection:"column",justifyContent:"center",borderRadius:"12px 0 0 12px",position:"relative"}}>
             <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Destination</div>
             <div style={{display:"flex",alignItems:"center",gap:4}}><input value={destInput} onChange={e=>handleDestInput(e.target.value)} onFocus={()=>{setDestFocused(true);if(destInput.length>=1)setShowDestDrop(true);}} onBlur={()=>{setTimeout(()=>{setDestFocused(false);if(!destInput.trim())setDestInput(destination);setShowDestDrop(false);},200);}} onKeyDown={e=>{if(e.key==="Enter"){setShowDestDrop(false);handleSearch();}if(e.key==="Escape"){setDestInput(destination);setShowDestDrop(false);}}} placeholder="City or destination" style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:15,fontWeight:600,color:NAVY,background:"transparent",padding:0,flex:1}}/>{destInput&&destFocused&&<button onClick={()=>{setDestInput("");setDestSuggestions([]);setShowDestDrop(false);}} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:18,padding:"0 2px",flexShrink:0,lineHeight:1}}>×</button>}</div>
-            {showDestDrop&&destSuggestions.length>0&&<div style={{position:"absolute",top:"calc(100% + 10px)",left:0,width:"100%",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.14)",zIndex:9999,maxHeight:280,overflowY:"auto"}}>
-              {destSuggestions.map(d=><div key={d.key} onClick={()=>selectDest(d)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",borderBottom:"1px solid #f8fafc",transition:"background 0.1s"}} onMouseEnter={e=>(e.currentTarget.style.background="#f8fafc")} onMouseLeave={e=>(e.currentTarget.style.background="#fff")}>
-                <span style={{fontSize:20}}>{d.flag}</span>
-                <div><div style={{fontSize:14,fontWeight:600,color:NAVY}}>{d.label}</div><div style={{fontSize:12,color:"#94a3b8"}}>{d.country}</div></div>
-              </div>)}
-            </div>}
+            {showDestDrop&&destSuggestions.length>0&&<div style={{position:"absolute",top:"calc(100% + 10px)",left:0,width:"100%",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.14)",zIndex:9999,maxHeight:280,overflowY:"auto"}}>{destSuggestions.map(d=><div key={d.key} onClick={()=>selectDest(d)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",borderBottom:"1px solid #f8fafc",transition:"background 0.1s"}} onMouseEnter={e=>(e.currentTarget.style.background="#f8fafc")} onMouseLeave={e=>(e.currentTarget.style.background="#fff")}><span style={{fontSize:20}}>{d.flag}</span><div><div style={{fontSize:14,fontWeight:600,color:NAVY}}>{d.label}</div><div style={{fontSize:12,color:"#94a3b8"}}>{d.country}</div></div></div>)}</div>}
           </div>
           <div className="sfd" style={{padding:"0 18px",borderRight:"1px solid #e2e8f0",display:"flex",flexDirection:"column",justifyContent:"center",background:desktopCalOpen&&desktopCalMode==="checkin"?"#f0f7ff":"transparent"}} onClick={()=>{setDesktopCalMode("checkin");setDesktopCalOpen(true);setDesktopCalOffset(0);}}>
             <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Check-in</div>
@@ -485,15 +409,8 @@ function SearchResults(){
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search
           </button>
           {desktopCalOpen&&<div ref={desktopCalRef} onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"calc(100% + 10px)",left:"28%",width:620,background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:14,boxShadow:"0 8px 40px rgba(0,0,0,0.16)",zIndex:9999,padding:22}}>
-            <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-              <button onClick={()=>setDesktopCalOffset(p=>Math.max(0,p-1))} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:16,color:"#64748b",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>‹</button>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,flex:1}}>{renderDesktopMonth(d1.getFullYear(),d1.getMonth())}{renderDesktopMonth(d2.getFullYear(),d2.getMonth())}</div>
-              <button onClick={()=>setDesktopCalOffset(p=>p+1)} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:16,color:"#64748b",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>›</button>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderTop:"1px solid #f1f5f9",paddingTop:12,marginTop:8}}>
-              <div style={{fontSize:13,color:"#64748b"}}>{checkIn&&checkOut&&<span style={{color:"#16a34a",fontWeight:600}}>✓ {formatDate(checkIn)} → {formatDate(checkOut)}</span>}</div>
-              <button onClick={()=>{setCheckIn("");setCheckOut("");}} style={{background:"none",border:"none",fontSize:13,color:"#94a3b8",cursor:"pointer",fontFamily:"inherit"}}>Clear</button>
-            </div>
+            <div style={{display:"flex",alignItems:"flex-start",gap:8}}><button onClick={()=>setDesktopCalOffset(p=>Math.max(0,p-1))} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:16,color:"#64748b",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>‹</button><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,flex:1}}>{renderDesktopMonth(d1.getFullYear(),d1.getMonth())}{renderDesktopMonth(d2.getFullYear(),d2.getMonth())}</div><button onClick={()=>setDesktopCalOffset(p=>p+1)} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:16,color:"#64748b",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>›</button></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderTop:"1px solid #f1f5f9",paddingTop:12,marginTop:8}}><div style={{fontSize:13,color:"#64748b"}}>{checkIn&&checkOut&&<span style={{color:"#16a34a",fontWeight:600}}>✓ {formatDate(checkIn)} → {formatDate(checkOut)}</span>}</div><button onClick={()=>{setCheckIn("");setCheckOut("");}} style={{background:"none",border:"none",fontSize:13,color:"#94a3b8",cursor:"pointer",fontFamily:"inherit"}}>Clear</button></div>
           </div>}
         </div>
       </div>}
@@ -514,8 +431,19 @@ function SearchResults(){
 
           <div style={{minWidth:0}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
-              <div><span className="sora" style={{fontSize:isMobile?18:22,fontWeight:800,color:NAVY}}>Hotels in {destination}</span>{!loading&&<span style={{fontSize:13,color:"#64748b",marginLeft:8}}>{sortedHotels.length} properties found</span>}</div>
-              {!isMobile&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"7px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,background:"#fff",cursor:"pointer",outline:"none"}}><option value="popularity">Sort by: Popularity</option><option value="price-low">Price: Low to High</option><option value="price-high">Price: High to Low</option><option value="rating">User Rating</option><option value="stars">Star Rating</option></select>}
+              <div>
+                <span className="sora" style={{fontSize:isMobile?18:22,fontWeight:800,color:NAVY}}>
+                  {refLabel ? `Hotels near ${refLabel}` : `Hotels in ${destination}`}
+                </span>
+                {!loading&&<span style={{fontSize:13,color:"#64748b",marginLeft:8}}>{sortedHotels.length} properties found</span>}
+              </div>
+              {!isMobile&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"7px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,background:"#fff",cursor:"pointer",outline:"none"}}>
+                <option value="popularity">{refLabel?"Nearest first":"Sort by: Popularity"}</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="rating">User Rating</option>
+                <option value="stars">Star Rating</option>
+              </select>}
             </div>
 
             {loading&&<div>{Array.from({length:5}).map((_,i)=><div key={i} className="hcard" style={{marginBottom:16}}><div style={{width:260,minHeight:210,background:"#f0f0f0",flexShrink:0}}/><div style={{padding:"18px 22px",flex:1,display:"flex",flexDirection:"column",gap:12}}><div className="skeleton" style={{height:20,width:"70%"}}/><div className="skeleton" style={{height:14,width:"40%"}}/><div style={{display:"flex",gap:8}}><div className="skeleton" style={{height:28,width:50,borderRadius:6}}/><div className="skeleton" style={{height:28,width:100}}/></div><div style={{display:"flex",gap:16}}><div className="skeleton" style={{height:14,width:80}}/><div className="skeleton" style={{height:14,width:80}}/><div className="skeleton" style={{height:14,width:80}}/></div><div style={{marginTop:"auto",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div className="skeleton" style={{height:36,width:120}}/><div className="skeleton" style={{height:44,width:100,borderRadius:10}}/></div></div></div>)}</div>}
@@ -536,7 +464,14 @@ function SearchResults(){
             </div>}
 
             {!loading&&!error&&user&&paginatedHotels.map((hotel,idx)=>{
-              const rating=hotel.rating||getRating(hotel.code);const discount=getDiscount(hotel.code);const price=priceINR(hotel);const globalIdx=(page-1)*perPage+idx;const cardAmenities=getCardAmenities(hotel);const area=getAreaFromCoords(hotel.latitude,hotel.longitude);
+              const rating=hotel.rating||getRating(hotel.code);const discount=getDiscount(hotel.code);const price=priceINR(hotel);const globalIdx=(page-1)*perPage+idx;const cardAmenities=getCardAmenities(hotel);
+              const area=getAreaFromCoords(hotel.latitude,hotel.longitude);
+              const distLabel=getDistanceLabel(hotel);
+              // Location line: distance from ref if available, else area, else address
+              const locationLine = distLabel
+                ? `${distLabel} from ${refLabel}`
+                : area || hotel.address || destination;
+
               return isMobile?(
                 <div key={String(hotel.code)} className="hcard-m" onClick={()=>handleHotelClick(hotel)}>
                   <div style={{position:"relative",height:200}}>
@@ -545,7 +480,10 @@ function SearchResults(){
                   </div>
                   <div style={{padding:"14px 16px 16px"}}>
                     <div className="sora" style={{fontSize:16,fontWeight:700,color:NAVY,marginBottom:3}}>{hotel.name}</div>
-                    <div style={{fontSize:12,color:"#64748b",marginBottom:6}}>{hotel.stars?<span style={{color:"#f59e0b"}}>{"★".repeat(hotel.stars)}</span>:null}{area?` · ${area}`:hotel.address?` · ${hotel.address}`:""}</div>
+                    <div style={{fontSize:12,color:"#64748b",marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
+                      {hotel.stars?<span style={{color:"#f59e0b"}}>{"★".repeat(hotel.stars)}</span>:null}
+                      <span>· 📍 {locationLine}</span>
+                    </div>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
                       <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:12,fontWeight:700,padding:"3px 8px",borderRadius:6}}>{rating.toFixed(1)}</span>
                       <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
@@ -568,7 +506,11 @@ function SearchResults(){
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
                         <div style={{flex:1}}>
                           <div className="sora" style={{fontSize:17,fontWeight:700,color:NAVY,marginBottom:4}}>{hotel.name}{hotel.stars?<span style={{color:"#f59e0b",fontSize:12,marginLeft:6}}>{"★".repeat(hotel.stars)}</span>:null}</div>
-                          <div style={{fontSize:12.5,color:"#64748b",marginBottom:8}}>📍 {area||hotel.address||destination}</div>
+                          <div style={{fontSize:12.5,color:"#64748b",marginBottom:8,display:"flex",alignItems:"center",gap:4}}>
+                            <span>📍</span>
+                            <span>{locationLine}</span>
+                            {distLabel&&<span style={{background:"#eff6ff",color:B,fontSize:11,fontWeight:600,padding:"1px 7px",borderRadius:10,marginLeft:4}}>{distLabel} away</span>}
+                          </div>
                           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
                             <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:12.5,fontWeight:700,padding:"3px 8px",borderRadius:6}}>{rating.toFixed(1)}</span>
                             <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
