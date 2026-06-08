@@ -372,12 +372,12 @@ router.get('/cities', async (req, res) => {
       NZ:'🇳🇿', LK:'🇱🇰', NP:'🇳🇵', BT:'🇧🇹', PK:'🇵🇰', BD:'🇧🇩',
     }
 
-    const cities = (resp.data.data || []).map((city: any) => ({
+    const cities = (resp.data.data || []).map((city) => ({
       city: city.name || city.city,
       country: city.countryName || city.country || city.countryCode,
       countryCode: city.countryCode,
       flag: COUNTRY_FLAGS[city.countryCode] || '🌍',
-    })).filter((c: any) => c.city)
+    })).filter((c) => c.city)
 
     return res.json({ cities })
   } catch (err) {
