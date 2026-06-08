@@ -184,7 +184,7 @@ export default function SearchHotelsPage() {
 
   // Default suggestions — top cities shown when input is empty
   const defaultSuggestions = DESTINATIONS.map(d => ({
-    type: 'city', name: d.city, subtext: d.country, flag: d.flag, placeId: null,
+    type: 'city', name: d.city, subtext: d.country, flag: d.flag, placeId: null, placeType: 'city',
   }));
 
   // Fetch suggestions from backend as user types
@@ -200,11 +200,13 @@ export default function SearchHotelsPage() {
         const data = await res.json();
         const cities = (data.cities || []).map((c: any) => ({
           type: 'city', name: c.name, subtext: c.subtext || c.country,
-          flag: c.flag || '🌍', placeId: c.placeId,  // ← placeId from /data/places
+          flag: c.flag || '🌍', placeId: c.placeId,
+          placeType: c.placeType || 'city',
         }));
         const hotels = (data.hotels || []).map((h: any) => ({
           type: 'hotel', name: h.name, subtext: h.subtext,
-          flag: h.flag || '🏨', hotelId: h.hotelId,  // ← hotelId from HOTEL_CACHE
+          flag: h.flag || '🏨', hotelId: h.hotelId,
+          placeType: 'hotel',
         }));
         const combined = [...cities, ...hotels];
         setSuggestions(combined.length > 0 ? combined : defaultSuggestions);
@@ -437,32 +439,51 @@ export default function SearchHotelsPage() {
     .sugg-item:hover { background: #f0f7ff !important; }
   `;
 
+  // Icon pill config per place type
+  const PLACE_ICONS: Record<string, { bg: string; color: string; icon: string; label: string }> = {
+    city:    { bg: "#E6F1FB", color: "#185FA5", icon: "🏙", label: "City" },
+    airport: { bg: "#E1F5EE", color: "#0F6E56", icon: "✈", label: "Airport" },
+    station: { bg: "#FAEEDA", color: "#854F0B", icon: "🚄", label: "Station" },
+    hotel:   { bg: "#FBEAF0", color: "#993556", icon: "🛏", label: "Hotel" },
+    area:    { bg: "#F1EFE8", color: "#5F5E5A", icon: "📍", label: "Area" },
+  };
+
+  const PlaceIcon = ({ placeType }: { placeType: string }) => {
+    const cfg = PLACE_ICONS[placeType] || PLACE_ICONS.city;
+    return (
+      <div style={{ width: 38, height: 38, borderRadius: 10, background: cfg.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 18 }}>
+        <span>{cfg.icon}</span>
+      </div>
+    );
+  };
+
   const SuggestionDropdown = ({ style }: { style?: React.CSSProperties }) => (
     showSuggestions && suggestions.length > 0 ? (
-      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 9999, maxHeight: 280, overflowY: "auto" as const, marginTop: 4, ...style }}>
-        {suggestions.map((s, i) => (
-          <div key={i} className="sugg-item"
-            onMouseDown={() => {
-              // Store full selection with placeId or hotelId
-              setSelection({
-                label: s.name,
-                type: s.type,
-                placeId: s.placeId || undefined,
-                hotelId: s.hotelId || undefined,
-              });
-              setInputText(s.name);
-              setShowSuggestions(false);
-              setTimeout(() => { setCalMode("checkin"); setCalOpen(true); }, 100);
-            }}
-            style={{ padding: "11px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontSize: 14, color: NAVY, borderBottom: i < suggestions.length - 1 ? "1px solid #f8fafc" : "none" }}>
-            <span style={{ fontSize: 22, flexShrink: 0 }}>{s.flag}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600 }}>{s.name}</div>
-              <div style={{ fontSize: 12, color: "#64748b" }}>{s.subtext}{s.type === 'hotel' ? ' · Hotel' : ''}</div>
+      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 9999, maxHeight: 340, overflowY: "auto" as const, marginTop: 4, ...style }}>
+        {suggestions.map((s, i) => {
+          const placeType = (s as any).placeType || (s.type === 'hotel' ? 'hotel' : 'city');
+          const cfg = PLACE_ICONS[placeType] || PLACE_ICONS.city;
+          const subtextLabel = cfg.label !== 'City' ? ` · ${cfg.label}` : '';
+          return (
+            <div key={i} className="sugg-item"
+              onMouseDown={() => {
+                setSelection({ label: s.name, type: s.type, placeId: (s as any).placeId || undefined, hotelId: (s as any).hotelId || undefined });
+                setInputText(s.name);
+                setShowSuggestions(false);
+                setTimeout(() => { setCalMode("checkin"); setCalOpen(true); }, 100);
+              }}
+              style={{ padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, borderBottom: i < suggestions.length - 1 ? "1px solid #f8fafc" : "none" }}>
+              <PlaceIcon placeType={placeType} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</div>
+                <div style={{ fontSize: 12, color: "#64748b" }}>{(s as any).subtext}{subtextLabel}</div>
+              </div>
+              {placeType === 'hotel' && (
+                <span style={{ fontSize: 11, background: "#eff6ff", color: B, padding: "2px 8px", borderRadius: 20, fontWeight: 600, flexShrink: 0 }}>Hotel</span>
+              )}
             </div>
-            {s.type === 'hotel' && <span style={{ fontSize: 10, background: "#eff6ff", color: B, padding: "2px 6px", borderRadius: 4, fontWeight: 600, flexShrink: 0 }}>Hotel</span>}
-          </div>
-        ))}
+          );
+        })}
       </div>
     ) : null
   );
