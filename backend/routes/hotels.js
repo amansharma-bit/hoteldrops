@@ -37,29 +37,56 @@ function memSet(key, data, ttlMs = 3600000) {
 }
 
 
-// ── City cache — pre-fetched at startup ──────────────────────────────────────
-let CITY_CACHE = []  // flat array of { city, country, countryCode, flag }
-
+// ── Static search index — cities + hotels pre-fetched at startup ─────────────
 const COUNTRY_FLAGS = {
   AE:'🇦🇪', IN:'🇮🇳', SG:'🇸🇬', TH:'🇹🇭', ID:'🇮🇩', MY:'🇲🇾', GB:'🇬🇧',
   FR:'🇫🇷', IT:'🇮🇹', ES:'🇪🇸', NL:'🇳🇱', TR:'🇹🇷', MV:'🇲🇻', ZA:'🇿🇦',
   US:'🇺🇸', JP:'🇯🇵', HK:'🇭🇰', KR:'🇰🇷', AU:'🇦🇺', QA:'🇶🇦', OM:'🇴🇲',
-  SA:'🇸🇦', VN:'🇻🇳', PH:'🇵🇭', CN:'🇨🇳', EG:'🇪🇬', MA:'🇲🇦', ZA:'🇿🇦',
+  SA:'🇸🇦', VN:'🇻🇳', PH:'🇵🇭', CN:'🇨🇳', EG:'🇪🇬', MA:'🇲🇦',
   DE:'🇩🇪', AT:'🇦🇹', CH:'🇨🇭', PT:'🇵🇹', GR:'🇬🇷', CZ:'🇨🇿', SE:'🇸🇪',
   NO:'🇳🇴', DK:'🇩🇰', FI:'🇫🇮', BE:'🇧🇪', CA:'🇨🇦', NZ:'🇳🇿', LK:'🇱🇰',
-  NP:'🇳🇵', MX:'🇲🇽', BR:'🇧🇷', AR:'🇦🇷', KE:'🇰🇪', TZ:'🇹🇿', RU:'🇷🇺',
-  MU:'🇲🇺', SC:'🇸🇨', BH:'🇧🇭', KW:'🇰🇼', JO:'🇯🇴', LB:'🇱🇧',
+  NP:'🇳🇵', MX:'🇲🇽', BR:'🇧🇷', KE:'🇰🇪', BH:'🇧🇭', KW:'🇰🇼', JO:'🇯🇴',
+  MU:'🇲🇺', RU:'🇷🇺', ES:'🇪🇸',
 }
 
-// Top countries Indians travel to
 const PREFETCH_COUNTRIES = [
   'AE','IN','SG','TH','ID','MY','GB','FR','IT','ES',
   'TR','MV','US','JP','AU','QA','OM','SA','VN','GR',
   'DE','AT','CH','PT','ZA','HK','KR','NZ','NL','SE',
+  'NO','DK','FI','BE','CA','EG','MA','BH','JO','MU',
 ]
 
-async function prefetchCities() {
-  console.log('🌍 Prefetching cities for', PREFETCH_COUNTRIES.length, 'countries...')
+// Top cities to pre-fetch hotels for
+const HOTEL_CITIES = [
+  { city: 'Dubai', country: 'AE' },
+  { city: 'Mumbai', country: 'IN' },
+  { city: 'New Delhi', country: 'IN' },
+  { city: 'Goa', country: 'IN' },
+  { city: 'Bangalore', country: 'IN' },
+  { city: 'Singapore', country: 'SG' },
+  { city: 'Bangkok', country: 'TH' },
+  { city: 'Bali', country: 'ID' },
+  { city: 'London', country: 'GB' },
+  { city: 'Paris', country: 'FR' },
+  { city: 'Rome', country: 'IT' },
+  { city: 'Istanbul', country: 'TR' },
+  { city: 'Doha', country: 'QA' },
+  { city: 'Abu Dhabi', country: 'AE' },
+  { city: 'Phuket', country: 'TH' },
+  { city: 'Kuala Lumpur', country: 'MY' },
+  { city: 'Tokyo', country: 'JP' },
+  { city: 'Sydney', country: 'AU' },
+  { city: 'Maldives', country: 'MV' },
+  { city: 'Barcelona', country: 'ES' },
+]
+
+let CITY_CACHE = []   // { type:'city', name, country, countryCode, flag }
+let HOTEL_CACHE = []  // { type:'hotel', name, city, country, hotelId, flag }
+
+async function buildStaticIndex() {
+  console.log('📦 Building static search index...')
+
+  // 1. Fetch all cities
   const allCities = []
   for (const cc of PREFETCH_COUNTRIES) {
     try {
@@ -67,25 +94,47 @@ async function prefetchCities() {
         headers: getHeaders(), timeout: 8000, validateStatus: () => true,
       })
       if (resp.status === 200 && resp.data?.data) {
-        const cities = resp.data.data.map(c => ({
-          city: c.name || c.city,
-          country: c.countryName || c.country || cc,
-          countryCode: cc,
-          flag: COUNTRY_FLAGS[cc] || '🌍',
-        })).filter(c => c.city)
-        allCities.push(...cities)
+        resp.data.data.forEach(c => {
+          const name = c.name || c.city
+          if (name) allCities.push({ type: 'city', name, country: c.countryName || cc, countryCode: cc, flag: COUNTRY_FLAGS[cc] || '🌍' })
+        })
       }
-      await sleep(120) // respect rate limits
-    } catch (e) {
-      console.log(`⚠️ Cities fetch failed for ${cc}: ${e.message}`)
-    }
+      await sleep(100)
+    } catch (e) { console.log(`⚠️ Cities ${cc}: ${e.message}`) }
   }
   CITY_CACHE = allCities
-  console.log(`✅ City cache loaded: ${CITY_CACHE.length} cities across ${PREFETCH_COUNTRIES.length} countries`)
+  console.log(`✅ Cities: ${CITY_CACHE.length}`)
+
+  // 2. Fetch hotels for top cities
+  const allHotels = []
+  for (const { city, country } of HOTEL_CITIES) {
+    try {
+      const resp = await axios.get(`${BASE_URL}/data/hotels?countryCode=${country}&cityName=${encodeURIComponent(city)}&limit=1000`, {
+        headers: getHeaders(), timeout: 10000, validateStatus: () => true,
+      })
+      if (resp.status === 200 && resp.data?.data) {
+        resp.data.data.forEach(h => {
+          if (h.name && h.id) allHotels.push({
+            type: 'hotel',
+            name: h.name,
+            city: h.city || city,
+            country: h.country || country,
+            countryCode: h.countryCode || country,
+            hotelId: h.id,
+            flag: COUNTRY_FLAGS[h.countryCode || country] || '🏨',
+          })
+        })
+      }
+      await sleep(200)
+    } catch (e) { console.log(`⚠️ Hotels ${city}: ${e.message}`) }
+  }
+  HOTEL_CACHE = allHotels
+  console.log(`✅ Hotels: ${HOTEL_CACHE.length} across ${HOTEL_CITIES.length} cities`)
+  console.log(`🎉 Search index ready: ${CITY_CACHE.length + HOTEL_CACHE.length} total entries`)
 }
 
-// Start prefetch after 2 seconds (let server boot first)
-setTimeout(prefetchCities, 2000)
+// Build index on startup
+setTimeout(buildStaticIndex, 2000)
 
 // ── Destination map ───────────────────────────────────────────────────────────
 const DESTINATIONS = {
@@ -402,43 +451,43 @@ router.get('/search', async (req, res) => {
 
 
 // ── GET /api/hotels/search?q=:query — search by hotel name ───────────────────
-router.get('/suggest', async (req, res) => {
-  try {
-    const { q } = req.query
-    if (!q || q.length < 2) return res.json({ hotels: [], cities: [] })
+router.get('/suggest', (req, res) => {
+  const { q } = req.query
+  if (!q || q.length < 1) return res.json({ cities: [], hotels: [] })
 
-    // Search cities from cache
-    const query = q.toLowerCase().trim()
-    const cities = CITY_CACHE
-      .filter(c => c.city.toLowerCase().startsWith(query) || c.city.toLowerCase().includes(query))
-      .sort((a, b) => a.city.toLowerCase().startsWith(query) ? -1 : 1)
-      .slice(0, 4)
-      .map(c => ({ type: 'city', name: c.city, subtext: c.country, flag: c.flag, countryCode: c.countryCode }))
+  const query = q.toLowerCase().trim()
 
-    // Search hotels by name via liteAPI
-    const resp = await axios.get(`${BASE_URL}/data/hotels?hotelName=${encodeURIComponent(q)}&limit=5`, {
-      headers: getHeaders(), timeout: 6000, validateStatus: () => true,
-    })
+  // Search cities from static cache
+  const cities = CITY_CACHE
+    .filter(c => c.name.toLowerCase().startsWith(query))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .slice(0, 4)
+    .map(c => ({ type: 'city', name: c.name, subtext: c.country, flag: c.flag, countryCode: c.countryCode }))
 
-    let hotels = []
-    if (resp.status === 200 && resp.data?.data) {
-      hotels = resp.data.data.slice(0, 5).map(h => ({
-        type: 'hotel',
-        name: h.name,
-        subtext: [h.city, h.country].filter(Boolean).join(', '),
-        hotelId: h.id || h.hotelId,
-        city: h.city,
-        country: h.country,
-        countryCode: h.countryCode,
-        flag: COUNTRY_FLAGS[h.countryCode] || '🏨',
-      }))
-    }
-
-    return res.json({ hotels, cities, total: hotels.length + cities.length })
-  } catch (err) {
-    console.error('Hotel search error:', err.message)
-    return res.json({ hotels: [], cities: [] })
+  // If less than 4 city starts-with, add contains matches
+  if (cities.length < 4) {
+    const more = CITY_CACHE
+      .filter(c => !c.name.toLowerCase().startsWith(query) && c.name.toLowerCase().includes(query))
+      .slice(0, 4 - cities.length)
+      .map(c => ({ type: 'city', name: c.name, subtext: c.country, flag: c.flag, countryCode: c.countryCode }))
+    cities.push(...more)
   }
+
+  // Search hotels from static cache
+  const hotels = HOTEL_CACHE
+    .filter(h => h.name.toLowerCase().includes(query))
+    .sort((a, b) => {
+      const aStart = a.name.toLowerCase().startsWith(query)
+      const bStart = b.name.toLowerCase().startsWith(query)
+      if (aStart && !bStart) return -1
+      if (!aStart && bStart) return 1
+      return a.name.localeCompare(b.name)
+    })
+    .slice(0, 5)
+    .map(h => ({ type: 'hotel', name: h.name, subtext: `${h.city}, ${h.country}`, flag: h.flag, hotelId: h.hotelId }))
+
+  console.log(`🔎 Suggest "${q}": ${cities.length} cities, ${hotels.length} hotels`)
+  return res.json({ cities, hotels, total: cities.length + hotels.length })
 })
 
 // ── GET /api/hotels/cities?q=:query ──────────────────────────────────────────
