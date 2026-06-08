@@ -349,6 +349,43 @@ router.get('/search', async (req, res) => {
 
 // This is the new /:code route — replaces everything from "// ── GET /api/hotels/:code" to "module.exports = router"
 
+// ── GET /api/hotels/cities?q=:query ──────────────────────────────────────────
+router.get('/cities', async (req, res) => {
+  try {
+    const { q } = req.query
+    if (!q || q.length < 2) return res.json({ cities: [] })
+
+    const resp = await axios.get(`${BASE_URL}/data/cities?countryCode=&name=${encodeURIComponent(q)}&limit=10`, {
+      headers: getHeaders(), timeout: 5000, validateStatus: () => true,
+    })
+
+    if (resp.status !== 200 || !resp.data?.data) return res.json({ cities: [] })
+
+    const COUNTRY_FLAGS: Record<string,string> = {
+      AE:'🇦🇪', IN:'🇮🇳', SG:'🇸🇬', TH:'🇹🇭', ID:'🇮🇩', MY:'🇲🇾', GB:'🇬🇧',
+      FR:'🇫🇷', IT:'🇮🇹', ES:'🇪🇸', NL:'🇳🇱', TR:'🇹🇷', MV:'🇲🇻', ZA:'🇿🇦',
+      US:'🇺🇸', JP:'🇯🇵', HK:'🇭🇰', KR:'🇰🇷', AU:'🇦🇺', QA:'🇶🇦', OM:'🇴🇲',
+      SA:'🇸🇦', VN:'🇻🇳', PH:'🇵🇭', CN:'🇨🇳', EG:'🇪🇬', MA:'🇲🇦', KE:'🇰🇪',
+      TZ:'🇹🇿', GH:'🇬🇭', NG:'🇳🇬', BR:'🇧🇷', MX:'🇲🇽', AR:'🇦🇷', CO:'🇨🇴',
+      DE:'🇩🇪', AT:'🇦🇹', CH:'🇨🇭', PT:'🇵🇹', GR:'🇬🇷', CZ:'🇨🇿', HU:'🇭🇺',
+      PL:'🇵🇱', SE:'🇸🇪', NO:'🇳🇴', DK:'🇩🇰', FI:'🇫🇮', BE:'🇧🇪', CA:'🇨🇦',
+      NZ:'🇳🇿', LK:'🇱🇰', NP:'🇳🇵', BT:'🇧🇹', PK:'🇵🇰', BD:'🇧🇩',
+    }
+
+    const cities = (resp.data.data || []).map((city: any) => ({
+      city: city.name || city.city,
+      country: city.countryName || city.country || city.countryCode,
+      countryCode: city.countryCode,
+      flag: COUNTRY_FLAGS[city.countryCode] || '🌍',
+    })).filter((c: any) => c.city)
+
+    return res.json({ cities })
+  } catch (err) {
+    console.error('Cities search error:', err.message)
+    return res.json({ cities: [] })
+  }
+})
+
 // ── GET /api/hotels/:code ─────────────────────────────────────────────────────
 router.get('/:code', async (req, res) => {
   try {
