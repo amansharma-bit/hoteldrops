@@ -170,8 +170,8 @@ export default function SearchHotelsPage() {
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState<GuestState>({ rooms: 1, adults: 2, children: 0, childAges: [] });
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [cityResults, setCityResults] = useState<{flag:string;city:string;country:string;img:string}[]>([]);
-  const [cityLoading, setCityLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<{type:string;name:string;subtext:string;flag:string;hotelId?:string;city?:string;countryCode?:string}[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [activeCity, setActiveCity] = useState("All Hotels");
   const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
@@ -188,35 +188,30 @@ export default function SearchHotelsPage() {
   const statsAnimated = useRef(false);
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
-  // Live city search via liteAPI, fallback to local list
-  const filteredSuggestions = cityResults.length > 0
-    ? cityResults
-    : destination.length > 0
+  // Combined search — cities + hotels
+  const localSuggestions = destination.length > 0
     ? DESTINATIONS.filter(d =>
         `${d.city}`.toLowerCase().includes(destination.toLowerCase()) ||
         `${d.country}`.toLowerCase().includes(destination.toLowerCase())
-      ).slice(0, 8)
-    : DESTINATIONS.slice(0, 8);
+      ).slice(0, 5).map(d => ({ type: 'city', name: d.city, subtext: d.country, flag: d.flag }))
+    : DESTINATIONS.slice(0, 6).map(d => ({ type: 'city', name: d.city, subtext: d.country, flag: d.flag }));
+
+  const filteredSuggestions = searchResults.length > 0 ? searchResults : localSuggestions;
 
   useEffect(() => {
-    if (destination.length < 2) { setCityResults([]); return; }
+    if (destination.length < 2) { setSearchResults([]); return; }
     const timer = setTimeout(async () => {
-      setCityLoading(true);
+      setSearchLoading(true);
       try {
-        const res = await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/cities?q=${encodeURIComponent(destination)}`);
+        const res = await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/search?q=${encodeURIComponent(destination)}`);
         const data = await res.json();
-        if (data.cities?.length > 0) {
-          setCityResults(data.cities.map((c: any) => ({
-            flag: c.flag || "🌍",
-            city: c.city || c.name,
-            country: c.country || c.countryName || "",
-            img: "/dubai.jpg"
-          })));
-        } else {
-          setCityResults([]);
-        }
-      } catch { setCityResults([]); }
-      finally { setCityLoading(false); }
+        const combined = [
+          ...(data.cities || []),
+          ...(data.hotels || []),
+        ];
+        setSearchResults(combined.length > 0 ? combined : []);
+      } catch { setSearchResults([]); }
+      finally { setSearchLoading(false); }
     }, 300);
     return () => clearTimeout(timer);
   }, [destination]);
@@ -377,7 +372,18 @@ export default function SearchHotelsPage() {
     showSuggestions && filteredSuggestions.length > 0 ? (
       <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 9999, maxHeight: 280, overflowY: "auto" as const, marginTop: 4, ...style }}>
         {filteredSuggestions.map((d, i) => (
-          <div key={i} className="sugg-item" onMouseDown={() => { setDestination(`${d.city}, ${d.country}`); setCityResults([]); setShowSuggestions(false); }}
+          <div key={i} className="sugg-item" onMouseDown={() => {
+              if (d.type === 'hotel' && d.hotelId) {
+                // Direct hotel — go straight to hotel detail page
+                // Use today+7 as default dates if none selected
+                const ci = checkIn || new Date(Date.now() + 86400000).toISOString().split('T')[0];
+                const co = checkOut || new Date(Date.now() + 2*86400000).toISOString().split('T')[0];
+                window.open(`/hotel/${d.hotelId}?checkIn=${ci}&checkOut=${co}&adults=2`, '_blank');
+              } else {
+                setDestination(`${d.name}, ${d.subtext}`);
+              }
+              setSearchResults([]); setShowSuggestions(false);
+            }}
             style={{ padding: "11px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontSize: 14, color: NAVY, borderBottom: i < filteredSuggestions.length - 1 ? "1px solid #f8fafc" : "none" }}>
             <span style={{ fontSize: 22, flexShrink: 0 }}>{d.flag}</span>
             <div>
