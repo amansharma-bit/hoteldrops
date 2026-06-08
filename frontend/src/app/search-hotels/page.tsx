@@ -188,31 +188,40 @@ export default function SearchHotelsPage() {
   const statsAnimated = useRef(false);
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
-  // Combined search — cities + hotels
-  const localSuggestions: any[] = destination.length > 0
-    ? DESTINATIONS.filter(d =>
-        `${d.city}`.toLowerCase().includes(destination.toLowerCase()) ||
-        `${d.country}`.toLowerCase().includes(destination.toLowerCase())
-      ).slice(0, 5).map(d => ({ type: 'city', name: d.city, subtext: d.country, flag: d.flag }))
-    : DESTINATIONS.slice(0, 6).map(d => ({ type: 'city', name: d.city, subtext: d.country, flag: d.flag }));
-
-  const filteredSuggestions = searchResults.length > 0 ? searchResults : localSuggestions;
+  // Suggestions — cities from backend cache + hotel name search
+  const [filteredSuggestions, setFilteredSuggestions] = useState<any[]>(
+    DESTINATIONS.slice(0, 6).map(d => ({ type: 'city', name: d.city, subtext: d.country, flag: d.flag }))
+  );
 
   useEffect(() => {
-    if (destination.length < 2) { setSearchResults([]); return; }
+    if (!destination || destination.length === 0) {
+      // Show default cities when empty
+      setFilteredSuggestions(DESTINATIONS.slice(0, 6).map(d => ({ type: 'city', name: d.city, subtext: d.country, flag: d.flag })));
+      setSearchResults([]);
+      return;
+    }
+
+    // Always show local matches immediately
+    const localMatches = DESTINATIONS
+      .filter(d => d.city.toLowerCase().includes(destination.toLowerCase()) || d.country.toLowerCase().includes(destination.toLowerCase()))
+      .slice(0, 5)
+      .map(d => ({ type: 'city', name: d.city, subtext: d.country, flag: d.flag }));
+    setFilteredSuggestions(localMatches.length > 0 ? localMatches : [{ type: 'city', name: destination, subtext: 'Search this destination', flag: '🌍' }]);
+
+    if (destination.length < 2) return;
+
+    // Then fetch from backend (cities cache + hotel names)
     const timer = setTimeout(async () => {
-      setSearchLoading(true);
       try {
         const res = await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/search?q=${encodeURIComponent(destination)}`);
         const data = await res.json();
-        const combined = [
-          ...(data.cities || []),
-          ...(data.hotels || []),
-        ];
-        setSearchResults(combined.length > 0 ? combined : []);
-      } catch { setSearchResults([]); }
-      finally { setSearchLoading(false); }
-    }, 300);
+        const cities = (data.cities || []).map((c: any) => ({ type: 'city', name: c.city, subtext: c.country, flag: c.flag || '🌍' }));
+        const hotels = (data.hotels || []).map((h: any) => ({ type: 'hotel', name: h.name, subtext: h.subtext || h.city, flag: '🏨', hotelId: h.hotelId }));
+        const combined = [...cities, ...hotels];
+        if (combined.length > 0) setFilteredSuggestions(combined);
+        // else keep local matches already shown
+      } catch { /* keep local matches */ }
+    }, 350);
     return () => clearTimeout(timer);
   }, [destination]);
 
