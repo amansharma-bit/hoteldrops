@@ -377,7 +377,7 @@ export default function SearchHotelsPage() {
     showSuggestions && filteredSuggestions.length > 0 ? (
       <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 9999, maxHeight: 280, overflowY: "auto" as const, marginTop: 4, ...style }}>
         {filteredSuggestions.map((d, i) => (
-          <div key={i} className="sugg-item" onMouseDown={() => { setDestination(`${d.city}, ${d.country}`); setShowSuggestions(false); }}
+          <div key={i} className="sugg-item" onMouseDown={() => { setDestination(`${d.city}, ${d.country}`); setCityResults([]); setShowSuggestions(false); }}
             style={{ padding: "11px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontSize: 14, color: NAVY, borderBottom: i < filteredSuggestions.length - 1 ? "1px solid #f8fafc" : "none" }}>
             <span style={{ fontSize: 22, flexShrink: 0 }}>{d.flag}</span>
             <div>
