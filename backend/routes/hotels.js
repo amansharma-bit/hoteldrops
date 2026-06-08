@@ -203,6 +203,18 @@ async function enrichWithCoords(hotels) {
   })
 }
 
+// ── Determine place type from Google Places types array ──────────────────────
+function getPlaceType(place) {
+  const types = (place.types || place.type || [])
+  const t = Array.isArray(types) ? types.join(' ') : String(types || '')
+  const name = (place.name || '').toLowerCase()
+  if (/airport/.test(t) || /airport/.test(name)) return 'airport'
+  if (/train_station|railway|transit_station|subway/.test(t) || /station|centralstation/.test(name)) return 'station'
+  if (/lodging|hotel/.test(t)) return 'hotel'
+  if (/neighborhood|sublocality|district|premise/.test(t)) return 'area'
+  return 'city' // locality, administrative_area, political → city
+}
+
 // ── GET /api/hotels/suggest?q= ────────────────────────────────────────────────
 // Calls liteAPI /data/places for city autocomplete (returns placeId)
 // Searches HOTEL_CACHE for hotel name autocomplete (returns hotelId)
@@ -223,10 +235,10 @@ router.get('/suggest', async (req, res) => {
         type: 'city',
         name: place.name || place.displayName || q,
         subtext: place.countryName || place.country || '',
-        flag: COUNTRY_FLAGS[(place.countryCode || '').toUpperCase()] || '🌍',
-        placeId: place.placeId || place.place_id,   // ← THE KEY — used in /search
+        placeId: place.placeId || place.place_id,
         countryCode: place.countryCode || '',
-      })).filter(c => c.placeId) // only keep results with a placeId
+        placeType: getPlaceType(place), // city | airport | station | area | hotel
+      })).filter(c => c.placeId)
     }
   } catch (e) {
     console.warn(`⚠️ /data/places error: ${e.message}`)
@@ -247,8 +259,8 @@ router.get('/suggest', async (req, res) => {
       type: 'hotel',
       name: h.name,
       subtext: `${h.city}, ${h.country}`,
-      flag: h.flag,
-      hotelId: h.hotelId,   // ← THE KEY — used in /search
+      placeType: 'hotel',
+      hotelId: h.hotelId,
     }))
 
   console.log(`🔎 Suggest "${q}": ${cities.length} cities, ${hotels.length} hotels`)
