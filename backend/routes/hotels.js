@@ -207,12 +207,12 @@ async function enrichWithCoords(hotels) {
 function getPlaceType(place) {
   const types = (place.types || place.type || [])
   const t = Array.isArray(types) ? types.join(' ') : String(types || '')
-  const name = (place.name || '').toLowerCase()
-  if (/airport/.test(t) || /airport/.test(name)) return 'airport'
-  if (/train_station|railway|transit_station|subway/.test(t) || /station|centralstation/.test(name)) return 'station'
-  if (/lodging|hotel/.test(t)) return 'hotel'
-  if (/neighborhood|sublocality|district|premise/.test(t)) return 'area'
-  return 'city' // locality, administrative_area, political → city
+  const name = (place.name || place.displayName || '').toLowerCase()
+  if (/airport|airfield/.test(t) || /airport/.test(name)) return 'airport'
+  if (/train_station|railway_station|transit_station|subway_station|bus_station|light_rail/.test(t) || /station|centralstation|central station/.test(name)) return 'station'
+  if (/lodging/.test(t)) return 'hotel'
+  if (/neighborhood|sublocality|district|premise|point_of_interest/.test(t)) return 'area'
+  return 'city'
 }
 
 // ── GET /api/hotels/suggest?q= ────────────────────────────────────────────────
