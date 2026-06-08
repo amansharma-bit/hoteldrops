@@ -204,12 +204,25 @@ export default function SearchHotelsPage() {
       try {
         const res = await fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(inputText)}`);
         const data = await res.json();
-        setSuggestions({
-          cities: data.cities || [],
-          hotels: data.hotels || [],
-          areas: [], landmarks: [], airport: null,
-        });
-      } catch { setSuggestions(defaultSuggestions); }
+        const cities = data.cities || [];
+        const hotels = data.hotels || [];
+        // Only fall back to defaults if API returned nothing AND input is short
+        if (cities.length === 0 && hotels.length === 0) {
+          const q = inputText.toLowerCase();
+          const matched = defaultSuggestions.cities.filter((c: any) =>
+            c.name.toLowerCase().includes(q)
+          );
+          setSuggestions({ cities: matched, hotels: [], areas: [], landmarks: [], airport: null });
+        } else {
+          setSuggestions({ cities, hotels, areas: [], landmarks: [], airport: null });
+        }
+      } catch {
+        const q = inputText.toLowerCase();
+        const matched = defaultSuggestions.cities.filter((c: any) =>
+          c.name.toLowerCase().includes(q)
+        );
+        setSuggestions({ cities: matched, hotels: [], areas: [], landmarks: [], airport: null });
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [inputText]);
