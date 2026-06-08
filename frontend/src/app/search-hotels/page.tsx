@@ -213,7 +213,7 @@ export default function SearchHotelsPage() {
     // Then fetch from backend (cities cache + hotel names)
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/search?q=${encodeURIComponent(destination)}`);
+        const res = await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/suggest?q=${encodeURIComponent(destination)}`);
         const data = await res.json();
         const cities = (data.cities || []).map((c: any) => ({ type: 'city', name: c.city, subtext: c.country, flag: c.flag || '🌍' }));
         const hotels = (data.hotels || []).map((h: any) => ({ type: 'hotel', name: h.name, subtext: h.subtext || h.city, flag: '🏨', hotelId: h.hotelId }));
