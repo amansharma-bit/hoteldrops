@@ -308,8 +308,8 @@ router.get('/:code', async (req, res) => {
 
     console.log(`🏨 Hotel detail: ${code} | ${checkIn}→${checkOut} | ${nights}N`)
 
-    // Fetch static content + rates + reviews in parallel
-    const [contentResp, ratesResp, reviewsResp] = await Promise.all([
+    // Fetch static content + rates + reviews + rooms in parallel
+    const [contentResp, ratesResp, reviewsResp, roomsResp] = await Promise.all([
       axios.get(`${BASE_URL}/data/hotel?hotelId=${code}`, {
         headers: getHeaders(), timeout: 12000, validateStatus: () => true,
       }),
@@ -326,6 +326,9 @@ router.get('/:code', async (req, res) => {
       axios.get(`${BASE_URL}/data/reviews?hotelId=${code}&timeout=4&getSentiment=true`, {
         headers: getHeaders(), timeout: 6000, validateStatus: () => true,
       }),
+      axios.get(`${BASE_URL}/data/rooms?hotelId=${code}`, {
+        headers: getHeaders(), timeout: 10000, validateStatus: () => true,
+      }),
     ])
 
     const d = contentResp.data?.data
@@ -336,9 +339,13 @@ router.get('/:code', async (req, res) => {
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .map(img => ({ url: img.url, caption: img.caption || 'Hotel' }))
 
-    // ── Room static data from /data/hotel (for size, beds, amenities, photos)
+    // ── Room static data — try /data/rooms first (more complete), fallback to /data/hotel rooms
+    const roomsData = (roomsResp?.status === 200 && roomsResp?.data?.data)
+      ? roomsResp.data.data
+      : (d.rooms || [])
+    console.log(`🏠 Rooms data source: ${roomsResp?.status === 200 ? '/data/rooms' : '/data/hotel'} — ${roomsData.length} rooms`)
     const staticRooms = {}
-    for (const sr of (d.rooms || [])) {
+    for (const sr of roomsData) {
       const roomData = {
         description: sr.description || '',
         sizeM2: sr.roomSizeSquare || null,
