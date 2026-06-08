@@ -164,6 +164,21 @@ const CITY_LOOKUP = {
   'beijing': { flag: '🇨🇳', country: 'China' },
   'shanghai': { flag: '🇨🇳', country: 'China' },
   'marrakech': { flag: '🇲🇦', country: 'Morocco' },
+  'dublin': { flag: '🇮🇪', country: 'Ireland' },
+  'dubrovnik': { flag: '🇭🇷', country: 'Croatia' },
+  'zagreb': { flag: '🇭🇷', country: 'Croatia' },
+  'reykjavik': { flag: '🇮🇸', country: 'Iceland' },
+  'warsaw': { flag: '🇵🇱', country: 'Poland' },
+  'krakow': { flag: '🇵🇱', country: 'Poland' },
+  'budapest': { flag: '🇭🇺', country: 'Hungary' },
+  'bucharest': { flag: '🇷🇴', country: 'Romania' },
+  'sofia': { flag: '🇧🇬', country: 'Bulgaria' },
+  'belgrade': { flag: '🇷🇸', country: 'Serbia' },
+  'valletta': { flag: '🇲🇹', country: 'Malta' },
+  'cape town': { flag: '🇿🇦', country: 'South Africa' },
+  'johannesburg': { flag: '🇿🇦', country: 'South Africa' },
+  'tel aviv': { flag: '🇮🇱', country: 'Israel' },
+  'jerusalem': { flag: '🇮🇱', country: 'Israel' },
   'dubai marina': { flag: '🇦🇪', country: 'United Arab Emirates' },
   'dubai mall': { flag: '🇦🇪', country: 'United Arab Emirates' },
   'downtown dubai': { flag: '🇦🇪', country: 'United Arab Emirates' },
@@ -333,7 +348,15 @@ router.get('/suggest', async (req, res) => {
       headers: getHeaders(), timeout: 5000, validateStatus: () => true,
     })
     if (resp.status === 200 && resp.data?.data) {
-      cities = resp.data.data.slice(0, 6).map(place => {
+      // Filter to only real city/area/airport results - skip businesses
+      const filtered = resp.data.data.filter((place: any) => {
+        const name = (place.name || place.displayName || '').toLowerCase()
+        const types = (place.types || []).join(' ').toLowerCase()
+        // Skip obvious businesses/services
+        if (/doctor|clinic|hospital|pharmacy|shop|store|mall.*clinic|auto|garage|repair|dentist|vet|salon|spa.*clinic/.test(name)) return false
+        return true
+      })
+      cities = filtered.slice(0, 6).map(place => {
         const countryCode = place.countryCode || place.country_code || ''
         const placeName = place.name || place.displayName || q
         // Use countryCode first, fall back to city name lookup
