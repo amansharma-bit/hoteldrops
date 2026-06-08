@@ -439,31 +439,49 @@ export default function SearchHotelsPage() {
     .sugg-item:hover { background: #f0f7ff !important; }
   `;
 
-  // Icon pill config per place type
-  const PLACE_ICONS: Record<string, { bg: string; color: string; icon: string; label: string }> = {
-    city:    { bg: "#E6F1FB", color: "#185FA5", icon: "🏙", label: "City" },
-    airport: { bg: "#E1F5EE", color: "#0F6E56", icon: "✈", label: "Airport" },
-    station: { bg: "#FAEEDA", color: "#854F0B", icon: "🚄", label: "Station" },
-    hotel:   { bg: "#FBEAF0", color: "#993556", icon: "🛏", label: "Hotel" },
-    area:    { bg: "#F1EFE8", color: "#5F5E5A", icon: "📍", label: "Area" },
+  // SVG icons per place type — no emoji, crisp at all sizes
+  const PLACE_CFG: Record<string, { bg: string; color: string; label: string; svg: React.ReactNode }> = {
+    city: {
+      bg: "#E6F1FB", color: "#185FA5", label: "City",
+      svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#185FA5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="9" width="5" height="12"/><rect x="9" y="5" width="6" height="16"/><rect x="16" y="11" width="5" height="10"/><line x1="1" y1="21" x2="23" y2="21"/></svg>
+    },
+    airport: {
+      bg: "#E1F5EE", color: "#0F6E56", label: "Airport",
+      svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
+    },
+    station: {
+      bg: "#FAEEDA", color: "#854F0B", label: "Station",
+      svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="13" rx="2"/><path d="M4 11h16"/><path d="M8 16l-2 4"/><path d="M16 16l2 4"/><circle cx="9" cy="7.5" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>
+    },
+    hotel: {
+      bg: "#FBEAF0", color: "#993556", label: "Hotel",
+      svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#993556" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v11"/><path d="M3 11h18"/><path d="M21 7v11"/><rect x="7" y="7" width="10" height="4" rx="2"/><path d="M7 18v2"/><path d="M17 18v2"/></svg>
+    },
+    area: {
+      bg: "#F1EFE8", color: "#5F5E5A", label: "Area",
+      svg: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5F5E5A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+    },
   };
 
   const PlaceIcon = ({ placeType }: { placeType: string }) => {
-    const cfg = PLACE_ICONS[placeType] || PLACE_ICONS.city;
+    const cfg = PLACE_CFG[placeType] || PLACE_CFG.city;
     return (
-      <div style={{ width: 38, height: 38, borderRadius: 10, background: cfg.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 18 }}>
-        <span>{cfg.icon}</span>
+      <div style={{ width: 40, height: 40, borderRadius: 10, background: cfg.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        {cfg.svg}
       </div>
     );
   };
 
   const SuggestionDropdown = ({ style }: { style?: React.CSSProperties }) => (
     showSuggestions && suggestions.length > 0 ? (
-      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 9999, maxHeight: 340, overflowY: "auto" as const, marginTop: 4, ...style }}>
+      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.14)", zIndex: 9999, maxHeight: 360, overflowY: "auto" as const, marginTop: 4, ...style }}>
         {suggestions.map((s, i) => {
-          const placeType = (s as any).placeType || (s.type === 'hotel' ? 'hotel' : 'city');
-          const cfg = PLACE_ICONS[placeType] || PLACE_ICONS.city;
-          const subtextLabel = cfg.label !== 'City' ? ` · ${cfg.label}` : '';
+          const placeType: string = (s as any).placeType || (s.type === 'hotel' ? 'hotel' : 'city');
+          const cfg = PLACE_CFG[placeType] || PLACE_CFG.city;
+          const country = (s as any).subtext || '';
+          const typeLabel = cfg.label !== 'City' ? cfg.label : '';
+          // Build subtext: "City · Sweden" or "Airport · Sweden" or "Hotel · Dubai"
+          const subtext = [typeLabel, country].filter(Boolean).join(' · ');
           return (
             <div key={i} className="sugg-item"
               onMouseDown={() => {
@@ -472,11 +490,11 @@ export default function SearchHotelsPage() {
                 setShowSuggestions(false);
                 setTimeout(() => { setCalMode("checkin"); setCalOpen(true); }, 100);
               }}
-              style={{ padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, borderBottom: i < suggestions.length - 1 ? "1px solid #f8fafc" : "none" }}>
+              style={{ padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, borderBottom: i < suggestions.length - 1 ? "1px solid #f1f5f9" : "none" }}>
               <PlaceIcon placeType={placeType} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</div>
-                <div style={{ fontSize: 12, color: "#64748b" }}>{(s as any).subtext}{subtextLabel}</div>
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: 1 }}>{subtext}</div>
               </div>
               {placeType === 'hotel' && (
                 <span style={{ fontSize: 11, background: "#eff6ff", color: B, padding: "2px 8px", borderRadius: 20, fontWeight: 600, flexShrink: 0 }}>Hotel</span>
