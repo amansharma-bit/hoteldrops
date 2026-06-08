@@ -479,7 +479,7 @@ function HotelDetailContent() {
           <div style={{ display: "grid", gridTemplateColumns: "520px 1fr 220px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", padding: "0 40px" }}>
             <div style={{ padding: "10px 0", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>{Object.keys(groupedRooms).length} Room Type{Object.keys(groupedRooms).length !== 1 ? "s" : ""}</div>
             <div style={{ padding: "10px 16px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>Options</div>
-            <div style={{ padding: "10px 0", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.07em", textAlign: "right" as const }}>Price</div>
+            <div style={{ padding: "10px 0", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.07em", textAlign: "left" as const }}>Price</div>
           </div>
 
           {/* Room groups */}
@@ -617,8 +617,8 @@ function HotelDetailContent() {
                           </div>
 
                           {/* Price */}
-                          <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column" as const, alignItems: "flex-end", justifyContent: "space-between" }}>
-                            <div style={{ textAlign: "right" as const }}>
+                          <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column" as const, alignItems: "flex-start", justifyContent: "space-between" }}>
+                            <div style={{ textAlign: "left" as const }}>
                               {discountPct && discountPct >= 5 && (
                                 <span style={{ background: "#fef2f2", color: "#dc2626", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 100, border: "1px solid #fecaca", display: "inline-block", marginBottom: 4 }}>{discountPct}% off</span>
                               )}
