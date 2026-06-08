@@ -350,9 +350,9 @@ function HotelDetailContent() {
         </div>
 
         {/* PHOTO GRID + RIGHT SIDEBAR */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 340px", gap: 20, marginBottom: 24, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 340px", gap: 20, marginBottom: 24, alignItems: "stretch" }}>
           {/* Photos */}
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gridTemplateRows: "230px 230px", gap: 6, borderRadius: 14, overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gridTemplateRows: "220px 220px", gap: 6, borderRadius: 14, overflow: "hidden" }}>
             <div style={{ gridRow: "1/3", overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openLightbox(0)}>
               <img src={hotel.images[0]?.url} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               <div style={{ position: "absolute", bottom: 12, left: 12, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 20, display: "flex", alignItems: "center", gap: 5 }}>
@@ -370,7 +370,7 @@ function HotelDetailContent() {
           {/* RIGHT SIDEBAR — deal box + rating */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {/* Deal box */}
-            <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+            <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", height: "100%", display: "flex", flexDirection: "column" as const }}>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#eff6ff", color: B, fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 100, marginBottom: 14 }}>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 Recommended Deal
@@ -461,7 +461,7 @@ function HotelDetailContent() {
         </div>
 
         {/* ── ROOMS ───────────────────────────────────────────────────────── */}
-        <div style={{ background: "#fff", borderRadius: 14, border: "1.5px solid #e2e8f0", marginBottom: 20, width: "100%", overflow: "hidden" }} ref={refRooms}>
+        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", marginBottom: 20, overflow: "hidden", marginLeft: isMobile ? -16 : -40, marginRight: isMobile ? -16 : -40, borderRadius: 0 }} ref={refRooms}>
 
           {/* Header */}
           <div style={{ padding: "18px 24px", borderBottom: "1.5px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 12 }}>
