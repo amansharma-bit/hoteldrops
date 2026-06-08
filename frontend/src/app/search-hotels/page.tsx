@@ -437,37 +437,157 @@ export default function SearchHotelsPage() {
     </div>
   );
 
+  // Client-side flag+country lookup — never relies on backend sending countryCode
+  const CITY_INFO: Record<string, { flag: string; country: string }> = {
+    'dubai': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'abu dhabi': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'sharjah': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'dubai mall': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'dubai marina': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'downtown dubai': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'palm jumeirah': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'deira': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'dubai international airport': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'dubai hills': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'dubai silicon oasis': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'jumeirah': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'mumbai': { flag: '🇮🇳', country: 'India' },
+    'new delhi': { flag: '🇮🇳', country: 'India' },
+    'delhi': { flag: '🇮🇳', country: 'India' },
+    'goa': { flag: '🇮🇳', country: 'India' },
+    'bangalore': { flag: '🇮🇳', country: 'India' },
+    'bengaluru': { flag: '🇮🇳', country: 'India' },
+    'jaipur': { flag: '🇮🇳', country: 'India' },
+    'hyderabad': { flag: '🇮🇳', country: 'India' },
+    'chennai': { flag: '🇮🇳', country: 'India' },
+    'kolkata': { flag: '🇮🇳', country: 'India' },
+    'agra': { flag: '🇮🇳', country: 'India' },
+    'kochi': { flag: '🇮🇳', country: 'India' },
+    'pune': { flag: '🇮🇳', country: 'India' },
+    'ahmedabad': { flag: '🇮🇳', country: 'India' },
+    'udaipur': { flag: '🇮🇳', country: 'India' },
+    'varanasi': { flag: '🇮🇳', country: 'India' },
+    'amritsar': { flag: '🇮🇳', country: 'India' },
+    'connaught place': { flag: '🇮🇳', country: 'India' },
+    'singapore': { flag: '🇸🇬', country: 'Singapore' },
+    'bangkok': { flag: '🇹🇭', country: 'Thailand' },
+    'phuket': { flag: '🇹🇭', country: 'Thailand' },
+    'chiang mai': { flag: '🇹🇭', country: 'Thailand' },
+    'bali': { flag: '🇮🇩', country: 'Indonesia' },
+    'jakarta': { flag: '🇮🇩', country: 'Indonesia' },
+    'kuala lumpur': { flag: '🇲🇾', country: 'Malaysia' },
+    'london': { flag: '🇬🇧', country: 'United Kingdom' },
+    'manchester': { flag: '🇬🇧', country: 'United Kingdom' },
+    'edinburgh': { flag: '🇬🇧', country: 'United Kingdom' },
+    'paris': { flag: '🇫🇷', country: 'France' },
+    'nice': { flag: '🇫🇷', country: 'France' },
+    'rome': { flag: '🇮🇹', country: 'Italy' },
+    'milan': { flag: '🇮🇹', country: 'Italy' },
+    'venice': { flag: '🇮🇹', country: 'Italy' },
+    'florence': { flag: '🇮🇹', country: 'Italy' },
+    'barcelona': { flag: '🇪🇸', country: 'Spain' },
+    'madrid': { flag: '🇪🇸', country: 'Spain' },
+    'amsterdam': { flag: '🇳🇱', country: 'Netherlands' },
+    'istanbul': { flag: '🇹🇷', country: 'Turkey' },
+    'tokyo': { flag: '🇯🇵', country: 'Japan' },
+    'osaka': { flag: '🇯🇵', country: 'Japan' },
+    'kyoto': { flag: '🇯🇵', country: 'Japan' },
+    'hong kong': { flag: '🇭🇰', country: 'Hong Kong' },
+    'seoul': { flag: '🇰🇷', country: 'South Korea' },
+    'sydney': { flag: '🇦🇺', country: 'Australia' },
+    'melbourne': { flag: '🇦🇺', country: 'Australia' },
+    'doha': { flag: '🇶🇦', country: 'Qatar' },
+    'muscat': { flag: '🇴🇲', country: 'Oman' },
+    'riyadh': { flag: '🇸🇦', country: 'Saudi Arabia' },
+    'jeddah': { flag: '🇸🇦', country: 'Saudi Arabia' },
+    'maldives': { flag: '🇲🇻', country: 'Maldives' },
+    'male': { flag: '🇲🇻', country: 'Maldives' },
+    'cairo': { flag: '🇪🇬', country: 'Egypt' },
+    'new york': { flag: '🇺🇸', country: 'United States' },
+    'los angeles': { flag: '🇺🇸', country: 'United States' },
+    'miami': { flag: '🇺🇸', country: 'United States' },
+    'las vegas': { flag: '🇺🇸', country: 'United States' },
+    'berlin': { flag: '🇩🇪', country: 'Germany' },
+    'munich': { flag: '🇩🇪', country: 'Germany' },
+    'vienna': { flag: '🇦🇹', country: 'Austria' },
+    'zurich': { flag: '🇨🇭', country: 'Switzerland' },
+    'lisbon': { flag: '🇵🇹', country: 'Portugal' },
+    'athens': { flag: '🇬🇷', country: 'Greece' },
+    'santorini': { flag: '🇬🇷', country: 'Greece' },
+    'prague': { flag: '🇨🇿', country: 'Czech Republic' },
+    'stockholm': { flag: '🇸🇪', country: 'Sweden' },
+    'oslo': { flag: '🇳🇴', country: 'Norway' },
+    'copenhagen': { flag: '🇩🇰', country: 'Denmark' },
+    'helsinki': { flag: '🇫🇮', country: 'Finland' },
+    'brussels': { flag: '🇧🇪', country: 'Belgium' },
+    'toronto': { flag: '🇨🇦', country: 'Canada' },
+    'vancouver': { flag: '🇨🇦', country: 'Canada' },
+    'colombo': { flag: '🇱🇰', country: 'Sri Lanka' },
+    'kathmandu': { flag: '🇳🇵', country: 'Nepal' },
+    'nairobi': { flag: '🇰🇪', country: 'Kenya' },
+    'manama': { flag: '🇧🇭', country: 'Bahrain' },
+    'kuwait city': { flag: '🇰🇼', country: 'Kuwait' },
+    'amman': { flag: '🇯🇴', country: 'Jordan' },
+    'hanoi': { flag: '🇻🇳', country: 'Vietnam' },
+    'ho chi minh': { flag: '🇻🇳', country: 'Vietnam' },
+    'manila': { flag: '🇵🇭', country: 'Philippines' },
+    'beijing': { flag: '🇨🇳', country: 'China' },
+    'shanghai': { flag: '🇨🇳', country: 'China' },
+    'marrakech': { flag: '🇲🇦', country: 'Morocco' },
+  };
+
+  function getCityInfo(name: string): { flag: string; country: string } | null {
+    if (!name) return null;
+    const lower = name.toLowerCase().trim();
+    if (CITY_INFO[lower]) return CITY_INFO[lower];
+    const keys = Object.keys(CITY_INFO).sort((a, b) => b.length - a.length);
+    for (const key of keys) {
+      if (lower.includes(key)) return CITY_INFO[key];
+    }
+    return null;
+  }
+
   const SuggestionDropdown = ({ style }: { style?: React.CSSProperties }) => {
     if (!showSuggestions || (!suggestions.cities.length && !suggestions.hotels.length)) return null;
     return (
       <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.13)", zIndex: 9999, maxHeight: 380, overflowY: "auto", marginTop: 4, ...style }}>
-        {suggestions.cities.map((c: any, i: number) => (
-          <div key={i} onMouseDown={() => handleSelect(c, 'city')}
-            style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
-            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-            <span style={{ fontSize: 20, flexShrink: 0 }}>{c.flag || "🌍"}</span>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{c.name}</div>
-              <div style={{ fontSize: 12, color: "#94a3b8" }}>{c.countryName || ""}</div>
+        {suggestions.cities.map((c: any, i: number) => {
+          const info = getCityInfo(c.name);
+          const flag = c.flag || info?.flag || "";
+          const country = c.countryName || info?.country || "";
+          return (
+            <div key={i} onMouseDown={() => handleSelect(c, 'city')}
+              style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+              <span style={{ fontSize: 22, flexShrink: 0, lineHeight: 1 }}>{flag}</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{c.name}</div>
+                {country && <div style={{ fontSize: 12, color: "#94a3b8" }}>{country}</div>}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {suggestions.hotels.length > 0 && (
           <>
             <div style={{ padding: "5px 16px 3px", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", borderTop: "1px solid #f1f5f9", background: "#f8fafc" }}>Hotels</div>
-            {suggestions.hotels.map((h: any, i: number) => (
-              <div key={i} onMouseDown={() => handleSelect(h, 'hotel')}
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                <span style={{ fontSize: 18, flexShrink: 0 }}>{h.flag || "🏨"}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: NAVY, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" }}>{h.name}</div>
-                  <div style={{ fontSize: 12, color: "#94a3b8" }}>{h.city}{h.countryName ? `, ${h.countryName}` : ""}</div>
+            {suggestions.hotels.map((h: any, i: number) => {
+              const hInfo = getCityInfo(h.city || h.name);
+              const hFlag = h.flag || hInfo?.flag || "🏨";
+              const hCountry = h.countryName || hInfo?.country || "";
+              return (
+                <div key={i} onMouseDown={() => handleSelect(h, 'hotel')}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  <span style={{ fontSize: 20, flexShrink: 0 }}>{hFlag}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: NAVY, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" }}>{h.name}</div>
+                    <div style={{ fontSize: 12, color: "#94a3b8" }}>{h.city}{hCountry ? `, ${hCountry}` : ""}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </>
         )}
       </div>
@@ -633,7 +753,7 @@ export default function SearchHotelsPage() {
                     <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or hotel</div>
                     <input type="text" placeholder="Where to? e.g. Dubai" value={inputText}
                       onChange={e => { setInputText(e.target.value); setSelection(null); setShowSuggestions(true); setSearchError(""); }}
-                      onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                      onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 300)}
                       style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 16, fontWeight: 500, color: NAVY, background: "transparent", padding: 0 }} />
                     <SuggestionDropdown />
                   </div>
@@ -662,7 +782,7 @@ export default function SearchHotelsPage() {
                     <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or hotel</div>
                     <input type="text" placeholder="Enter city or hotel name" value={inputText}
                       onChange={e => { setInputText(e.target.value); setSelection(null); setShowSuggestions(true); setSearchError(""); }}
-                      onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                      onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 300)}
                       style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 15, fontWeight: 500, color: NAVY, background: "transparent", padding: 0, width: "100%" }} />
                     <SuggestionDropdown style={{ width: 420 }} />
                   </div>
