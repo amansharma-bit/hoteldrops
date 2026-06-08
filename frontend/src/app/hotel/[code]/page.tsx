@@ -155,6 +155,8 @@ function HotelDetailContent() {
     .rate-row.selected { background: #eff6ff; }
     .reserve-btn { background: ${B}; color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; }
     .reserve-btn:hover { background: #1038a0; }
+    .reserve-btn-yellow { background: #f97316; color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; width: 100%; }
+    .reserve-btn-yellow:hover { background: #ea6c0a; }
     .fac-icon-box { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 10px; border: 1.5px solid #e2e8f0; border-radius: 10px; min-width: 80px; text-align: center; }
     .review-filter-btn { padding: 6px 14px; border-radius: 100px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer; font-family: inherit; white-space: nowrap; }
     .review-filter-btn.active { background: ${NAVY}; color: #fff; border-color: ${NAVY}; }
@@ -401,45 +403,21 @@ function HotelDetailContent() {
               ) : <div style={{ fontSize: 13, color: "#64748b", marginBottom: 14 }}>Select dates for price</div>}
               <button onClick={() => goTo("rooms")} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }}>Reserve a Room →</button>
               <button onClick={() => goTo("rooms")} style={{ width: "100%", background: "#fff", color: B, border: `1.5px solid ${B}`, borderRadius: 10, padding: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>View All Rooms ↓</button>
+              {hotel.rating && (
+                <div style={{ borderTop: "1.5px solid #f1f5f9", marginTop: 14, paddingTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ background: NAVY, color: "#fff", borderRadius: 8, padding: "4px 8px", fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 800 }}>{parseFloat(hotel.rating).toFixed(1)}</div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>{parseFloat(hotel.rating) >= 9 ? "Exceptional" : parseFloat(hotel.rating) >= 8 ? "Excellent" : "Very Good"}</div>
+                      {hotel.reviewCount && <div style={{ fontSize: 11, color: "#94a3b8" }}>{Number(hotel.reviewCount).toLocaleString()} Ratings</div>}
+                    </div>
+                  </div>
+                  <button onClick={() => goTo("reviews")} style={{ fontSize: 12, color: B, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>See reviews →</button>
+                </div>
+              )}
             </div>
 
-            {/* Rating card */}
-            {hotel.rating && (
-              <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                  <div style={{ background: NAVY, color: "#fff", borderRadius: 10, width: 52, height: 52, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <div className="sora" style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{parseFloat(hotel.rating).toFixed(1)}</div>
-                  </div>
-                  <div>
-                    <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY }}>
-                      {parseFloat(hotel.rating) >= 9 ? "Exceptional" : parseFloat(hotel.rating) >= 8 ? "Excellent" : "Very Good"}
-                    </div>
-                    {hotel.reviewCount && <div style={{ fontSize: 12, color: "#64748b" }}>{Number(hotel.reviewCount).toLocaleString()} Ratings</div>}
-                  </div>
-                </div>
-                {/* Sentiment categories */}
-                {hotel.sentimentAnalysis?.categories?.slice(0, 4).map((cat: any) => (
-                  <div key={cat.name} style={{ marginBottom: 8 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: NAVY, marginBottom: 3 }}>
-                      <span style={{ fontWeight: 600 }}>{cat.name}</span>
-                      <span style={{ fontWeight: 700 }}>{cat.rating?.toFixed(1)}</span>
-                    </div>
-                    <div className="sentiment-bar"><div className="sentiment-fill" style={{ width: (cat.rating / 10 * 100) + "%" }} /></div>
-                  </div>
-                ))}
-                {/* Guests are saying */}
-                {hotel.sentimentAnalysis?.pros?.length > 0 && (
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: NAVY, marginBottom: 8 }}>Guests are saying</div>
-                    <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
-                      {hotel.sentimentAnalysis.pros.slice(0, 4).map((p: string) => (
-                        <span key={p} style={{ background: "#f0fdf4", color: "#166534", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, border: "1px solid #bbf7d0" }}>{p}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+
           </div>
         </div>
 
@@ -584,8 +562,8 @@ function HotelDetailContent() {
                     ) : <div style={{ fontSize: 13, color: "#64748b" }}>On request</div>}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, width: "100%" }}>
-                    <button className="reserve-btn" onClick={() => setSelectedOffer(room.offerId)}
-                      style={{ background: isSel ? "#1038a0" : B, color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                    <button onClick={() => setSelectedOffer(room.offerId)}
+                      style={{ background: isSel ? "#1038a0" : "#f97316", color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
                       {isSel ? "✓ Selected" : "Reserve 1 Room"}
                     </button>
                     {isSel && (
