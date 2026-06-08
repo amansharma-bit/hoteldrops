@@ -402,7 +402,7 @@ router.get('/search', async (req, res) => {
 
 
 // ── GET /api/hotels/search?q=:query — search by hotel name ───────────────────
-router.get('/search', async (req, res) => {
+router.get('/suggest', async (req, res) => {
   try {
     const { q } = req.query
     if (!q || q.length < 2) return res.json({ hotels: [], cities: [] })
