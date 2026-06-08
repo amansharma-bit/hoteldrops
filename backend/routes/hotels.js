@@ -349,7 +349,7 @@ router.get('/suggest', async (req, res) => {
     })
     if (resp.status === 200 && resp.data?.data) {
       // Filter to only real city/area/airport results - skip businesses
-      const filtered = resp.data.data.filter((place: any) => {
+      const filtered = resp.data.data.filter((place) => {
         const name = (place.name || place.displayName || '').toLowerCase()
         const types = (place.types || []).join(' ').toLowerCase()
         // Skip obvious businesses/services
