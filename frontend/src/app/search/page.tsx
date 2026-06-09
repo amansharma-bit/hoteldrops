@@ -275,9 +275,9 @@ interface GuestState{rooms:number;adults:number;children:number;childAges:number
 
 const FALLBACK_IMGS=["https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=85&fit=crop"];
 
-interface FiltersPanelProps{destination:string;areaOptions:string[];filterLocation:string;setFilterLocation:(v:string)=>void;filterPriceMin:number|null;filterPriceMax:number|null;setPriceRange:(min:number|null,max:number|null)=>void;filterRefundable:boolean;setFilterRefundable:(v:boolean)=>void;filterBreakfast:boolean;setFilterBreakfast:(v:boolean)=>void;filterRating:number|null;setFilterRating:(v:number|null)=>void;filterStars:number[];setFilterStars:(v:number[])=>void;filterFacilities:string[];setFilterFacilities:(v:string[])=>void;hasActiveFilters:boolean;clearAllFilters:()=>void;onHotelSearch:(v:string)=>void;landmarkInput?:string;setLandmarkInput?:(v:string)=>void;onLandmarkSearch?:(v:string)=>void;landmarkRef?:{lat:number;lng:number;label:string}|null;landmarkLoading?:boolean;}
+interface FiltersPanelProps{destination:string;areaOptions:string[];filterLocation:string;setFilterLocation:(v:string)=>void;filterPriceMin:number|null;filterPriceMax:number|null;setPriceRange:(min:number|null,max:number|null)=>void;filterRefundable:boolean;setFilterRefundable:(v:boolean)=>void;filterBreakfast:boolean;setFilterBreakfast:(v:boolean)=>void;filterRating:number|null;setFilterRating:(v:number|null)=>void;filterStars:number[];setFilterStars:(v:number[])=>void;filterFacilities:string[];setFilterFacilities:(v:string[])=>void;hasActiveFilters:boolean;clearAllFilters:()=>void;onHotelSearch:(v:string)=>void;}
 
-function FiltersPanel({areaOptions,filterLocation,setFilterLocation,filterPriceMin,filterPriceMax,setPriceRange,filterRefundable,setFilterRefundable,filterBreakfast,setFilterBreakfast,filterRating,setFilterRating,filterStars,setFilterStars,filterFacilities,setFilterFacilities,hasActiveFilters,clearAllFilters,onHotelSearch,landmarkInput,setLandmarkInput,onLandmarkSearch,landmarkRef,landmarkLoading}:FiltersPanelProps){
+function FiltersPanel({areaOptions,filterLocation,setFilterLocation,filterPriceMin,filterPriceMax,setPriceRange,filterRefundable,setFilterRefundable,filterBreakfast,setFilterBreakfast,filterRating,setFilterRating,filterStars,setFilterStars,filterFacilities,setFilterFacilities,hasActiveFilters,clearAllFilters,onHotelSearch}:FiltersPanelProps){
   const [showMore,setShowMore]=useState(false);const [sv,setSv]=useState("");
   const CB=({active,onClick}:{active:boolean;onClick:()=>void})=><div onClick={onClick} style={{width:16,height:16,border:`1.5px solid ${active?B:"#e2e8f0"}`,borderRadius:4,background:active?B:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer"}}>{active&&<svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}</div>;
   const RB=({active,onClick}:{active:boolean;onClick:()=>void})=><div onClick={onClick} style={{width:16,height:16,border:`1.5px solid ${active?B:"#e2e8f0"}`,borderRadius:"50%",background:active?B:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer"}}>{active&&<div style={{width:6,height:6,borderRadius:"50%",background:"#fff"}}/>}</div>;
@@ -286,8 +286,8 @@ function FiltersPanel({areaOptions,filterLocation,setFilterLocation,filterPriceM
     <div>
       <div style={{display:"flex",alignItems:"center",gap:8,border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 12px",marginBottom:16}}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" placeholder="Hotel name, area or landmark" value={sv} onChange={e=>{setSv(e.target.value);onHotelSearch(e.target.value);if(e.target.value.length===0&&onLandmarkSearch)onLandmarkSearch("");else if(onLandmarkSearch&&e.target.value.length>=4)onLandmarkSearch(e.target.value);}} style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:13,color:NAVY,background:"transparent",width:"100%"}}/>
-        {sv&&<button onClick={()=>{setSv("");onHotelSearch("");if(onLandmarkSearch)onLandmarkSearch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:16,padding:0}}>×</button>}
+        <input type="text" placeholder="Hotel name, area or landmark" value={sv} onChange={e=>{setSv(e.target.value);onHotelSearch(e.target.value);}} style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:13,color:NAVY,background:"transparent",width:"100%"}}/>
+        {sv&&<button onClick={()=>{setSv("");onHotelSearch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:16,padding:0}}>×</button>}
       </div>
       
       <div style={{marginBottom:16}}><div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>Price per night</div>{([{label:"Under ₹5,000",min:null,max:5000},{label:"₹5,000 – ₹10,000",min:5000,max:10000},{label:"₹10,000 – ₹20,000",min:10000,max:20000},{label:"₹20,000 – ₹40,000",min:20000,max:40000},{label:"₹40,000+",min:40000,max:null}] as {label:string;min:number|null;max:number|null}[]).map(({label,min,max})=>{const a=filterPriceMin===min&&filterPriceMax===max;return<Row key={label} onClick={()=>a?setPriceRange(null,null):setPriceRange(min,max)}><CB active={a} onClick={()=>a?setPriceRange(null,null):setPriceRange(min,max)}/><span style={{fontSize:13,color:"#1e293b"}}>{label}</span></Row>;})}</div>
@@ -436,7 +436,7 @@ function SearchResults(){
   const[desktopCalOffset,setDesktopCalOffset]=useState(0);const[desktopGuestOpen,setDesktopGuestOpen]=useState(false);
   const[destInput,setDestInput]=useState(destination);const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);
   const destRef=useRef<HTMLDivElement>(null);const desktopCalRef=useRef<HTMLDivElement>(null);const desktopGuestRef=useRef<HTMLDivElement>(null);
-  const[filterStars,setFilterStars]=useState<number[]>([]);const[filterBreakfast,setFilterBreakfast]=useState(false);const[filterRefundable,setFilterRefundable]=useState(false);const[filterRating,setFilterRating]=useState<number|null>(null);const[filterPriceMin,setFilterPriceMin]=useState<number|null>(null);const[filterPriceMax,setFilterPriceMax]=useState<number|null>(null);const[filterFacilities,setFilterFacilities]=useState<string[]>([]);const[filterLocation,setFilterLocation]=useState("");const[hotelSearch,setHotelSearch]=useState("");const[landmarkInput,setLandmarkInput]=useState("");const[landmarkRef,setLandmarkRef]=useState<{lat:number;lng:number;label:string}|null>(null);const[landmarkLoading,setLandmarkLoading]=useState(false);
+  const[filterStars,setFilterStars]=useState<number[]>([]);const[filterBreakfast,setFilterBreakfast]=useState(false);const[filterRefundable,setFilterRefundable]=useState(false);const[filterRating,setFilterRating]=useState<number|null>(null);const[filterPriceMin,setFilterPriceMin]=useState<number|null>(null);const[filterPriceMax,setFilterPriceMax]=useState<number|null>(null);const[filterFacilities,setFilterFacilities]=useState<string[]>([]);const[filterLocation,setFilterLocation]=useState("");const[hotelSearch,setHotelSearch]=useState("");
 
   // ── Distance reference point from URL ────────────────────────────────────
   const refLat = searchParams.get("refLat") ? parseFloat(searchParams.get("refLat")!) : null;
@@ -466,58 +466,6 @@ function SearchResults(){
 
   useEffect(()=>{fetchHotels();},[]);
 
-  const searchLandmark=async(q:string)=>{
-    if(!q.trim()){setLandmarkRef(null);setSortBy("popularity");return;}
-    // First check if any hotels match by name — if yes, treat as hotel search not landmark
-    const hotelMatches=hotels.filter(h=>h.name.toLowerCase().includes(q.toLowerCase()));
-    if(hotelMatches.length>2){setLandmarkRef(null);return;}
-    setLandmarkLoading(true);
-    try{
-      // Strip common city/country words to get the landmark name
-      const cityWords=destination.toLowerCase().split(/[\s,]+/);
-      let cleaned=q.toLowerCase().trim();
-      cityWords.forEach(w=>{if(w.length>2)cleaned=cleaned.replace(new RegExp('\\b'+w+'\\b','gi'),'').trim();});
-      cleaned=cleaned.replace(/^(in|at|near|the|a|an)\s+/i,'').trim()||q.trim();
-      const res=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/landmark?q=${encodeURIComponent(cleaned)}`);
-      const data=await res.json();
-      if(data.lat&&data.lng){setLandmarkRef({lat:data.lat,lng:data.lng,label:cleaned});setSortBy("distance");}
-      else{setLandmarkRef(null);}
-    }catch{setLandmarkRef(null);}
-    setLandmarkLoading(false);
-  };
-
-  const[aiQuery,setAiQuery]=useState("");const[aiLoading,setAiLoading]=useState(false);const[showAiSearch,setShowAiSearch]=useState(false);
-  const handleAiSearch=async(q:string)=>{
-    if(!q.trim())return;
-    setAiLoading(true);
-    try{
-      const lower=q.toLowerCase();
-      // Parse price: "under 15000", "below ₹20,000", "less than 10k"
-      const priceMaxMatch=lower.match(/(?:under|below|less than|max|upto|up to)\s*[₹rs\s]*([0-9,]+)\s*k?/i);
-      const priceMinMatch=lower.match(/(?:above|over|more than|min|at least)\s*[₹rs\s]*([0-9,]+)\s*k?/i);
-      if(priceMaxMatch){const v=parseInt(priceMaxMatch[1].replace(/,/g,""));setFilterPriceMax(lower.includes("k")&&v<1000?v*1000:v);}
-      if(priceMinMatch){const v=parseInt(priceMinMatch[1].replace(/,/g,""));setFilterPriceMin(lower.includes("k")&&v<1000?v*1000:v);}
-      // Parse stars: "5 star", "4-star", "luxury"
-      const starMatch=lower.match(/([3-5])\s*[\-\s]?star/i);
-      if(starMatch)setFilterStars([parseInt(starMatch[1])]);
-      if(/luxury|5\s*star/i.test(lower))setFilterStars([5]);
-      // Parse amenities
-      if(/breakfast|with breakfast|incl.*breakfast/i.test(lower))setFilterBreakfast(true);
-      if(/free cancel|refundable|flexible/i.test(lower))setFilterRefundable(true);
-      // Parse rating
-      if(/exceptional|rating\s*9|9\+/i.test(lower))setFilterRating(9);
-      else if(/excellent|rating\s*8|8\+/i.test(lower))setFilterRating(8);
-      // Parse landmark — look for "near X", "close to X", "by X", "around X"
-      const landmarkMatch=lower.match(/(?:near|close to|by|around|next to|opposite|adjacent to)\s+([a-z\s]+?)(?:\s+(?:under|below|with|free|having|that|which|and|,)|$)/i);
-      if(landmarkMatch){
-        const lm=landmarkMatch[1].trim();
-        if(lm.length>2)await searchLandmark(lm);
-      }
-      setShowAiSearch(false);
-    }catch(e){console.error(e);}
-    setAiLoading(false);
-  };
-
   const NIGHTS=checkIn&&checkOut?Math.max(1,Math.round((new Date(checkOut).getTime()-new Date(checkIn).getTime())/86400000)):1;
   const priceINR=(h:Hotel)=>Math.round(parseFloat(String(h.lowestPriceINR||h.minRate||0))/NIGHTS);
   const getRating=(code:string|number)=>[9.1,8.9,9.4,9.3,8.7,9.0,8.8,9.2][codeToNum(code)%8];
@@ -529,17 +477,16 @@ function SearchResults(){
 
   // ── Distance helper ───────────────────────────────────────────────────────
   const getDistanceLabel = (hotel: Hotel): string | null => {
-    const rlat=landmarkRef?.lat||refLat;const rlng=landmarkRef?.lng||refLng;
-    if (!rlat || !rlng || !hotel.latitude || !hotel.longitude) return null;
-    return formatDistance(haversineKm(rlat, rlng, hotel.latitude, hotel.longitude));
+    if (!refLat || !refLng || !hotel.latitude || !hotel.longitude) return null;
+    return formatDistance(haversineKm(refLat, refLng, hotel.latitude, hotel.longitude));
   };
-  const activeRefLabel=landmarkRef?.label||refLabel;
+  const activeRefLabel=refLabel;
 
   const areaOptions=useMemo(()=>{const found=new Set<string>();hotels.forEach(h=>{const a=getAreaFromCoords(h.latitude,h.longitude,destination);if(a)found.add(a);});return Array.from(found);},[hotels,destination]);
   const clearAllFilters=()=>{setFilterStars([]);setFilterBreakfast(false);setFilterRefundable(false);setFilterRating(null);setFilterPriceMax(null);setFilterPriceMin(null);setFilterFacilities([]);setFilterLocation("");setHotelSearch("");};
   const hasActiveFilters=filterStars.length>0||filterBreakfast||filterRefundable||filterRating!==null||filterPriceMax!==null||filterPriceMin!==null||filterFacilities.length>0||!!filterLocation||!!hotelSearch;
 
-  const filteredHotels=useMemo(()=>hotels.filter(h=>{const price=priceINR(h);if(hotelSearch&&!landmarkRef&&!h.name.toLowerCase().includes(hotelSearch.toLowerCase()))return false;if(filterStars.length>0&&!filterStars.includes(h.stars||0))return false;if(filterBreakfast&&!h.hasBreakfast)return false;if(filterRefundable&&h.isRefundable!==true)return false;if(filterRating!==null){const r=h.rating||getRating(h.code);if(r<filterRating)return false;}if(filterPriceMin!==null&&price<filterPriceMin)return false;if(filterPriceMax!==null&&price>filterPriceMax)return false;if(filterFacilities.length>0){const am=(h.amenities||[]).map(a=>a.toLowerCase());if(!filterFacilities.every(f=>am.some(a=>a.includes(f.toLowerCase()))))return false;}if(filterLocation){const area=getAreaFromCoords(h.latitude,h.longitude);if(area!==filterLocation)return false;}return true;}),[hotels,hotelSearch,filterStars,filterBreakfast,filterRefundable,filterRating,filterPriceMin,filterPriceMax,filterFacilities,filterLocation]);
+  const filteredHotels=useMemo(()=>hotels.filter(h=>{const price=priceINR(h);if(hotelSearch&&!h.name.toLowerCase().includes(hotelSearch.toLowerCase()))return false;if(filterStars.length>0&&!filterStars.includes(h.stars||0))return false;if(filterBreakfast&&!h.hasBreakfast)return false;if(filterRefundable&&h.isRefundable!==true)return false;if(filterRating!==null){const r=h.rating||getRating(h.code);if(r<filterRating)return false;}if(filterPriceMin!==null&&price<filterPriceMin)return false;if(filterPriceMax!==null&&price>filterPriceMax)return false;if(filterFacilities.length>0){const am=(h.amenities||[]).map(a=>a.toLowerCase());if(!filterFacilities.every(f=>am.some(a=>a.includes(f.toLowerCase()))))return false;}if(filterLocation){const area=getAreaFromCoords(h.latitude,h.longitude,destination);if(area!==filterLocation)return false;}return true;}),[hotels,hotelSearch,filterStars,filterBreakfast,filterRefundable,filterRating,filterPriceMin,filterPriceMax,filterFacilities,filterLocation]);
 
   const sortedHotels=useMemo(()=>[...filteredHotels].sort((a,b)=>{
     if(sortBy==="price-low")return priceINR(a)-priceINR(b);
@@ -547,7 +494,7 @@ function SearchResults(){
     if(sortBy==="rating")return(b.rating||getRating(b.code))-(a.rating||getRating(a.code));
     if(sortBy==="stars")return(b.stars||0)-(a.stars||0);
     // Distance sort — when landmark active OR sortBy=distance
-    const rlat=landmarkRef?.lat||refLat;const rlng=landmarkRef?.lng||refLng;
+    const rlat=refLat;const rlng=refLng;
     if((sortBy==="distance"||(rlat&&rlng))&&rlat&&rlng){
       const da=a.latitude&&a.longitude?haversineKm(rlat,rlng,a.latitude,a.longitude):9999;
       const db=b.latitude&&b.longitude?haversineKm(rlat,rlng,b.latitude,b.longitude):9999;
@@ -557,7 +504,7 @@ function SearchResults(){
   }),[filteredHotels,sortBy,refLat,refLng]);
 
   const perPage=10;const paginatedHotels=sortedHotels.slice((page-1)*perPage,page*perPage);const totalPages=Math.ceil(sortedHotels.length/perPage);
-  const filterProps:FiltersPanelProps={destination,areaOptions,filterLocation,setFilterLocation,filterPriceMin,filterPriceMax,setPriceRange:(min,max)=>{setFilterPriceMin(min);setFilterPriceMax(max);},filterRefundable,setFilterRefundable,filterBreakfast,setFilterBreakfast,filterRating,setFilterRating,filterStars,setFilterStars,filterFacilities,setFilterFacilities,hasActiveFilters,clearAllFilters,onHotelSearch:setHotelSearch,landmarkInput,setLandmarkInput,onLandmarkSearch:searchLandmark,landmarkRef,landmarkLoading};
+  const filterProps:FiltersPanelProps={destination,areaOptions,filterLocation,setFilterLocation,filterPriceMin,filterPriceMax,setPriceRange:(min,max)=>{setFilterPriceMin(min);setFilterPriceMax(max);},filterRefundable,setFilterRefundable,filterBreakfast,setFilterBreakfast,filterRating,setFilterRating,filterStars,setFilterStars,filterFacilities,setFilterFacilities,hasActiveFilters,clearAllFilters,onHotelSearch:setHotelSearch};
 
   const handleSearch=()=>{
     if(!user){setShowAuthModal(true);return;}
@@ -660,18 +607,7 @@ function SearchResults(){
                   {activeRefLabel ? `Hotels near ${activeRefLabel}` : `Hotels in ${destination}`}
                 </span>
                 {!loading&&<span style={{fontSize:13,color:"#64748b",marginLeft:8}}>{sortedHotels.length} properties found</span>}
-                <button onClick={()=>{setShowAiSearch(!showAiSearch);setAiQuery("");}} style={{display:"flex",alignItems:"center",gap:5,background:showAiSearch?"#eff6ff":"#f8fafc",border:`1.5px solid ${showAiSearch?B:"#e2e8f0"}`,borderRadius:20,padding:"5px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",color:showAiSearch?B:"#64748b"}}>✨ AI Search</button>
               </div>
-              {showAiSearch&&<div style={{marginBottom:16,background:"#fff",border:`1.5px solid ${B}`,borderRadius:12,padding:14}}>
-                <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>Describe what you want in plain English</div>
-                <div style={{display:"flex",gap:8}}>
-                  <input autoFocus type="text" value={aiQuery} onChange={e=>setAiQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")handleAiSearch(aiQuery);if(e.key==="Escape")setShowAiSearch(false);}} placeholder={`e.g. "5-star pool hotel near Burj Khalifa under ₹20,000"`} style={{flex:1,border:"1.5px solid #e2e8f0",borderRadius:8,padding:"9px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,outline:"none"}}/>
-                  <button onClick={()=>handleAiSearch(aiQuery)} disabled={aiLoading||!aiQuery.trim()} style={{background:B,color:"#fff",border:"none",borderRadius:8,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,display:"flex",alignItems:"center",gap:6,opacity:aiLoading||!aiQuery.trim()?0.6:1}}>
-                    {aiLoading?<div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.4)",borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>:"✨"} Search
-                  </button>
-                </div>
-                <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>Try: "near Palm Jumeirah with pool" · "5-star free cancellation under ₹15,000" · "breakfast near Marina Bay"</div>
-              </div>}
               {!isMobile&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"7px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,background:"#fff",cursor:"pointer",outline:"none"}}>
                 {(activeRefLabel)&&<option value="distance">Nearest first</option>}
                 <option value="popularity">Sort by: Popularity</option>
