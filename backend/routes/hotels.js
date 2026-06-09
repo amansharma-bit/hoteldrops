@@ -334,6 +334,50 @@ async function enrichWithCoords(hotels) {
   })
 }
 
+// ── POST /api/hotels/chat ────────────────────────────────────────────────────
+router.post('/chat', async (req, res) => {
+  const { messages, destination, checkIn, checkOut, hotelCount } = req.body
+  if (!messages?.length) return res.json({ reply: 'How can I help you?' })
+
+  const systemPrompt = `You are rebuq's AI travel assistant — friendly, knowledgeable, concise.
+The user is searching hotels in ${destination || 'an unknown city'} from ${checkIn || 'unknown'} to ${checkOut || 'unknown'}.
+There are currently ${hotelCount || 0} hotels loaded in their search results.
+
+You can help with:
+- Hotel recommendations and area comparisons
+- Local restaurants, food, nightlife
+- Weather and best time to visit
+- Transport, visa, currency tips
+- Packing advice
+- Things to do and attractions
+- Price guidance and value assessment
+
+Keep answers concise (2-4 sentences max unless detail is needed). Be conversational and helpful.
+If asked to filter hotels (e.g. "show only 5-star"), respond with JSON action like: {"action":"filter","stars":5}
+Otherwise respond in plain text.`
+
+  try {
+    const response = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 600,
+      system: systemPrompt,
+      messages: messages.map(m => ({ role: m.role, content: m.content }))
+    }, {
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
+      timeout: 15000
+    })
+    const reply = response.data?.content?.[0]?.text || 'Sorry, I could not process that.'
+    return res.json({ reply, success: true })
+  } catch (e) {
+    console.error('Chat error:', e.message)
+    return res.json({ reply: 'Sorry, I am having trouble connecting. Please try again.', success: false })
+  }
+})
+
 // ── POST /api/hotels/ai-search ───────────────────────────────────────────────
 router.post('/ai-search', async (req, res) => {
   const { query, destination } = req.body
