@@ -465,7 +465,7 @@ function HotelDetailContent() {
         </div>
 
         {/* ROOMS — mobile friendly */}
-        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", marginBottom: 20, overflow: "hidden", marginLeft: isMobile ? -16 : -40, marginRight: isMobile ? -16 : -40 }} ref={refRooms}>
+        <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, marginBottom: 20, overflow: "hidden" }} ref={refRooms}>
           <div style={{ padding: isMobile ? "16px 16px" : "18px 40px", borderBottom: "1.5px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 12 }}>
             <h2 className="sora" style={{ fontSize: isMobile ? 17 : 20, fontWeight: 700, color: NAVY }}>Select your room</h2>
             <div style={{ display: "flex", gap: 8 }}>
@@ -553,7 +553,7 @@ function HotelDetailContent() {
                     <div>
                       {/* Column headers */}
                       {groupIdx === 0 && (
-                        <div style={{ display: "grid", gridTemplateColumns: "480px 1fr 200px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", margin: "0 -40px", padding: "0 40px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "480px 1fr 200px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
                           <div style={{ padding: "10px 0", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>{Object.keys(groupedRooms).length} Room Type{Object.keys(groupedRooms).length !== 1 ? "s" : ""}</div>
                           <div style={{ padding: "10px 16px", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>Options</div>
                           <div style={{ padding: "10px 0", fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>Price</div>
