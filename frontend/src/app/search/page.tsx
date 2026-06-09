@@ -306,7 +306,7 @@ function SearchResults(){
     try{
       const res=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/landmark?q=${encodeURIComponent(q)}`);
       const data=await res.json();
-      if(data.lat&&data.lng){setLandmarkRef({lat:data.lat,lng:data.lng,label:data.label||q});}
+      if(data.lat&&data.lng){setLandmarkRef({lat:data.lat,lng:data.lng,label:data.label||q});setSortBy("distance");}
       else{setLandmarkRef(null);}
     }catch{setLandmarkRef(null);}
     setLandmarkLoading(false);
@@ -372,9 +372,9 @@ function SearchResults(){
     if(sortBy==="price-high")return priceINR(b)-priceINR(a);
     if(sortBy==="rating")return(b.rating||getRating(b.code))-(a.rating||getRating(a.code));
     if(sortBy==="stars")return(b.stars||0)-(a.stars||0);
-    // If reference point exists (from URL or landmark search), sort by distance
+    // Distance sort — when landmark active OR sortBy=distance
     const rlat=landmarkRef?.lat||refLat;const rlng=landmarkRef?.lng||refLng;
-    if(rlat&&rlng){
+    if((sortBy==="distance"||(rlat&&rlng))&&rlat&&rlng){
       const da=a.latitude&&a.longitude?haversineKm(rlat,rlng,a.latitude,a.longitude):9999;
       const db=b.latitude&&b.longitude?haversineKm(rlat,rlng,b.latitude,b.longitude):9999;
       return da-db;
@@ -499,7 +499,8 @@ function SearchResults(){
                 <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>Try: "near Palm Jumeirah with pool" · "5-star free cancellation under ₹15,000" · "breakfast near Marina Bay"</div>
               </div>}
               {!isMobile&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"7px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,background:"#fff",cursor:"pointer",outline:"none"}}>
-                <option value="popularity">{refLabel?"Nearest first":"Sort by: Popularity"}</option>
+                {(activeRefLabel)&&<option value="distance">Nearest first</option>}
+                <option value="popularity">Sort by: Popularity</option>
                 <option value="price-low">Price: Low to High</option>
                 <option value="price-high">Price: High to Low</option>
                 <option value="rating">User Rating</option>
