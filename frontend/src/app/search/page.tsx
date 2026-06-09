@@ -592,7 +592,7 @@ function codeToNum(code:string|number):number{if(typeof code==="number")return c
 
 const IconBreakfast=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>;
 
-interface Hotel{code:string|number;name:string;stars:number|null;minRate:number;currency:string;imageUrl?:string;address?:string;chain?:string;rating?:number|null;latitude?:number|null;longitude?:number|null;amenities?:string[];isRefundable?:boolean|null;hasBreakfast?:boolean;lowestPriceINR?:number;otaPriceINR?:number;memberSaving?:number;taxesIncluded?:boolean;}
+interface Hotel{code:string|number;name:string;stars:number|null;minRate:number;currency:string;imageUrl?:string;address?:string;city?:string;chain?:string;rating?:number|null;latitude?:number|null;longitude?:number|null;amenities?:string[];isRefundable?:boolean|null;hasBreakfast?:boolean;lowestPriceINR?:number;otaPriceINR?:number;memberSaving?:number;taxesIncluded?:boolean;}
 interface GuestState{rooms:number;adults:number;children:number;childAges:number[];}
 
 const FALLBACK_IMGS=["https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=85&fit=crop"];
