@@ -766,6 +766,10 @@ function SearchResults(){
   const[desktopCalOffset,setDesktopCalOffset]=useState(0);const[desktopGuestOpen,setDesktopGuestOpen]=useState(false);
   const[destInput,setDestInput]=useState(destination);const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);
   const destRef=useRef<HTMLDivElement>(null);const desktopCalRef=useRef<HTMLDivElement>(null);const desktopGuestRef=useRef<HTMLDivElement>(null);
+  const[aiSearchQuery,setAiSearchQuery]=useState("");
+  const[aiSearchActive,setAiSearchActive]=useState(false);
+  const[aiSearchLoading,setAiSearchLoading]=useState(false);
+  const[aiApplied,setAiApplied]=useState(false);
   const[filterStars,setFilterStars]=useState<number[]>([]);const[filterBreakfast,setFilterBreakfast]=useState(false);const[filterRefundable,setFilterRefundable]=useState(false);const[filterRating,setFilterRating]=useState<number|null>(null);const[filterPriceMin,setFilterPriceMin]=useState<number|null>(null);const[filterPriceMax,setFilterPriceMax]=useState<number|null>(null);const[filterFacilities,setFilterFacilities]=useState<string[]>([]);const[filterLocation,setFilterLocation]=useState("");const[hotelSearch,setHotelSearch]=useState("");
 
   // ── Distance reference point from URL ────────────────────────────────────
@@ -813,6 +817,33 @@ function SearchResults(){
   const activeRefLabel=refLabel;
 
   const areaOptions=useMemo(()=>getAreasForCity(destination),[destination]);
+  const handleAiSearch=async(query:string)=>{
+    if(!query.trim())return;
+    setAiSearchLoading(true);
+    try{
+      const res=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/ai-search`,{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({query,destination})
+      });
+      const data=await res.json();
+      const f=data.filters||{};
+      if(f.priceMax)setFilterPriceMax(f.priceMax);
+      if(f.priceMin)setFilterPriceMin(f.priceMin);
+      if(f.stars)setFilterStars([f.stars]);
+      if(f.hasBreakfast)setFilterBreakfast(true);
+      if(f.isRefundable)setFilterRefundable(true);
+      if(f.minRating)setFilterRating(f.minRating);
+      if(f.area){setFilterLocation(f.area);}
+      if(f.landmark){
+        const lRes=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/landmark?q=${encodeURIComponent(f.landmark)}`);
+        const lData=await lRes.json();
+        if(lData.lat&&lData.lng){setSortBy("distance");}
+      }
+      setAiApplied(true);
+    }catch(e){console.error(e);}
+    setAiSearchLoading(false);
+  };
+
   const clearAllFilters=()=>{setFilterStars([]);setFilterBreakfast(false);setFilterRefundable(false);setFilterRating(null);setFilterPriceMax(null);setFilterPriceMin(null);setFilterFacilities([]);setFilterLocation("");setHotelSearch("");};
   const hasActiveFilters=filterStars.length>0||filterBreakfast||filterRefundable||filterRating!==null||filterPriceMax!==null||filterPriceMin!==null||filterFacilities.length>0||!!filterLocation||!!hotelSearch;
 
