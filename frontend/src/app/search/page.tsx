@@ -301,7 +301,7 @@ function SearchResults(){
     if(!q.trim()){setLandmarkRef(null);return;}
     // First check if any hotels match by name — if yes, treat as hotel search not landmark
     const hotelMatches=hotels.filter(h=>h.name.toLowerCase().includes(q.toLowerCase()));
-    if(hotelMatches.length>0){setLandmarkRef(null);return;}
+    if(hotelMatches.length>2){setLandmarkRef(null);return;} // allow partial matches but not many
     setLandmarkLoading(true);
     try{
       const res=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/landmark?q=${encodeURIComponent(q)}`);
@@ -496,7 +496,18 @@ Return only the JSON object.`}]
                   {activeRefLabel ? `Hotels near ${activeRefLabel}` : `Hotels in ${destination}`}
                 </span>
                 {!loading&&<span style={{fontSize:13,color:"#64748b",marginLeft:8}}>{sortedHotels.length} properties found</span>}
+                <button onClick={()=>{setShowAiSearch(!showAiSearch);setAiQuery("");}} style={{display:"flex",alignItems:"center",gap:5,background:showAiSearch?"#eff6ff":"#f8fafc",border:`1.5px solid ${showAiSearch?B:"#e2e8f0"}`,borderRadius:20,padding:"5px 12px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",color:showAiSearch?B:"#64748b"}}>✨ AI Search</button>
               </div>
+              {showAiSearch&&<div style={{marginBottom:16,background:"#fff",border:`1.5px solid ${B}`,borderRadius:12,padding:14}}>
+                <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>Describe what you want in plain English</div>
+                <div style={{display:"flex",gap:8}}>
+                  <input autoFocus type="text" value={aiQuery} onChange={e=>setAiQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")handleAiSearch(aiQuery);if(e.key==="Escape")setShowAiSearch(false);}} placeholder={`e.g. "5-star pool hotel near Burj Khalifa under ₹20,000"`} style={{flex:1,border:"1.5px solid #e2e8f0",borderRadius:8,padding:"9px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,outline:"none"}}/>
+                  <button onClick={()=>handleAiSearch(aiQuery)} disabled={aiLoading||!aiQuery.trim()} style={{background:B,color:"#fff",border:"none",borderRadius:8,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0,display:"flex",alignItems:"center",gap:6,opacity:aiLoading||!aiQuery.trim()?0.6:1}}>
+                    {aiLoading?<div style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.4)",borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>:"✨"} Search
+                  </button>
+                </div>
+                <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>Try: "near Palm Jumeirah with pool" · "5-star free cancellation under ₹15,000" · "breakfast near Marina Bay"</div>
+              </div>}
               {!isMobile&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"7px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,background:"#fff",cursor:"pointer",outline:"none"}}>
                 <option value="popularity">{refLabel?"Nearest first":"Sort by: Popularity"}</option>
                 <option value="price-low">Price: Low to High</option>
