@@ -374,6 +374,7 @@ router.get('/suggest', async (req, res) => {
           }
         })
         .filter(c => c.placeId && c.flag) // only show if we have a flag
+        .filter((c, index, self) => index === self.findIndex(x => x.name.toLowerCase() === c.name.toLowerCase())) // remove duplicates
     }
   } catch (e) {
     console.warn(`⚠️ /data/places error: ${e.message}`)
