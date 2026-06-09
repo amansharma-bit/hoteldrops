@@ -962,6 +962,18 @@ function SearchResults(){
           </div>}
 
           <div style={{minWidth:0}}>
+            {/* PREMIUM AI SEARCH BAR */}
+            <div style={{marginBottom:20}}>
+              <div style={{background:"linear-gradient(135deg,#0f172a 0%,#1447b8 50%,#0f172a 100%)",borderRadius:16,padding:"2px",boxShadow:"0 8px 32px rgba(20,71,184,0.25)"}}>
+                <div style={{background:"#0f172a",borderRadius:14,display:"flex",alignItems:"center",gap:12,padding:"14px 18px"}}>
+                  <span style={{flexShrink:0,fontSize:20}}>✨</span>
+                  <input value={aiSearchQuery} onChange={e=>{setAiSearchQuery(e.target.value);setAiApplied(false);}} onKeyDown={e=>{if(e.key==="Enter")handleAiSearch(aiSearchQuery);}} placeholder={`Ask AI: "5-star pool hotel near Burj Khalifa" or "budget free cancellation in ${destination}"`} style={{flex:1,background:"transparent",border:"none",outline:"none",color:"#fff",fontSize:14,fontFamily:"inherit"}}/>
+                  {aiSearchLoading?(<div style={{width:18,height:18,border:"2px solid rgba(255,255,255,0.2)",borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin 1s linear infinite",flexShrink:0}}/>):aiSearchQuery?(<button onClick={()=>handleAiSearch(aiSearchQuery)} style={{background:"linear-gradient(135deg,#1447b8,#2563eb)",color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>Search</button>):null}
+                  {aiApplied&&<span style={{fontSize:11,color:"#4ade80",fontWeight:600,flexShrink:0}}>✓ Applied</span>}
+                </div>
+              </div>
+              {aiApplied&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,fontSize:12,color:"#64748b"}}><span>AI filters applied</span><button onClick={()=>{clearAllFilters();setAiSearchQuery("");}} style={{color:B,fontWeight:600,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>Clear all</button></div>}
+            </div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
               <div>
                 <span className="sora" style={{fontSize:isMobile?18:22,fontWeight:800,color:NAVY}}>
