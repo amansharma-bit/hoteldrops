@@ -1085,6 +1085,73 @@ function SearchResults(){
         <button className="btb" onClick={()=>setMobileSheet("sort")}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={mobileSheet==="sort"?B:"#64748b"} strokeWidth="2"><path d="M3 6h18M7 12h10M11 18h2"/></svg><span style={{color:mobileSheet==="sort"?B:"#64748b"}}>Sort</span></button>
         {!user&&<button className="btb" onClick={()=>setShowAuthModal(true)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span style={{color:B,fontWeight:700}}>Sign in</span></button>}
       </div>}
+
+      {/* FLOATING AI CHAT WIDGET */}
+      <div style={{position:"fixed",bottom:28,right:28,zIndex:9999,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:12}}>
+        {chatOpen&&(
+          <div style={{width:360,height:520,background:"#fff",borderRadius:20,boxShadow:"0 20px 60px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",overflow:"hidden",border:"1.5px solid #e2e8f0"}}>
+            <div style={{background:`linear-gradient(135deg,${NAVY},${B})`,padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{background:"rgba(255,255,255,0.18)",borderRadius:8,padding:"4px 8px",display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{fontFamily:"'Sora',sans-serif",fontWeight:800,fontSize:14,color:"#fff"}}>r.</span>
+                  <span style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.8)"}}>AI</span>
+                </div>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:"#fff"}}>rebuq Assistant</div>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.65)",display:"flex",alignItems:"center",gap:4}}>
+                    <div style={{width:6,height:6,borderRadius:"50%",background:"#4ade80"}}/>
+                    Powered by Claude AI
+                  </div>
+                </div>
+              </div>
+              <button onClick={()=>setChatOpen(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.7)",fontSize:22,cursor:"pointer",padding:0,lineHeight:1}}>×</button>
+            </div>
+            <div style={{flex:1,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:10}}>
+              {chatMessages.map((m,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
+                  <div style={{maxWidth:"82%",padding:"10px 14px",borderRadius:m.role==="user"?"16px 16px 4px 16px":"16px 16px 16px 4px",background:m.role==="user"?B:"#f1f5f9",color:m.role==="user"?"#fff":NAVY,fontSize:13,lineHeight:1.6}}>
+                    {m.content}
+                  </div>
+                </div>
+              ))}
+              {chatLoading&&(
+                <div style={{display:"flex",justifyContent:"flex-start"}}>
+                  <div style={{background:"#f1f5f9",borderRadius:"16px 16px 16px 4px",padding:"10px 14px",display:"flex",gap:4,alignItems:"center"}}>
+                    <div style={{width:6,height:6,borderRadius:"50%",background:"#94a3b8",animation:"pulse 1s ease-in-out 0s infinite"}}/>
+                    <div style={{width:6,height:6,borderRadius:"50%",background:"#94a3b8",animation:"pulse 1s ease-in-out 0.2s infinite"}}/>
+                    <div style={{width:6,height:6,borderRadius:"50%",background:"#94a3b8",animation:"pulse 1s ease-in-out 0.4s infinite"}}/>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef}/>
+            </div>
+            {chatMessages.length<=1&&(
+              <div style={{padding:"0 12px 8px",display:"flex",gap:6,flexWrap:"wrap",flexShrink:0}}>
+                {[`Best areas in ${destination}`,`Local food near hotels`,`Weather in ${destination}`,`Is ₹8,000 good value?`].map(p=>(
+                  <button key={p} onClick={()=>sendChat(p)} style={{background:"#eff6ff",color:B,border:"none",borderRadius:20,padding:"5px 10px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{p}</button>
+                ))}
+              </div>
+            )}
+            <div style={{padding:"12px",borderTop:"1px solid #f1f5f9",display:"flex",gap:8,flexShrink:0}}>
+              <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")sendChat(chatInput);}} placeholder="Ask anything about your trip..." style={{flex:1,border:"1.5px solid #e2e8f0",borderRadius:10,padding:"9px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,outline:"none"}}/>
+              <button onClick={()=>sendChat(chatInput)} disabled={!chatInput.trim()||chatLoading} style={{background:B,color:"#fff",border:"none",borderRadius:10,width:38,height:38,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:!chatInput.trim()||chatLoading?0.5:1,flexShrink:0}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </div>
+        )}
+        <button onClick={()=>setChatOpen(p=>!p)} style={{width:56,height:56,borderRadius:"50%",background:`linear-gradient(135deg,${NAVY},${B})`,border:"none",cursor:"pointer",boxShadow:"0 8px 24px rgba(20,71,184,0.35)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:1}}>
+          {chatOpen?(
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          ):(
+            <>
+              <span style={{fontFamily:"'Sora',sans-serif",fontWeight:800,fontSize:15,color:"#fff",lineHeight:1}}>r.</span>
+              <span style={{fontSize:8,fontWeight:700,color:"rgba(255,255,255,0.8)",letterSpacing:"0.05em"}}>AI</span>
+            </>
+          )}
+        </button>
+      </div>
+
     </div>
   );
 }
