@@ -854,9 +854,19 @@ function SearchResults(){
         if(parsed.action==="filter"){
           if(parsed.stars)setFilterStars([parsed.stars]);
           if(parsed.priceMax)setFilterPriceMax(parsed.priceMax);
+          if(parsed.priceMin)setFilterPriceMin(parsed.priceMin);
           if(parsed.isRefundable)setFilterRefundable(true);
           if(parsed.hasBreakfast)setFilterBreakfast(true);
-          setChatMessages(m=>[...m,{role:"assistant",content:`Done! I've applied the filter for you. You can see the results in the list.`}]);
+          if(parsed.minRating)setFilterRating(parsed.minRating);
+          if(parsed.hotelName)setHotelSearch(parsed.hotelName);
+          if(parsed.area)setFilterLocation(parsed.area);
+          if(parsed.amenity){
+            const amenityMap:Record<string,string>={pool:"Swimming Pool",spa:"Spa & Wellness",gym:"Fitness Centre",restaurant:"Restaurant",wifi:"Free WiFi",breakfast:"Breakfast",parking:"Parking",bar:"Bar"};
+            const key=parsed.amenity.toLowerCase();
+            const mapped=Object.keys(amenityMap).find(k=>key.includes(k));
+            if(mapped)setFilterFacilities([amenityMap[mapped]]);
+          }
+          setChatMessages(m=>[...m,{role:"assistant",content:parsed.message||"Done! Filters applied — check the results list."}]);
         } else {
           setChatMessages(m=>[...m,{role:"assistant",content:reply}]);
         }
