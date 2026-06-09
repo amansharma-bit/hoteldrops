@@ -334,6 +334,85 @@ async function enrichWithCoords(hotels) {
   })
 }
 
+// ── GET /api/hotels/landmark ─────────────────────────────────────────────────
+router.get('/landmark', async (req, res) => {
+  const { q } = req.query
+  if (!q) return res.json({ lat: null, lng: null, label: null })
+
+  // Known landmarks with coordinates
+  const LANDMARKS = {
+    'burj khalifa':        { lat: 25.1972, lng: 55.2744 },
+    'dubai mall':          { lat: 25.1985, lng: 55.2796 },
+    'palm jumeirah':       { lat: 25.1124, lng: 55.1390 },
+    'dubai marina':        { lat: 25.0777, lng: 55.1405 },
+    'downtown dubai':      { lat: 25.1972, lng: 55.2796 },
+    'jumeirah beach':      { lat: 25.1412, lng: 55.1853 },
+    'deira':               { lat: 25.2697, lng: 55.3095 },
+    'difc':                { lat: 25.2121, lng: 55.2796 },
+    'business bay':        { lat: 25.1855, lng: 55.2965 },
+    'marina bay sands':    { lat: 1.2834,  lng: 103.8607 },
+    'marina bay':          { lat: 1.2802,  lng: 103.8601 },
+    'orchard road':        { lat: 1.3048,  lng: 103.8318 },
+    'sentosa':             { lat: 1.2494,  lng: 103.8303 },
+    'changi':              { lat: 1.3644,  lng: 103.9915 },
+    'eiffel tower':        { lat: 48.8584, lng: 2.2945   },
+    'champs elysees':      { lat: 48.8698, lng: 2.3078   },
+    'colosseum':           { lat: 41.8902, lng: 12.4922  },
+    'vatican':             { lat: 41.9029, lng: 12.4534  },
+    'times square':        { lat: 40.7580, lng: -73.9855 },
+    'central park':        { lat: 40.7851, lng: -73.9683 },
+    'connaught place':     { lat: 28.6304, lng: 77.2177  },
+    'india gate':          { lat: 28.6129, lng: 77.2295  },
+    'bandra':              { lat: 19.0596, lng: 72.8295  },
+    'juhu':                { lat: 19.0989, lng: 72.8264  },
+    'marine drive':        { lat: 18.9322, lng: 72.8264  },
+    'colaba':              { lat: 18.9067, lng: 72.8147  },
+    'andheri':             { lat: 19.1136, lng: 72.8697  },
+    'cyber city':          { lat: 28.4952, lng: 77.0877  },
+    'golf course road':    { lat: 28.4663, lng: 77.0698  },
+    'udyog vihar':         { lat: 28.5021, lng: 77.0881  },
+    'hauz khas':           { lat: 28.5494, lng: 77.2001  },
+    'karol bagh':          { lat: 28.6514, lng: 77.1907  },
+    'lajpat nagar':        { lat: 28.5726, lng: 77.2390  },
+    'sukhumvit':           { lat: 13.7310, lng: 100.5598 },
+    'silom':               { lat: 13.7234, lng: 100.5301 },
+    'patong beach':        { lat: 7.8964,  lng: 98.2979  },
+    'kuta':                { lat: -8.7184, lng: 115.1686 },
+    'seminyak':            { lat: -8.6905, lng: 115.1609 },
+    'ubud':                { lat: -8.5069, lng: 115.2625 },
+    'shibuya':             { lat: 35.6598, lng: 139.7004 },
+    'shinjuku':            { lat: 35.6938, lng: 139.7034 },
+    'asakusa':             { lat: 35.7148, lng: 139.7967 },
+    'tsim sha tsui':       { lat: 22.2988, lng: 114.1722 },
+    'mong kok':            { lat: 22.3193, lng: 114.1694 },
+    'opera house':         { lat: -33.8568, lng: 151.2153},
+    'bondi beach':         { lat: -33.8915, lng: 151.2767},
+  }
+
+  const query = q.toLowerCase().trim()
+  const keys = Object.keys(LANDMARKS).sort((a, b) => b.length - a.length)
+  const match = keys.find(k => query.includes(k) || k.includes(query))
+
+  if (match) {
+    return res.json({ lat: LANDMARKS[match].lat, lng: LANDMARKS[match].lng, label: q })
+  }
+
+  // Try liteAPI places as fallback
+  try {
+    const resp = await axios.get(`${BASE_URL}/data/places?textQuery=${encodeURIComponent(q)}`, {
+      headers: getHeaders(), timeout: 5000, validateStatus: () => true,
+    })
+    if (resp.status === 200 && resp.data?.data?.[0]) {
+      const place = resp.data.data[0]
+      const lat = place.latitude || place.location?.lat || null
+      const lng = place.longitude || place.location?.lng || null
+      if (lat && lng) return res.json({ lat, lng, label: place.name || q })
+    }
+  } catch (e) {}
+
+  return res.json({ lat: null, lng: null, label: null })
+})
+
 // ── GET /api/hotels/suggest ───────────────────────────────────────────────────
 router.get('/suggest', async (req, res) => {
   const { q } = req.query
