@@ -213,48 +213,6 @@ function ChipDropdown({id,label,openChip,setOpenChip,children}:{id:string;label:
 function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMobile}:{hotels:Hotel[];checkIn:string;checkOut:string;filterProps:FiltersPanelProps;onClose:()=>void;onHotelClick:(h:Hotel)=>void;isMobile:boolean;}){
   const mapRef=useRef<HTMLDivElement>(null);const mapInstanceRef=useRef<any>(null);const markersRef=useRef<{el:HTMLElement;hotel:Hotel;pinDiv:HTMLElement}[]>([]);const listRef=useRef<HTMLDivElement>(null);
   const[selectedHotel,setSelectedHotel]=useState<Hotel|null>(null);const[openChip,setOpenChip]=useState<string|null>(null);const chipRef=useRef<HTMLDivElement>(null);
-  const[aiQuery,setAiQuery]=useState("");const[aiLoading,setAiLoading]=useState(false);const[showAiSearch,setShowAiSearch]=useState(false);
-  const handleAiSearch=async(q:string)=>{
-    if(!q.trim())return;
-    setAiLoading(true);
-    try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:500,
-          messages:[{role:"user",content:`You are a hotel search assistant. Parse this search query and return ONLY a JSON object with these fields (no markdown, no explanation):
-- landmark: string or null (specific area/landmark like "Burj Khalifa", "Marina Bay")
-- priceMax: number or null (max price per night in INR)
-- priceMin: number or null (min price per night in INR)  
-- stars: number[] or null (star ratings like [4,5])
-- hasBreakfast: boolean
-- isRefundable: boolean
-- rating: number or null (min rating like 8 or 9)
-
-Query: "${q}"
-Destination city: the city being searched
-
-Return only the JSON object.`}]
-        })
-      });
-      const data=await res.json();
-      const text=data.content?.[0]?.text||"{}";
-      const parsed=JSON.parse(text.replace(/```json|```/g,"").trim());
-      // Apply parsed filters
-      if(parsed.priceMax)setFilterPriceMax(parsed.priceMax);
-      if(parsed.priceMin)setFilterPriceMin(parsed.priceMin);
-      if(parsed.stars?.length)setFilterStars(parsed.stars);
-      if(parsed.hasBreakfast)setFilterBreakfast(true);
-      if(parsed.isRefundable)setFilterRefundable(true);
-      if(parsed.rating)setFilterRating(parsed.rating);
-      if(parsed.landmark)await searchLandmark(parsed.landmark);
-      setShowAiSearch(false);
-    }catch(e){console.error(e);}
-    setAiLoading(false);
-  };
-
   const NIGHTS=checkIn&&checkOut?Math.max(1,Math.round((new Date(checkOut).getTime()-new Date(checkIn).getTime())/86400000)):1;
   const hotelsWithCoords=hotels.filter(h=>h.latitude&&h.longitude);
   useEffect(()=>{const handler=(e:MouseEvent)=>{if(openChip&&chipRef.current&&!chipRef.current.contains(e.target as Node)){setOpenChip(null);}};document.addEventListener("mousedown",handler);return()=>document.removeEventListener("mousedown",handler);},[openChip]);
