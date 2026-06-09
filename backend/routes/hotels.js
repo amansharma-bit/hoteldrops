@@ -355,8 +355,14 @@ router.post('/chat', async (req, res) => {
     '- Answer travel questions: weather, local food, restaurants, transport, visa, packing\n' +
     '- Apply filters when asked\n\n' +
     'Keep answers concise. Mention hotel name and price when recommending.\n' +
-    'For filter actions ONLY respond with JSON: {"action":"filter","stars":5} or {"action":"filter","isRefundable":true}\n' +
-    'For everything else respond in plain natural language.'
+    'FILTER ACTIONS — respond with JSON only for these cases:\n' +
+    '- Show specific hotel: {"action":"filter","hotelName":"Atlantis","message":"Showing Atlantis for you!"}\n' +
+    '- Star filter: {"action":"filter","stars":5,"message":"Showing 5-star hotels!"}\n' +
+    '- Price filter: {"action":"filter","priceMax":10000,"message":"Showing hotels under Rs10,000!"}\n' +
+    '- Refundable: {"action":"filter","isRefundable":true,"message":"Showing free cancellation hotels!"}\n' +
+    '- Amenity: {"action":"filter","amenity":"pool","message":"Showing hotels with pool!"}\n' +
+    '- Area: {"action":"filter","area":"Deira","message":"Showing hotels in Deira!"}\n' +
+    'For ALL other questions (weather, food, comparisons, recommendations) respond in plain natural language only.'
 
   try {
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
