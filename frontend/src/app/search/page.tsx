@@ -770,6 +770,7 @@ function SearchResults(){
   const[aiSearchActive,setAiSearchActive]=useState(false);
   const[aiSearchLoading,setAiSearchLoading]=useState(false);
   const[aiApplied,setAiApplied]=useState(false);
+  const[aiResponse,setAiResponse]=useState("");
   const[chatOpen,setChatOpen]=useState(false);
   const[chatMessages,setChatMessages]=useState<{role:string;content:string}[]>([
     {role:"assistant",content:`Hi! I'm your rebuq AI assistant. Ask me anything about ${""} — best areas, local food, weather, what to pack, or just filter your hotel search. How can I help?`}
@@ -827,39 +828,44 @@ function SearchResults(){
   const handleAiSearch=async(query:string)=>{
     if(!query.trim())return;
     setAiSearchLoading(true);
+    // Show response inline below the search bar
+    setAiResponse("");
     try{
-      const res=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/ai-search`,{
+      // First try to extract filters
+      const filterRes=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/ai-search`,{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({query,destination})
       });
-      const data=await res.json();
-      const f=data.filters||{};
-      if(f.priceMax)setFilterPriceMax(f.priceMax);
-      if(f.priceMin)setFilterPriceMin(f.priceMin);
-      if(f.stars)setFilterStars([f.stars]);
-      if(f.hasBreakfast)setFilterBreakfast(true);
-      if(f.isRefundable)setFilterRefundable(true);
-      if(f.minRating)setFilterRating(f.minRating);
-      if(f.area)setFilterLocation(f.area);
-      // Wire amenity to facilities filter
+      const filterData=await filterRes.json();
+      const f=filterData.filters||{};
+      let filtersApplied=false;
+      if(f.priceMax){setFilterPriceMax(f.priceMax);filtersApplied=true;}
+      if(f.priceMin){setFilterPriceMin(f.priceMin);filtersApplied=true;}
+      if(f.stars){setFilterStars([f.stars]);filtersApplied=true;}
+      if(f.hasBreakfast){setFilterBreakfast(true);filtersApplied=true;}
+      if(f.isRefundable){setFilterRefundable(true);filtersApplied=true;}
+      if(f.minRating){setFilterRating(f.minRating);filtersApplied=true;}
+      if(f.area){setFilterLocation(f.area);filtersApplied=true;}
       if(f.amenity){
-        const amenityMap:Record<string,string>={
-          pool:"Swimming Pool",spa:"Spa & Wellness",gym:"Fitness Centre",
-          fitness:"Fitness Centre",restaurant:"Restaurant",wifi:"Free WiFi",
-          breakfast:"Breakfast",parking:"Parking",airport:"Airport Transfer",
-          beach:"Beach Access",bar:"Bar",kids:"Kids Club",business:"Business Centre",
-        };
+        const amenityMap:Record<string,string>={pool:"Swimming Pool",spa:"Spa & Wellness",gym:"Fitness Centre",fitness:"Fitness Centre",restaurant:"Restaurant",wifi:"Free WiFi",breakfast:"Breakfast",parking:"Parking",airport:"Airport Transfer",bar:"Bar"};
         const key=f.amenity.toLowerCase();
         const mapped=Object.keys(amenityMap).find(k=>key.includes(k));
-        if(mapped)setFilterFacilities([amenityMap[mapped]]);
+        if(mapped){setFilterFacilities([amenityMap[mapped]]);filtersApplied=true;}
       }
       if(f.landmark){
         const lRes=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/landmark?q=${encodeURIComponent(f.landmark)}`);
         const lData=await lRes.json();
-        if(lData.lat&&lData.lng){setSortBy("distance");}
+        if(lData.lat&&lData.lng){setSortBy("distance");filtersApplied=true;}
       }
-      setAiApplied(true);
-    }catch(e){console.error(e);}
+      // Always get a natural language answer from Claude
+      const chatRes=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/chat`,{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({messages:[{role:"user",content:query}],destination,checkIn,checkOut,hotelCount:hotels.length})
+      });
+      const chatData=await chatRes.json();
+      setAiResponse(chatData.reply||"");
+      setAiApplied(filtersApplied);
+    }catch(e){console.error(e);setAiResponse("Sorry, I could not connect. Please try again.");}
     setAiSearchLoading(false);
   };
 
@@ -1028,7 +1034,21 @@ function SearchResults(){
                 {aiSearchLoading?(<div style={{width:16,height:16,border:`2px solid #e2e8f0`,borderTop:`2px solid ${B}`,borderRadius:"50%",animation:"spin 1s linear infinite",flexShrink:0}}/>):aiSearchQuery?(<button onClick={()=>handleAiSearch(aiSearchQuery)} style={{background:B,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>Search</button>):null}
                 {aiApplied&&<span style={{fontSize:11,color:"#16a34a",fontWeight:600,flexShrink:0}}>✓ Applied</span>}
               </div>
-              {aiApplied&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,fontSize:12,color:"#64748b"}}><span>AI filters applied for "{aiSearchQuery}"</span><button onClick={()=>{clearAllFilters();setAiSearchQuery("");}} style={{color:B,fontWeight:600,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>Clear</button></div>}
+              {aiResponse&&(
+                <div style={{marginTop:10,padding:"12px 16px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                    <div style={{background:B,borderRadius:6,padding:"2px 6px",display:"flex",alignItems:"center",gap:3}}>
+                      <span style={{fontFamily:"'Sora',sans-serif",fontWeight:800,fontSize:11,color:"#fff"}}>r.</span>
+                      <span style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,0.8)"}}>AI</span>
+                    </div>
+                    <span style={{fontSize:11,color:"#94a3b8"}}>rebuq Assistant</span>
+                    {aiApplied&&<span style={{fontSize:11,color:"#16a34a",fontWeight:600,marginLeft:"auto"}}>✓ Filters applied</span>}
+                  </div>
+                  <p style={{fontSize:13,color:NAVY,lineHeight:1.7,margin:0}}>{aiResponse}</p>
+                  <button onClick={()=>{clearAllFilters();setAiSearchQuery("");setAiResponse("");}} style={{marginTop:8,color:"#94a3b8",fontWeight:600,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>Clear</button>
+                </div>
+              )}
+              {!aiResponse&&aiApplied&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,fontSize:12,color:"#64748b"}}><span>AI filters applied for "{aiSearchQuery}"</span><button onClick={()=>{clearAllFilters();setAiSearchQuery("");}} style={{color:B,fontWeight:600,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>Clear</button></div>}
             </div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
               <div>
