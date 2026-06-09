@@ -334,6 +334,60 @@ async function enrichWithCoords(hotels) {
   })
 }
 
+// ── POST /api/hotels/ai-search ───────────────────────────────────────────────
+router.post('/ai-search', async (req, res) => {
+  const { query, destination } = req.body
+  if (!query) return res.json({ filters: {} })
+
+  try {
+    const response = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: `You are a hotel search assistant. Parse this query and return ONLY a JSON object, no markdown, no explanation.
+
+Query: "${query}"
+City: ${destination || 'unknown'}
+
+Return JSON with these fields (null if not mentioned):
+{
+  "landmark": string or null,
+  "priceMax": number or null (INR per night),
+  "priceMin": number or null (INR per night),
+  "stars": number or null (3, 4, or 5),
+  "hasBreakfast": boolean,
+  "isRefundable": boolean,
+  "minRating": number or null (7, 8, or 9),
+  "amenity": string or null (e.g. "pool", "spa", "gym"),
+  "area": string or null (neighbourhood/area name)
+}
+
+Examples:
+- "indian restaurant hotel near burj khalifa" → {"landmark":"Burj Khalifa","amenity":"restaurant","area":null}
+- "5 star pool hotel under 20000" → {"stars":5,"priceMax":20000,"amenity":"pool"}
+- "cheap hotel in bandra" → {"area":"Bandra","priceMax":5000}
+- "luxury free cancellation" → {"stars":5,"isRefundable":true}`
+      }]
+    }, {
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
+      timeout: 10000
+    })
+
+    const text = response.data?.content?.[0]?.text || '{}'
+    const clean = text.replace(/```json|```/g, '').trim()
+    const filters = JSON.parse(clean)
+    return res.json({ filters, success: true })
+  } catch (e) {
+    console.error('AI search error:', e.message)
+    return res.json({ filters: {}, success: false })
+  }
+})
+
 // ── GET /api/hotels/landmark ─────────────────────────────────────────────────
 router.get('/landmark', async (req, res) => {
   const { q } = req.query
