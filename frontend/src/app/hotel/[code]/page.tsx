@@ -336,7 +336,7 @@ function HotelDetailContent() {
         {/* HOTEL NAME */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, marginBottom: 6 }}>
-            <h1 className="sora" style={{ fontSize: isMobile ? 20 : 28, fontWeight: 800, color: NAVY, wordBreak: "break-word" as const }}>{hotel.name}</h1>
+            <h1 className="sora" style={{ fontSize: isMobile ? 20 : 28, fontWeight: 800, color: NAVY, wordBreak: "break-word" as const, whiteSpace: "normal" as const, overflow: "visible" }}>{hotel.name}</h1>
             <span style={{ color: "#f59e0b", fontSize: 16 }}>{"★".repeat(stars)}</span>
             {hotel.rating && <span style={{ background: B, color: "#fff", fontSize: 13, fontWeight: 700, padding: "3px 10px", borderRadius: 8 }}>{parseFloat(hotel.rating).toFixed(1)}</span>}
           </div>
