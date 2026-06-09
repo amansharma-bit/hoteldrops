@@ -117,8 +117,8 @@ function FiltersPanel({areaOptions,filterLocation,setFilterLocation,filterPriceM
     <div>
       <div style={{display:"flex",alignItems:"center",gap:8,border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 12px",marginBottom:16}}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" placeholder="Search by hotel name" value={sv} onChange={e=>{setSv(e.target.value);onHotelSearch(e.target.value);}} style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:13,color:NAVY,background:"transparent",width:"100%"}}/>
-        {sv&&<button onClick={()=>{setSv("");onHotelSearch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:16,padding:0}}>×</button>}
+        <input type="text" placeholder="Hotel name, area or landmark" value={sv} onChange={e=>{setSv(e.target.value);onHotelSearch(e.target.value);if(onLandmarkSearch&&e.target.value.length>=3)onLandmarkSearch(e.target.value);}} style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:13,color:NAVY,background:"transparent",width:"100%"}}/>
+        {sv&&<button onClick={()=>{setSv("");onHotelSearch("");if(onLandmarkSearch)onLandmarkSearch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:16,padding:0}}>×</button>}
       </div>
       
       <div style={{marginBottom:16}}><div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>Price per night</div>{([{label:"Under ₹5,000",min:null,max:5000},{label:"₹5,000 – ₹10,000",min:5000,max:10000},{label:"₹10,000 – ₹20,000",min:10000,max:20000},{label:"₹20,000 – ₹40,000",min:20000,max:40000},{label:"₹40,000+",min:40000,max:null}] as {label:string;min:number|null;max:number|null}[]).map(({label,min,max})=>{const a=filterPriceMin===min&&filterPriceMax===max;return<Row key={label} onClick={()=>a?setPriceRange(null,null):setPriceRange(min,max)}><CB active={a} onClick={()=>a?setPriceRange(null,null):setPriceRange(min,max)}/><span style={{fontSize:13,color:"#1e293b"}}>{label}</span></Row>;})}</div>
@@ -213,6 +213,47 @@ function ChipDropdown({id,label,openChip,setOpenChip,children}:{id:string;label:
 function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMobile}:{hotels:Hotel[];checkIn:string;checkOut:string;filterProps:FiltersPanelProps;onClose:()=>void;onHotelClick:(h:Hotel)=>void;isMobile:boolean;}){
   const mapRef=useRef<HTMLDivElement>(null);const mapInstanceRef=useRef<any>(null);const markersRef=useRef<{el:HTMLElement;hotel:Hotel;pinDiv:HTMLElement}[]>([]);const listRef=useRef<HTMLDivElement>(null);
   const[selectedHotel,setSelectedHotel]=useState<Hotel|null>(null);const[openChip,setOpenChip]=useState<string|null>(null);const chipRef=useRef<HTMLDivElement>(null);
+  const handleAiSearch=async(q:string)=>{
+    if(!q.trim())return;
+    setAiLoading(true);
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:500,
+          messages:[{role:"user",content:`You are a hotel search assistant. Parse this search query and return ONLY a JSON object with these fields (no markdown, no explanation):
+- landmark: string or null (specific area/landmark like "Burj Khalifa", "Marina Bay")
+- priceMax: number or null (max price per night in INR)
+- priceMin: number or null (min price per night in INR)  
+- stars: number[] or null (star ratings like [4,5])
+- hasBreakfast: boolean
+- isRefundable: boolean
+- rating: number or null (min rating like 8 or 9)
+
+Query: "${q}"
+Destination city: ${destination}
+
+Return only the JSON object.`}]
+        })
+      });
+      const data=await res.json();
+      const text=data.content?.[0]?.text||"{}";
+      const parsed=JSON.parse(text.replace(/```json|```/g,"").trim());
+      // Apply parsed filters
+      if(parsed.priceMax)setFilterPriceMax(parsed.priceMax);
+      if(parsed.priceMin)setFilterPriceMin(parsed.priceMin);
+      if(parsed.stars?.length)setFilterStars(parsed.stars);
+      if(parsed.hasBreakfast)setFilterBreakfast(true);
+      if(parsed.isRefundable)setFilterRefundable(true);
+      if(parsed.rating)setFilterRating(parsed.rating);
+      if(parsed.landmark)await searchLandmark(parsed.landmark);
+      setShowAiSearch(false);
+    }catch(e){console.error(e);}
+    setAiLoading(false);
+  };
+
   const NIGHTS=checkIn&&checkOut?Math.max(1,Math.round((new Date(checkOut).getTime()-new Date(checkIn).getTime())/86400000)):1;
   const hotelsWithCoords=hotels.filter(h=>h.latitude&&h.longitude);
   useEffect(()=>{const handler=(e:MouseEvent)=>{if(openChip&&chipRef.current&&!chipRef.current.contains(e.target as Node)){setOpenChip(null);}};document.addEventListener("mousedown",handler);return()=>document.removeEventListener("mousedown",handler);},[openChip]);
@@ -267,7 +308,7 @@ function SearchResults(){
   const[desktopCalOffset,setDesktopCalOffset]=useState(0);const[desktopGuestOpen,setDesktopGuestOpen]=useState(false);
   const[destInput,setDestInput]=useState(destination);const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);
   const destRef=useRef<HTMLDivElement>(null);const desktopCalRef=useRef<HTMLDivElement>(null);const desktopGuestRef=useRef<HTMLDivElement>(null);
-  const[filterStars,setFilterStars]=useState<number[]>([]);const[filterBreakfast,setFilterBreakfast]=useState(false);const[filterRefundable,setFilterRefundable]=useState(false);const[filterRating,setFilterRating]=useState<number|null>(null);const[filterPriceMin,setFilterPriceMin]=useState<number|null>(null);const[filterPriceMax,setFilterPriceMax]=useState<number|null>(null);const[filterFacilities,setFilterFacilities]=useState<string[]>([]);const[filterLocation,setFilterLocation]=useState("");const[hotelSearch,setHotelSearch]=useState("");const[landmarkInput,setLandmarkInput]=useState("");const[landmarkRef,setLandmarkRef]=useState<{lat:number;lng:number;label:string}|null>(null);const[landmarkLoading,setLandmarkLoading]=useState(false);
+  const[filterStars,setFilterStars]=useState<number[]>([]);const[filterBreakfast,setFilterBreakfast]=useState(false);const[filterRefundable,setFilterRefundable]=useState(false);const[filterRating,setFilterRating]=useState<number|null>(null);const[filterPriceMin,setFilterPriceMin]=useState<number|null>(null);const[filterPriceMax,setFilterPriceMax]=useState<number|null>(null);const[filterFacilities,setFilterFacilities]=useState<string[]>([]);const[filterLocation,setFilterLocation]=useState("");const[hotelSearch,setHotelSearch]=useState("");const[landmarkInput,setLandmarkInput]=useState("");const[landmarkRef,setLandmarkRef]=useState<{lat:number;lng:number;label:string}|null>(null);const[landmarkLoading,setLandmarkLoading]=useState(false);const[aiQuery,setAiQuery]=useState("");const[aiLoading,setAiLoading]=useState(false);const[showAiSearch,setShowAiSearch]=useState(false);
 
   // ── Distance reference point from URL ────────────────────────────────────
   const refLat = searchParams.get("refLat") ? parseFloat(searchParams.get("refLat")!) : null;
@@ -299,46 +340,58 @@ function SearchResults(){
 
   const searchLandmark=async(q:string)=>{
     if(!q.trim()){setLandmarkRef(null);return;}
+    // First check if any hotels match by name — if yes, treat as hotel search not landmark
+    const hotelMatches=hotels.filter(h=>h.name.toLowerCase().includes(q.toLowerCase()));
+    if(hotelMatches.length>0){setLandmarkRef(null);return;}
     setLandmarkLoading(true);
     try{
-      const res=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/suggest?q=${encodeURIComponent(q)}`);
+      const res=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/landmark?q=${encodeURIComponent(q)}`);
       const data=await res.json();
-      const city=(data.cities||[])[0];
-      if(city?.placeId){
-        const gRes=await fetch(`https://maps.googleapis.com/maps/api/geocode/json?place_id=${city.placeId}&key=`).catch(()=>null);
-        // Use liteAPI places endpoint to get lat/lng
-        const pRes=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/suggest?q=${encodeURIComponent(q)}`);
-        const pData=await pRes.json();
-        const place=(pData.cities||[])[0];
-        if(place){
-          // Fallback: use known coordinates for common landmarks
-          const LANDMARKS:Record<string,{lat:number;lng:number}> = {
-            'marina bay':         {lat:1.2802,lng:103.8601},
-            'marina bay sands':   {lat:1.2834,lng:103.8607},
-            'orchard road':       {lat:1.3048,lng:103.8318},
-            'burj khalifa':       {lat:25.1972,lng:55.2744},
-            'dubai marina':       {lat:25.0777,lng:55.1405},
-            'palm jumeirah':      {lat:25.1124,lng:55.1390},
-            'downtown dubai':     {lat:25.1972,lng:55.2796},
-            'deira':              {lat:25.2697,lng:55.3095},
-            'times square':       {lat:40.7580,lng:-73.9855},
-            'eiffel tower':       {lat:48.8584,lng:2.2945},
-            'colosseum':          {lat:41.8902,lng:12.4922},
-            'shibuya':            {lat:35.6598,lng:139.7004},
-            'connaught place':    {lat:28.6304,lng:77.2177},
-            'bandra':             {lat:19.0596,lng:72.8295},
-            'juhu':               {lat:19.0989,lng:72.8264},
-            'marine drive':       {lat:18.9322,lng:72.8264},
-            'sector 17':          {lat:30.7407,lng:76.7785},
-          };
-          const key=q.toLowerCase().trim();
-          const match=Object.keys(LANDMARKS).find(k=>key.includes(k)||k.includes(key));
-          if(match){setLandmarkRef({lat:LANDMARKS[match].lat,lng:LANDMARKS[match].lng,label:q});}
-          else{setLandmarkRef(null);}
-        }
-      }else setLandmarkRef(null);
+      if(data.lat&&data.lng){setLandmarkRef({lat:data.lat,lng:data.lng,label:data.label||q});}
+      else{setLandmarkRef(null);}
     }catch{setLandmarkRef(null);}
     setLandmarkLoading(false);
+  };
+
+  const handleAiSearch=async(q:string)=>{
+    if(!q.trim())return;
+    setAiLoading(true);
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:500,
+          messages:[{role:"user",content:`You are a hotel search assistant. Parse this search query and return ONLY a JSON object with these fields (no markdown, no explanation):
+- landmark: string or null (specific area/landmark like "Burj Khalifa", "Marina Bay")
+- priceMax: number or null (max price per night in INR)
+- priceMin: number or null (min price per night in INR)  
+- stars: number[] or null (star ratings like [4,5])
+- hasBreakfast: boolean
+- isRefundable: boolean
+- rating: number or null (min rating like 8 or 9)
+
+Query: "${q}"
+Destination city: ${destination}
+
+Return only the JSON object.`}]
+        })
+      });
+      const data=await res.json();
+      const text=data.content?.[0]?.text||"{}";
+      const parsed=JSON.parse(text.replace(/```json|```/g,"").trim());
+      // Apply parsed filters
+      if(parsed.priceMax)setFilterPriceMax(parsed.priceMax);
+      if(parsed.priceMin)setFilterPriceMin(parsed.priceMin);
+      if(parsed.stars?.length)setFilterStars(parsed.stars);
+      if(parsed.hasBreakfast)setFilterBreakfast(true);
+      if(parsed.isRefundable)setFilterRefundable(true);
+      if(parsed.rating)setFilterRating(parsed.rating);
+      if(parsed.landmark)await searchLandmark(parsed.landmark);
+      setShowAiSearch(false);
+    }catch(e){console.error(e);}
+    setAiLoading(false);
   };
 
   const NIGHTS=checkIn&&checkOut?Math.max(1,Math.round((new Date(checkOut).getTime()-new Date(checkIn).getTime())/86400000)):1;
@@ -362,7 +415,7 @@ function SearchResults(){
   const clearAllFilters=()=>{setFilterStars([]);setFilterBreakfast(false);setFilterRefundable(false);setFilterRating(null);setFilterPriceMax(null);setFilterPriceMin(null);setFilterFacilities([]);setFilterLocation("");setHotelSearch("");};
   const hasActiveFilters=filterStars.length>0||filterBreakfast||filterRefundable||filterRating!==null||filterPriceMax!==null||filterPriceMin!==null||filterFacilities.length>0||!!filterLocation||!!hotelSearch;
 
-  const filteredHotels=useMemo(()=>hotels.filter(h=>{const price=priceINR(h);if(hotelSearch&&!h.name.toLowerCase().includes(hotelSearch.toLowerCase()))return false;if(filterStars.length>0&&!filterStars.includes(h.stars||0))return false;if(filterBreakfast&&!h.hasBreakfast)return false;if(filterRefundable&&h.isRefundable!==true)return false;if(filterRating!==null){const r=h.rating||getRating(h.code);if(r<filterRating)return false;}if(filterPriceMin!==null&&price<filterPriceMin)return false;if(filterPriceMax!==null&&price>filterPriceMax)return false;if(filterFacilities.length>0){const am=(h.amenities||[]).map(a=>a.toLowerCase());if(!filterFacilities.every(f=>am.some(a=>a.includes(f.toLowerCase()))))return false;}if(filterLocation){const area=getAreaFromCoords(h.latitude,h.longitude);if(area!==filterLocation)return false;}return true;}),[hotels,hotelSearch,filterStars,filterBreakfast,filterRefundable,filterRating,filterPriceMin,filterPriceMax,filterFacilities,filterLocation]);
+  const filteredHotels=useMemo(()=>hotels.filter(h=>{const price=priceINR(h);if(hotelSearch&&!landmarkRef&&!h.name.toLowerCase().includes(hotelSearch.toLowerCase()))return false;if(filterStars.length>0&&!filterStars.includes(h.stars||0))return false;if(filterBreakfast&&!h.hasBreakfast)return false;if(filterRefundable&&h.isRefundable!==true)return false;if(filterRating!==null){const r=h.rating||getRating(h.code);if(r<filterRating)return false;}if(filterPriceMin!==null&&price<filterPriceMin)return false;if(filterPriceMax!==null&&price>filterPriceMax)return false;if(filterFacilities.length>0){const am=(h.amenities||[]).map(a=>a.toLowerCase());if(!filterFacilities.every(f=>am.some(a=>a.includes(f.toLowerCase()))))return false;}if(filterLocation){const area=getAreaFromCoords(h.latitude,h.longitude);if(area!==filterLocation)return false;}return true;}),[hotels,hotelSearch,filterStars,filterBreakfast,filterRefundable,filterRating,filterPriceMin,filterPriceMax,filterFacilities,filterLocation]);
 
   const sortedHotels=useMemo(()=>[...filteredHotels].sort((a,b)=>{
     if(sortBy==="price-low")return priceINR(a)-priceINR(b);
