@@ -290,6 +290,14 @@ function FiltersPanel({areaOptions,filterLocation,setFilterLocation,filterPriceM
         {sv&&<button onClick={()=>{setSv("");onHotelSearch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:16,padding:0}}>×</button>}
       </div>
       
+      {areaOptions.length>0&&<div style={{marginBottom:16}}>
+        <div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>Location</div>
+        {areaOptions.map(a=><Row key={a} onClick={()=>setFilterLocation(filterLocation===a?"":a)}>
+          <CB active={filterLocation===a} onClick={()=>setFilterLocation(filterLocation===a?"":a)}/>
+          <span style={{fontSize:13,color:"#1e293b"}}>{a}</span>
+        </Row>)}
+        {filterLocation&&<button onClick={()=>setFilterLocation("")} style={{background:"none",border:"none",fontSize:12,color:B,cursor:"pointer",fontFamily:"inherit",padding:"4px 0",fontWeight:600}}>Clear</button>}
+      </div>}
       <div style={{marginBottom:16}}><div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>Price per night</div>{([{label:"Under ₹5,000",min:null,max:5000},{label:"₹5,000 – ₹10,000",min:5000,max:10000},{label:"₹10,000 – ₹20,000",min:10000,max:20000},{label:"₹20,000 – ₹40,000",min:20000,max:40000},{label:"₹40,000+",min:40000,max:null}] as {label:string;min:number|null;max:number|null}[]).map(({label,min,max})=>{const a=filterPriceMin===min&&filterPriceMax===max;return<Row key={label} onClick={()=>a?setPriceRange(null,null):setPriceRange(min,max)}><CB active={a} onClick={()=>a?setPriceRange(null,null):setPriceRange(min,max)}/><span style={{fontSize:13,color:"#1e293b"}}>{label}</span></Row>;})}</div>
       <div style={{marginBottom:16}}><div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>Suggested</div>{[{label:"Free Cancellation",active:filterRefundable,toggle:()=>setFilterRefundable(!filterRefundable)},{label:"Free Breakfast",active:filterBreakfast,toggle:()=>setFilterBreakfast(!filterBreakfast)},{label:"Rating 9+",active:filterRating===9,toggle:()=>setFilterRating(filterRating===9?null:9)}].map(({label,active,toggle})=><Row key={label} onClick={toggle}><CB active={active} onClick={toggle}/><span style={{fontSize:13,color:"#1e293b"}}>{label}</span></Row>)}</div>
       <div style={{marginBottom:16}}><div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>Star category</div>{[5,4,3,2,1].map(s=>{const a=filterStars.includes(s);return<Row key={s} onClick={()=>setFilterStars(a?filterStars.filter(x=>x!==s):[...filterStars,s])}><CB active={a} onClick={()=>setFilterStars(a?filterStars.filter(x=>x!==s):[...filterStars,s])}/><span style={{color:"#f59e0b",fontSize:13}}>{"★".repeat(s)}</span><span style={{fontSize:13,color:"#1e293b"}}>{s} Star</span></Row>;})}</div>
