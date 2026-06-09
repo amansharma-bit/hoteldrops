@@ -341,37 +341,39 @@ router.get('/suggest', async (req, res) => {
 
   const query = q.toLowerCase().trim()
 
-  // 1. City suggestions from liteAPI
+  // 1. City suggestions from liteAPI — cities only, no metro/mall/business
   let cities = []
   try {
     const resp = await axios.get(`${BASE_URL}/data/places?textQuery=${encodeURIComponent(q)}`, {
       headers: getHeaders(), timeout: 5000, validateStatus: () => true,
     })
     if (resp.status === 200 && resp.data?.data) {
-      // Filter to only real city/area/airport results - skip businesses
-      const filtered = resp.data.data.filter((place) => {
-        const name = (place.name || place.displayName || '').toLowerCase()
-        const types = (place.types || []).join(' ').toLowerCase()
-        // Skip obvious businesses/services
-        if (/doctor|clinic|hospital|pharmacy|shop|store|mall.*clinic|auto|garage|repair|dentist|vet|salon|spa.*clinic/.test(name)) return false
-        return true
-      })
-      cities = filtered.slice(0, 6).map(place => {
-        const countryCode = place.countryCode || place.country_code || ''
-        const placeName = place.name || place.displayName || q
-        // Use countryCode first, fall back to city name lookup
-        const cityInfo = getCityInfo(placeName)
-        const countryName = place.countryName || place.country || COUNTRY_NAMES[countryCode] || cityInfo?.country || ''
-        const flag = COUNTRY_FLAGS[countryCode] || cityInfo?.flag || '🌍'
-        return {
-          type: 'city',
-          name: placeName,
-          countryName,
-          countryCode,
-          flag,
-          placeId: place.placeId || place.place_id,
-        }
-      }).filter(c => c.placeId)
+      cities = resp.data.data
+        .filter(place => {
+          const name = (place.name || place.displayName || '').toLowerCase()
+          const types = (place.types || []).join(' ').toLowerCase()
+          // Only keep cities, regions, countries — skip everything else
+          if (/metro|station|airport|mall|hospital|clinic|doctor|pharmacy|school|university|restaurant|hotel|shop|market|temple|mosque|church|park|garden|museum|stadium|cinema|theatre|tower|bridge|road|street|avenue|colony|nagar|vihar|enclave|sector|block|phase/.test(name)) return false
+          if (types && !/locality|administrative|political|country|sublocality/.test(types)) return false
+          return true
+        })
+        .slice(0, 6)
+        .map(place => {
+          const countryCode = place.countryCode || place.country_code || ''
+          const placeName = place.name || place.displayName || q
+          const cityInfo = getCityInfo(placeName)
+          const countryName = place.countryName || place.country || COUNTRY_NAMES[countryCode] || cityInfo?.country || ''
+          const flag = COUNTRY_FLAGS[countryCode] || cityInfo?.flag || ''
+          return {
+            type: 'city',
+            name: placeName,
+            countryName,
+            countryCode,
+            flag,
+            placeId: place.placeId || place.place_id,
+          }
+        })
+        .filter(c => c.placeId && c.flag) // only show if we have a flag
     }
   } catch (e) {
     console.warn(`⚠️ /data/places error: ${e.message}`)
