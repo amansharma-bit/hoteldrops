@@ -362,7 +362,8 @@ router.post('/chat', async (req, res) => {
     '- Refundable: {"action":"filter","isRefundable":true,"message":"Showing free cancellation hotels!"}\n' +
     '- Amenity: {"action":"filter","amenity":"pool","message":"Showing hotels with pool!"}\n' +
     '- Area: {"action":"filter","area":"Deira","message":"Showing hotels in Deira!"}\n' +
-    'For ALL other questions (weather, food, comparisons, recommendations) respond in plain natural language only.'
+    'For ALL other questions (weather, food, comparisons, recommendations) respond in plain natural language only.\n' +
+    'IMPORTANT: When returning JSON filter actions, return raw JSON only — no backticks, no markdown, no code blocks.'
 
   try {
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
