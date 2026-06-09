@@ -234,7 +234,7 @@ function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMob
 - rating: number or null (min rating like 8 or 9)
 
 Query: "${q}"
-Destination city: ${destination}
+Destination city: the city being searched
 
 Return only the JSON object.`}]
         })
@@ -375,7 +375,7 @@ function SearchResults(){
 - rating: number or null (min rating like 8 or 9)
 
 Query: "${q}"
-Destination city: ${destination}
+Destination city: the city being searched
 
 Return only the JSON object.`}]
         })
