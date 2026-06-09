@@ -241,7 +241,7 @@ export default function SearchHotelsPage() {
   };
 
   useEffect(() => {
-    if (!inputText || inputText.length === 0) { setSuggestions(defaultSuggestions); return; }
+    if (!inputText || inputText.length === 0) { setSuggestions({ cities: [], hotels: [], areas: [], landmarks: [], airport: null }); return; }
     if (inputText.length < 2) return;
     const timer = setTimeout(async () => {
       try {
@@ -347,7 +347,7 @@ export default function SearchHotelsPage() {
   };
 
   const doSearch = (sel: Selection, ci: string, co: string) => {
-    requireAuth(() => {
+    requireAuth(async () => {
       const params = new URLSearchParams({
         checkIn: ci, checkOut: co,
         adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children),
@@ -360,11 +360,20 @@ export default function SearchHotelsPage() {
         params.set('destination', sel.label);
         router.push(`/search?${params.toString()}`);
       } else {
-        // area/landmark/airport — pass lat/lng and label as reference point for distance
+        // No placeId — fetch it from suggest API first
+        try {
+          const res = await fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(sel.label)}`);
+          const data = await res.json();
+          const match = (data.cities || []).find((c: any) =>
+            c.name?.toLowerCase() === sel.label.toLowerCase()
+          ) || (data.cities || [])[0];
+          if (match?.placeId) {
+            params.set('placeId', match.placeId);
+          }
+        } catch {}
         params.set('destination', sel.label);
         if (sel.lat) params.set('refLat', String(sel.lat));
         if (sel.lng) params.set('refLng', String(sel.lng));
-        params.set('refLabel', sel.label);
         router.push(`/search?${params.toString()}`);
       }
     });
@@ -403,16 +412,19 @@ export default function SearchHotelsPage() {
         const match = (data.hotels || []).find((h: any) => h.name.toLowerCase().includes(hotelName.toLowerCase().slice(0, 15)));
         if (match?.hotelId) {
           const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children) });
-          router.push(`/hotel/${match.hotelId}?${params.toString()}`);
+          const url = `/hotel/${match.hotelId}?${params.toString()}`;
+          isMobile ? router.push(url) : window.open(url, '_blank');
         } else {
           const cityMatch = (data.cities || []).find((c: any) => c.name?.toLowerCase().includes(city.toLowerCase()));
           const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: city });
           if (cityMatch?.placeId) params.set('placeId', cityMatch.placeId);
-          router.push(`/search?${params.toString()}`);
+          const url = `/search?${params.toString()}`;
+          isMobile ? router.push(url) : window.open(url, '_blank');
         }
       } catch {
         const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: city });
-        router.push(`/search?${params.toString()}`);
+        const url = `/search?${params.toString()}`;
+        isMobile ? router.push(url) : window.open(url, '_blank');
       }
     });
   };
