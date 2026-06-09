@@ -60,21 +60,190 @@ const DESTINATIONS: { label: string; key: string; flag: string; country: string;
   { label:"Cairo", key:"cairo", flag:"🇪🇬", country:"EG", city:"Cairo" },
 ];
 
-const DUBAI_AREAS: [string, number, number, number, number][] = [
-  ["Palm Jumeirah",25.095,25.130,55.117,55.165],["Dubai Marina",25.065,25.095,55.130,55.160],
-  ["JBR",25.073,25.090,55.120,55.138],["Downtown Dubai",25.185,25.202,55.270,55.295],
-  ["Business Bay",25.173,25.192,55.280,55.310],["DIFC",25.205,25.220,55.270,55.285],
-  ["Deira",25.255,25.290,55.295,55.340],["Bur Dubai",25.230,25.260,55.280,55.320],
-  ["Sheikh Zayed Road",25.200,25.230,55.260,55.285],["Al Barsha",25.095,25.130,55.165,55.210],
-  ["Jumeirah",25.155,25.205,55.215,55.265],["Dubai Creek Harbour",25.195,25.225,55.330,55.365],
-  ["City Walk",25.195,25.215,55.245,55.270],["Dubai Hills",25.115,25.155,55.220,55.270],
-  ["Al Jadaf",25.215,25.240,55.330,55.360],["Festival City",25.220,25.250,55.350,55.385],
-  ["Al Qusais",25.250,25.285,55.355,55.400],["Jebel Ali",24.970,25.040,55.040,55.120],
-];
+// [name, minLat, maxLat, minLng, maxLng]
+const ALL_CITY_AREAS: Record<string,[string,number,number,number,number][]> = {
+  dubai: [
+    ["Palm Jumeirah",25.095,25.130,55.117,55.165],["Dubai Marina",25.065,25.095,55.130,55.160],
+    ["JBR",25.073,25.090,55.120,55.138],["Downtown Dubai",25.185,25.202,55.270,55.295],
+    ["Business Bay",25.173,25.192,55.280,55.310],["DIFC",25.205,25.220,55.270,55.285],
+    ["Deira",25.255,25.290,55.295,55.340],["Bur Dubai",25.230,25.260,55.280,55.320],
+    ["Sheikh Zayed Road",25.200,25.230,55.260,55.285],["Al Barsha",25.095,25.130,55.165,55.210],
+    ["Jumeirah",25.155,25.205,55.215,55.265],["Dubai Creek Harbour",25.195,25.225,55.330,55.365],
+    ["City Walk",25.195,25.215,55.245,55.270],["Dubai Hills",25.115,25.155,55.220,55.270],
+    ["Festival City",25.220,25.250,55.350,55.385],["Jebel Ali",24.970,25.040,55.040,55.120],
+  ],
+  "abu dhabi": [
+    ["Corniche",24.461,24.490,54.320,54.380],["Yas Island",24.480,24.510,54.580,54.640],
+    ["Saadiyat Island",24.530,24.560,54.420,54.480],["Al Reem Island",24.490,24.520,54.390,54.430],
+    ["Downtown Abu Dhabi",24.470,24.500,54.350,54.400],["Al Maryah Island",24.495,24.515,54.380,54.410],
+  ],
+  singapore: [
+    ["Orchard Road",1.295,1.320,103.820,103.845],["Marina Bay",1.270,1.295,103.845,103.875],
+    ["Clarke Quay",1.285,1.300,103.840,103.860],["Sentosa",1.235,1.260,103.815,103.850],
+    ["Bugis",1.295,1.315,103.850,103.870],["Little India",1.300,1.320,103.845,103.865],
+    ["Chinatown",1.278,1.295,103.838,103.855],["Jurong",1.330,1.360,103.695,103.740],
+    ["Changi",1.345,1.380,103.970,104.010],["Harbourfront",1.258,1.275,103.815,103.835],
+  ],
+  bangkok: [
+    ["Sukhumvit",13.715,13.750,100.545,100.590],["Silom",13.715,13.735,100.515,100.545],
+    ["Siam",13.740,13.760,100.525,100.550],["Khao San Road",13.750,13.770,100.490,100.510],
+    ["Asok",13.728,13.748,100.555,100.575],["Chatuchak",13.790,13.820,100.540,100.565],
+    ["Riverside",13.720,13.745,100.490,100.520],
+  ],
+  phuket: [
+    ["Patong Beach",7.875,7.920,98.280,98.320],["Kata Beach",7.815,7.855,98.285,98.315],
+    ["Karon Beach",7.845,7.880,98.285,98.310],["Phuket Town",7.875,7.910,98.375,98.410],
+    ["Kamala Beach",7.940,7.975,98.255,98.285],["Surin Beach",7.975,8.010,98.255,98.285],
+  ],
+  bali: [
+    ["Kuta",-8.740,-8.700,115.155,115.185],["Seminyak",-8.700,-8.670,115.150,115.180],
+    ["Canggu",-8.660,-8.630,115.125,115.165],["Ubud",-8.525,-8.485,115.250,115.290],
+    ["Nusa Dua",-8.815,-8.775,115.215,115.255],["Jimbaran",-8.800,-8.760,115.145,115.185],
+    ["Seminyak",-8.700,-8.670,115.150,115.180],
+  ],
+  "kuala lumpur": [
+    ["KLCC",3.148,3.168,101.705,101.725],["Bukit Bintang",3.140,3.158,101.705,101.725],
+    ["Bangsar",3.118,3.140,101.668,101.695],["Mont Kiara",3.168,3.195,101.650,101.680],
+    ["Petaling Jaya",3.090,3.120,101.625,101.660],["Chow Kit",3.160,3.180,101.690,101.715],
+  ],
+  london: [
+    ["Mayfair",51.503,51.520,-0.160,-0.130],["Soho",51.508,51.520,-0.140,-0.120],
+    ["Covent Garden",51.508,51.520,-0.130,-0.110],["Shoreditch",51.518,51.535,-0.085,-0.060],
+    ["Kensington",51.492,51.510,-0.205,-0.175],["Canary Wharf",51.498,51.512,-0.030,-0.005],
+    ["Westminster",51.495,51.512,-0.140,-0.110],["Camden",51.530,51.550,-0.155,-0.130],
+  ],
+  paris: [
+    ["Eiffel Tower Area",48.847,48.868,2.285,2.310],["Champs-Élysées",48.864,48.882,2.290,2.320],
+    ["Le Marais",48.852,48.868,2.345,2.370],["Montmartre",48.880,48.900,2.330,2.360],
+    ["Latin Quarter",48.845,48.862,2.340,2.360],["Saint-Germain",48.848,48.862,2.325,2.345],
+    ["Opera",48.866,48.880,2.325,2.350],
+  ],
+  rome: [
+    ["Colosseum Area",41.883,41.900,12.482,12.502],["Vatican",41.895,41.912,12.445,12.465],
+    ["Trastevere",41.882,41.898,12.462,12.482],["Termini",41.894,41.910,12.492,12.512],
+    ["Spanish Steps",41.904,41.918,12.477,12.495],["Navona",41.895,41.910,12.468,12.482],
+  ],
+  barcelona: [
+    ["Gothic Quarter",41.378,41.392,2.168,2.185],["Eixample",41.385,41.405,2.145,2.175],
+    ["Barceloneta",41.374,41.388,2.183,2.200],["Gracia",41.400,41.420,2.148,2.168],
+    ["Sagrada Familia Area",41.400,41.415,2.168,2.188],["El Born",41.382,41.396,2.178,2.195],
+  ],
+  amsterdam: [
+    ["City Centre",52.368,52.382,4.888,4.910],["Jordaan",52.370,52.385,4.878,4.898],
+    ["De Pijp",52.350,52.368,4.888,4.908],["Leidseplein",52.360,52.375,4.876,4.896],
+    ["Museumplein",52.355,52.370,4.874,4.896],["Amsterdam Noord",52.385,52.410,4.885,4.920],
+  ],
+  istanbul: [
+    ["Sultanahmet",41.004,41.020,28.970,28.992],["Taksim",41.034,41.050,28.978,28.998],
+    ["Beyoglu",41.028,41.044,28.970,28.990],["Besiktas",41.040,41.058,29.000,29.025],
+    ["Kadikoy",40.980,40.998,29.020,29.042],["Sisli",41.052,41.068,28.980,29.000],
+  ],
+  tokyo: [
+    ["Shinjuku",35.685,35.705,139.688,139.715],["Shibuya",35.652,35.670,139.692,139.715],
+    ["Asakusa",35.706,35.724,139.788,139.812],["Ginza",35.664,35.678,139.758,139.778],
+    ["Akihabara",35.694,35.710,139.768,139.788],["Roppongi",35.655,35.672,139.725,139.745],
+    ["Ikebukuro",35.726,35.742,139.706,139.726],["Odaiba",35.620,35.638,139.768,139.792],
+  ],
+  "hong kong": [
+    ["Tsim Sha Tsui",22.292,22.310,114.165,114.185],["Central",22.278,22.295,114.152,114.172],
+    ["Mong Kok",22.312,22.328,114.162,114.178],["Causeway Bay",22.276,22.292,114.178,114.198],
+    ["Wan Chai",22.274,22.290,114.168,114.188],["Kowloon",22.305,22.325,114.155,114.185],
+  ],
+  seoul: [
+    ["Gangnam",37.495,37.520,127.018,127.055],["Myeongdong",37.558,37.575,126.978,126.998],
+    ["Hongdae",37.548,37.565,126.918,126.938],["Insadong",37.570,37.585,126.982,126.998],
+    ["Itaewon",37.532,37.550,126.988,127.008],["Dongdaemun",37.566,37.582,127.002,127.022],
+  ],
+  sydney: [
+    ["CBD",-33.875,-33.858,151.198,151.218],["Darling Harbour",-33.878,-33.862,151.195,151.210],
+    ["Bondi Beach",-33.900,-33.882,151.268,151.290],["Manly",-33.802,-33.784,151.278,151.300],
+    ["The Rocks",-33.862,-33.848,151.200,151.215],["Surry Hills",-33.890,-33.872,151.205,151.225],
+  ],
+  "new york": [
+    ["Midtown",40.748,40.768,-73.995,-73.970],["Times Square Area",40.752,40.768,-73.995,-73.978],
+    ["Upper East Side",40.768,40.790,-73.968,-73.948],["Brooklyn",40.668,40.700,-73.998,-73.960],
+    ["SoHo",40.720,40.738,-74.008,-73.988],["Chelsea",40.738,40.755,-74.008,-73.988],
+    ["Financial District",40.702,40.720,-74.020,-74.000],
+  ],
+  mumbai: [
+    ["Bandra",19.048,19.072,72.818,72.842],["Juhu",19.088,19.112,72.815,72.840],
+    ["Colaba",18.895,18.920,72.808,72.832],["Andheri",19.102,19.128,72.855,72.880],
+    ["Lower Parel",18.988,19.008,72.818,72.838],["BKC",19.054,19.078,72.858,72.882],
+    ["Powai",19.108,19.132,72.895,72.920],["Worli",18.998,19.020,72.808,72.828],
+  ],
+  "new delhi": [
+    ["Connaught Place",28.622,28.640,77.208,77.228],["Aerocity",28.548,28.566,77.104,77.126],
+    ["Hauz Khas",28.542,28.560,77.192,77.212],["Lajpat Nagar",28.564,28.582,77.230,77.250],
+    ["Karol Bagh",28.644,28.660,77.182,77.202],["Saket",28.520,28.540,77.202,77.222],
+    ["Dwarka",28.568,28.598,77.038,77.078],["Nehru Place",28.544,28.562,77.245,77.265],
+  ],
+  bangalore: [
+    ["MG Road",12.972,12.988,77.608,77.628],["Whitefield",12.968,12.998,77.730,77.760],
+    ["Koramangala",12.924,12.944,77.618,77.645],["Indiranagar",12.972,12.990,77.638,77.658],
+    ["Electronic City",12.840,12.870,77.658,77.688],["Hebbal",13.032,13.055,77.588,77.612],
+    ["Yelahanka",13.090,13.120,77.578,77.608],
+  ],
+  doha: [
+    ["West Bay",25.315,25.340,51.520,51.548],["The Pearl",25.368,25.392,51.540,51.568],
+    ["Souq Waqif",25.285,25.302,51.530,51.548],["Lusail",25.400,25.430,51.500,51.535],
+    ["Al Waab",25.248,25.268,51.445,51.468],
+  ],
+  cairo: [
+    ["Downtown",30.042,30.062,31.230,31.252],["Zamalek",30.058,30.075,31.215,31.232],
+    ["Giza Pyramids Area",29.968,29.990,31.120,31.145],["Heliopolis",30.085,30.108,31.318,31.342],
+    ["Maadi",29.960,29.980,31.245,31.268],
+  ],
+  riyadh: [
+    ["Al Olaya",24.688,24.710,46.678,46.702],["Al Malaz",24.670,24.692,46.720,46.745],
+    ["Diplomatic Quarter",24.685,24.710,46.595,46.625],["King Abdullah Road",24.720,24.748,46.648,46.678],
+  ],
+  muscat: [
+    ["Muttrah",23.612,23.632,58.582,58.605],["Al Qurum",23.588,23.610,58.525,58.550],
+    ["Al Khuwair",23.595,23.618,58.488,58.512],["Madinat Qaboos",23.578,23.600,58.462,58.488],
+  ],
+  goa: [
+    ["North Goa",15.490,15.560,73.740,73.790],["Calangute",15.535,15.558,73.752,73.775],
+    ["Baga",15.548,15.572,73.748,73.772],["Anjuna",15.572,15.595,73.732,73.758],
+    ["South Goa",15.200,15.320,73.920,73.980],["Panjim",15.490,15.510,73.820,73.845],
+  ],
+  chennai: [
+    ["T Nagar",13.035,13.052,80.228,80.248],["Adyar",13.000,13.020,80.248,80.268],
+    ["Anna Nagar",13.068,13.088,80.198,80.218],["Egmore",13.070,13.088,80.255,80.275],
+    ["ECR",12.840,12.960,80.235,80.265],["OMR",12.870,12.980,80.218,80.248],
+  ],
+  kolkata: [
+    ["Park Street",22.548,22.565,88.348,88.368],["Salt Lake",22.568,22.592,88.388,88.415],
+    ["New Town",22.572,22.602,88.440,88.472],["Howrah",22.578,22.600,88.295,88.325],
+    ["Ballygunge",22.520,22.540,88.355,88.378],
+  ],
+  hyderabad: [
+    ["Banjara Hills",17.408,17.428,78.438,78.460],["Jubilee Hills",17.418,17.440,78.402,78.428],
+    ["HITEC City",17.438,17.458,78.370,78.395],["Secunderabad",17.438,17.460,78.490,78.518],
+    ["Gachibowli",17.430,17.452,78.348,78.372],["Old City",17.348,17.370,78.468,78.492],
+  ],
+  jaipur: [
+    ["Old City",26.920,26.942,75.820,75.845],["C-Scheme",26.888,26.908,75.795,75.820],
+    ["Malviya Nagar",26.852,26.872,75.800,75.825],["Vaishali Nagar",26.908,26.928,75.745,75.770],
+  ],
+  kochi: [
+    ["Fort Kochi",9.960,9.980,76.230,76.252],["Ernakulam",9.978,9.998,76.278,76.302],
+    ["Marine Drive",9.978,9.998,76.285,76.308],["Aluva",10.098,10.118,76.348,76.372],
+  ],
+  agra: [
+    ["Taj Mahal Area",27.168,27.188,78.038,78.062],["Fatehabad Road",27.158,27.178,78.025,78.050],
+    ["Civil Lines",27.175,27.195,78.000,78.025],
+  ],
+  maldives: [
+    ["Male City",4.168,4.188,73.505,73.530],["North Male Atoll",4.200,4.350,73.400,73.600],
+    ["South Male Atoll",3.800,4.050,73.400,73.600],
+  ],
+};
 
-function getAreaFromCoords(lat?: number|null, lng?: number|null): string|null {
+function getAreaFromCoords(lat?: number|null, lng?: number|null, city?: string): string|null {
   if (!lat||!lng) return null;
-  for (const [name,minLat,maxLat,minLng,maxLng] of DUBAI_AREAS) {
+  const cityKey = (city||"").toLowerCase().trim();
+  const areas = ALL_CITY_AREAS[cityKey] || ALL_CITY_AREAS["dubai"] || [];
+  for (const [name,minLat,maxLat,minLng,maxLng] of areas as [string,number,number,number,number][]) {
     if (lat>=minLat&&lat<=maxLat&&lng>=minLng&&lng<=maxLng) return name;
   }
   return null;
@@ -366,7 +535,7 @@ function SearchResults(){
   };
   const activeRefLabel=landmarkRef?.label||refLabel;
 
-  const areaOptions=useMemo(()=>{const found=new Set<string>();hotels.forEach(h=>{const a=getAreaFromCoords(h.latitude,h.longitude);if(a)found.add(a);});return DUBAI_AREAS.map(([n])=>n).filter(n=>found.has(n));},[hotels]);
+  const areaOptions=useMemo(()=>{const found=new Set<string>();hotels.forEach(h=>{const a=getAreaFromCoords(h.latitude,h.longitude,destination);if(a)found.add(a);});return DUBAI_AREAS.map(([n])=>n).filter(n=>found.has(n));},[hotels]);
   const clearAllFilters=()=>{setFilterStars([]);setFilterBreakfast(false);setFilterRefundable(false);setFilterRating(null);setFilterPriceMax(null);setFilterPriceMin(null);setFilterFacilities([]);setFilterLocation("");setHotelSearch("");};
   const hasActiveFilters=filterStars.length>0||filterBreakfast||filterRefundable||filterRating!==null||filterPriceMax!==null||filterPriceMin!==null||filterFacilities.length>0||!!filterLocation||!!hotelSearch;
 
@@ -532,7 +701,7 @@ function SearchResults(){
 
             {!loading&&!error&&user&&paginatedHotels.map((hotel,idx)=>{
               const rating=hotel.rating||getRating(hotel.code);const discount=getDiscount(hotel.code);const price=priceINR(hotel);const globalIdx=(page-1)*perPage+idx;const cardAmenities=getCardAmenities(hotel);
-              const area=getAreaFromCoords(hotel.latitude,hotel.longitude);
+              const area=getAreaFromCoords(hotel.latitude,hotel.longitude,destination);
               const distLabel=getDistanceLabel(hotel);
               // Location line: distance from ref if available, else area, else address
               const locationLine = distLabel
