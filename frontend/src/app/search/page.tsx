@@ -298,15 +298,20 @@ function SearchResults(){
   useEffect(()=>{fetchHotels();},[]);
 
   const searchLandmark=async(q:string)=>{
-    if(!q.trim()){setLandmarkRef(null);return;}
+    if(!q.trim()){setLandmarkRef(null);setSortBy("popularity");return;}
     // First check if any hotels match by name — if yes, treat as hotel search not landmark
     const hotelMatches=hotels.filter(h=>h.name.toLowerCase().includes(q.toLowerCase()));
-    if(hotelMatches.length>2){setLandmarkRef(null);return;} // allow partial matches but not many
+    if(hotelMatches.length>2){setLandmarkRef(null);return;}
     setLandmarkLoading(true);
     try{
-      const res=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/landmark?q=${encodeURIComponent(q)}`);
+      // Strip common city/country words to get the landmark name
+      const cityWords=destination.toLowerCase().split(/[\s,]+/);
+      let cleaned=q.toLowerCase().trim();
+      cityWords.forEach(w=>{if(w.length>2)cleaned=cleaned.replace(new RegExp('\\b'+w+'\\b','gi'),'').trim();});
+      cleaned=cleaned.replace(/^(in|at|near|the|a|an)\s+/i,'').trim()||q.trim();
+      const res=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/landmark?q=${encodeURIComponent(cleaned)}`);
       const data=await res.json();
-      if(data.lat&&data.lng){setLandmarkRef({lat:data.lat,lng:data.lng,label:data.label||q});setSortBy("distance");}
+      if(data.lat&&data.lng){setLandmarkRef({lat:data.lat,lng:data.lng,label:cleaned});setSortBy("distance");}
       else{setLandmarkRef(null);}
     }catch{setLandmarkRef(null);}
     setLandmarkLoading(false);
