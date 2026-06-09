@@ -358,7 +358,7 @@ Otherwise respond in plain text.`
 
   try {
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 600,
       system: systemPrompt,
       messages: messages.map(m => ({ role: m.role, content: m.content }))
@@ -385,7 +385,7 @@ router.post('/ai-search', async (req, res) => {
 
   try {
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 500,
       messages: [{
         role: 'user',
