@@ -830,7 +830,21 @@ function SearchResults(){
     try{
       const res=await fetch("https://hoteldrops-production-7e5a.up.railway.app/api/hotels/chat",{
         method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({messages:newMsgs,destination,checkIn,checkOut,hotelCount:hotels.length})
+        body:JSON.stringify({
+          messages:newMsgs,
+          destination,checkIn,checkOut,
+          hotelCount:hotels.length,
+          hotelList:sortedHotels.map(h=>({
+            name:h.name,
+            stars:h.stars,
+            area:h.address||h.city||"",
+            price:priceINR(h),
+            rating:h.rating||null,
+            isRefundable:h.isRefundable||false,
+            hasBreakfast:h.hasBreakfast||false,
+            amenities:(h.amenities||[]).slice(0,5),
+          }))
+        })
       });
       const data=await res.json();
       const reply=data.reply||"Sorry, I could not process that.";
