@@ -850,7 +850,8 @@ function SearchResults(){
       const reply=data.reply||"Sorry, I could not process that.";
       // Check if reply is a filter action
       try{
-        const parsed=JSON.parse(reply);
+        const cleaned=reply.replace(/```json|```/g,"").trim();
+        const parsed=JSON.parse(cleaned);
         if(parsed.action==="filter"){
           if(parsed.stars)setFilterStars([parsed.stars]);
           if(parsed.priceMax)setFilterPriceMax(parsed.priceMax);
