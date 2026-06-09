@@ -317,38 +317,28 @@ function SearchResults(){
     if(!q.trim())return;
     setAiLoading(true);
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:500,
-          messages:[{role:"user",content:`You are a hotel search assistant. Parse this search query and return ONLY a JSON object with these fields (no markdown, no explanation):
-- landmark: string or null (specific area/landmark like "Burj Khalifa", "Marina Bay")
-- priceMax: number or null (max price per night in INR)
-- priceMin: number or null (min price per night in INR)  
-- stars: number[] or null (star ratings like [4,5])
-- hasBreakfast: boolean
-- isRefundable: boolean
-- rating: number or null (min rating like 8 or 9)
-
-Query: "${q}"
-Destination city: the city being searched
-
-Return only the JSON object.`}]
-        })
-      });
-      const data=await res.json();
-      const text=data.content?.[0]?.text||"{}";
-      const parsed=JSON.parse(text.replace(/```json|```/g,"").trim());
-      // Apply parsed filters
-      if(parsed.priceMax)setFilterPriceMax(parsed.priceMax);
-      if(parsed.priceMin)setFilterPriceMin(parsed.priceMin);
-      if(parsed.stars?.length)setFilterStars(parsed.stars);
-      if(parsed.hasBreakfast)setFilterBreakfast(true);
-      if(parsed.isRefundable)setFilterRefundable(true);
-      if(parsed.rating)setFilterRating(parsed.rating);
-      if(parsed.landmark)await searchLandmark(parsed.landmark);
+      const lower=q.toLowerCase();
+      // Parse price: "under 15000", "below ₹20,000", "less than 10k"
+      const priceMaxMatch=lower.match(/(?:under|below|less than|max|upto|up to)\s*[₹rs\s]*([0-9,]+)\s*k?/i);
+      const priceMinMatch=lower.match(/(?:above|over|more than|min|at least)\s*[₹rs\s]*([0-9,]+)\s*k?/i);
+      if(priceMaxMatch){const v=parseInt(priceMaxMatch[1].replace(/,/g,""));setFilterPriceMax(lower.includes("k")&&v<1000?v*1000:v);}
+      if(priceMinMatch){const v=parseInt(priceMinMatch[1].replace(/,/g,""));setFilterPriceMin(lower.includes("k")&&v<1000?v*1000:v);}
+      // Parse stars: "5 star", "4-star", "luxury"
+      const starMatch=lower.match(/([3-5])\s*[\-\s]?star/i);
+      if(starMatch)setFilterStars([parseInt(starMatch[1])]);
+      if(/luxury|5\s*star/i.test(lower))setFilterStars([5]);
+      // Parse amenities
+      if(/breakfast|with breakfast|incl.*breakfast/i.test(lower))setFilterBreakfast(true);
+      if(/free cancel|refundable|flexible/i.test(lower))setFilterRefundable(true);
+      // Parse rating
+      if(/exceptional|rating\s*9|9\+/i.test(lower))setFilterRating(9);
+      else if(/excellent|rating\s*8|8\+/i.test(lower))setFilterRating(8);
+      // Parse landmark — look for "near X", "close to X", "by X", "around X"
+      const landmarkMatch=lower.match(/(?:near|close to|by|around|next to|opposite|adjacent to)\s+([a-z\s]+?)(?:\s+(?:under|below|with|free|having|that|which|and|,)|$)/i);
+      if(landmarkMatch){
+        const lm=landmarkMatch[1].trim();
+        if(lm.length>2)await searchLandmark(lm);
+      }
       setShowAiSearch(false);
     }catch(e){console.error(e);}
     setAiLoading(false);
