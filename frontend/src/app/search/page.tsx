@@ -833,7 +833,19 @@ function SearchResults(){
       if(f.hasBreakfast)setFilterBreakfast(true);
       if(f.isRefundable)setFilterRefundable(true);
       if(f.minRating)setFilterRating(f.minRating);
-      if(f.area){setFilterLocation(f.area);}
+      if(f.area)setFilterLocation(f.area);
+      // Wire amenity to facilities filter
+      if(f.amenity){
+        const amenityMap:Record<string,string>={
+          pool:"Swimming Pool",spa:"Spa & Wellness",gym:"Fitness Centre",
+          fitness:"Fitness Centre",restaurant:"Restaurant",wifi:"Free WiFi",
+          breakfast:"Breakfast",parking:"Parking",airport:"Airport Transfer",
+          beach:"Beach Access",bar:"Bar",kids:"Kids Club",business:"Business Centre",
+        };
+        const key=f.amenity.toLowerCase();
+        const mapped=Object.keys(amenityMap).find(k=>key.includes(k));
+        if(mapped)setFilterFacilities([amenityMap[mapped]]);
+      }
       if(f.landmark){
         const lRes=await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/landmark?q=${encodeURIComponent(f.landmark)}`);
         const lData=await lRes.json();
@@ -964,15 +976,16 @@ function SearchResults(){
           <div style={{minWidth:0}}>
             {/* PREMIUM AI SEARCH BAR */}
             <div style={{marginBottom:20}}>
-              <div style={{background:"linear-gradient(135deg,#0f172a 0%,#1447b8 50%,#0f172a 100%)",borderRadius:16,padding:"2px",boxShadow:"0 8px 32px rgba(20,71,184,0.25)"}}>
-                <div style={{background:"#0f172a",borderRadius:14,display:"flex",alignItems:"center",gap:12,padding:"14px 18px"}}>
-                  <span style={{flexShrink:0,fontSize:20}}>✨</span>
-                  <input value={aiSearchQuery} onChange={e=>{setAiSearchQuery(e.target.value);setAiApplied(false);}} onKeyDown={e=>{if(e.key==="Enter")handleAiSearch(aiSearchQuery);}} placeholder={`Ask AI: "5-star pool hotel near Burj Khalifa" or "budget free cancellation in ${destination}"`} style={{flex:1,background:"transparent",border:"none",outline:"none",color:"#fff",fontSize:14,fontFamily:"inherit"}}/>
-                  {aiSearchLoading?(<div style={{width:18,height:18,border:"2px solid rgba(255,255,255,0.2)",borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin 1s linear infinite",flexShrink:0}}/>):aiSearchQuery?(<button onClick={()=>handleAiSearch(aiSearchQuery)} style={{background:"linear-gradient(135deg,#1447b8,#2563eb)",color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>Search</button>):null}
-                  {aiApplied&&<span style={{fontSize:11,color:"#4ade80",fontWeight:600,flexShrink:0}}>✓ Applied</span>}
+              <div style={{background:"#fff",border:`1.5px solid ${B}`,borderRadius:14,boxShadow:"0 4px 20px rgba(20,71,184,0.12)",display:"flex",alignItems:"center",gap:12,padding:"12px 16px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,background:B,borderRadius:8,padding:"4px 8px"}}>
+                  <span style={{fontFamily:"'Sora',sans-serif",fontWeight:800,fontSize:13,color:"#fff"}}>r.</span>
+                  <span style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.8)",letterSpacing:"0.05em"}}>AI</span>
                 </div>
+                <input value={aiSearchQuery} onChange={e=>{setAiSearchQuery(e.target.value);setAiApplied(false);}} onKeyDown={e=>{if(e.key==="Enter")handleAiSearch(aiSearchQuery);}} placeholder={`Search with AI — "pool hotel near Burj Khalifa" · "5-star breakfast under ₹15,000" · "free cancellation in Jumeirah"`} style={{flex:1,background:"transparent",border:"none",outline:"none",color:NAVY,fontSize:13,fontFamily:"inherit"}}/>
+                {aiSearchLoading?(<div style={{width:16,height:16,border:`2px solid #e2e8f0`,borderTop:`2px solid ${B}`,borderRadius:"50%",animation:"spin 1s linear infinite",flexShrink:0}}/>):aiSearchQuery?(<button onClick={()=>handleAiSearch(aiSearchQuery)} style={{background:B,color:"#fff",border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>Search</button>):null}
+                {aiApplied&&<span style={{fontSize:11,color:"#16a34a",fontWeight:600,flexShrink:0}}>✓ Applied</span>}
               </div>
-              {aiApplied&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,fontSize:12,color:"#64748b"}}><span>AI filters applied</span><button onClick={()=>{clearAllFilters();setAiSearchQuery("");}} style={{color:B,fontWeight:600,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>Clear all</button></div>}
+              {aiApplied&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,fontSize:12,color:"#64748b"}}><span>AI filters applied for "{aiSearchQuery}"</span><button onClick={()=>{clearAllFilters();setAiSearchQuery("");}} style={{color:B,fontWeight:600,background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>Clear</button></div>}
             </div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
               <div>
