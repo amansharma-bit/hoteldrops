@@ -339,22 +339,24 @@ router.post('/chat', async (req, res) => {
   const { messages, destination, checkIn, checkOut, hotelCount } = req.body
   if (!messages?.length) return res.json({ reply: 'How can I help you?' })
 
-  const systemPrompt = `You are rebuq's AI travel assistant — friendly, knowledgeable, concise.
-The user is searching hotels in ${destination || 'an unknown city'} from ${checkIn || 'unknown'} to ${checkOut || 'unknown'}.
-There are currently ${hotelCount || 0} hotels loaded in their search results.
+  const { hotelList = [] } = req.body
+  const hotelRows = hotelList.map((h, i) =>
+    i+1 + '. ' + h.name + ' | ' + h.stars + 'star | Rs' + (h.price||0).toLocaleString('en-IN') + '/night | Rating:' + (h.rating||'N/A') + ' | ' + (h.isRefundable?'Free cancellation':'Non-refundable') + ' | ' + (h.hasBreakfast?'Breakfast included':'No breakfast') + ' | Area:' + h.area + ' | ' + (h.amenities||[]).join(', ')
+  ).join('\n')
 
-You can help with:
-- Hotel recommendations and area comparisons
-- Local restaurants, food, nightlife
-- Weather and best time to visit
-- Transport, visa, currency tips
-- Packing advice
-- Things to do and attractions
-- Price guidance and value assessment
+  const hotelContext = hotelList.length > 0 ? '\n\nHOTELS ON SCREEN (' + hotelList.length + ' properties):\n' + hotelRows : ''
 
-Keep answers concise (2-4 sentences max unless detail is needed). Be conversational and helpful.
-If asked to filter hotels (e.g. "show only 5-star"), respond with JSON action like: {"action":"filter","stars":5}
-Otherwise respond in plain text.`
+  const systemPrompt = 'You are rebuq AI travel assistant — friendly, knowledgeable, concise. ' +
+    'User is searching hotels in ' + (destination || 'unknown city') + ' from ' + (checkIn || 'unknown') + ' to ' + (checkOut || 'unknown') + '.' + hotelContext + '\n\n' +
+    'You have full visibility of all hotels on screen. You can:\n' +
+    '- Answer questions about specific hotels, rates, amenities, cancellation\n' +
+    '- Compare hotels: cheapest, best rated, which has pool etc\n' +
+    '- Recommend hotels based on preferences\n' +
+    '- Answer travel questions: weather, local food, restaurants, transport, visa, packing\n' +
+    '- Apply filters when asked\n\n' +
+    'Keep answers concise. Mention hotel name and price when recommending.\n' +
+    'For filter actions ONLY respond with JSON: {"action":"filter","stars":5} or {"action":"filter","isRefundable":true}\n' +
+    'For everything else respond in plain natural language.'
 
   try {
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
