@@ -213,6 +213,7 @@ function ChipDropdown({id,label,openChip,setOpenChip,children}:{id:string;label:
 function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMobile}:{hotels:Hotel[];checkIn:string;checkOut:string;filterProps:FiltersPanelProps;onClose:()=>void;onHotelClick:(h:Hotel)=>void;isMobile:boolean;}){
   const mapRef=useRef<HTMLDivElement>(null);const mapInstanceRef=useRef<any>(null);const markersRef=useRef<{el:HTMLElement;hotel:Hotel;pinDiv:HTMLElement}[]>([]);const listRef=useRef<HTMLDivElement>(null);
   const[selectedHotel,setSelectedHotel]=useState<Hotel|null>(null);const[openChip,setOpenChip]=useState<string|null>(null);const chipRef=useRef<HTMLDivElement>(null);
+  const[aiQuery,setAiQuery]=useState("");const[aiLoading,setAiLoading]=useState(false);const[showAiSearch,setShowAiSearch]=useState(false);
   const handleAiSearch=async(q:string)=>{
     if(!q.trim())return;
     setAiLoading(true);
@@ -308,7 +309,7 @@ function SearchResults(){
   const[desktopCalOffset,setDesktopCalOffset]=useState(0);const[desktopGuestOpen,setDesktopGuestOpen]=useState(false);
   const[destInput,setDestInput]=useState(destination);const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);
   const destRef=useRef<HTMLDivElement>(null);const desktopCalRef=useRef<HTMLDivElement>(null);const desktopGuestRef=useRef<HTMLDivElement>(null);
-  const[filterStars,setFilterStars]=useState<number[]>([]);const[filterBreakfast,setFilterBreakfast]=useState(false);const[filterRefundable,setFilterRefundable]=useState(false);const[filterRating,setFilterRating]=useState<number|null>(null);const[filterPriceMin,setFilterPriceMin]=useState<number|null>(null);const[filterPriceMax,setFilterPriceMax]=useState<number|null>(null);const[filterFacilities,setFilterFacilities]=useState<string[]>([]);const[filterLocation,setFilterLocation]=useState("");const[hotelSearch,setHotelSearch]=useState("");const[landmarkInput,setLandmarkInput]=useState("");const[landmarkRef,setLandmarkRef]=useState<{lat:number;lng:number;label:string}|null>(null);const[landmarkLoading,setLandmarkLoading]=useState(false);const[aiQuery,setAiQuery]=useState("");const[aiLoading,setAiLoading]=useState(false);const[showAiSearch,setShowAiSearch]=useState(false);
+  const[filterStars,setFilterStars]=useState<number[]>([]);const[filterBreakfast,setFilterBreakfast]=useState(false);const[filterRefundable,setFilterRefundable]=useState(false);const[filterRating,setFilterRating]=useState<number|null>(null);const[filterPriceMin,setFilterPriceMin]=useState<number|null>(null);const[filterPriceMax,setFilterPriceMax]=useState<number|null>(null);const[filterFacilities,setFilterFacilities]=useState<string[]>([]);const[filterLocation,setFilterLocation]=useState("");const[hotelSearch,setHotelSearch]=useState("");const[landmarkInput,setLandmarkInput]=useState("");const[landmarkRef,setLandmarkRef]=useState<{lat:number;lng:number;label:string}|null>(null);const[landmarkLoading,setLandmarkLoading]=useState(false);
 
   // ── Distance reference point from URL ────────────────────────────────────
   const refLat = searchParams.get("refLat") ? parseFloat(searchParams.get("refLat")!) : null;
@@ -353,6 +354,7 @@ function SearchResults(){
     setLandmarkLoading(false);
   };
 
+  const[aiQuery,setAiQuery]=useState("");const[aiLoading,setAiLoading]=useState(false);const[showAiSearch,setShowAiSearch]=useState(false);
   const handleAiSearch=async(q:string)=>{
     if(!q.trim())return;
     setAiLoading(true);
