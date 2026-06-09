@@ -770,6 +770,13 @@ function SearchResults(){
   const[aiSearchActive,setAiSearchActive]=useState(false);
   const[aiSearchLoading,setAiSearchLoading]=useState(false);
   const[aiApplied,setAiApplied]=useState(false);
+  const[chatOpen,setChatOpen]=useState(false);
+  const[chatMessages,setChatMessages]=useState<{role:string;content:string}[]>([
+    {role:"assistant",content:`Hi! I'm your rebuq AI assistant. Ask me anything about ${""} — best areas, local food, weather, what to pack, or just filter your hotel search. How can I help?`}
+  ]);
+  const[chatInput,setChatInput]=useState("");
+  const[chatLoading,setChatLoading]=useState(false);
+  const chatEndRef=useRef<HTMLDivElement>(null);
   const[filterStars,setFilterStars]=useState<number[]>([]);const[filterBreakfast,setFilterBreakfast]=useState(false);const[filterRefundable,setFilterRefundable]=useState(false);const[filterRating,setFilterRating]=useState<number|null>(null);const[filterPriceMin,setFilterPriceMin]=useState<number|null>(null);const[filterPriceMax,setFilterPriceMax]=useState<number|null>(null);const[filterFacilities,setFilterFacilities]=useState<string[]>([]);const[filterLocation,setFilterLocation]=useState("");const[hotelSearch,setHotelSearch]=useState("");
 
   // ── Distance reference point from URL ────────────────────────────────────
@@ -854,6 +861,42 @@ function SearchResults(){
       setAiApplied(true);
     }catch(e){console.error(e);}
     setAiSearchLoading(false);
+  };
+
+  const sendChat=async(msg:string)=>{
+    if(!msg.trim()||chatLoading)return;
+    const userMsg={role:"user",content:msg};
+    const newMsgs=[...chatMessages,userMsg];
+    setChatMessages(newMsgs);
+    setChatInput("");
+    setChatLoading(true);
+    try{
+      const res=await fetch("https://hoteldrops-production-7e5a.up.railway.app/api/hotels/chat",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({messages:newMsgs,destination,checkIn,checkOut,hotelCount:hotels.length})
+      });
+      const data=await res.json();
+      const reply=data.reply||"Sorry, I could not process that.";
+      // Check if reply is a filter action
+      try{
+        const parsed=JSON.parse(reply);
+        if(parsed.action==="filter"){
+          if(parsed.stars)setFilterStars([parsed.stars]);
+          if(parsed.priceMax)setFilterPriceMax(parsed.priceMax);
+          if(parsed.isRefundable)setFilterRefundable(true);
+          if(parsed.hasBreakfast)setFilterBreakfast(true);
+          setChatMessages(m=>[...m,{role:"assistant",content:`Done! I've applied the filter for you. You can see the results in the list.`}]);
+        } else {
+          setChatMessages(m=>[...m,{role:"assistant",content:reply}]);
+        }
+      }catch{
+        setChatMessages(m=>[...m,{role:"assistant",content:reply}]);
+      }
+    }catch{
+      setChatMessages(m=>[...m,{role:"assistant",content:"Sorry, I'm having trouble connecting. Please try again."}]);
+    }
+    setChatLoading(false);
+    setTimeout(()=>chatEndRef.current?.scrollIntoView({behavior:"smooth"}),100);
   };
 
   const clearAllFilters=()=>{setFilterStars([]);setFilterBreakfast(false);setFilterRefundable(false);setFilterRating(null);setFilterPriceMax(null);setFilterPriceMin(null);setFilterFacilities([]);setFilterLocation("");setHotelSearch("");};
