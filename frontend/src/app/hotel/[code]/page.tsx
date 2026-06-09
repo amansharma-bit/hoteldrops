@@ -346,31 +346,17 @@ function HotelDetailContent() {
           </div>
         </div>
 
-        {/* PHOTO GRID */}
-        {isMobile ? (
+        {/* PHOTO GRID — mobile only */}
+        {isMobile && (
           <div style={{ height: 220, borderRadius: 12, overflow: "hidden", marginBottom: 16, cursor: "pointer", position: "relative" }} onClick={() => openLightbox(0)}>
             <img src={hotel.images[0]?.url} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             <div style={{ position: "absolute", bottom: 12, right: 12, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 20 }}>
               📷 {hotel.images.length} photos
             </div>
           </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gridTemplateRows: "220px 220px", gap: 6, borderRadius: 14, overflow: "hidden", marginBottom: 20 }}>
-            <div style={{ gridRow: "1/3", overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openLightbox(0)}>
-              <img src={hotel.images[0]?.url} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              <div style={{ position: "absolute", bottom: 12, left: 12, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 20 }}>
-                📷 See all {hotel.images.length} photos
-              </div>
-            </div>
-            {[1, 2].map(i => (
-              <div key={i} style={{ overflow: "hidden", cursor: "pointer" }} onClick={() => openLightbox(i)}>
-                <img src={hotel.images[i]?.url || hotel.images[0]?.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              </div>
-            ))}
-          </div>
         )}
 
-        {/* DEAL BOX — mobile shows inline, desktop shows in sidebar */}
+        {/* DEAL BOX — mobile inline */}
         {isMobile && (
           <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 16, marginBottom: 20 }}>
             {hotel.lowestPriceINR ? (
@@ -389,7 +375,20 @@ function HotelDetailContent() {
         {/* DESKTOP: PHOTO GRID + SIDEBAR */}
         {!isMobile && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20, marginBottom: 24, alignItems: "start" }}>
-            <div /> {/* photos already rendered above */}
+            {/* Photo grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gridTemplateRows: "220px 220px", gap: 6, borderRadius: 14, overflow: "hidden" }}>
+              <div style={{ gridRow: "1/3", overflow: "hidden", cursor: "pointer", position: "relative" }} onClick={() => openLightbox(0)}>
+                <img src={hotel.images[0]?.url} alt={hotel.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute", bottom: 12, left: 12, background: "rgba(0,0,0,0.6)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "5px 12px", borderRadius: 20 }}>
+                  📷 See all {hotel.images.length} photos
+                </div>
+              </div>
+              {[1, 2].map(i => (
+                <div key={i} style={{ overflow: "hidden", cursor: "pointer" }} onClick={() => openLightbox(i)}>
+                  <img src={hotel.images[i]?.url || hotel.images[0]?.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </div>
+              ))}
+            </div>
             <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#eff6ff", color: B, fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 100, marginBottom: 14 }}>
                 ★ Recommended Deal
