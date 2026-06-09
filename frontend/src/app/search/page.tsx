@@ -789,7 +789,7 @@ function SearchResults(){
     const d=dest||destination,c1=ci||checkIn,c2=co||checkOut,gs=g||guests;
     const placeId=pid!==undefined?pid:(searchParams.get("placeId")||"");
     if(!c1||!c2){setLoading(false);setError("Please select check-in and check-out dates.");return;}
-    setLoading(true);setError(null);setPage(1);
+    setLoading(true);setError(null);setPage(1);setHotels([]);
     try{
       const url=placeId
         ?`${API}/search?placeId=${encodeURIComponent(placeId)}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}&rooms=${gs.rooms}`
