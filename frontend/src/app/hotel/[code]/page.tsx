@@ -181,7 +181,7 @@ function HotelDetailContent() {
   const px = isMobile ? "0 16px" : "0 40px";
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif", background: "#f8fafc", color: "#1e293b", maxWidth: "100vw", overflowX: "hidden" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#f8fafc", color: "#1e293b", width: "100%" }}>
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
@@ -315,7 +315,7 @@ function HotelDetailContent() {
       )}
 
       {/* PAGE BODY */}
-      <div style={{ padding: px, maxWidth: "100%", overflowX: "hidden" }}>
+      <div style={{ padding: px, width: "100%", boxSizing: "border-box" as const }}>
 
         {/* BREADCRUMB */}
         <div style={{ padding: "12px 0", fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
@@ -334,8 +334,8 @@ function HotelDetailContent() {
         </div>
 
         {/* HOTEL NAME */}
-        <div style={{ marginBottom: 16, maxWidth: "calc(100vw - 420px)" }}>
-          <h1 className="sora" style={{ fontSize: isMobile ? 20 : 28, fontWeight: 800, color: NAVY, marginBottom: 6, wordBreak: "break-word" as const, whiteSpace: "normal" as const }}>{hotel.name}</h1>
+        <div style={{ marginBottom: 16, width: "100%", overflow: "hidden" }}>
+          <h1 className="sora" style={{ fontSize: isMobile ? 20 : 28, fontWeight: 800, color: NAVY, marginBottom: 6, overflowWrap: "break-word" as const, wordBreak: "break-word" as const, hyphens: "auto" as const, maxWidth: isMobile ? "100%" : "calc(100% - 360px)" }}>{hotel.name}</h1>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" as const }}>
             <span style={{ color: "#f59e0b", fontSize: 16 }}>{"★".repeat(stars)}</span>
             {hotel.rating && <span style={{ background: B, color: "#fff", fontSize: 13, fontWeight: 700, padding: "3px 10px", borderRadius: 8 }}>{parseFloat(hotel.rating).toFixed(1)}</span>}
