@@ -286,7 +286,7 @@ function FiltersPanel({areaOptions,filterLocation,setFilterLocation,filterPriceM
     <div>
       <div style={{display:"flex",alignItems:"center",gap:8,border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 12px",marginBottom:16}}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" placeholder="Hotel name, area or landmark" value={sv} onChange={e=>{setSv(e.target.value);onHotelSearch(e.target.value);if(onLandmarkSearch&&e.target.value.length>=3)onLandmarkSearch(e.target.value);}} style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:13,color:NAVY,background:"transparent",width:"100%"}}/>
+        <input type="text" placeholder="Hotel name, area or landmark" value={sv} onChange={e=>{setSv(e.target.value);onHotelSearch(e.target.value);if(e.target.value.length===0&&onLandmarkSearch)onLandmarkSearch("");else if(onLandmarkSearch&&e.target.value.length>=4)onLandmarkSearch(e.target.value);}} style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:13,color:NAVY,background:"transparent",width:"100%"}}/>
         {sv&&<button onClick={()=>{setSv("");onHotelSearch("");if(onLandmarkSearch)onLandmarkSearch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:16,padding:0}}>×</button>}
       </div>
       
@@ -535,7 +535,7 @@ function SearchResults(){
   };
   const activeRefLabel=landmarkRef?.label||refLabel;
 
-  const areaOptions=useMemo(()=>{const found=new Set<string>();hotels.forEach(h=>{const a=getAreaFromCoords(h.latitude,h.longitude,destination);if(a)found.add(a);});return DUBAI_AREAS.map(([n])=>n).filter(n=>found.has(n));},[hotels]);
+  const areaOptions=useMemo(()=>{const found=new Set<string>();hotels.forEach(h=>{const a=getAreaFromCoords(h.latitude,h.longitude,destination);if(a)found.add(a);});return Array.from(found);},[hotels,destination]);
   const clearAllFilters=()=>{setFilterStars([]);setFilterBreakfast(false);setFilterRefundable(false);setFilterRating(null);setFilterPriceMax(null);setFilterPriceMin(null);setFilterFacilities([]);setFilterLocation("");setHotelSearch("");};
   const hasActiveFilters=filterStars.length>0||filterBreakfast||filterRefundable||filterRating!==null||filterPriceMax!==null||filterPriceMin!==null||filterFacilities.length>0||!!filterLocation||!!hotelSearch;
 
