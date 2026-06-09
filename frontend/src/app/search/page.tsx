@@ -853,6 +853,12 @@ function SearchResults(){
         const cleaned=reply.replace(/```json|```/g,"").trim();
         const parsed=JSON.parse(cleaned);
         if(parsed.action==="filter"){
+          // Clear all previous filters first
+          setFilterStars([]);setFilterPriceMax(null);setFilterPriceMin(null);
+          setFilterRefundable(false);setFilterBreakfast(false);setFilterRating(null);
+          setHotelSearch("");setFilterLocation("");setFilterFacilities([]);
+          if(parsed.clearAll){setChatMessages(m=>[...m,{role:"assistant",content:parsed.message||"Showing all hotels!"}]);return;}
+          // Apply new filters
           if(parsed.stars)setFilterStars([parsed.stars]);
           if(parsed.priceMax)setFilterPriceMax(parsed.priceMax);
           if(parsed.priceMin)setFilterPriceMin(parsed.priceMin);
