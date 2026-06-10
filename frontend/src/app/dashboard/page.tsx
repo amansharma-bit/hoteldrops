@@ -230,14 +230,14 @@ export default function Dashboard() {
                   <svg style={{ marginLeft: "auto" }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5l7 7-7 7"/></svg>
                 </button>
               ))}
-            </div>
-            <button
+              <button
               onClick={async () => { await supabase.auth.signOut(); router.push("/"); }}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "12px 18px", border: "1.5px solid #fecaca", borderRadius: 12, cursor: "pointer", fontFamily: "inherit", fontSize: 14, background: "#fff", color: "#ef4444" }}
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 18px", border: "none", borderTop: "1px solid #f1f5f9", cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, background: "#fff", color: "#ef4444" }}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
               Sign Out
             </button>
+          </div>
           </div>
         )}
 
