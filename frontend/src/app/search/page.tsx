@@ -764,7 +764,7 @@ function SearchResults(){
   const[mobileSheet,setMobileSheet]=useState<"filter"|"sort"|null>(null);
   const[desktopCalOpen,setDesktopCalOpen]=useState(false);const[desktopCalMode,setDesktopCalMode]=useState<"checkin"|"checkout">("checkin");
   const[desktopCalOffset,setDesktopCalOffset]=useState(0);const[desktopGuestOpen,setDesktopGuestOpen]=useState(false);
-  const[destInput,setDestInput]=useState(destination);const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);
+  const[destInput,setDestInput]=useState(destination);const[selectedPlaceId,setSelectedPlaceId]=useState(searchParams.get('placeId')||'');const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);
   const destRef=useRef<HTMLDivElement>(null);const desktopCalRef=useRef<HTMLDivElement>(null);const desktopGuestRef=useRef<HTMLDivElement>(null);
   const[chatOpen,setChatOpen]=useState(false);
   const[chatMessages,setChatMessages]=useState<{role:string;content:string}[]>([
@@ -783,7 +783,7 @@ function SearchResults(){
   useEffect(()=>{supabase.auth.getUser().then(({data})=>{if(data.user){const m=data.user.user_metadata;setUser({name:m?.full_name||m?.name||data.user.email?.split("@")[0]||"Member"});}});supabase.auth.onAuthStateChange((_,session)=>{if(session?.user){const m=session.user.user_metadata;setUser({name:m?.full_name||m?.name||session.user.email?.split("@")[0]||"Member"});setShowAuthModal(false);}});},[]);
   useEffect(()=>{const handler=(e:MouseEvent)=>{if(desktopCalRef.current&&!desktopCalRef.current.contains(e.target as Node))setDesktopCalOpen(false);if(desktopGuestRef.current&&!desktopGuestRef.current.contains(e.target as Node))setDesktopGuestOpen(false);if(destRef.current&&!destRef.current.contains(e.target as Node))setShowDestDrop(false);};document.addEventListener("mousedown",handler);return()=>document.removeEventListener("mousedown",handler);},[]);
   const handleDestInput=(val:string)=>{setDestInput(val);if(val.length>=1){const q=val.toLowerCase();setDestSuggestions(DESTINATIONS.filter(d=>d.label.toLowerCase().includes(q)||d.key.includes(q)));setShowDestDrop(true);}else{setDestSuggestions([]);setShowDestDrop(false);}};
-  const selectDest=(d:typeof DESTINATIONS[0])=>{setDestInput(d.label);setDestination(d.label);setShowDestDrop(false);};
+  const selectDest=(d:typeof DESTINATIONS[0])=>{setDestInput(d.label);setDestination(d.label);setSelectedPlaceId(d.placeId||'');setShowDestDrop(false);};
 
   const fetchHotels=useCallback(async(dest?:string,ci?:string,co?:string,g?:GuestState,pid?:string)=>{
     const d=dest||destination,c1=ci||checkIn,c2=co||checkOut,gs=g||guests;
@@ -913,7 +913,7 @@ function SearchResults(){
   const handleSearch=()=>{
     if(!user){setShowAuthModal(true);return;}
     const d=destInput.trim()||destination;setDestination(d);
-    const currentPlaceId=searchParams.get("placeId")||"";
+    const currentPlaceId=selectedPlaceId||searchParams.get("placeId")||"";
     fetchHotels(d,checkIn,checkOut,guests,currentPlaceId);
     const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
     if(currentPlaceId)p.set("placeId",currentPlaceId);
