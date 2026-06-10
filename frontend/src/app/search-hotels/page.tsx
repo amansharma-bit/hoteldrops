@@ -939,7 +939,7 @@ export default function SearchHotelsPage() {
             <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Member Exclusive Hotels</h2>
             <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>rebuq members get exclusive rates at top hotels across the world.</p>
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto", paddingBottom: 4 }}>
+          <div>
             {CONTINENT_CITIES.map(group => (
               <div key={group.continent} style={{ marginBottom: 40 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.12em", marginBottom: 16 }}>{group.continent}</div>
