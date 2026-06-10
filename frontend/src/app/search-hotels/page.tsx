@@ -179,8 +179,7 @@ export default function SearchHotelsPage() {
   const [guests, setGuests] = useState<GuestState>({ rooms: 1, adults: 2, children: 0, childAges: [] });
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<any>({ cities: [], hotels: [], areas: [], landmarks: [], airport: null });
-  const [activeCity, setActiveCity] = useState("All Hotels");
-  const [tickerIdx, setTickerIdx] = useState(0);
+    const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
   const [statVals, setStatVals] = useState(STATS.map(s => `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
   const [menuOpen, setMenuOpen] = useState(false);
@@ -441,7 +440,7 @@ export default function SearchHotelsPage() {
   };
 
   const ticker = TICKER_ITEMS[tickerIdx];
-  const hotels = HOTELS_BY_CITY[activeCity] || HOTELS_BY_CITY["All Hotels"];
+  const hotels: any[] = [];
   const d1 = new Date(today.getFullYear(), today.getMonth() + calMonthOffset);
   const d2 = new Date(today.getFullYear(), today.getMonth() + calMonthOffset + 1);
 
