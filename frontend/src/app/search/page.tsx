@@ -801,7 +801,24 @@ function SearchResults(){
     setLoading(false);
   },[destination,checkIn,checkOut,guests,searchParams]);
 
-  useEffect(()=>{fetchHotels();},[]);
+  useEffect(()=>{
+    const pid = searchParams.get("placeId") || "";
+    const dest = searchParams.get("destination") || "";
+    const ci = searchParams.get("checkIn") || "";
+    const co = searchParams.get("checkOut") || "";
+    const adults = parseInt(searchParams.get("adults") || "2");
+    const children = parseInt(searchParams.get("children") || "0");
+    const rooms = parseInt(searchParams.get("rooms") || "1");
+    if (pid && dest) {
+      setSelectedPlaceId(pid);
+      setDestInput(dest);
+      setDestination(dest);
+      fetchHotels(dest, ci, co, { adults, children, rooms }, pid);
+    } else {
+      fetchHotels();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[searchParams.get("placeId"), searchParams.get("destination"), searchParams.get("checkIn"), searchParams.get("checkOut")]);
 
   const NIGHTS=checkIn&&checkOut?Math.max(1,Math.round((new Date(checkOut).getTime()-new Date(checkIn).getTime())/86400000)):1;
   const priceINR=(h:Hotel)=>Math.round(parseFloat(String(h.lowestPriceINR||h.minRate||0))/NIGHTS);
