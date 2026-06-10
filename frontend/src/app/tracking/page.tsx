@@ -92,16 +92,17 @@ function TrackingContent() {
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
       <style>{`* { box-sizing: border-box; margin: 0; padding: 0; } .sora { font-family: 'Sora', sans-serif; }`}</style>
 
-      {/* NAV — matches homepage exactly */}
-      <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 32px", position: "sticky", top: 0, zIndex: 300 }}>
-        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
+      {/* NAV + HERO wrapper */}
+      <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)" }}>
+      <nav style={{ background: "transparent", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 32px", position: "sticky", top: 0, zIndex: 300 }}>
+        <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none" }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
         {!isMobile && (
           <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
-            <a href="/search-hotels" style={{ fontSize: 14, color: B, textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a>
+            <a href="/search-hotels" style={{ fontSize: 14, color: "#FCD34D", textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a>
             {user ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => router.push("/dashboard")}>
                 <div style={{ width: 32, height: 32, borderRadius: "50%", background: B, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
-                <span style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{user.name.split(" ")[0]}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user.name.split(" ")[0]}</span>
               </div>
             ) : (
               <button onClick={() => router.push("/signin")} style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Sign in</button>
@@ -111,7 +112,7 @@ function TrackingContent() {
       </nav>
 
       {/* HERO */}
-      <div style={{ background: B, padding: isMobile ? "40px 20px" : "64px 40px" }}>
+      <div style={{ background: "transparent", padding: isMobile ? "40px 20px" : "64px 40px" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(252,211,77,0.2)", border: "1px solid rgba(252,211,77,0.4)", padding: "6px 16px", borderRadius: 100, fontSize: 12, fontWeight: 700, color: "#FCD34D", marginBottom: 28, letterSpacing: "0.04em" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FCD34D", display: "inline-block" }} />
