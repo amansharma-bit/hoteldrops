@@ -813,7 +813,7 @@ function SearchResults(){
       setSelectedPlaceId(pid);
       setDestInput(dest);
       setDestination(dest);
-      fetchHotels(dest, ci, co, { adults, children, rooms }, pid);
+      fetchHotels(dest, ci, co, { adults, children, rooms, childAges: [] }, pid);
     } else {
       fetchHotels();
     }
