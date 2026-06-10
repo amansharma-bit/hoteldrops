@@ -45,6 +45,8 @@ interface Booking {
   status: string; last_checked_at: string; nights: number;
   room_type: string; created_at: string; platform?: string; ref_no?: string;
   offers?: { offer_price: number; customer_saving: number; status: string; id: string }[];
+  voucher_url?: string | null;
+  doc_type?: string | null;
 }
 
 type Section = "overview" | "price-monitor" | "my-bookings" | "trips" | "notifications" | "settings";
@@ -468,6 +470,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div style={{ padding: "14px 22px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                      {b.voucher_url && (<a href={b.voucher_url} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 6, background: "#f0fdf4", color: "#16a34a", border: "1.5px solid #bbf7d0", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textDecoration: "none" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>View Voucher</a>)}
                       <button style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>View Details</button>
                       {isDropFound && <button style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Claim Refund</button>}
                     </div>
