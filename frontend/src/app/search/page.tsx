@@ -929,12 +929,12 @@ function SearchResults(){
 
   const handleSearch=()=>{
     if(!user){setShowAuthModal(true);return;}
-    const d=destInput.trim()||destination;setDestination(d);
+    const d=destInput.trim()||destination;
     const currentPlaceId=selectedPlaceId||searchParams.get("placeId")||"";
-    fetchHotels(d,checkIn,checkOut,guests,currentPlaceId);
     const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
     if(currentPlaceId)p.set("placeId",currentPlaceId);
-    router.replace(`/search?${p.toString()}`);
+    // Hard navigation forces full remount so new city loads fresh
+    window.location.href=`/search?${p.toString()}`;
   };
 
   const handleHotelClick=(hotel:Hotel)=>{if(!user){setShowAuthModal(true);return;}window.open(`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}`,'_blank');};
