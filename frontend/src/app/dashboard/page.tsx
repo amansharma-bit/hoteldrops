@@ -166,7 +166,7 @@ export default function Dashboard() {
       <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)" }}>
 
         {/* Nav */}
-        <nav style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", position: "sticky", top: 0, zIndex: 300, background: "transparent" }}>
+        <nav style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 48px", position: "sticky", top: 0, zIndex: 300, background: "transparent" }}>
           <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none" }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 100, padding: "5px 14px" }}>
             <div style={{ width: 7, height: 7, background: "#4ade80", borderRadius: "50%", animation: "pulse 1.5s infinite" }} />
@@ -186,7 +186,7 @@ export default function Dashboard() {
         </nav>
 
         {/* Profile Banner */}
-        <div style={{ padding: isMobile ? "20px 20px 28px" : "28px 40px 36px", position: "relative", overflow: "hidden" }}>
+        <div style={{ padding: isMobile ? "20px 20px 28px" : "28px 48px 36px", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, opacity: 0.06, backgroundImage: "linear-gradient(rgba(255,255,255,0.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.3) 1px,transparent 1px)", backgroundSize: "48px 48px" }} />
           <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" as const }}>
             <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
@@ -222,7 +222,7 @@ export default function Dashboard() {
           </div>
 
           {/* Horizontal Nav Pills */}
-          <div style={{ display: "flex", gap: 6, marginTop: 24, overflowX: "auto" as const, paddingBottom: 2 }}>
+          <div style={{ display: "flex", gap: 6, marginTop: 24, overflowX: "auto" as const, paddingBottom: 2, justifyContent: "flex-start" }}>
             {NAV.map(item => (
               <button key={item.key} onClick={() => setSection(item.key)} className="nav-item"
                 style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 100, border: "1.5px solid", borderColor: section === item.key ? "#fff" : "rgba(255,255,255,0.25)", background: section === item.key ? "#fff" : "rgba(255,255,255,0.1)", color: section === item.key ? NAVY : "#fff", fontSize: 13, fontWeight: section === item.key ? 700 : 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, transition: "all 0.15s" }}>
@@ -230,7 +230,7 @@ export default function Dashboard() {
               </button>
             ))}
             <button onClick={async () => { await supabase.auth.signOut(); router.push("/"); }}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 100, border: "1.5px solid rgba(255,100,100,0.4)", background: "rgba(239,68,68,0.15)", color: "#fca5a5", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, marginLeft: "auto" }}>
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 100, border: "1.5px solid rgba(255,100,100,0.4)", background: "rgba(239,68,68,0.15)", color: "#fca5a5", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const }}>
               Sign Out
             </button>
           </div>
@@ -238,7 +238,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── CONTENT ── */}
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "24px 16px 60px" : "32px 32px 80px" }}>
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: isMobile ? "24px 16px 60px" : "32px 48px 80px" }}>
 
         {isDemo && (
           <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 16px", marginBottom: 20, fontSize: 13, color: "#92400e", display: "flex", alignItems: "center", gap: 8 }}>
@@ -315,9 +315,9 @@ export default function Dashboard() {
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, marginBottom: 4 }}>
                         <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, color: NAVY }}>{b.hotel_name}</div>
                         {isDropFound ? (
-                          <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: "#dcfce7", color: "#16a34a" }}>💰 Price Drop Found!</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: "#dcfce7", color: "#16a34a", display: "inline-flex", alignItems: "center", gap: 5 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />Price Drop Found!</span>
                         ) : (
-                          <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: "#dbeafe", color: B }}>👁 Tracking</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: "#dbeafe", color: B, display: "inline-flex", alignItems: "center", gap: 5 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: B, display: "inline-block", animation: "pulse 1.5s infinite" }} />Tracking</span>
                         )}
                         {b.ota_name && <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, background: "#f1f5f9", color: "#64748b" }}>{b.ota_name}</span>}
                       </div>
@@ -392,7 +392,7 @@ export default function Dashboard() {
                   {/* Footer */}
                   <div style={{ padding: "14px 24px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" as const }}>
                     <div style={{ fontSize: 12, color: "#94a3b8" }}>
-                      {isDropFound ? "🎉 We found a lower price! Rebook now to save." : "👁 rebuq checks this price every 6 hours. We'll WhatsApp you the moment it drops."}
+                      {isDropFound ? "🎉 We found a lower price! Rebook now to save." : "rebuq checks this price every 6 hours. We'll WhatsApp you the moment it drops."}
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                       {b.voucher_url && (
