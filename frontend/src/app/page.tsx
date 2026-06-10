@@ -65,16 +65,16 @@ const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, textTransform:
 const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }
 
 const CARDS = [
-  { img: "/atlantisdubai.jpg", price: "₹22,400", name: "Atlantis The Palm, Dubai", pct: "↓19%", city: "Dubai" },
-  { img: "/Westinmaldives.jpg", price: "₹31,600", name: "The Westin, Maldives", pct: "↓20%", city: "Maldives" },
-  { img: "/lemeridienbali.jpg", price: "₹18,200", name: "Le Meridien, Bali", pct: "↓22%", city: "Bali" },
-  { img: "/hyattregencybangkok.jpg", price: "₹17,400", name: "Hyatt Regency, Bangkok", pct: "↓28%", city: "Bangkok" },
-  { img: "/theroseatenewdelhi.jpg", price: "₹14,800", name: "The Roseate, New Delhi", pct: "↓16%", city: "New Delhi" },
-  { img: "/wgoa.jpg", price: "₹21,000", name: "W Goa", pct: "↓18%", city: "Goa" },
-  { img: "/andazsingapore.jpg", price: "₹19,500", name: "Andaz, Singapore", pct: "↓23%", city: "Singapore" },
-  { img: "/langhamlondon.jpg", price: "₹26,200", name: "The Langham, London", pct: "↓21%", city: "London" },
-  { img: "/fourseasonsmumbai.jpg", price: "₹16,900", name: "Four Seasons, Mumbai", pct: "↓25%", city: "Mumbai" },
-  { img: "/Crowneplazayasidland.jpg", price: "₹48,000", name: "Crowne Plaza, Yas Island", pct: "↓12%", city: "Abu Dhabi" },
+  { img: "/atlantisdubai.jpg", hotel: "Atlantis The Palm", city: "Dubai", pct: "↓19%" },
+  { img: "/Westinmaldives.jpg", hotel: "The Westin", city: "Maldives", pct: "↓20%" },
+  { img: "/lemeridienbali.jpg", hotel: "Le Meridien", city: "Bali", pct: "↓22%" },
+  { img: "/hyattregencybangkok.jpg", hotel: "Hyatt Regency", city: "Bangkok", pct: "↓28%" },
+  { img: "/theroseatenewdelhi.jpg", hotel: "The Roseate", city: "New Delhi", pct: "↓16%" },
+  { img: "/wgoa.jpg", hotel: "W Goa", city: "Goa", pct: "↓18%" },
+  { img: "/andazsingapore.jpg", hotel: "Andaz", city: "Singapore", pct: "↓23%" },
+  { img: "/langhamlondon.jpg", hotel: "The Langham", city: "London", pct: "↓21%" },
+  { img: "/fourseasonsmumbai.jpg", hotel: "Four Seasons", city: "Mumbai", pct: "↓25%" },
+  { img: "/Crowneplazayasidland.jpg", hotel: "Crowne Plaza", city: "Yas Island", pct: "↓12%" },
 ];
 
 const STATS = [
@@ -1021,7 +1021,7 @@ export default function Home() {
                   } catch {
                     window.location.href = `/search-hotels`;
                   }
-                }} style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><img src={c.img} alt={c.name} className="hotel-card-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /><div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.62) 0%, transparent 60%)" }} /><div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}><span style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, display: "block" }}>{c.price}</span><span style={{ fontSize: 12, opacity: 0.85 }}>{c.name}</span></div><div style={{ position: "absolute", top: 12, right: 12, background: "#16a34a", color: "#fff", fontSize: 13, fontWeight: 700, padding: "4px 10px", borderRadius: 8 }}>{c.pct}</div></div>))}
+                }} style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><img src={c.img} alt={c.name} className="hotel-card-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /><div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.62) 0%, transparent 60%)" }} /><div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}><span style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 16 : 18, fontWeight: 800, display: "block", marginBottom: 2 }}>{c.hotel}</span><span style={{ fontSize: 12, opacity: 0.8, display: "flex", alignItems: "center", gap: 4 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><circle cx="12" cy="11" r="3"/></svg>{c.city}</span></div><div style={{ position: "absolute", top: 12, right: 12, background: "#16a34a", color: "#fff", fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 8 }}>{c.pct} members saved</div></div>))}
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}><button onClick={() => scrollCarousel(-1)} disabled={carouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos === 0 ? 0.4 : 1 }}>‹</button><div style={{ display: "flex", gap: 6 }}>{Array.from({ length: CARDS.length - VISIBLE + 1 }, (_, i) => (<div key={i} onClick={() => setCarouselPos(i)} style={{ width: i === carouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === carouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />))}</div><button onClick={() => scrollCarousel(1)} disabled={carouselPos >= MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos >= MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos >= MAX_POS ? 0.4 : 1 }}>›</button></div>
