@@ -1,5 +1,48 @@
 const express = require('express');
 const router = express.Router();
+
+// ── Resolve liteAPI hotelId by hotel name + city ──────────────────────────────
+async function resolveHotelId(hotelName, hotelCity) {
+  if (!hotelName || !hotelCity) return null;
+  try {
+    const CITY_COUNTRY = {
+      'dubai':'AE','abu dhabi':'AE','sharjah':'AE','ajman':'AE',
+      'mumbai':'IN','delhi':'IN','new delhi':'IN','goa':'IN','bangalore':'IN',
+      'bengaluru':'IN','jaipur':'IN','hyderabad':'IN','chennai':'IN','kolkata':'IN',
+      'agra':'IN','udaipur':'IN','kochi':'IN','pune':'IN','amritsar':'IN',
+      'singapore':'SG','bangkok':'TH','phuket':'TH','bali':'ID','jakarta':'ID',
+      'kuala lumpur':'MY','london':'GB','paris':'FR','rome':'IT','barcelona':'ES',
+      'amsterdam':'NL','istanbul':'TR','tokyo':'JP','sydney':'AU',
+      'doha':'QA','muscat':'OM','riyadh':'SA','jeddah':'SA',
+      'maldives':'MV','male':'MV','hong kong':'HK','seoul':'KR',
+      'new york':'US','los angeles':'US','miami':'US','munich':'DE',
+      'berlin':'DE','vienna':'AT','zurich':'CH','prague':'CZ','budapest':'HU',
+      'lisbon':'PT','athens':'GR','yerevan':'AM','dubai creek':'AE',
+    };
+    const cityLower = hotelCity.toLowerCase().trim();
+    let countryCode = 'IN';
+    for (const [city, cc] of Object.entries(CITY_COUNTRY)) {
+      if (cityLower.includes(city)) { countryCode = cc; break; }
+    }
+    const resp = await axios.get(
+      `https://api.liteapi.travel/v3.0/data/hotels?countryCode=${countryCode}&cityName=${encodeURIComponent(hotelCity)}&hotelName=${encodeURIComponent(hotelName)}&limit=5`,
+      { headers: { 'X-API-Key': process.env.LITEAPI_KEY || 'sand_9a1ac97a-74b9-4917-8777-900e559a9e43', 'Accept': 'application/json' }, timeout: 6000, validateStatus: () => true }
+    );
+    const hotels = resp.data?.data || [];
+    if (!hotels.length) return null;
+    const nameLower = hotelName.toLowerCase();
+    const best = hotels.find(h => {
+      const hn = (h.name || '').toLowerCase();
+      const words = nameLower.split(' ').filter(w => w.length > 3);
+      return words.some(w => hn.includes(w));
+    }) || hotels[0];
+    console.log(`✓ Resolved "${hotelName}" → ${best.id} (${best.name})`);
+    return best.id;
+  } catch(e) {
+    console.warn('resolveHotelId failed:', e.message);
+    return null;
+  }
+}
 const multer = require('multer');
 const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
@@ -335,6 +378,9 @@ router.post('/submit', async (req, res) => {
     const rooms = num_rooms || 1;
     const price_per_night = total_price_paid ? Math.round(total_price_paid / nights / rooms) : null;
 
+    // Resolve liteAPI hotelId — saves exact match, avoids name mismatch in price tracker
+    const liteapi_hotel_id = await resolveHotelId(hotel_name, hotel_city);
+
     const { data: booking, error } = await supabase.from('bookings').insert({
       hotel_name, hotel_city,
       hotel_address: hotel_address || null,
@@ -359,7 +405,8 @@ router.post('/submit', async (req, res) => {
       payment_type: payment_type || 'pay_now',
       amount_paid_upfront: amount_paid_upfront || 0,
       phone, email,
-      voucher_url: voucher_url || null,   // ← NEW: save the file URL
+      liteapi_hotel_id: liteapi_hotel_id || null,
+      voucher_url: voucher_url || null,
       doc_type: doc_type || 'confirmed_voucher',  // ← NEW: save document type
       status: 'active',
       created_at: new Date().toISOString(),
