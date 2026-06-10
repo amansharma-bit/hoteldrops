@@ -192,6 +192,7 @@ function TrackingContent() {
           </div>
         </div>
       </div>
+      </div>{/* end gradient wrapper */}
 
       {/* BOOKING SUMMARY + WHAT'S NEXT */}
       <div style={{ background: "#f8fafc", padding: isMobile ? "32px 20px" : "48px 40px" }}>
