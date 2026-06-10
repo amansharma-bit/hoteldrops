@@ -756,6 +756,38 @@ router.get('/search', async (req, res) => {
   }
 })
 
+
+// ── GET /api/hotels/find-hotels ─────────────────────────────────────────────
+router.get('/find-hotels', async (req, res) => {
+  const hotels = [
+    { name: 'Atlantis', country: 'AE', city: 'Dubai' },
+    { name: 'Westin', country: 'MV', city: 'Male' },
+    { name: 'Le Meridien', country: 'ID', city: 'Bali' },
+    { name: 'Hyatt Regency', country: 'TH', city: 'Bangkok' },
+    { name: 'Roseate', country: 'IN', city: 'New Delhi' },
+    { name: 'W Goa', country: 'IN', city: 'Goa' },
+    { name: 'Andaz', country: 'SG', city: 'Singapore' },
+    { name: 'Langham', country: 'GB', city: 'London' },
+    { name: 'Four Seasons', country: 'IN', city: 'Mumbai' },
+    { name: 'Crowne Plaza', country: 'AE', city: 'Abu Dhabi' },
+  ];
+  const results = [];
+  for (const h of hotels) {
+    try {
+      const resp = await axios.get(
+        `${BASE_URL}/data/hotels?countryCode=${h.country}&cityName=${encodeURIComponent(h.city)}&hotelName=${encodeURIComponent(h.name)}&limit=3`,
+        { headers: getHeaders(), timeout: 8000, validateStatus: () => true }
+      );
+      const matches = resp.data?.data || [];
+      results.push({ search: h.name, city: h.city, matches: matches.slice(0,3).map(m => ({ id: m.id, name: m.name, city: m.city })) });
+      await sleep(300);
+    } catch(e) {
+      results.push({ search: h.name, city: h.city, error: e.message });
+    }
+  }
+  return res.json({ results });
+});
+
 // ── GET /api/hotels/:code ─────────────────────────────────────────────────────
 router.get('/:code', async (req, res) => {
   try {
@@ -906,37 +938,5 @@ router.get('/:code', async (req, res) => {
     return res.status(500).json({ error: err.message })
   }
 })
-
-
-// ── GET /api/hotels/find-hotels ─────────────────────────────────────────────
-router.get('/find-hotels', async (req, res) => {
-  const hotels = [
-    { name: 'Atlantis', country: 'AE', city: 'Dubai' },
-    { name: 'Westin', country: 'MV', city: 'Male' },
-    { name: 'Le Meridien', country: 'ID', city: 'Bali' },
-    { name: 'Hyatt Regency', country: 'TH', city: 'Bangkok' },
-    { name: 'Roseate', country: 'IN', city: 'New Delhi' },
-    { name: 'W Goa', country: 'IN', city: 'Goa' },
-    { name: 'Andaz', country: 'SG', city: 'Singapore' },
-    { name: 'Langham', country: 'GB', city: 'London' },
-    { name: 'Four Seasons', country: 'IN', city: 'Mumbai' },
-    { name: 'Crowne Plaza', country: 'AE', city: 'Abu Dhabi' },
-  ];
-  const results = [];
-  for (const h of hotels) {
-    try {
-      const resp = await axios.get(
-        `${BASE_URL}/data/hotels?countryCode=${h.country}&cityName=${encodeURIComponent(h.city)}&hotelName=${encodeURIComponent(h.name)}&limit=3`,
-        { headers: getHeaders(), timeout: 8000, validateStatus: () => true }
-      );
-      const matches = resp.data?.data || [];
-      results.push({ search: h.name, city: h.city, matches: matches.slice(0,3).map(m => ({ id: m.id, name: m.name, city: m.city })) });
-      await sleep(300);
-    } catch(e) {
-      results.push({ search: h.name, city: h.city, error: e.message });
-    }
-  }
-  return res.json({ results });
-});
 
 module.exports = router
