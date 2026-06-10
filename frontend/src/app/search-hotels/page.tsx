@@ -968,3 +968,10 @@ export default function SearchHotelsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}
