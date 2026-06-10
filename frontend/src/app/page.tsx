@@ -65,16 +65,16 @@ const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, textTransform:
 const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }
 
 const CARDS = [
-  { img: "/atlantisdubai.jpg", price: "₹22,400", name: "Atlantis The Palm, Dubai", pct: "↓19%", dest: "Dubai", placeId: "ChIJRcbZaklDXz4RRlNFzTjIBrw" },
-  { img: "/Westinmaldives.jpg", price: "₹31,600", name: "The Westin, Maldives", pct: "↓20%", dest: "Maldives", placeId: "ChIJo1WKZL-AxTkRIZE_gWVbHhI" },
-  { img: "/lemeridienbali.jpg", price: "₹18,200", name: "Le Meridien, Bali", pct: "↓22%", dest: "Bali", placeId: "ChIJoQ8Q6NB1HTURKbCGSA2IXBQ" },
-  { img: "/hyattregencybangkok.jpg", price: "₹17,400", name: "Hyatt Regency, Bangkok", pct: "↓28%", dest: "Bangkok", placeId: "ChIJ82ENKDJgHTERIEjiXbIAAQE" },
-  { img: "/theroseatenewdelhi.jpg", price: "₹14,800", name: "The Roseate, New Delhi", pct: "↓16%", dest: "New Delhi", placeId: "ChIJLbZ-NFv9DDkRzk0gTkm3wlI" },
-  { img: "/wgoa.jpg", price: "₹21,000", name: "W Goa", pct: "↓18%", dest: "Goa", placeId: "ChIJH7LEFpqFvzsRf4mEr62lFRQ" },
-  { img: "/andazsingapore.jpg", price: "₹19,500", name: "Andaz, Singapore", pct: "↓23%", dest: "Singapore", placeId: "ChIJdZODzGQX2jERqFKjFmBRoEA" },
-  { img: "/langhamlondon.jpg", price: "₹26,200", name: "The Langham, London", pct: "↓21%", dest: "London", placeId: "ChIJdd4hrwug2EcRmSrV3Vo6llI" },
-  { img: "/fourseasonsmumbai.jpg", price: "₹16,900", name: "Four Seasons, Mumbai", pct: "↓25%", dest: "Mumbai", placeId: "ChIJwe1EZjDG5zsRmKxMaa4f36o" },
-  { img: "/Crowneplazayasidland.jpg", price: "₹48,000", name: "Crowne Plaza, Yas Island", pct: "↓12%", dest: "Abu Dhabi", placeId: "ChIJi5RHN7ZrXj4RLgFiiLuMeCA" },
+  { img: "/atlantisdubai.jpg", price: "₹22,400", name: "Atlantis The Palm, Dubai", pct: "↓19%", city: "Dubai" },
+  { img: "/Westinmaldives.jpg", price: "₹31,600", name: "The Westin, Maldives", pct: "↓20%", city: "Maldives" },
+  { img: "/lemeridienbali.jpg", price: "₹18,200", name: "Le Meridien, Bali", pct: "↓22%", city: "Bali" },
+  { img: "/hyattregencybangkok.jpg", price: "₹17,400", name: "Hyatt Regency, Bangkok", pct: "↓28%", city: "Bangkok" },
+  { img: "/theroseatenewdelhi.jpg", price: "₹14,800", name: "The Roseate, New Delhi", pct: "↓16%", city: "New Delhi" },
+  { img: "/wgoa.jpg", price: "₹21,000", name: "W Goa", pct: "↓18%", city: "Goa" },
+  { img: "/andazsingapore.jpg", price: "₹19,500", name: "Andaz, Singapore", pct: "↓23%", city: "Singapore" },
+  { img: "/langhamlondon.jpg", price: "₹26,200", name: "The Langham, London", pct: "↓21%", city: "London" },
+  { img: "/fourseasonsmumbai.jpg", price: "₹16,900", name: "Four Seasons, Mumbai", pct: "↓25%", city: "Mumbai" },
+  { img: "/Crowneplazayasidland.jpg", price: "₹48,000", name: "Crowne Plaza, Yas Island", pct: "↓12%", city: "Abu Dhabi" },
 ];
 
 const STATS = [
@@ -1012,16 +1012,14 @@ export default function Home() {
                   const ci = today.toISOString().split('T')[0];
                   const co = new Date(today.getTime() + 2 * 86400000).toISOString().split('T')[0];
                   try {
-                    const res = await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/suggest?q=${encodeURIComponent(c.name.split(',')[0])}`);
-                    const data = await res.json();
-                    const hotel = data.hotels?.[0];
-                    if (hotel?.hotelId) {
-                      window.location.href = `/hotel/${hotel.hotelId}?checkIn=${ci}&checkOut=${co}&adults=2&rooms=1&children=0`;
-                    } else {
-                      window.location.href = `/search?destination=${encodeURIComponent(c.dest)}&placeId=${encodeURIComponent(c.placeId)}&checkIn=${ci}&checkOut=${co}&adults=2&rooms=1&children=0`;
-                    }
+                    const res = await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/suggest?q=${encodeURIComponent(c.city)}`);
+                    const d = await res.json();
+                    const city = d.cities?.[0];
+                    const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: "2", rooms: "1", children: "0", destination: c.city });
+                    if (city?.placeId) params.set("placeId", city.placeId);
+                    window.location.href = `/search?${params.toString()}`;
                   } catch {
-                    window.location.href = `/search?destination=${encodeURIComponent(c.dest)}&placeId=${encodeURIComponent(c.placeId)}&checkIn=${ci}&checkOut=${co}&adults=2&rooms=1&children=0`;
+                    window.location.href = `/search-hotels`;
                   }
                 }} style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><img src={c.img} alt={c.name} className="hotel-card-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /><div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.62) 0%, transparent 60%)" }} /><div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}><span style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, display: "block" }}>{c.price}</span><span style={{ fontSize: 12, opacity: 0.85 }}>{c.name}</span></div><div style={{ position: "absolute", top: 12, right: 12, background: "#16a34a", color: "#fff", fontSize: 13, fontWeight: 700, padding: "4px 10px", borderRadius: 8 }}>{c.pct}</div></div>))}
           </div>
