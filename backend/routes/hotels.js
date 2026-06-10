@@ -757,17 +757,6 @@ router.get('/search', async (req, res) => {
 })
 
 
-// ── GET /api/hotels/find-hotels ─────────────────────────────────────────────
-router.get('/find-hotels', async (req, res) => {
-  const queries = ['Atlantis', 'Westin', 'Meridien', 'Hyatt', 'Roseate', 'W Goa', 'Andaz', 'Langham', 'Four Seasons', 'Crowne Plaza'];
-  const results = {};
-  for (const q of queries) {
-    const matches = HOTEL_CACHE.filter(h => h.name.toLowerCase().includes(q.toLowerCase())).slice(0, 3);
-    results[q] = matches.map(h => ({ id: h.hotelId, name: h.name, city: h.city }));
-  }
-  return res.json(results);
-});
-
 // ── GET /api/hotels/:code ─────────────────────────────────────────────────────
 router.get('/:code', async (req, res) => {
   try {
