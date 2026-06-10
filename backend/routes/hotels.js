@@ -757,6 +757,24 @@ router.get('/search', async (req, res) => {
 })
 
 
+// ── GET /api/hotels/resolve-hotel ────────────────────────────────────────────
+router.get('/resolve-hotel', async (req, res) => {
+  const { name, city, country } = req.query;
+  if (!name) return res.status(400).json({ error: 'name required' });
+  try {
+    const cc = country || 'AE';
+    const cn = city || '';
+    const resp = await axios.get(
+      `${BASE_URL}/data/hotels?countryCode=${cc}&cityName=${encodeURIComponent(cn)}&hotelName=${encodeURIComponent(name)}&limit=5`,
+      { headers: getHeaders(), timeout: 8000, validateStatus: () => true }
+    );
+    const hotels = resp.data?.data || [];
+    return res.json({ hotels: hotels.map(h => ({ id: h.id, name: h.name, city: h.city, address: h.address })) });
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 // ── GET /api/hotels/:code ─────────────────────────────────────────────────────
 router.get('/:code', async (req, res) => {
   try {
