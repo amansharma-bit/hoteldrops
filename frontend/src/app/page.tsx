@@ -65,15 +65,15 @@ const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, textTransform:
 const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }
 
 const CARDS = [
-  { img: "/dubai.jpg", city: "Dubai", label: "Dubai", pct: "↓19%" },
-  { img: "/bali.jpg", city: "Bali", label: "Bali", pct: "↓22%" },
-  { img: "/bangkok.jpg", city: "Bangkok", label: "Bangkok", pct: "↓28%" },
-  { img: "/singapore.jpg", city: "Singapore", label: "Singapore", pct: "↓23%" },
-  { img: "/goa.jpg", city: "Goa", label: "Goa", pct: "↓18%" },
-  { img: "/mumbai.jpg", city: "Mumbai", label: "Mumbai", pct: "↓25%" },
-  { img: "/newdelhi.jpg", city: "New Delhi", label: "New Delhi", pct: "↓16%" },
+  { img: "/atlantisdubai.jpg", city: "Dubai", label: "Dubai", pct: "↓19%" },
+  { img: "/Westinmaldives.jpg", city: "Maldives", label: "Maldives", pct: "↓20%" },
+  { img: "/lemeridienbali.jpg", city: "Bali", label: "Bali", pct: "↓22%" },
+  { img: "/hyattregencybangkok.jpg", city: "Bangkok", label: "Bangkok", pct: "↓28%" },
+  { img: "/theroseatenewdelhi.jpg", city: "New Delhi", label: "New Delhi", pct: "↓16%" },
+  { img: "/wgoa.jpg", city: "Goa", label: "Goa", pct: "↓18%" },
+  { img: "/andazsingapore.jpg", city: "Singapore", label: "Singapore", pct: "↓23%" },
   { img: "/langhamlondon.jpg", city: "London", label: "London", pct: "↓21%" },
-  { img: "/hyattregencybangkok.jpg", city: "Phuket", label: "Phuket", pct: "↓20%" },
+  { img: "/fourseasonsmumbai.jpg", city: "Mumbai", label: "Mumbai", pct: "↓25%" },
   { img: "/Crowneplazayasidland.jpg", city: "Abu Dhabi", label: "Abu Dhabi", pct: "↓12%" },
 ];
 
