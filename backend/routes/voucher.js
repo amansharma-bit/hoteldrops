@@ -14,7 +14,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const EXTRACTION_PROMPT = [
+function buildExtractionPrompt(rates) {
+  const r = rates || { AED:'23', USD:'83', EUR:'90', GBP:'106', SGD:'62', THB:'2.3', OMR:'216', QAR:'23', SAR:'22' };
+  return [
   'You are an expert hotel booking data extractor for rebuq.com, an Indian hotel price tracking service.',
   'You will receive images that may be: screenshots, camera photos of laptop/desktop screens, phone screen photos, PDFs, or email confirmations.',
   'Camera photos may have glare, reflections, slight blur, or angle distortion — extract whatever you can read. Do NOT return poor_quality unless the image is completely black, white, or unreadable.',
@@ -75,7 +77,7 @@ const EXTRACTION_PROMPT = [
   '- For search results: extract price_per_night_incl_tax per hotel (apply OTA tax rules above)',
   '- For GRN room listings: prices shown are TOTAL for entire stay — divide by num_nights for per-night rate',
   '- For Booking.com room tables: price shown is for X nights total, taxes shown separately — ADD them',
-  '- Currency conversion to INR: Use these rates — AED×23, USD×83, EUR×90, GBP×106, SGD×62, THB×2.3, OMR×216, QAR×23, SAR×22',
+  `- Currency conversion to INR: Use TODAY\'S LIVE RATES — AED×${r.AED}, USD×${r.USD}, EUR×${r.EUR}, GBP×${r.GBP}, SGD×${r.SGD}, THB×${r.THB}, OMR×${r.OMR}, QAR×${r.QAR}, SAR×${r.SAR}`,
   '- IMPORTANT: If price is in AED and booking is from Booking.com/Agoda/Expedia accessed from UAE, ALWAYS convert to INR using AED×23',
   '- Always set currency_original to the original currency even after conversion',
   '- Set currency_original to original currency code',
@@ -132,6 +134,30 @@ const EXTRACTION_PROMPT = [
   '- Agoda: never set a price — always null with agoda_pretax_warning:true.',
   '- Ixigo/Goibibo/Yatra: ALWAYS add base + taxes before multiplying by nights and rooms.',
 ].join('\n');
+}
+
+async function getLiveRates() {
+  try {
+    const res = await axios.get('https://open.er-api.com/v6/latest/INR', { timeout: 3000 });
+    const r = res.data?.rates;
+    if (!r) return null;
+    // rates are X per 1 INR, so INR per X = 1/rate
+    return {
+      AED: r.AED ? (1/r.AED).toFixed(2) : '23',
+      USD: r.USD ? (1/r.USD).toFixed(2) : '83',
+      EUR: r.EUR ? (1/r.EUR).toFixed(2) : '90',
+      GBP: r.GBP ? (1/r.GBP).toFixed(2) : '106',
+      SGD: r.SGD ? (1/r.SGD).toFixed(2) : '62',
+      THB: r.THB ? (1/r.THB).toFixed(2) : '2.3',
+      OMR: r.OMR ? (1/r.OMR).toFixed(2) : '216',
+      QAR: r.QAR ? (1/r.QAR).toFixed(2) : '23',
+      SAR: r.SAR ? (1/r.SAR).toFixed(2) : '22',
+    };
+  } catch(e) {
+    console.warn('FX rate fetch failed, using defaults:', e.message);
+    return null;
+  }
+}
 
 async function callClaude(fileBuffer, mimeType) {
   const isPDF = mimeType === 'application/pdf';
@@ -139,13 +165,16 @@ async function callClaude(fileBuffer, mimeType) {
     ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: fileBuffer.toString('base64') } }
     : { type: 'image', source: { type: 'base64', media_type: mimeType, data: fileBuffer.toString('base64') } };
 
+  const liveRates = await getLiveRates();
+  const prompt = buildExtractionPrompt(liveRates);
+
   try {
     const response = await axios.post(
       'https://api.anthropic.com/v1/messages',
       {
         model: 'claude-opus-4-5-20251101',
         max_tokens: 4096,
-        messages: [{ role: 'user', content: [fileContent, { type: 'text', text: EXTRACTION_PROMPT }] }],
+        messages: [{ role: 'user', content: [fileContent, { type: 'text', text: prompt }] }],
       },
       {
         headers: {
