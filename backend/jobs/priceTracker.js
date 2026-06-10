@@ -2,8 +2,54 @@
 // Logic: price only — find lowest rate at hotel for same dates, trigger if cheaper
 
 const { createClient } = require('@supabase/supabase-js')
-const { findHotelCode, getDestinationCode, getHotelRooms, sleep } = require('../utils/hotelbeds')
+const axios = require('axios')
 const email = require('../utils/emailService')
+
+const LITEAPI_KEY = process.env.LITEAPI_KEY || 'sand_9a1ac97a-74b9-4917-8777-900e559a9e43'
+const LITEAPI_BASE = 'https://api.liteapi.travel/v3.0'
+const liteHeaders = { 'X-API-Key': LITEAPI_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' }
+
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+// Resolve hotelId by name+city if not already stored
+const CITY_COUNTRY = {
+  'dubai':'AE','abu dhabi':'AE','sharjah':'AE','mumbai':'IN','delhi':'IN',
+  'new delhi':'IN','goa':'IN','bangalore':'IN','bengaluru':'IN','jaipur':'IN',
+  'hyderabad':'IN','chennai':'IN','kolkata':'IN','agra':'IN','udaipur':'IN',
+  'kochi':'IN','pune':'IN','amritsar':'IN','singapore':'SG','bangkok':'TH',
+  'phuket':'TH','bali':'ID','jakarta':'ID','kuala lumpur':'MY','london':'GB',
+  'paris':'FR','rome':'IT','barcelona':'ES','amsterdam':'NL','istanbul':'TR',
+  'tokyo':'JP','sydney':'AU','doha':'QA','muscat':'OM','riyadh':'SA',
+  'jeddah':'SA','maldives':'MV','male':'MV','hong kong':'HK','seoul':'KR',
+  'new york':'US','los angeles':'US','miami':'US','munich':'DE','berlin':'DE',
+  'vienna':'AT','zurich':'CH','prague':'CZ','budapest':'HU','lisbon':'PT',
+  'athens':'GR','yerevan':'AM',
+}
+async function resolveHotelId(hotelName, hotelCity) {
+  try {
+    const cityLower = (hotelCity || '').toLowerCase()
+    let countryCode = 'IN'
+    for (const [city, cc] of Object.entries(CITY_COUNTRY)) {
+      if (cityLower.includes(city)) { countryCode = cc; break; }
+    }
+    const resp = await axios.get(
+      `${LITEAPI_BASE}/data/hotels?countryCode=${countryCode}&cityName=${encodeURIComponent(hotelCity)}&hotelName=${encodeURIComponent(hotelName)}&limit=5`,
+      { headers: liteHeaders, timeout: 8000, validateStatus: () => true }
+    )
+    const hotels = resp.data?.data || []
+    if (!hotels.length) return null
+    const nameLower = hotelName.toLowerCase()
+    const best = hotels.find(h => {
+      const hn = (h.name || '').toLowerCase()
+      return nameLower.split(' ').filter(w => w.length > 3).some(w => hn.includes(w))
+    }) || hotels[0]
+    console.log(`  ✅ Resolved "${hotelName}" → ${best.id} (${best.name})`)
+    return best.id
+  } catch(e) {
+    console.warn('  ⚠️  resolveHotelId failed:', e.message)
+    return null
+  }
+}
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -90,43 +136,47 @@ async function processBooking(booking) {
     return {}
   }
 
-  // ── Map hotel to Hotelbeds code if not done ───────────────────────────────
-  if (!booking.hotelbeds_hotel_code) {
-    const destCode = getDestinationCode(booking.hotel_city)
-    if (!destCode) {
-      console.log(`  ⚠️  No dest code for "${booking.hotel_city}"`)
-      await updateNextCheck(booking.id, 12)
-      return {}
-    }
-    console.log(`  🗺️  Mapping → ${destCode}`)
-    const hotelCode = await findHotelCode(booking.hotel_name, destCode)
-    if (hotelCode) {
-      await supabase.from('bookings').update({ hotelbeds_hotel_code: hotelCode, status: 'tracking' }).eq('id', booking.id)
-      booking.hotelbeds_hotel_code = hotelCode
+  // ── Resolve liteAPI hotelId if not stored ────────────────────────────────
+  let hotelId = booking.liteapi_hotel_id
+  if (!hotelId) {
+    console.log(`  🔍 Resolving hotelId for "${booking.hotel_name}"...`)
+    hotelId = await resolveHotelId(booking.hotel_name, booking.hotel_city)
+    if (hotelId) {
+      await supabase.from('bookings').update({ liteapi_hotel_id: hotelId, status: 'tracking' }).eq('id', booking.id)
+      booking.liteapi_hotel_id = hotelId
       didMap = true
-      console.log(`  ✅ Mapped: ${hotelCode}`)
     } else {
-      console.log(`  ⚠️  No match — retry in 12hrs`)
+      console.log(`  ⚠️  Could not resolve hotelId — retry in 12hrs`)
       await updateNextCheck(booking.id, 12)
       return {}
     }
   }
 
-  // ── Fetch all rooms ───────────────────────────────────────────────────────
-  console.log(`  💰 Checking price (${booking.hotelbeds_hotel_code})...`)
+  // ── Fetch live rates from liteAPI ─────────────────────────────────────────
+  console.log(`  💰 Checking price (${hotelId})...`)
 
   let rooms = []
   try {
-    rooms = await getHotelRooms({
-      hotelCode: booking.hotelbeds_hotel_code,
-      checkIn:   booking.check_in,
-      checkOut:  booking.check_out,
-      adults:    booking.num_adults   || 2,
-      children:  booking.num_children || 0,
-      rooms:     booking.num_rooms    || 1,
-    })
+    const ratesResp = await axios.post(`${LITEAPI_BASE}/hotels/rates`, {
+      hotelIds: [hotelId],
+      checkin:  booking.check_in,
+      checkout: booking.check_out,
+      adults:   booking.num_adults   || 2,
+      children: booking.num_children || 0,
+      rooms:    booking.num_rooms    || 1,
+      currency: 'INR',
+    }, { headers: liteHeaders, timeout: 15000, validateStatus: () => true })
+
+    if (ratesResp.status !== 200) {
+      console.log(`  ❌ Rates API error: ${ratesResp.status}`)
+      await updateNextCheck(booking.id, 1)
+      return { mapped: didMap }
+    }
+    // liteAPI returns data.data[0].roomTypes
+    const hotelData = ratesResp.data?.data?.[0]
+    rooms = hotelData?.roomTypes || []
   } catch (e) {
-    console.error('  ❌ Rooms fetch failed:', e.message)
+    console.error('  ❌ Rates fetch failed:', e.message)
     await updateNextCheck(booking.id, 1)
     return { mapped: didMap }
   }
@@ -156,11 +206,11 @@ async function processBooking(booking) {
 
   for (const room of rooms) {
     for (const rate of (room.rates || [])) {
-      const priceEUR = parseFloat(rate.net || 0)
-      if (priceEUR <= 0) continue
-      const priceINR = Math.round(priceEUR * EUR_TO_INR)
+      // liteAPI returns retailRate in INR when currency=INR
+      const priceINR = parseFloat(rate.retailRate?.total?.[0]?.amount || rate.retailRate?.total || rate.net || 0)
+      if (priceINR <= 0) continue
       if (priceINR < lowestPrice) {
-        lowestPrice = priceINR
+        lowestPrice = Math.round(priceINR)
         lowestRoom  = room
         lowestRate  = rate
       }
