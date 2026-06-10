@@ -97,6 +97,19 @@ const FAQS = [
   { q: "What if I have a non-refundable booking?", a: "rebuq works best with refundable bookings. If your booking is non-refundable, we'll let you know when you upload — and suggest booking a flexible rate next time so you can benefit from price drops." },
 ];
 
+async function uploadVoucherToStorage(file: File): Promise<string | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || 'anonymous';
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `${userId}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('vouchers').upload(path, file, { contentType: file.type, upsert: false });
+    if (error) { console.error('Storage upload error:', error); return null; }
+    const { data } = supabase.storage.from('vouchers').getPublicUrl(path);
+    return data?.publicUrl || null;
+  } catch (e) { console.error('Storage error:', e); return null; }
+}
+
 export default function Home() {
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -131,6 +144,7 @@ export default function Home() {
   const [docType, setDocType] = useState<string>('confirmed_voucher');
   const [selectedHotelIdx, setSelectedHotelIdx] = useState<number | null>(null);
   const [selectedRoomIdx, setSelectedRoomIdx] = useState<number | null>(null);
+  const [voucherUrl, setVoucherUrl]   = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -169,7 +183,7 @@ export default function Home() {
   });
 
   const openModal = () => {
-    setModalOpen(true); setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); setDocType('confirmed_voucher');
+    setModalOpen(true); setUploadStep(1); setFile(null); setFileSource(null); setVoucherUrl(null); setExtracted(null); setDocType('confirmed_voucher');
     setPhone(''); setEmailVal(''); setSubmitError(''); setBlockInfo(null); setWarnings({}); setLoading(false);
     setExtractResult(null); setSelectedHotelIdx(null); setSelectedRoomIdx(null); setEditMode(false); setShowChildAgePopup(false);
   };
@@ -219,6 +233,8 @@ export default function Home() {
     const msgs = ['Reading your voucher…', 'Identifying hotel & dates…', 'Extracting pricing…', 'Checking cancellation policy…', 'Almost done…'];
     let i = 0; setScanMsg(msgs[0]);
     const interval = setInterval(() => { i++; if (i < msgs.length) setScanMsg(msgs[i]); }, 900);
+    const uploadedUrl = await uploadVoucherToStorage(file);
+    setVoucherUrl(uploadedUrl);
     try {
       const formData = new FormData();
       formData.append('voucher', file);
@@ -364,7 +380,7 @@ export default function Home() {
       const res = await fetch('https://hoteldrops-production-7e5a.up.railway.app/api/voucher/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...extracted, phone: phone.startsWith('+') ? phone : `+91${phone}`, email: emailVal }),
+        body: JSON.stringify({ ...extracted, phone: phone.startsWith('+') ? phone : `+91${phone}`, email: emailVal, voucher_url: voucherUrl || null, doc_type: docType }),
       });
       const json = await res.json();
       if (json.blocked && json.reason === 'non_refundable') {
@@ -869,7 +885,8 @@ export default function Home() {
                     {warnings.payAtProperty && (<div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#0369a1' }}><strong>Pay at property</strong> — You have not paid yet so amount shows Rs.0. We will still track the rate.</div>)}
                     {warnings.unknownPolicy && (<div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}><strong>Cancellation policy unclear</strong> — Please select your policy below.</div>)}
                     {warnings.currencyConverted && extracted?.total_price_paid > 0 && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#166534' }}><strong>Currency converted</strong> — Original was in {warnings.originalCurrency}, converted to INR. Please verify.</div>)}
-                    {file && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#166534' }}><strong>AI extracted successfully</strong> — verify and correct anything that looks wrong.</div>)}
+                    {voucherUrl && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><span><strong>✓ Voucher stored</strong> — AI extracted. Verify anything wrong.</span><a href={voucherUrl} target="_blank" rel="noreferrer" style={{ color: '#1447b8', fontWeight: 600, fontSize: 12, marginLeft: 8 }}>View file →</a></div>)}
+                    {!voucherUrl && file && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#166534' }}><strong>AI extracted successfully</strong> — verify and correct anything that looks wrong.</div>)}
 
                     <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Hotel details</div>
