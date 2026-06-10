@@ -188,51 +188,55 @@ export default function Dashboard() {
         {/* Profile Banner */}
         <div style={{ padding: isMobile ? "20px 20px 28px" : "28px 48px 36px", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, opacity: 0.06, backgroundImage: "linear-gradient(rgba(255,255,255,0.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.3) 1px,transparent 1px)", backgroundSize: "48px 48px" }} />
-          <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" as const }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-              <div style={{ position: "relative" }}>
-                <div style={{ width: isMobile ? 56 : 68, height: isMobile ? 56 : 68, borderRadius: 16, background: "rgba(255,255,255,0.18)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 20 : 24, fontWeight: 800, color: "#fff" }}>
+          <div style={{ position: "relative", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24 }}>
+            {/* LEFT: avatar + MY ACCOUNT + name + email + badges + nav pills stacked */}
+            <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flex: 1 }}>
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <div style={{ width: 64, height: 64, borderRadius: 16, background: "rgba(255,255,255,0.18)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: "#fff" }}>
                   {user?.initials || "M"}
                 </div>
-                <button onClick={() => setSection("settings")} style={{ position: "absolute", bottom: -4, right: -4, width: 22, height: 22, borderRadius: "50%", background: GOLD, border: "2px solid #fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>✏️</button>
+                <button onClick={() => setSection("settings")} style={{ position: "absolute", bottom: -4, right: -4, width: 20, height: 20, borderRadius: "50%", background: GOLD, border: "2px solid rgba(255,255,255,0.4)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
               </div>
-              <div>
-                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 18 : 24, fontWeight: 800, color: "#fff", marginBottom: 4 }}>{user?.name || "Member"}</div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 8 }}>{user?.email}</div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <span style={{ background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, border: "1px solid rgba(255,255,255,0.25)" }}>✅ Verified Member</span>
-                  <span style={{ background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, border: "1px solid rgba(255,255,255,0.25)" }}>⭐ Gold Saver</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.12em", textTransform: "uppercase" as const, marginBottom: 3 }}>MY ACCOUNT</div>
+                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 800, color: "#fff", marginBottom: 2 }}>{user?.name || "Member"}</div>
+                <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.65)", marginBottom: 10 }}>{user?.email}</div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+                  <span style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, border: "1px solid rgba(255,255,255,0.2)" }}>Verified Member</span>
+                  <span style={{ background: "rgba(252,211,77,0.15)", color: "#FCD34D", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, border: "1px solid rgba(252,211,77,0.3)" }}>Gold Saver</span>
+                </div>
+                {/* Nav pills — LEFT aligned under name */}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                  {NAV.map(item => (
+                    <button key={item.key} onClick={() => setSection(item.key)} className="nav-item"
+                      style={{ padding: "7px 16px", borderRadius: 100, border: "1.5px solid", borderColor: section === item.key ? "#fff" : "rgba(255,255,255,0.2)", background: section === item.key ? "#fff" : "rgba(255,255,255,0.08)", color: section === item.key ? NAVY : "rgba(255,255,255,0.85)", fontSize: 12.5, fontWeight: section === item.key ? 700 : 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, transition: "all 0.15s" }}>
+                      {item.label}
+                    </button>
+                  ))}
+                  <button onClick={async () => { await supabase.auth.signOut(); router.push("/"); }}
+                    style={{ padding: "7px 16px", borderRadius: 100, border: "1.5px solid rgba(255,100,100,0.35)", background: "rgba(239,68,68,0.12)", color: "#fca5a5", fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const }}>
+                    Sign Out
+                  </button>
                 </div>
               </div>
             </div>
+            {/* RIGHT: stats */}
             {!isMobile && (
-              <div style={{ display: "flex", gap: 32 }}>
+              <div style={{ display: "flex", gap: 36, flexShrink: 0, paddingTop: 8 }}>
                 {[
-                  { label: "MONITORED", val: watchBookings.length },
-                  { label: "DROPS FOUND", val: dropsFound },
+                  { label: "MONITORED", val: String(watchBookings.length) },
+                  { label: "DROPS FOUND", val: String(dropsFound) },
                   { label: "TOTAL SAVED", val: formatINR(totalSaved || 31938) },
                 ].map((s, i) => (
                   <div key={i} style={{ textAlign: "center" as const }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.55)", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 4 }}>{s.label}</div>
-                    <div style={{ fontFamily: "'Sora',sans-serif", fontSize: i === 2 ? 28 : 32, fontWeight: 800, color: i === 2 ? GOLD : "#fff" }}>{s.val}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 6 }}>{s.label}</div>
+                    <div style={{ fontFamily: "'Sora',sans-serif", fontSize: i === 2 ? 26 : 30, fontWeight: 800, color: i === 2 ? GOLD : "#fff" }}>{s.val}</div>
                   </div>
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Horizontal Nav Pills */}
-          <div style={{ display: "flex", gap: 6, marginTop: 24, overflowX: "auto" as const, paddingBottom: 2, justifyContent: "flex-start" }}>
-            {NAV.map(item => (
-              <button key={item.key} onClick={() => setSection(item.key)} className="nav-item"
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 100, border: "1.5px solid", borderColor: section === item.key ? "#fff" : "rgba(255,255,255,0.25)", background: section === item.key ? "#fff" : "rgba(255,255,255,0.1)", color: section === item.key ? NAVY : "#fff", fontSize: 13, fontWeight: section === item.key ? 700 : 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, transition: "all 0.15s" }}>
-                <span>{item.emoji}</span> {item.label}
-              </button>
-            ))}
-            <button onClick={async () => { await supabase.auth.signOut(); router.push("/"); }}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 100, border: "1.5px solid rgba(255,100,100,0.4)", background: "rgba(239,68,68,0.15)", color: "#fca5a5", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const }}>
-              Sign Out
-            </button>
           </div>
         </div>
       </div>
