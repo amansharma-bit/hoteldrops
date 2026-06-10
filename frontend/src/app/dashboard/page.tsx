@@ -66,10 +66,10 @@ const DEMO_BOOKINGS = [
 ];
 
 const DEMO_ACTIVITY = [
-  { icon: "📊", text: "Price tracker activated for Manand Hotel, Yerevan", time: "2 hours ago", color: B },
-  { icon: "💰", text: "Price drop detected — ₹2,300 saved on The Leela Palace", time: "1 day ago", color: "#16a34a" },
-  { icon: "🏨", text: "Booking confirmed — Radisson Blu, Bengaluru", time: "3 days ago", color: GOLD },
-  { icon: "✅", text: "Stay completed — Taj Mahal Palace, Mumbai", time: "1 month ago", color: "#64748b" },
+  { icon: "monitor", text: "Price tracker activated for Manand Hotel, Yerevan", time: "2 hours ago", color: B },
+  { icon: "drop", text: "Price drop detected — ₹2,300 saved on The Leela Palace", time: "1 day ago", color: "#16a34a" },
+  { icon: "hotel", text: "Booking confirmed — Radisson Blu, Bengaluru", time: "3 days ago", color: GOLD },
+  { icon: "check", text: "Stay completed — Taj Mahal Palace, Mumbai", time: "1 month ago", color: "#64748b" },
 ];
 
 type Section = "overview" | "price-monitor" | "my-bookings" | "trips" | "notifications" | "settings";
@@ -139,12 +139,12 @@ export default function Dashboard() {
   const inp: React.CSSProperties = { width: "100%", border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "11px 14px", fontSize: 14, fontFamily: "inherit", color: NAVY, outline: "none", background: "#fff" };
 
   const NAV = [
-    { key: "overview" as Section,      label: "Overview",      emoji: "🏠" },
-    { key: "price-monitor" as Section, label: "Price Monitor", emoji: "📊" },
-    { key: "my-bookings" as Section,   label: "My Bookings",   emoji: "🏨" },
-    { key: "trips" as Section,         label: "Trips",         emoji: "✈️" },
-    { key: "notifications" as Section, label: "Notifications", emoji: "🔔" },
-    { key: "settings" as Section,      label: "Settings",      emoji: "⚙️" },
+    { key: "overview" as Section,      label: "Overview",      emoji: "·" },
+    { key: "price-monitor" as Section, label: "Price Monitor" },
+    { key: "my-bookings" as Section,   label: "My Bookings" },
+    { key: "trips" as Section,         label: "Trips" },
+    { key: "notifications" as Section, label: "Notifications" },
+    { key: "settings" as Section,      label: "Settings" },
   ];
 
   const filteredBookings = DEMO_BOOKINGS.filter(b => bookingTab === "all" || b.status === bookingTab);
@@ -252,13 +252,15 @@ export default function Dashboard() {
           <div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
               {[
-                { emoji: "📊", val: watchBookings.length, label: "Bookings Monitored", color: B, bg: "#eff6ff" },
-                { emoji: "🏨", val: DEMO_BOOKINGS.length, label: "Bookings With Us", color: "#0891b2", bg: "#ecfeff" },
-                { emoji: "💰", val: formatINR(totalSaved || 31938), label: "Total Saved", color: "#16a34a", bg: "#f0fdf4" },
-                { emoji: "✈️", val: 2, label: "Trips Completed", color: "#9333ea", bg: "#faf5ff" },
+                { emoji: "", val: watchBookings.length, label: "Bookings Monitored", color: B, bg: "#eff6ff" },
+                { emoji: "", val: DEMO_BOOKINGS.length, label: "Bookings With Us", color: "#0891b2", bg: "#ecfeff" },
+                { emoji: "", val: formatINR(totalSaved || 31938), label: "Total Saved", color: "#16a34a", bg: "#f0fdf4" },
+                { emoji: "", val: 2, label: "Trips Completed", color: "#9333ea", bg: "#faf5ff" },
               ].map((s, i) => (
                 <div key={i} style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 20 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, fontSize: 18 }}>{s.emoji}</div>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+                    <div style={{ width: 16, height: 16, borderRadius: "50%", background: s.color, opacity: 0.7 }} />
+                  </div>
                   <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 20 : 26, fontWeight: 800, color: NAVY, marginBottom: 4 }}>{s.val}</div>
                   <div style={{ fontSize: 12, color: "#64748b" }}>{s.label}</div>
                 </div>
@@ -268,7 +270,9 @@ export default function Dashboard() {
               <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 18 }}>Recent Activity</div>
               {DEMO_ACTIVITY.map((a, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "12px 0", borderBottom: i < DEMO_ACTIVITY.length - 1 ? "1px solid #f8fafc" : "none" }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 10, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 16 }}>{a.icon}</div>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: "#f8fafc", border: "1.5px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: a.color }} />
+                  </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13.5, color: NAVY, fontWeight: 500, marginBottom: 2 }}>{a.text}</div>
                     <div style={{ fontSize: 12, color: "#94a3b8" }}>{a.time}</div>
@@ -322,7 +326,7 @@ export default function Dashboard() {
                         {b.ota_name && <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, background: "#f1f5f9", color: "#64748b" }}>{b.ota_name}</span>}
                       </div>
                       <div style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
-                        📍 {b.hotel_city}
+                        {b.hotel_city}
                         {b.created_at && <span style={{ color: "#94a3b8", marginLeft: 8 }}>· Tracked {timeAgo(b.created_at)}</span>}
                       </div>
                     </div>
@@ -332,7 +336,7 @@ export default function Dashboard() {
                         <div>
                           <div style={{ fontSize: 12, color: "#94a3b8", textDecoration: "line-through" }}>{formatINR(b.total_price_paid)}</div>
                           <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: NAVY }}>{formatINR(offer.offer_price)}</div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: "#16a34a" }}>Save {formatINR(offer.customer_saving)} 🎉</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#16a34a" }}>Save {formatINR(offer.customer_saving)}</div>
                         </div>
                       ) : (
                         <div>
@@ -347,38 +351,38 @@ export default function Dashboard() {
                   {/* Data Grid */}
                   <div style={{ padding: "16px 24px", display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: "14px 24px", borderTop: "1px solid #f1f5f9", marginTop: 14 }}>
                     {[
-                      { label: "CHECK-IN", val: fmtDate(b.check_in), icon: "📅" },
-                      { label: "CHECK-OUT", val: fmtDate(b.check_out), icon: "📅" },
-                      { label: "GUESTS", val: `${b.num_adults} adult${b.num_adults > 1 ? "s" : ""}${b.num_children > 0 ? ` · ${b.num_children} child${b.num_children > 1 ? "ren" : ""}` : ""}`, icon: "👥" },
-                      { label: "NIGHTS", val: `${b.total_nights || Math.max(1, Math.round((new Date(b.check_out).getTime() - new Date(b.check_in).getTime()) / 86400000))} nights`, icon: "🌙" },
+                      { label: "CHECK-IN", val: fmtDate(b.check_in) },
+                      { label: "CHECK-OUT", val: fmtDate(b.check_out) },
+                      { label: "GUESTS", val: `${b.num_adults} adult${b.num_adults > 1 ? "s" : ""}${b.num_children > 0 ? ` · ${b.num_children} child${b.num_children > 1 ? "ren" : ""}` : ""}` },
+                      { label: "NIGHTS", val: `${b.total_nights || Math.max(1, Math.round((new Date(b.check_out).getTime() - new Date(b.check_in).getTime()) / 86400000))} nights` },
                     ].map((f, i) => (
                       <div key={i}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>{f.label}</div>
-                        <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY }}>{f.icon} {f.val}</div>
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY }}>{f.val}</div>
                       </div>
                     ))}
                     {b.num_children > 0 && b.children_ages?.filter(a => a !== null).length > 0 && (
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>CHILD AGES</div>
-                        <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY }}>👶 {b.children_ages.filter(a => a !== null).map((a, i) => a === 0 ? "Under 1" : `${a} yrs`).join(", ")}</div>
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY }}>{b.children_ages.filter(a => a !== null).map((a, i) => a === 0 ? "Under 1" : `${a} yrs`).join(", ")}</div>
                       </div>
                     )}
                     {b.room_type && (
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>ROOM TYPE</div>
-                        <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY }}>🛏 {b.room_type}</div>
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY }}>{b.room_type}</div>
                       </div>
                     )}
                     {b.board_basis && b.board_basis !== "RO" && (
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>BOARD BASIS</div>
-                        <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY }}>🍽 {b.board_basis_label || b.board_basis}</div>
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY }}>{b.board_basis_label || b.board_basis}</div>
                       </div>
                     )}
                     {b.booking_reference && (
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>BOOKING REF</div>
-                        <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY }}>🔖 {b.booking_reference}</div>
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY }}>{b.booking_reference}</div>
                       </div>
                     )}
                   </div>
@@ -397,7 +401,7 @@ export default function Dashboard() {
                     <div style={{ display: "flex", gap: 8 }}>
                       {b.voucher_url && (
                         <a href={b.voucher_url} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 5, background: "#f0fdf4", color: "#16a34a", border: "1.5px solid #bbf7d0", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
-                          📄 View Voucher
+                          View Voucher
                         </a>
                       )}
                       {isDropFound && (
@@ -442,10 +446,10 @@ export default function Dashboard() {
               <div key={b.id} style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: 22, marginBottom: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap" as const, gap: 10 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🏨</div>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}></div>
                     <div>
                       <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 16, fontWeight: 700, color: NAVY }}>{b.hotel_name}</div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>📍 {b.hotel_city}</div>
+                      <div style={{ fontSize: 12, color: "#64748b" }}>{b.hotel_city}</div>
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -479,10 +483,10 @@ export default function Dashboard() {
             <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 12 }}>UPCOMING</div>
             {DEMO_BOOKINGS.filter(b => b.status === "upcoming").map(b => (
               <div key={b.id} style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, padding: 18, marginBottom: 12, display: "flex", alignItems: "center", gap: 16 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 22 }}>🏨</div>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 22 }}></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{b.hotel_name}</div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>📍 {b.hotel_city} · {fmtDate(b.check_in)} – {fmtDate(b.check_out)}</div>
+                  <div style={{ fontSize: 12, color: "#64748b" }}>{b.hotel_city} · {fmtDate(b.check_in)} – {fmtDate(b.check_out)}</div>
                 </div>
                 <div style={{ textAlign: "right" as const }}>
                   <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: "#dbeafe", color: B }}>Upcoming</span>
@@ -493,10 +497,10 @@ export default function Dashboard() {
             <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.1em", margin: "24px 0 12px" }}>PAST TRIPS</div>
             {DEMO_BOOKINGS.filter(b => b.status === "completed").map(b => (
               <div key={b.id} style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, padding: 18, marginBottom: 12, display: "flex", alignItems: "center", gap: 16 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 22 }}>🏨</div>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 22 }}></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{b.hotel_name}</div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>📍 {b.hotel_city} · {fmtDate(b.check_in)} – {fmtDate(b.check_out)}</div>
+                  <div style={{ fontSize: 12, color: "#64748b" }}>{b.hotel_city} · {fmtDate(b.check_in)} – {fmtDate(b.check_out)}</div>
                 </div>
                 <div style={{ textAlign: "right" as const }}>
                   <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: "#dcfce7", color: "#16a34a" }}>Completed</span>
@@ -514,13 +518,15 @@ export default function Dashboard() {
             <div style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>Manage how and when you hear from us</div>
             <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, marginBottom: 20, overflow: "hidden" }}>
               {[
-                { label: "Price Drop Alerts", desc: "Get notified when we detect a price drop on your monitored bookings", emoji: "💰", val: notifPriceDrops, set: setNotifPriceDrops },
-                { label: "Booking Updates", desc: "Confirmation, cancellation, and modification updates", emoji: "🏨", val: notifBookingUpdates, set: setNotifBookingUpdates },
-                { label: "Exclusive Deals", desc: "Personalised hotel deals and member-only offers", emoji: "⭐", val: notifDeals, set: setNotifDeals },
-                { label: "SMS Notifications", desc: "Receive important alerts via SMS", emoji: "📱", val: notifSMS, set: setNotifSMS },
+                { label: "Price Drop Alerts", desc: "Get notified when we detect a price drop on your monitored bookings", emoji: "", val: notifPriceDrops, set: setNotifPriceDrops },
+                { label: "Booking Updates", desc: "Confirmation, cancellation, and modification updates", emoji: "", val: notifBookingUpdates, set: setNotifBookingUpdates },
+                { label: "Exclusive Deals", desc: "Personalised hotel deals and member-only offers", emoji: "", val: notifDeals, set: setNotifDeals },
+                { label: "SMS Notifications", desc: "Receive important alerts via SMS", emoji: "", val: notifSMS, set: setNotifSMS },
               ].map((n, i, arr) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 16, padding: "18px 22px", borderBottom: i < arr.length - 1 ? "1px solid #f8fafc" : "none" }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>{n.emoji}</div>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: B }} />
+              </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, marginBottom: 2 }}>{n.label}</div>
                     <div style={{ fontSize: 12.5, color: "#64748b" }}>{n.desc}</div>
