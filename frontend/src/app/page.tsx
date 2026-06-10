@@ -904,7 +904,7 @@ export default function Home() {
                       </div>
                       <div style={{ marginBottom: 14 }}>
                         <label style={lbl}>Booked on</label>
-                        <select style={inp} value={extracted.ota_name} onChange={e => setExtracted({ ...extracted, ota_name: e.target.value })}>{['MakeMyTrip','Booking.com','Agoda','Goibibo','Hotels.com','Expedia','GRNConnect','Direct','Other'].map(o => <option key={o} value={o}>{o}</option>)}</select>
+                        <select style={inp} value={extracted.ota_name} onChange={e => setExtracted({ ...extracted, ota_name: e.target.value })}>{['MakeMyTrip','Booking.com','Agoda','Goibibo','Hotels.com','Expedia','Yatra','Ixigo','TBO','Direct','Other'].map(o => <option key={o} value={o}>{o}</option>)}</select>
                       </div>
                     </div>
 
