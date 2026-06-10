@@ -65,16 +65,16 @@ const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, textTransform:
 const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }
 
 const CARDS = [
-  { img: "/atlantisdubai.jpg", hotel: "Atlantis The Palm", city: "Dubai", pct: "↓19%" },
-  { img: "/Westinmaldives.jpg", hotel: "The Westin", city: "Maldives", pct: "↓20%" },
-  { img: "/lemeridienbali.jpg", hotel: "Le Meridien", city: "Bali", pct: "↓22%" },
-  { img: "/hyattregencybangkok.jpg", hotel: "Hyatt Regency", city: "Bangkok", pct: "↓28%" },
-  { img: "/theroseatenewdelhi.jpg", hotel: "The Roseate", city: "New Delhi", pct: "↓16%" },
-  { img: "/wgoa.jpg", hotel: "W Goa", city: "Goa", pct: "↓18%" },
-  { img: "/andazsingapore.jpg", hotel: "Andaz", city: "Singapore", pct: "↓23%" },
-  { img: "/langhamlondon.jpg", hotel: "The Langham", city: "London", pct: "↓21%" },
-  { img: "/fourseasonsmumbai.jpg", hotel: "Four Seasons", city: "Mumbai", pct: "↓25%" },
-  { img: "/Crowneplazayasidland.jpg", hotel: "Crowne Plaza", city: "Yas Island", pct: "↓12%" },
+  { img: "/dubai.jpg", city: "Dubai", label: "Dubai", pct: "↓19%" },
+  { img: "/bali.jpg", city: "Bali", label: "Bali", pct: "↓22%" },
+  { img: "/bangkok.jpg", city: "Bangkok", label: "Bangkok", pct: "↓28%" },
+  { img: "/singapore.jpg", city: "Singapore", label: "Singapore", pct: "↓23%" },
+  { img: "/goa.jpg", city: "Goa", label: "Goa", pct: "↓18%" },
+  { img: "/mumbai.jpg", city: "Mumbai", label: "Mumbai", pct: "↓25%" },
+  { img: "/newdelhi.jpg", city: "New Delhi", label: "New Delhi", pct: "↓16%" },
+  { img: "/langhamlondon.jpg", city: "London", label: "London", pct: "↓21%" },
+  { img: "/hyattregencybangkok.jpg", city: "Phuket", label: "Phuket", pct: "↓20%" },
+  { img: "/Crowneplazayasidland.jpg", city: "Abu Dhabi", label: "Abu Dhabi", pct: "↓12%" },
 ];
 
 const STATS = [
@@ -1015,13 +1015,13 @@ export default function Home() {
                     const res = await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/suggest?q=${encodeURIComponent(c.city)}`);
                     const d = await res.json();
                     const city = d.cities?.[0];
-                    const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: "2", rooms: "1", children: "0", destination: c.city });
+                    const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: "2", rooms: "1", children: "0", destination: c.label });
                     if (city?.placeId) params.set("placeId", city.placeId);
                     window.location.href = `/search?${params.toString()}`;
                   } catch {
                     window.location.href = `/search-hotels`;
                   }
-                }} style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><img src={c.img} alt={c.name} className="hotel-card-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /><div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.62) 0%, transparent 60%)" }} /><div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}><span style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 16 : 18, fontWeight: 800, display: "block", marginBottom: 2 }}>{c.hotel}</span><span style={{ fontSize: 12, opacity: 0.8, display: "flex", alignItems: "center", gap: 4 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><circle cx="12" cy="11" r="3"/></svg>{c.city}</span></div><div style={{ position: "absolute", top: 12, right: 12, background: "#16a34a", color: "#fff", fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 8 }}>{c.pct} members saved</div></div>))}
+                }} style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><img src={c.img} alt={c.name} className="hotel-card-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /><div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.62) 0%, transparent 60%)" }} /><div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}><span style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 20 : 24, fontWeight: 800, display: "block", marginBottom: 2 }}>{c.label}</span><span style={{ fontSize: 12, opacity: 0.8 }}>Members saving up to {c.pct}</span></div><div style={{ position: "absolute", top: 12, right: 12, background: "#16a34a", color: "#fff", fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 8 }}>{c.pct}</div></div>))}
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}><button onClick={() => scrollCarousel(-1)} disabled={carouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos === 0 ? 0.4 : 1 }}>‹</button><div style={{ display: "flex", gap: 6 }}>{Array.from({ length: CARDS.length - VISIBLE + 1 }, (_, i) => (<div key={i} onClick={() => setCarouselPos(i)} style={{ width: i === carouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === carouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />))}</div><button onClick={() => scrollCarousel(1)} disabled={carouselPos >= MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos >= MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos >= MAX_POS ? 0.4 : 1 }}>›</button></div>
