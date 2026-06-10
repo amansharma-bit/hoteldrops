@@ -210,7 +210,6 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
     const rawText = await callClaude(file.buffer, file.mimetype);
 
     let parsed;
-    // Step 1: try raw; Step 2: strip markdown; Step 3: find first { to last }
     const rawTrimmed = rawText.trim();
     try { parsed = JSON.parse(rawTrimmed); }
     catch(e1) {
@@ -234,7 +233,6 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
     const docType = parsed.documentType;
 
     if (docType === 'confirmed_voucher' && parsed.data) {
-      // Block non-refundable confirmed vouchers
       if (parsed.data.cancellation_policy === 'non-refundable') {
         return res.json({
           success: false, blocked: true, blockReason: 'non_refundable',
@@ -242,7 +240,6 @@ router.post('/extract', upload.single('voucher'), async (req, res) => {
           data: parsed.data,
         });
       }
-      // Block if check-in already passed
       if (parsed.data.check_in) {
         const days = getDaysDiff(parsed.data.check_in);
         if (days !== null && days < 0) {
@@ -279,6 +276,8 @@ router.post('/submit', async (req, res) => {
       cancellation_policy, cancellation_deadline, cancellation_penalty,
       payment_type, amount_paid_upfront,
       phone, email,
+      voucher_url,  // ← NEW: file URL from Supabase Storage
+      doc_type,     // ← NEW: document type from frontend
     } = req.body;
 
     if (!hotel_name || !check_in || !check_out || !phone || !email) {
@@ -326,6 +325,8 @@ router.post('/submit', async (req, res) => {
       payment_type: payment_type || 'pay_now',
       amount_paid_upfront: amount_paid_upfront || 0,
       phone, email,
+      voucher_url: voucher_url || null,   // ← NEW: save the file URL
+      doc_type: doc_type || 'confirmed_voucher',  // ← NEW: save document type
       status: 'active',
       created_at: new Date().toISOString(),
     }).select().single();
