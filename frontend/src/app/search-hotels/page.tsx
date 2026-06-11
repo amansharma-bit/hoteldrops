@@ -932,52 +932,12 @@ export default function SearchHotelsPage() {
         </section>
       </div>
 
-      {/* STATS */}
-      <div style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", paddingTop: isMobile ? 48 : 56 }} ref={statsRef}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "20px" : "26px 40px", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)" }}>
-          {STATS.map((s, i) => (
-            <div key={i} style={{ textAlign: "center", borderRight: !isMobile && i < 3 ? "1px solid #e2e8f0" : "none", padding: "0 20px" }}>
-              <div className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY }}>{statVals[i]}</div>
-              <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* TOP DESTINATIONS */}
-      <div style={{ padding: isMobile ? "50px 20px" : "70px 40px", maxWidth: 1100, margin: "0 auto" }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Explore by destination</p>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28, flexWrap: "wrap" as const, gap: 12 }}>
-          <div>
-            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Top Destinations</h2>
-            <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Handpicked destinations with rates unavailable anywhere else.</p>
-          </div>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "#16a34a" }}>
-            <span style={{ width: 7, height: 7, background: "#16a34a", borderRadius: "50%", display: "inline-block", animation: "pulse 1.5s infinite" }} /> Live rates
-          </span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 14 }}>
-          {DESTINATIONS.slice(0, 6).map((d, i) => (
-            <div key={i} className="dest-card" onClick={() => handleDestCardClick(d.city)}
-              style={{ borderRadius: 14, overflow: "hidden", position: "relative", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", height: isMobile ? 140 : 200 }}>
-              <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={e => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80&fit=crop"; }} />
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 55%)" }} />
-              {d.badge && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, padding: "3px 9px", borderRadius: 6, background: d.badgeColor, color: d.badgeText }}>{d.badge}</span>}
-              <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
-                <div className="sora" style={{ fontSize: 17, fontWeight: 700 }}>{d.flag} {d.city}</div>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>{d.country}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* EXPLORE BY CONTINENT */}
+      {/* EXPLORE BY DESTINATION */}
       <div style={{ background: "#f8fafc", padding: isMobile ? "50px 0" : "70px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 20px" : "0 40px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Member exclusive rates</p>
           <div style={{ marginBottom: 24 }}>
-            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Explore by Destination</h2>
+            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY }}>Explore by Destination</h2>
             <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>rebuq members get exclusive rates at top hotels across the world.</p>
           </div>
 
@@ -985,7 +945,7 @@ export default function SearchHotelsPage() {
           <div style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto" as const, paddingBottom: 4 }}>
             {CONTINENT_CITIES.map(group => (
               <button key={group.continent} onClick={() => setActiveContinent(group.continent)}
-                style={{ padding: "8px 20px", borderRadius: 100, border: "1.5px solid", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, background: activeContinent === group.continent ? B : "#fff", color: activeContinent === group.continent ? "#fff" : NAVY, borderColor: activeContinent === group.continent ? B : "#e2e8f0", transition: "all 0.15s", flexShrink: 0 }}>
+                style={{ padding: "8px 20px", borderRadius: 100, border: "1.5px solid", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, flexShrink: 0, background: activeContinent === group.continent ? B : "#fff", color: activeContinent === group.continent ? "#fff" : NAVY, borderColor: activeContinent === group.continent ? B : "#e2e8f0", transition: "all 0.15s" }}>
                 {group.continent}
               </button>
             ))}
