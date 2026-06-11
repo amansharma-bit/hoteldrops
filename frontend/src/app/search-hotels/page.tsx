@@ -110,35 +110,75 @@ const DESTINATIONS = [
   { flag: "🇺🇸", city: "Miami", country: "United States", img: "/miami.jpg" },
 ];
 
-const CONTINENT_CITIES = [
-  {
-    continent: "Asia",
-    cities: [
-      { city: "Dubai", country: "UAE", img: "/dubai.jpg", flag: "🇦🇪", placeId: "ChIJRcbZaklDXz4RRlNFzTjIBrw" },
-      { city: "Bali", country: "Indonesia", img: "/bali.jpg", flag: "🇮🇩", placeId: "ChIJoQ8Q6NB1HTURKbCGSA2IXBQ" },
-      { city: "Bangkok", country: "Thailand", img: "/hyattregencybangkok.jpg", flag: "🇹🇭", placeId: "ChIJ82ENKDJgHTERIEjiXbIAAQE" },
-      { city: "Singapore", country: "Singapore", img: "/singapore.jpg", flag: "🇸🇬", placeId: "ChIJdZODzGQX2jERqFKjFmBRoEA" },
-      { city: "Goa", country: "India", img: "/goa.jpg", flag: "🇮🇳", placeId: "ChIJH7LEFpqFvzsRf4mEr62lFRQ" },
-      { city: "Mumbai", country: "India", img: "/mumbai.jpg", flag: "🇮🇳", placeId: "ChIJwe1EZjDG5zsRmKxMaa4f36o" },
-      { city: "New Delhi", country: "India", img: "/newdelhi.jpg", flag: "🇮🇳", placeId: "ChIJLbZ-NFv9DDkRzk0gTkm3wlI" },
-      { city: "Maldives", country: "Maldives", img: "/Westinmaldives.jpg", flag: "🇲🇻", placeId: "ChIJo1WKZL-AxTkRIZE_gWVbHhI" },
-    ]
-  },
-  {
-    continent: "Middle East",
-    cities: [
-      { city: "Abu Dhabi", country: "UAE", img: "/Crowneplazayasidland.jpg", flag: "🇦🇪", placeId: "ChIJi5RHN7ZrXj4RLgFiiLuMeCA" },
-    ]
-  },
-  {
-    continent: "Europe",
-    cities: [
-      { city: "London", country: "United Kingdom", img: "/langhamlondon.jpg", flag: "🇬🇧", placeId: "ChIJdd4hrwug2EcRmSrV3Vo6llI" },
-    ]
-  },
-];
+const HOTELS_BY_CITY: Record<string, Array<{
+  name: string; loc: string; city: string; stars: number; rating: string;
+  tags: string[]; was: string; now: string; save: string;
+  badges: [string,string][]; img: string;
+}>> = {
+  "All Hotels": [
+    { name: "Atlantis The Palm", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach","Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/atlantisthepalmdubai.jpg" },
+    { name: "Four Seasons Resort Bali", loc: "Bali, Indonesia", city: "Bali", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view","Spa","Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending","trending"],["3.5% Off","off"]], img: "/FourSeasonsbali.jpg" },
+    { name: "Marina Bay Sands", loc: "Singapore", city: "Singapore", stars: 5, rating: "4.7 (19.1k)", tags: ["Infinity pool","SkyPark","Casino"], was: "₹47,000", now: "₹34,600", save: "Save ₹12,400", badges: [["AI Watching","watching"],["4% Off","off"]], img: "/marinabaysandssingapore.jpg" },
+    { name: "The Leela Palace New Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.9 (8.2k)", tags: ["Pool","Spa","Fine dining"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/theleelapalace.jpg" },
+    { name: "Taj Mahal Palace", loc: "Mumbai, India", city: "Mumbai", stars: 5, rating: "4.9 (22.4k)", tags: ["Heritage","Sea view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/tajmahalpalacemumbai.jpg" },
+    { name: "The Leela Goa", loc: "Goa, India", city: "Goa", stars: 5, rating: "4.8 (12.1k)", tags: ["Beach","Lagoon","Golf"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/leelagoa.jpg" },
+  ],
+  "Dubai": [
+    { name: "Atlantis The Palm", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/atlantisthepalmdubai.jpg" },
+    { name: "Burj Al Arab", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.8 (12.3k)", tags: ["Iconic","Private beach"], was: "₹1,20,000", now: "₹84,000", save: "Save ₹36,000", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/burjalarab.jpg" },
+    { name: "Four Seasons Hotel Dubai", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.7 (6.2k)", tags: ["City view","Spa"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Best Value","best"],["3% Off","off"]], img: "/fourseasonsdifc.jpg" },
+    { name: "Jumeirah Al Qasr", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.6 (8.9k)", tags: ["Beach","Pool"], was: "₹44,000", now: "₹31,800", save: "Save ₹12,200", badges: [["Trending","trending"],["5% Off","off"]], img: "/jumeirahalqasr.jpg" },
+    { name: "Address Downtown Dubai", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.7 (14.2k)", tags: ["Burj view","Rooftop pool"], was: "₹52,000", now: "₹37,400", save: "Save ₹14,600", badges: [["AI Watching","watching"],["6% Off","off"]], img: "/addressdowntown.jpg" },
+    { name: "W Dubai Palm Jumeirah", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.5 (9.1k)", tags: ["Palm view","Beach"], was: "₹35,000", now: "₹24,500", save: "Save ₹10,500", badges: [["Best Value","best"],["4% Off","off"]], img: "/wdubaipalm.jpg" },
+  ],
+  "Bali": [
+    { name: "Four Seasons Resort Bali", loc: "Bali, Indonesia", city: "Bali", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view","Spa","Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending","trending"],["3.5% Off","off"]], img: "/FourSeasonsbali.jpg" },
+    { name: "Viceroy Bali", loc: "Bali, Indonesia", city: "Bali", stars: 5, rating: "4.8 (4.2k)", tags: ["Valley view","Private pool"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/viceroybali.jpg" },
+    { name: "Bvlgari Resort Bali", loc: "Bali, Indonesia", city: "Bali", stars: 5, rating: "4.9 (2.4k)", tags: ["Cliffside","Private beach"], was: "₹80,000", now: "₹56,000", save: "Save ₹24,000", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/BvlgariResortBali.jpg" },
+    { name: "Alila Villas Uluwatu", loc: "Bali, Indonesia", city: "Bali", stars: 5, rating: "4.8 (5.1k)", tags: ["Clifftop","Ocean view"], was: "₹44,000", now: "₹30,800", save: "Save ₹13,200", badges: [["Trending","trending"],["6% Off","off"]], img: "/alilavillasuluwatu.jpg" },
+    { name: "COMO Uma Ubud", loc: "Bali, Indonesia", city: "Bali", stars: 5, rating: "4.7 (3.8k)", tags: ["Wellness","Yoga","Jungle"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Best Value","best"],["5% Off","off"]], img: "/comoumaubud.jpg" },
+    { name: "Amankila", loc: "Bali, Indonesia", city: "Bali", stars: 5, rating: "4.9 (1.8k)", tags: ["Terraced pools","Ocean view"], was: "₹68,000", now: "₹47,600", save: "Save ₹20,400", badges: [["Best Value","best"],["8% Off","off"]], img: "/amankilabali.jpg" },
+  ],
+  "Singapore": [
+    { name: "Marina Bay Sands", loc: "Singapore", city: "Singapore", stars: 5, rating: "4.7 (19.1k)", tags: ["Infinity pool","SkyPark"], was: "₹47,000", now: "₹34,600", save: "Save ₹12,400", badges: [["AI Watching","watching"],["4% Off","off"]], img: "/marinabaysandssingapore.jpg" },
+    { name: "Capella Singapore", loc: "Singapore", city: "Singapore", stars: 5, rating: "4.9 (3.4k)", tags: ["Sentosa","Heritage"], was: "₹62,000", now: "₹43,400", save: "Save ₹18,600", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/capellasingapore.jpg" },
+    { name: "Raffles Hotel Singapore", loc: "Singapore", city: "Singapore", stars: 5, rating: "4.8 (6.1k)", tags: ["Colonial","Heritage"], was: "₹72,000", now: "₹50,400", save: "Save ₹21,600", badges: [["Luxury","luxury"],["7% Off","off"]], img: "/rafflessingapore.jpg" },
+    { name: "The Fullerton Bay Hotel Singapore", loc: "Singapore", city: "Singapore", stars: 5, rating: "4.8 (7.2k)", tags: ["Marina view","Rooftop bar"], was: "₹44,000", now: "₹30,800", save: "Save ₹13,200", badges: [["Best Value","best"],["5% Off","off"]], img: "/TheFullertonBayHotelSingapore.jpg" },
+    { name: "Mandarin Oriental Singapore", loc: "Singapore", city: "Singapore", stars: 5, rating: "4.7 (9.8k)", tags: ["Marina view","Spa"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Trending","trending"],["6% Off","off"]], img: "/mandarinorientalsingapore.jpg" },
+    { name: "Andaz Singapore", loc: "Singapore", city: "Singapore", stars: 5, rating: "4.6 (4.2k)", tags: ["Rooftop","City view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Best Value","best"],["4% Off","off"]], img: "/andazsingapore.jpg" },
+  ],
+  "New Delhi": [
+    { name: "The Leela Palace New Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.9 (8.2k)", tags: ["Pool","Spa","Fine dining"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/theleelapalace.jpg" },
+    { name: "The Oberoi New Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.8 (6.4k)", tags: ["Golf course view","Spa"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Best Value","best"],["5% Off","off"]], img: "/oberoinewdelhi.jpg" },
+    { name: "ITC Maurya New Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.7 (11.2k)", tags: ["Bukhara","Pool"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Trending","trending"],["4% Off","off"]], img: "/ITCmaurya.jpg" },
+    { name: "Taj Mahal Hotel New Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.8 (14.1k)", tags: ["Heritage","Pool"], was: "₹26,000", now: "₹18,200", save: "Save ₹7,800", badges: [["Luxury","luxury"],["6% Off","off"]], img: "/tajmahalnewdelhi.jpg" },
+    { name: "The Imperial New Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.7 (9.8k)", tags: ["Colonial","Art collection"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Best Value","best"],["5% Off","off"]], img: "/theimperialnewdelhi.jpg" },
+    { name: "Hyatt Regency Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.6 (18.4k)", tags: ["Pool","Spa"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["AI Watching","watching"],["4% Off","off"]], img: "/hyattregencynewdelhi.jpg" },
+  ],
+  "Goa": [
+    { name: "The Leela Goa", loc: "Goa, India", city: "Goa", stars: 5, rating: "4.8 (12.1k)", tags: ["Beach","Lagoon","Golf"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/leelagoa.jpg" },
+    { name: "Taj Exotica Resort Goa", loc: "Goa, India", city: "Goa", stars: 5, rating: "4.7 (9.4k)", tags: ["Beach","Spa"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["Best Value","best"],["5% Off","off"]], img: "/tajexoticagoa.jpg" },
+    { name: "W Goa", loc: "Goa, India", city: "Goa", stars: 5, rating: "4.6 (7.2k)", tags: ["Vagator","Beach"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Trending","trending"],["6% Off","off"]], img: "/wgoa.jpg" },
+    { name: "Park Hyatt Goa Resort", loc: "Goa, India", city: "Goa", stars: 5, rating: "4.7 (8.6k)", tags: ["Beach","Pool"], was: "₹16,000", now: "₹11,200", save: "Save ₹4,800", badges: [["Best Value","best"],["4% Off","off"]], img: "/parkhyattgoa.jpg" },
+    { name: "Alila Diwa Goa", loc: "Goa, India", city: "Goa", stars: 5, rating: "4.6 (5.1k)", tags: ["Paddy field view","Pool"], was: "₹14,000", now: "₹9,800", save: "Save ₹4,200", badges: [["AI Watching","watching"],["3% Off","off"]], img: "/aliladiwagoa.jpg" },
+    { name: "Taj Fort Aguada Resort Goa", loc: "Goa, India", city: "Goa", stars: 5, rating: "4.5 (14.2k)", tags: ["Heritage fort","Beach"], was: "₹15,000", now: "₹10,500", save: "Save ₹4,500", badges: [["Trending","trending"],["5% Off","off"]], img: "/tajfortaguada.jpg" },
+  ],
+  "Mumbai": [
+    { name: "Taj Mahal Palace", loc: "Mumbai, India", city: "Mumbai", stars: 5, rating: "4.9 (22.4k)", tags: ["Gateway of India","Heritage","Sea view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/tajmahalpalacemumbai.jpg" },
+    { name: "The Oberoi Mumbai", loc: "Mumbai, India", city: "Mumbai", stars: 5, rating: "4.8 (8.2k)", tags: ["Sea view","Spa"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Best Value","best"],["5% Off","off"]], img: "/oberoimumbai.jpg" },
+    { name: "Four Seasons Hotel Mumbai", loc: "Mumbai, India", city: "Mumbai", stars: 5, rating: "4.7 (6.8k)", tags: ["Sea link view","Spa"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Trending","trending"],["6% Off","off"]], img: "/fourseasonsmumbai.jpg" },
+    { name: "The St Regis Mumbai", loc: "Mumbai, India", city: "Mumbai", stars: 5, rating: "4.8 (9.1k)", tags: ["Sky high pool","City view"], was: "₹26,000", now: "₹18,200", save: "Save ₹7,800", badges: [["Luxury","luxury"],["4% Off","off"]], img: "/stregismumbai.jpg" },
+    { name: "ITC Grand Central Mumbai", loc: "Mumbai, India", city: "Mumbai", stars: 5, rating: "4.6 (7.4k)", tags: ["Parel","Pool"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["Best Value","best"],["5% Off","off"]], img: "/itcgrandcentral.jpg" },
+    { name: "JW Marriott Mumbai Juhu", loc: "Mumbai, India", city: "Mumbai", stars: 5, rating: "4.7 (16.2k)", tags: ["Juhu beach","Pool"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["AI Watching","watching"],["4% Off","off"]], img: "/jwmarriottmumbai.jpg" },
+  ],
+};
 
-// CITY_FILTERS removed
+const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
+  luxury: { bg: "#1e293b", color: "#fff" }, best: { bg: "#16a34a", color: "#fff" },
+  watching: { bg: "rgba(20,71,184,0.92)", color: "#fff" }, trending: { bg: "#f59e0b", color: "#1a1a1a" }, off: { bg: "#ef4444", color: "#fff" },
+};
+
+const CITY_FILTERS = ["All Hotels", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai"];
 
 const STATS = [
   { id: 0, target: 4200, prefix: "", suffix: "+", label: "Member deals live right now" },
@@ -179,13 +219,13 @@ export default function SearchHotelsPage() {
   const [guests, setGuests] = useState<GuestState>({ rooms: 1, adults: 2, children: 0, childAges: [] });
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<any>({ cities: [], hotels: [], areas: [], landmarks: [], airport: null });
-    const [tickerIdx, setTickerIdx] = useState(0);
+  const [activeCity, setActiveCity] = useState("All Hotels");
+  const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
   const [statVals, setStatVals] = useState(STATS.map(s => `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [calOpen, setCalOpen] = useState(false);
-  const [activeContinent, setActiveContinent] = useState("Asia");
   const [calMode, setCalMode] = useState<"checkin"|"checkout">("checkin");
   const [calMonthOffset, setCalMonthOffset] = useState(0);
   const [guestOpen, setGuestOpen] = useState(false);
@@ -441,7 +481,7 @@ export default function SearchHotelsPage() {
   };
 
   const ticker = TICKER_ITEMS[tickerIdx];
-  const hotels: any[] = [];
+  const hotels = HOTELS_BY_CITY[activeCity] || HOTELS_BY_CITY["All Hotels"];
   const d1 = new Date(today.getFullYear(), today.getMonth() + calMonthOffset);
   const d2 = new Date(today.getFullYear(), today.getMonth() + calMonthOffset + 1);
 
@@ -938,40 +978,49 @@ export default function SearchHotelsPage() {
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Member exclusive rates</p>
           <div style={{ marginBottom: 24 }}>
             <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Member Exclusive Hotels</h2>
-            <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>rebuq members get exclusive rates at top hotels across the world.</p>
+            <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Members save an average of <strong>₹24,600</strong> on these properties.</p>
           </div>
-          {/* Continent tabs */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" as const }}>
-            {CONTINENT_CITIES.map(group => (
-              <button key={group.continent} onClick={() => setActiveContinent(group.continent)}
-                style={{ padding: "7px 18px", borderRadius: 100, border: "1.5px solid", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", background: activeContinent === group.continent ? B : "#fff", color: activeContinent === group.continent ? "#fff" : NAVY, borderColor: activeContinent === group.continent ? B : "#e2e8f0", transition: "all 0.15s" }}>
-                {group.continent}
-              </button>
-            ))}
+          <div style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto", paddingBottom: 4 }}>
+            {CITY_FILTERS.map(f => {
+              const dest = DESTINATIONS.find(d => d.city === f);
+              return (
+                <button key={f} onClick={() => setActiveCity(f)} style={{ background: activeCity === f ? NAVY : "#fff", border: `1.5px solid ${activeCity === f ? NAVY : "#e2e8f0"}`, color: activeCity === f ? "#fff" : NAVY, fontSize: 13, fontWeight: 500, padding: "7px 18px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, flexShrink: 0, transition: "all 0.2s" }}>
+                  {f === "All Hotels" ? f : `${dest?.flag || ""} ${f}`}
+                </button>
+              );
+            })}
           </div>
-          {/* City grid for active continent */}
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 14 }}>
-            {CONTINENT_CITIES.find(g => g.continent === activeContinent)?.cities.map(c => (
-              <div key={c.city} onClick={async () => {
-                requireAuth(async () => {
-                  const today = new Date();
-                  const ci = today.toISOString().split("T")[0];
-                  const co = new Date(today.getTime() + 2*86400000).toISOString().split("T")[0];
-                  const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: c.city });
-                  if (c.placeId) params.set("placeId", c.placeId);
-                  router.push(`/search?${params.toString()}`);
-                });
-              }}
-              style={{ borderRadius: 14, overflow: "hidden", cursor: "pointer", position: "relative", height: isMobile ? 130 : 180, boxShadow: "0 2px 12px rgba(0,0,0,0.08)", transition: "transform 0.2s" }}
-              className="city-card">
-                <img src={c.img} alt={c.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 55%)" }} />
-                <div style={{ position: "absolute", bottom: 10, left: 12, color: "#fff" }}>
-                  <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 14 : 18, fontWeight: 800 }}>{c.flag} {c.city}</div>
-                  <div style={{ fontSize: 11, opacity: 0.8 }}>{c.country}</div>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20 }}>
+            {hotels.map((h, i) => (
+              <div key={i} className="hotel-card" onClick={() => handleHotelCardClick(h.name, h.city)}
+                style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1.5px solid #e2e8f0" }}>
+                <div style={{ height: 190, position: "relative", overflow: "hidden" }}>
+                  <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                    {h.badges.map(([label, type]) => { const s = BADGE_STYLES[type] || BADGE_STYLES.luxury; return <span key={label} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, letterSpacing: "0.04em", textTransform: "uppercase" as const, background: s.bg, color: s.color }}>{label}</span>; })}
+                  </div>
+                </div>
+                <div style={{ padding: "16px 18px 18px" }}>
+                  <div style={{ color: "#f59e0b", fontSize: 12, marginBottom: 4 }}>{"★".repeat(h.stars)}</div>
+                  <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{h.name}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{h.loc} · {h.rating}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5, marginBottom: 14 }}>
+                    {h.tags.map(t => <span key={t} style={{ background: "#f8fafc", color: "#64748b", fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 500 }}>{t}</span>)}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ fontSize: 12, color: "#64748b", textDecoration: "line-through" }}>{h.was}</div>
+                      <div className="sora" style={{ fontSize: 20, fontWeight: 800, color: NAVY }}>{h.now} <span style={{ fontSize: 11, color: "#64748b", fontFamily: "Inter,sans-serif", fontWeight: 400 }}>/night</span></div>
+                      <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, marginTop: 2 }}>{h.save}</div>
+                    </div>
+                    <button style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const }}>View deal →</button>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+          <div style={{ textAlign: "center", marginTop: 36 }}>
+            <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>↑ Search for more hotels</button>
           </div>
         </div>
       </div>
