@@ -310,9 +310,9 @@ _Offer valid 24 hours._`
 
   try {
     const twilio    = require('twilio')
-    const client    = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN)
+    const client    = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
     const formatted = phone.startsWith('+') ? `whatsapp:${phone}` : `whatsapp:+91${phone}`
-    await client.messages.create({ from: 'whatsapp:+14155238886', to: formatted, body: msg })
+    await client.messages.create({ from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM || '+14155238886'}`, to: formatted, body: msg })
     await supabase.from('offers').update({ whatsapp_sent_at: new Date().toISOString(), status: 'sent' }).eq('id', savedOffer.id)
     console.log(`  📱 WhatsApp sent → ${phone}`)
   } catch (e) {
