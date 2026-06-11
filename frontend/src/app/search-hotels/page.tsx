@@ -972,55 +972,55 @@ export default function SearchHotelsPage() {
         </div>
       </div>
 
-      {/* HOTELS */}
-      <div id="hotels-section" style={{ background: "#f8fafc", padding: isMobile ? "50px 0" : "70px 0" }}>
+      {/* EXPLORE BY CONTINENT */}
+      <div style={{ background: "#f8fafc", padding: isMobile ? "50px 0" : "70px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 20px" : "0 40px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Member exclusive rates</p>
           <div style={{ marginBottom: 24 }}>
-            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Member Exclusive Hotels</h2>
-            <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Members save an average of <strong>₹24,600</strong> on these properties.</p>
+            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Explore by Destination</h2>
+            <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>rebuq members get exclusive rates at top hotels across the world.</p>
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto", paddingBottom: 4 }}>
-            {CITY_FILTERS.map(f => {
-              const dest = DESTINATIONS.find(d => d.city === f);
-              return (
-                <button key={f} onClick={() => setActiveCity(f)} style={{ background: activeCity === f ? NAVY : "#fff", border: `1.5px solid ${activeCity === f ? NAVY : "#e2e8f0"}`, color: activeCity === f ? "#fff" : NAVY, fontSize: 13, fontWeight: 500, padding: "7px 18px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, flexShrink: 0, transition: "all 0.2s" }}>
-                  {f === "All Hotels" ? f : `${dest?.flag || ""} ${f}`}
-                </button>
-              );
-            })}
+
+          {/* Continent tabs */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto" as const, paddingBottom: 4 }}>
+            {CONTINENT_CITIES.map(group => (
+              <button key={group.continent} onClick={() => setActiveContinent(group.continent)}
+                style={{ padding: "8px 20px", borderRadius: 100, border: "1.5px solid", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, background: activeContinent === group.continent ? B : "#fff", color: activeContinent === group.continent ? "#fff" : NAVY, borderColor: activeContinent === group.continent ? B : "#e2e8f0", transition: "all 0.15s", flexShrink: 0 }}>
+                {group.continent}
+              </button>
+            ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20 }}>
-            {hotels.map((h, i) => (
-              <div key={i} className="hotel-card" onClick={() => handleHotelCardClick(h.name, h.city)}
-                style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1.5px solid #e2e8f0" }}>
-                <div style={{ height: 190, position: "relative", overflow: "hidden" }}>
-                  <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                    {h.badges.map(([label, type]) => { const s = BADGE_STYLES[type] || BADGE_STYLES.luxury; return <span key={label} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, letterSpacing: "0.04em", textTransform: "uppercase" as const, background: s.bg, color: s.color }}>{label}</span>; })}
-                  </div>
-                </div>
-                <div style={{ padding: "16px 18px 18px" }}>
-                  <div style={{ color: "#f59e0b", fontSize: 12, marginBottom: 4 }}>{"★".repeat(h.stars)}</div>
-                  <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{h.name}</div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{h.loc} · {h.rating}</div>
-                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5, marginBottom: 14 }}>
-                    {h.tags.map(t => <span key={t} style={{ background: "#f8fafc", color: "#64748b", fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 500 }}>{t}</span>)}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div>
-                      <div style={{ fontSize: 12, color: "#64748b", textDecoration: "line-through" }}>{h.was}</div>
-                      <div className="sora" style={{ fontSize: 20, fontWeight: 800, color: NAVY }}>{h.now} <span style={{ fontSize: 11, color: "#64748b", fontFamily: "Inter,sans-serif", fontWeight: 400 }}>/night</span></div>
-                      <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, marginTop: 2 }}>{h.save}</div>
-                    </div>
-                    <button style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const }}>View deal →</button>
-                  </div>
+
+          {/* City grid */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 16 }}>
+            {CONTINENT_CITIES.find(g => g.continent === activeContinent)?.cities.map(c => (
+              <div key={c.city} onClick={async () => {
+                requireAuth(async () => {
+                  const today = new Date();
+                  const ci = today.toISOString().split("T")[0];
+                  const co = new Date(today.getTime() + 2*86400000).toISOString().split("T")[0];
+                  try {
+                    const res = await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/suggest?q=${encodeURIComponent(c.city)}`);
+                    const d = await res.json();
+                    const city = d.cities?.[0];
+                    const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: c.city });
+                    if (city?.placeId) params.set("placeId", city.placeId);
+                    router.push(`/search?${params.toString()}`);
+                  } catch {
+                    router.push(`/search?destination=${encodeURIComponent(c.city)}&checkIn=${ci}&checkOut=${co}&adults=2&rooms=1&children=0`);
+                  }
+                });
+              }}
+              className="city-dest-card"
+              style={{ borderRadius: 16, overflow: "hidden", cursor: "pointer", position: "relative", height: isMobile ? 140 : 200, boxShadow: "0 2px 12px rgba(0,0,0,0.08)", transition: "transform 0.2s, box-shadow 0.2s" }}>
+                <img src={c.img} alt={c.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)" }} />
+                <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
+                  <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 16 : 20, fontWeight: 800, marginBottom: 2 }}>{c.flag} {c.city}</div>
+                  <div style={{ fontSize: 12, opacity: 0.8 }}>{c.country}</div>
                 </div>
               </div>
             ))}
-          </div>
-          <div style={{ textAlign: "center", marginTop: 36 }}>
-            <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>↑ Search for more hotels</button>
           </div>
         </div>
       </div>
