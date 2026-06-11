@@ -185,6 +185,7 @@ export default function SearchHotelsPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [calOpen, setCalOpen] = useState(false);
+  const [activeContinent, setActiveContinent] = useState("Asia");
   const [calMode, setCalMode] = useState<"checkin"|"checkout">("checkin");
   const [calMonthOffset, setCalMonthOffset] = useState(0);
   const [guestOpen, setGuestOpen] = useState(false);
@@ -939,32 +940,35 @@ export default function SearchHotelsPage() {
             <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Member Exclusive Hotels</h2>
             <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>rebuq members get exclusive rates at top hotels across the world.</p>
           </div>
-          <div>
+          {/* Continent tabs */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" as const }}>
             {CONTINENT_CITIES.map(group => (
-              <div key={group.continent} style={{ marginBottom: 40 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.12em", marginBottom: 16 }}>{group.continent}</div>
-                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 14 }}>
-                  {group.cities.map(c => (
-                    <div key={c.city} onClick={async () => {
-                      requireAuth(async () => {
-                        const today = new Date();
-                        const ci = today.toISOString().split("T")[0];
-                        const co = new Date(today.getTime() + 2*86400000).toISOString().split("T")[0];
-                        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: c.city });
-                        if (c.placeId) params.set("placeId", c.placeId);
-                        router.push(`/search?${params.toString()}`);
-                      });
-                    }}
-                    style={{ borderRadius: 14, overflow: "hidden", cursor: "pointer", position: "relative", height: isMobile ? 130 : 160, boxShadow: "0 2px 12px rgba(0,0,0,0.08)", transition: "transform 0.2s" }}
-                    className="city-card">
-                      <img src={c.img} alt={c.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 55%)" }} />
-                      <div style={{ position: "absolute", bottom: 10, left: 12, color: "#fff" }}>
-                        <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 14 : 16, fontWeight: 800 }}>{c.flag} {c.city}</div>
-                        <div style={{ fontSize: 11, opacity: 0.8 }}>{c.country}</div>
-                      </div>
-                    </div>
-                  ))}
+              <button key={group.continent} onClick={() => setActiveContinent(group.continent)}
+                style={{ padding: "7px 18px", borderRadius: 100, border: "1.5px solid", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", background: activeContinent === group.continent ? B : "#fff", color: activeContinent === group.continent ? "#fff" : NAVY, borderColor: activeContinent === group.continent ? B : "#e2e8f0", transition: "all 0.15s" }}>
+                {group.continent}
+              </button>
+            ))}
+          </div>
+          {/* City grid for active continent */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 14 }}>
+            {CONTINENT_CITIES.find(g => g.continent === activeContinent)?.cities.map(c => (
+              <div key={c.city} onClick={async () => {
+                requireAuth(async () => {
+                  const today = new Date();
+                  const ci = today.toISOString().split("T")[0];
+                  const co = new Date(today.getTime() + 2*86400000).toISOString().split("T")[0];
+                  const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: c.city });
+                  if (c.placeId) params.set("placeId", c.placeId);
+                  router.push(`/search?${params.toString()}`);
+                });
+              }}
+              style={{ borderRadius: 14, overflow: "hidden", cursor: "pointer", position: "relative", height: isMobile ? 130 : 180, boxShadow: "0 2px 12px rgba(0,0,0,0.08)", transition: "transform 0.2s" }}
+              className="city-card">
+                <img src={c.img} alt={c.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 55%)" }} />
+                <div style={{ position: "absolute", bottom: 10, left: 12, color: "#fff" }}>
+                  <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 14 : 18, fontWeight: 800 }}>{c.flag} {c.city}</div>
+                  <div style={{ fontSize: 11, opacity: 0.8 }}>{c.country}</div>
                 </div>
               </div>
             ))}
