@@ -1,5 +1,5 @@
 const express = require('express');
-const { sendBookingConfirmation, sendWelcomeEmail } = require('../utils/notifications');
+const { sendWhatsAppAlert } = require('../utils/notifications');
 const emailService = require('../utils/emailService');
 const router = express.Router();
 
@@ -419,22 +419,45 @@ router.post('/submit', async (req, res) => {
       return res.status(500).json({ success: false, error: 'Failed to save booking' });
     }
 
-    // Send WhatsApp + email confirmation
+    // Send WhatsApp confirmation via Twilio
     try {
-      await sendBookingConfirmation(phone, email, {
-        customerName: email.split('@')[0],
-        hotelName: hotel_name,
-        city: hotel_city,
-        checkIn: check_in,
-        checkOut: check_out,
-        nights,
-        originalPrice: total_price_paid,
-        bookingRef: booking_reference,
-        bookingId: booking.id,
-      });
-      console.log(`✅ Confirmation sent to ${phone} / ${email}`);
-    } catch (notifErr) {
-      console.warn('⚠️ Notification failed (booking still saved):', notifErr.message);
+      const to = phone.startsWith('+') ? phone : `+91${phone}`;
+      const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+      const twilioToken = process.env.TWILIO_AUTH_TOKEN;
+      const twilioFrom = process.env.TWILIO_WHATSAPP_FROM;
+      if (twilioSid && twilioToken && twilioFrom && twilioSid !== 'placeholder') {
+        const twilio = require('twilio')(twilioSid, twilioToken);
+        const msg = `✅ *rebuq* — Booking Tracked!\n\nHi! We're now monitoring *${hotel_name}* in ${hotel_city || ''}.\n\n📅 ${check_in} → ${check_out} (${nights} nights)\n💰 Paid: ₹${Number(total_price_paid||0).toLocaleString('en-IN')}\n\nWe'll WhatsApp you the moment the price drops. 🎯\n\n_rebuq — Booked a hotel? We watch the price._`;
+        await twilio.messages.create({
+          from: `whatsapp:${twilioFrom}`,
+          to: `whatsapp:${to}`,
+          body: msg
+        });
+        console.log(`✅ WhatsApp confirmation sent to ${to}`);
+      }
+    } catch (waErr) {
+      console.warn('⚠️ WhatsApp failed (booking still saved):', waErr.message);
+    }
+
+    // Send email confirmation via Resend
+    try {
+      const resendKey = process.env.RESEND_API_KEY;
+      if (resendKey) {
+        await emailService.bookingReceived(email, {
+          name: email.split('@')[0],
+          booking: {
+            hotel_name, hotel_city,
+            check_in, check_out,
+            total_nights: nights,
+            total_price_paid,
+            booking_reference,
+            ota_name,
+          }
+        });
+        console.log(`✅ Email confirmation sent to ${email}`);
+      }
+    } catch (emailErr) {
+      console.warn('⚠️ Email failed (booking still saved):', emailErr.message);
     }
 
     return res.json({ success: true, booking_id: booking.id });
