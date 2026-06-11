@@ -976,6 +976,21 @@ export default function SearchHotelsPage() {
         </div>
       </div>
 
+      {/* BOTTOM CTA */}
+      <div style={{ background: "linear-gradient(135deg,#0c1f5c 0%,#1e4fc2 100%)", padding: isMobile ? "50px 20px" : "64px 40px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 340px", gap: 56, alignItems: "center" }}>
+          <div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 100, marginBottom: 16, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>✦ Already booked elsewhere?</div>
+            <h2 className="sora" style={{ fontSize: isMobile ? 26 : 42, fontWeight: 800, color: "#fff", lineHeight: 1.1, marginBottom: 14 }}>Don&apos;t overpay. Let our AI <span style={{ color: YELLOW }}>watch the price.</span></h2>
+            <p style={{ fontSize: 14.5, color: "rgba(255,255,255,0.7)", lineHeight: 1.7, marginBottom: 28 }}>Upload your booking voucher. We&apos;ll monitor the rate 24/7 and WhatsApp you the moment it drops.</p>
+          </div>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 28, boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+            <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 5 }}>Already booked? Check for a drop</div>
+            <div style={{ fontSize: 12.5, color: "#64748b", marginBottom: 16 }}>Takes 30 seconds. We handle the rest.</div>
+            <button onClick={() => router.push("/")} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 13, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Upload My Booking Voucher</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
