@@ -1,4 +1,6 @@
 const express = require('express');
+const { sendBookingConfirmation, sendWelcomeEmail } = require('../utils/notifications');
+const emailService = require('../utils/emailService');
 const router = express.Router();
 
 // ── Resolve liteAPI hotelId by hotel name + city ──────────────────────────────
@@ -415,6 +417,24 @@ router.post('/submit', async (req, res) => {
     if (error) {
       console.error('Supabase insert error:', error);
       return res.status(500).json({ success: false, error: 'Failed to save booking' });
+    }
+
+    // Send WhatsApp + email confirmation
+    try {
+      await sendBookingConfirmation(phone, email, {
+        customerName: email.split('@')[0],
+        hotelName: hotel_name,
+        city: hotel_city,
+        checkIn: check_in,
+        checkOut: check_out,
+        nights,
+        originalPrice: total_price_paid,
+        bookingRef: booking_reference,
+        bookingId: booking.id,
+      });
+      console.log(`✅ Confirmation sent to ${phone} / ${email}`);
+    } catch (notifErr) {
+      console.warn('⚠️ Notification failed (booking still saved):', notifErr.message);
     }
 
     return res.json({ success: true, booking_id: booking.id });
