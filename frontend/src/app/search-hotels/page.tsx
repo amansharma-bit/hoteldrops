@@ -1005,9 +1005,9 @@ export default function SearchHotelsPage() {
                     const city = d.cities?.[0];
                     const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: "2", rooms: "1", children: "0", destination: c.city });
                     if (city?.placeId) params.set("placeId", city.placeId);
-                    router.push(\`/search?\${params.toString()}\`);
+                    router.push(`/search?${params.toString()}`);
                   } catch {
-                    router.push(\`/search?destination=\${encodeURIComponent(c.city)}&checkIn=\${ci}&checkOut=\${co}&adults=2&rooms=1&children=0\`);
+                    router.push(`/search?destination=${encodeURIComponent(c.city)}&checkIn=${ci}&checkOut=${co}&adults=2&rooms=1&children=0`);
                   }
                 });
               }}
