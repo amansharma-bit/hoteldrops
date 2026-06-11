@@ -1040,6 +1040,32 @@ export default function SearchHotelsPage() {
           </div>
         </div>
       </div>
+
+      {/* FOOTER */}
+      <footer style={{ background: NAVY, color: "#94a3b8", padding: isMobile ? "40px 20px" : "48px 40px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr 1fr", gap: 40, marginBottom: 40 }}>
+            <div>
+              <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 22, color: "#fff", marginBottom: 10 }}>rebuq<span style={{ color: YELLOW }}>.</span></div>
+              <p style={{ fontSize: 13.5, lineHeight: 1.7, maxWidth: 280 }}>AI-powered hotel price protection for Indian travellers. Upload your voucher, we watch the price.</p>
+            </div>
+            {[
+              { title: "Product", links: ["How It Works", "Pricing", "For Corporates", "API"] },
+              { title: "Company", links: ["About", "Blog", "Careers", "Press"] },
+              { title: "Support", links: ["Help Center", "Contact Us", "Privacy Policy", "Terms"] },
+            ].map((col, i) => (
+              <div key={i}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 14 }}>{col.title}</div>
+                {col.links.map(l => <div key={l} style={{ fontSize: 13.5, marginBottom: 8, cursor: "pointer" }}>{l}</div>)}
+              </div>
+            ))}
+          </div>
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" as const, gap: 12 }}>
+            <span style={{ fontSize: 13 }}>© 2026 rebuq Technologies Pvt. Ltd. All rights reserved.</span>
+            <span style={{ fontSize: 13 }}>Made with ❤️ for Indian travellers</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
