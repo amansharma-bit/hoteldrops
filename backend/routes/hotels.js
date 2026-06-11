@@ -775,6 +775,19 @@ router.get('/resolve-hotel', async (req, res) => {
   }
 });
 
+
+// ── GET /api/hotels/cache-search ─────────────────────────────────────────────
+router.get('/cache-search', (req, res) => {
+  const { q } = req.query;
+  if (!q) return res.json({ results: HOTEL_CACHE.slice(0, 20) });
+  const query = q.toLowerCase();
+  const results = HOTEL_CACHE
+    .filter(h => h.name.toLowerCase().includes(query))
+    .slice(0, 10)
+    .map(h => ({ hotelId: h.hotelId, name: h.name, city: h.city, country: h.country }));
+  return res.json({ results, total: HOTEL_CACHE.length });
+});
+
 // ── GET /api/hotels/:code ─────────────────────────────────────────────────────
 router.get('/:code', async (req, res) => {
   try {
