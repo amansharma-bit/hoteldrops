@@ -505,7 +505,7 @@ export default function SearchHotelsPage() {
     </div>
   );
 
-  // Client-side flag+country lookup — never relies on backend sending countryCode
+  // Client-side flag+country lookup
   const CITY_INFO: Record<string, { flag: string; country: string }> = {
     'dubai': { flag: '🇦🇪', country: 'United Arab Emirates' },
     'abu dhabi': { flag: '🇦🇪', country: 'United Arab Emirates' },
