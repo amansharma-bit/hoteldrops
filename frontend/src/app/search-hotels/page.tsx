@@ -58,49 +58,6 @@ const TICKER_ITEMS = [
   { name: "Arjun T.", hotel: "The Langham, London", saved: "₹26,200", time: "31 min ago" },
 ];
 
-const CONTINENT_CITIES = [
-  { continent: "Asia", cities: [
-    { city: "Bali", country: "Indonesia", flag: "🇮🇩", img: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80" },
-    { city: "Bangkok", country: "Thailand", flag: "🇹🇭", img: "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=800&q=80" },
-    { city: "Singapore", country: "Singapore", flag: "🇸🇬", img: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=800&q=80" },
-    { city: "Tokyo", country: "Japan", flag: "🇯🇵", img: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80" },
-    { city: "Phuket", country: "Thailand", flag: "🇹🇭", img: "https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?w=800&q=80" },
-    { city: "Kuala Lumpur", country: "Malaysia", flag: "🇲🇾", img: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=800&q=80" },
-  ]},
-  { continent: "India", cities: [
-    { city: "Mumbai", country: "India", flag: "🇮🇳", img: "/mumbai.jpg" },
-    { city: "New Delhi", country: "India", flag: "🇮🇳", img: "/newdelhi.jpg" },
-    { city: "Goa", country: "India", flag: "🇮🇳", img: "/goa.jpg" },
-    { city: "Jaipur", country: "India", flag: "🇮🇳", img: "https://images.unsplash.com/photo-1599661046289-e31897846e41?w=800&q=80" },
-    { city: "Udaipur", country: "India", flag: "🇮🇳", img: "https://images.unsplash.com/photo-1477587458883-47145ed94245?w=800&q=80" },
-    { city: "Kochi", country: "India", flag: "🇮🇳", img: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=800&q=80" },
-  ]},
-  { continent: "Middle East", cities: [
-    { city: "Dubai", country: "UAE", flag: "🇦🇪", img: "/dubai.jpg" },
-    { city: "Abu Dhabi", country: "UAE", flag: "🇦🇪", img: "/Crowneplazayasidland.jpg" },
-    { city: "Doha", country: "Qatar", flag: "🇶🇦", img: "https://images.unsplash.com/photo-1553913861-c0fddf2619ee?w=800&q=80" },
-    { city: "Muscat", country: "Oman", flag: "🇴🇲", img: "https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=800&q=80" },
-    { city: "Riyadh", country: "Saudi Arabia", flag: "🇸🇦", img: "https://images.unsplash.com/photo-1586724237569-f3d0c1dee8c6?w=800&q=80" },
-    { city: "Istanbul", country: "Turkey", flag: "🇹🇷", img: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800&q=80" },
-  ]},
-  { continent: "Europe", cities: [
-    { city: "London", country: "United Kingdom", flag: "🇬🇧", img: "/langhamlondon.jpg" },
-    { city: "Paris", country: "France", flag: "🇫🇷", img: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80" },
-    { city: "Rome", country: "Italy", flag: "🇮🇹", img: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&q=80" },
-    { city: "Barcelona", country: "Spain", flag: "🇪🇸", img: "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=800&q=80" },
-    { city: "Amsterdam", country: "Netherlands", flag: "🇳🇱", img: "https://images.unsplash.com/photo-1534351590666-13e3e96b5017?w=800&q=80" },
-    { city: "Prague", country: "Czech Republic", flag: "🇨🇿", img: "https://images.unsplash.com/photo-1541849546-216549ae216d?w=800&q=80" },
-  ]},
-  { continent: "Americas & Pacific", cities: [
-    { city: "New York", country: "USA", flag: "🇺🇸", img: "https://images.unsplash.com/photo-1490644658840-3f2e3f8c5625?w=800&q=80" },
-    { city: "Miami", country: "USA", flag: "🇺🇸", img: "https://images.unsplash.com/photo-1533106418989-88406c7cc8ca?w=800&q=80" },
-    { city: "Los Angeles", country: "USA", flag: "🇺🇸", img: "https://images.unsplash.com/photo-1534430480872-3498386e7856?w=800&q=80" },
-    { city: "Sydney", country: "Australia", flag: "🇦🇺", img: "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=800&q=80" },
-    { city: "Melbourne", country: "Australia", flag: "🇦🇺", img: "https://images.unsplash.com/photo-1514395462725-fb4566210144?w=800&q=80" },
-    { city: "Cancun", country: "Mexico", flag: "🇲🇽", img: "https://images.unsplash.com/photo-1552074284-5e88ef1aef18?w=800&q=80" },
-  ]},
-];
-
 const DESTINATIONS = [
   { flag: "🇦🇪", city: "Dubai", country: "United Arab Emirates", img: "/dubai.jpg", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
   { flag: "🇮🇳", city: "New Delhi", country: "India", img: "/newdelhi.jpg", badge: "Member Deal", badgeColor: "#1447b8", badgeText: "#fff" },
@@ -269,7 +226,6 @@ export default function SearchHotelsPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [calOpen, setCalOpen] = useState(false);
-  const [activeContinent, setActiveContinent] = useState("Asia");
   const [calMode, setCalMode] = useState<"checkin"|"checkout">("checkin");
   const [calMonthOffset, setCalMonthOffset] = useState(0);
   const [guestOpen, setGuestOpen] = useState(false);
@@ -976,50 +932,95 @@ export default function SearchHotelsPage() {
         </section>
       </div>
 
-      {/* EXPLORE BY DESTINATION */}
-      <div style={{ background: "#f8fafc", padding: isMobile ? "50px 0" : "70px 0" }}>
+      {/* STATS */}
+      <div style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", paddingTop: isMobile ? 48 : 56 }} ref={statsRef}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "20px" : "26px 40px", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)" }}>
+          {STATS.map((s, i) => (
+            <div key={i} style={{ textAlign: "center", borderRight: !isMobile && i < 3 ? "1px solid #e2e8f0" : "none", padding: "0 20px" }}>
+              <div className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY }}>{statVals[i]}</div>
+              <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* TOP DESTINATIONS */}
+      <div style={{ padding: isMobile ? "50px 20px" : "70px 40px", maxWidth: 1100, margin: "0 auto" }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Explore by destination</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28, flexWrap: "wrap" as const, gap: 12 }}>
+          <div>
+            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Top Destinations</h2>
+            <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Handpicked destinations with rates unavailable anywhere else.</p>
+          </div>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "#16a34a" }}>
+            <span style={{ width: 7, height: 7, background: "#16a34a", borderRadius: "50%", display: "inline-block", animation: "pulse 1.5s infinite" }} /> Live rates
+          </span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 14 }}>
+          {DESTINATIONS.slice(0, 6).map((d, i) => (
+            <div key={i} className="dest-card" onClick={() => handleDestCardClick(d.city)}
+              style={{ borderRadius: 14, overflow: "hidden", position: "relative", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", height: isMobile ? 140 : 200 }}>
+              <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={e => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80&fit=crop"; }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 55%)" }} />
+              {d.badge && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, padding: "3px 9px", borderRadius: 6, background: d.badgeColor, color: d.badgeText }}>{d.badge}</span>}
+              <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
+                <div className="sora" style={{ fontSize: 17, fontWeight: 700 }}>{d.flag} {d.city}</div>
+                <div style={{ fontSize: 12, opacity: 0.8 }}>{d.country}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* HOTELS */}
+      <div id="hotels-section" style={{ background: "#f8fafc", padding: isMobile ? "50px 0" : "70px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 20px" : "0 40px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Member exclusive rates</p>
           <div style={{ marginBottom: 24 }}>
-            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY }}>Explore by Destination</h2>
-            <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>rebuq members get exclusive rates at top hotels across the world.</p>
+            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Member Exclusive Hotels</h2>
+            <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Members save an average of <strong>₹24,600</strong> on these properties.</p>
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto" as const, paddingBottom: 4 }}>
-            {CONTINENT_CITIES.map(group => (
-              <button key={group.continent} onClick={() => setActiveContinent(group.continent)}
-                style={{ padding: "8px 20px", borderRadius: 100, border: "1.5px solid", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, flexShrink: 0, background: activeContinent === group.continent ? B : "#fff", color: activeContinent === group.continent ? "#fff" : NAVY, borderColor: activeContinent === group.continent ? B : "#e2e8f0", transition: "all 0.15s" }}>
-                {group.continent}
-              </button>
-            ))}
+          <div style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto", paddingBottom: 4 }}>
+            {CITY_FILTERS.map(f => {
+              const dest = DESTINATIONS.find(d => d.city === f);
+              return (
+                <button key={f} onClick={() => setActiveCity(f)} style={{ background: activeCity === f ? NAVY : "#fff", border: `1.5px solid ${activeCity === f ? NAVY : "#e2e8f0"}`, color: activeCity === f ? "#fff" : NAVY, fontSize: 13, fontWeight: 500, padding: "7px 18px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, flexShrink: 0, transition: "all 0.2s" }}>
+                  {f === "All Hotels" ? f : `${dest?.flag || ""} ${f}`}
+                </button>
+              );
+            })}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 16 }}>
-            {CONTINENT_CITIES.find(g => g.continent === activeContinent)?.cities.map(c => (
-              <div key={c.city} onClick={async () => {
-                requireAuth(async () => {
-                  const today = new Date();
-                  const ci = today.toISOString().split("T")[0];
-                  const co = new Date(today.getTime() + 2*86400000).toISOString().split("T")[0];
-                  try {
-                    const res = await fetch(`https://hoteldrops-production-7e5a.up.railway.app/api/hotels/suggest?q=${encodeURIComponent(c.city)}`);
-                    const d = await res.json();
-                    const city = d.cities?.[0];
-                    const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: "2", rooms: "1", children: "0", destination: c.city });
-                    if (city?.placeId) params.set("placeId", city.placeId);
-                    router.push(`/search?${params.toString()}`);
-                  } catch {
-                    router.push(`/search?destination=${encodeURIComponent(c.city)}&checkIn=${ci}&checkOut=${co}&adults=2&rooms=1&children=0`);
-                  }
-                });
-              }}
-              style={{ borderRadius: 16, overflow: "hidden", cursor: "pointer", position: "relative", height: isMobile ? 140 : 200, boxShadow: "0 2px 12px rgba(0,0,0,0.08)", transition: "transform 0.2s" }}>
-                <img src={c.img} alt={c.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)" }} />
-                <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
-                  <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 16 : 20, fontWeight: 800, marginBottom: 2 }}>{c.flag} {c.city}</div>
-                  <div style={{ fontSize: 12, opacity: 0.8 }}>{c.country}</div>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20 }}>
+            {hotels.map((h, i) => (
+              <div key={i} className="hotel-card" onClick={() => handleHotelCardClick(h.name, h.city)}
+                style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1.5px solid #e2e8f0" }}>
+                <div style={{ height: 190, position: "relative", overflow: "hidden" }}>
+                  <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                    {h.badges.map(([label, type]) => { const s = BADGE_STYLES[type] || BADGE_STYLES.luxury; return <span key={label} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, letterSpacing: "0.04em", textTransform: "uppercase" as const, background: s.bg, color: s.color }}>{label}</span>; })}
+                  </div>
+                </div>
+                <div style={{ padding: "16px 18px 18px" }}>
+                  <div style={{ color: "#f59e0b", fontSize: 12, marginBottom: 4 }}>{"★".repeat(h.stars)}</div>
+                  <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{h.name}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{h.loc} · {h.rating}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5, marginBottom: 14 }}>
+                    {h.tags.map(t => <span key={t} style={{ background: "#f8fafc", color: "#64748b", fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 500 }}>{t}</span>)}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ fontSize: 12, color: "#64748b", textDecoration: "line-through" }}>{h.was}</div>
+                      <div className="sora" style={{ fontSize: 20, fontWeight: 800, color: NAVY }}>{h.now} <span style={{ fontSize: 11, color: "#64748b", fontFamily: "Inter,sans-serif", fontWeight: 400 }}>/night</span></div>
+                      <div style={{ fontSize: 12, color: "#16a34a", fontWeight: 600, marginTop: 2 }}>{h.save}</div>
+                    </div>
+                    <button style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const }}>View deal →</button>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+          <div style={{ textAlign: "center", marginTop: 36 }}>
+            <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>↑ Search for more hotels</button>
           </div>
         </div>
       </div>
