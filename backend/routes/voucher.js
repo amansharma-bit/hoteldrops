@@ -424,7 +424,8 @@ router.post('/submit', async (req, res) => {
       const twilioSid = process.env.TWILIO_ACCOUNT_SID;
       const twilioToken = process.env.TWILIO_AUTH_TOKEN;
       const twilioFrom = process.env.TWILIO_WHATSAPP_FROM;
-      if (twilioSid && twilioToken && twilioFrom && twilioSid !== 'placeholder') {
+      console.log('WA debug:', { hasSid: !!twilioSid, hasToken: !!twilioToken, hasFrom: !!twilioFrom, to });
+      if (twilioSid && twilioToken && twilioFrom) {
         const twilio = require('twilio')(twilioSid, twilioToken);
         const msg = `✅ *rebuq* — Booking Tracked!\n\nHi! We're now monitoring *${hotel_name}* in ${hotel_city || ''}.\n\n📅 ${check_in} → ${check_out} (${nights} nights)\n💰 Paid: ₹${Number(total_price_paid||0).toLocaleString('en-IN')}\n\nWe'll WhatsApp you the moment the price drops. 🎯\n\n_rebuq — Booked a hotel? We watch the price._`;
         await twilio.messages.create({
@@ -445,12 +446,18 @@ router.post('/submit', async (req, res) => {
         await emailService.bookingReceived(email, {
           name: email.split('@')[0],
           booking: {
-            hotel_name, hotel_city,
-            check_in, check_out,
-            total_nights: nights,
-            total_price_paid,
-            booking_reference,
-            ota_name,
+            hotelName: hotel_name,
+            city: hotel_city,
+            checkIn: check_in,
+            checkOut: check_out,
+            nights,
+            totalPaid: total_price_paid,
+            bookingRef: booking_reference,
+            platform: ota_name,
+            adults: num_adults || 2,
+            children: children_ages || [],
+            roomType: room_type || null,
+            cancellationDeadline: cancellation_deadline || null,
           }
         });
         console.log(`✅ Email confirmation sent to ${email}`);
