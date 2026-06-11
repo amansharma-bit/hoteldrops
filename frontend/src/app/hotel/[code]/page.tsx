@@ -199,7 +199,7 @@ function HotelDetailContent() {
       )}
 
       {/* NAV */}
-      <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", height: 60, position: "sticky", top: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 16px" : "0 40px" }}>
+      <nav style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", height: 60, position: "sticky", top: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 16px" : "0 40px", overflow: "hidden" }}>
         <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: NAVY, textDecoration: "none" }}>rebuq<span style={{ color: B }}>.</span></a>
         {!isMobile && (
           <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
@@ -230,7 +230,7 @@ function HotelDetailContent() {
       {/* SEARCH BAR — desktop only */}
       {!isMobile && (
         <div ref={refSearchBar} style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "10px 40px", position: "sticky", top: topOffset, zIndex: 250, overflow: "visible" }}>
-          <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: 64, position: "relative" }}>
+          <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: isMobile ? "auto" : 64, position: "relative" }}>
             <div style={{ padding: "0 22px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>Hotel</div>
               <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{hotel.name}</div>
@@ -239,7 +239,7 @@ function HotelDetailContent() {
               { label: "Check-in", val: editCheckIn, mode: "checkin" as const },
               { label: "Check-out", val: editCheckOut, mode: "checkout" as const },
             ].map(f => (
-              <div key={f.label} style={{ padding: "0 18px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer" }}
+              <div key={f.label} style={{ padding: "0 18px", borderRight: "1px solid #e2e8f0", display: isMobile ? "none" : "flex", flexDirection: "column", justifyContent: "center", cursor: "pointer" }}
                 onClick={() => { setCalMode(f.mode); setCalOpen(true); }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>{f.label}</div>
                 <div style={{ fontSize: 14, fontWeight: f.val ? 600 : 400, color: f.val ? NAVY : "#94a3b8" }}>
