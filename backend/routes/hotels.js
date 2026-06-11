@@ -776,6 +776,23 @@ router.get('/resolve-hotel', async (req, res) => {
 });
 
 
+
+// ── GET /api/hotels/cache-dump ────────────────────────────────────────────────
+router.get('/cache-dump', (req, res) => {
+  const fmt = req.query.format || 'json';
+  if (fmt === 'csv') {
+    const rows = ['hotelId,name,city,country'];
+    for (const h of HOTEL_CACHE) {
+      const name = (h.name || '').replace(/,/g, ' ');
+      rows.push(`${h.hotelId},${name},${h.city || ''},${h.country || ''}`);
+    }
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="rebuq_hotel_cache.csv"');
+    return res.send(rows.join('\n'));
+  }
+  return res.json({ total: HOTEL_CACHE.length, hotels: HOTEL_CACHE.map(h => ({ hotelId: h.hotelId, name: h.name, city: h.city, country: h.country })) });
+});
+
 // ── GET /api/hotels/cache-search ─────────────────────────────────────────────
 router.get('/cache-search', (req, res) => {
   const { q } = req.query;
