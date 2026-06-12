@@ -407,6 +407,7 @@ router.post('/submit', async (req, res) => {
       payment_type: payment_type || 'pay_now',
       amount_paid_upfront: amount_paid_upfront || 0,
       phone, email,
+      liteapi_hotel_id: liteapi_hotel_id || null,
       voucher_url: voucher_url || null,
       doc_type: doc_type || 'confirmed_voucher',  // ← NEW: save document type
       status: 'active',
