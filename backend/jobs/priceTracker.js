@@ -58,22 +58,27 @@ const supabase = createClient(
 
 const EUR_TO_INR = 112
 
-async function runPriceTracker() {
+async function runPriceTracker(force = false) {
   console.log('\n🤖 ===== Price Tracker Started =====')
   console.log(`⏰ ${new Date().toISOString()}`)
   let checked = 0, dropsFound = 0, errors = 0, mapped = 0
 
   try {
     const now = new Date().toISOString()
-    const { data: bookings, error } = await supabase
+    let query = supabase
       .from('bookings')
       .select('*')
       .eq('tracking_active', true)
       .in('status', ['pending', 'tracking'])
       .not('status', 'eq', 'non-refundable')
-      .or(`next_check_at.is.null,next_check_at.lte.${now}`)
       .order('created_at', { ascending: true })
       .limit(10)
+
+    if (!force) {
+      query = query.or(`next_check_at.is.null,next_check_at.lte.${now}`)
+    }
+
+    const { data: bookings, error } = await query
 
     if (error) throw error
     if (!bookings?.length) {
