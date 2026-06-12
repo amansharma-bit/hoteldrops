@@ -42,11 +42,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }))
 app.get('/api/run-tracker', async (req, res) => {
   console.log('🔥 Manual price tracker triggered')
   try {
-    // Reset next_check_at for all active bookings before running
-    const { createClient } = require('@supabase/supabase-js')
-    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY)
-    await sb.from('bookings').update({ next_check_at: new Date().toISOString() }).eq('tracking_active', true)
-    const result = await runPriceTracker()
+    const result = await runPriceTracker(true)
     res.json({ success: true, ...result })
   } catch(e) {
     res.status(500).json({ error: e.message })
