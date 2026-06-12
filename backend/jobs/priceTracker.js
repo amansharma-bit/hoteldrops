@@ -56,8 +56,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 )
 
-const EUR_TO_INR = 112
-
 async function runPriceTracker(force = false) {
   console.log('\n🤖 ===== Price Tracker Started =====')
   console.log(`⏰ ${new Date().toISOString()}`)
