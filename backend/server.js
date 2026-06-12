@@ -38,7 +38,18 @@ app.use('/api/voucher',  voucherRoutes)
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }))
 
-cron.schedule('0 * * * *', async () => {
+// Manual trigger for demo
+app.post('/api/run-tracker', async (req, res) => {
+  console.log('🔥 Manual price tracker triggered')
+  try {
+    const result = await runPriceTracker()
+    res.json({ success: true, ...result })
+  } catch(e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+cron.schedule('*/5 * * * *', async () => {
   console.log('⏰ Running price tracker job...')
   try {
     const result = await runPriceTracker()
