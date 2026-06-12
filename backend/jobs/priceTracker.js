@@ -178,15 +178,18 @@ async function processBooking(booking) {
       timeout:          8,
     }, { headers: liteHeaders, timeout: 15000, validateStatus: () => true })
 
+    console.log(`  📡 Rates API status: ${ratesResp.status}`)
     if (ratesResp.status !== 200) {
-      console.log(`  ❌ Rates API error: ${ratesResp.status}`)
+      console.log(`  ❌ Rates API error: ${ratesResp.status} — ${JSON.stringify(ratesResp.data).slice(0,200)}`)
       await updateNextCheck(booking.id, 1)
       return { mapped: didMap }
     }
-    // liteAPI returns data.data[0].roomTypes
     const hotelData = ratesResp.data?.data?.[0]
     rooms = hotelData?.roomTypes || []
-    console.log(`  📊 Rooms found: ${rooms.length}, raw status: ${ratesResp.status}`)
+    console.log(`  📊 Rooms found: ${rooms.length} | hotelData: ${hotelData ? 'yes' : 'no'} | data length: ${ratesResp.data?.data?.length || 0}`)
+    if (ratesResp.data?.data?.length === 0) {
+      console.log(`  ⚠️  No availability returned. Raw: ${JSON.stringify(ratesResp.data).slice(0,300)}`)
+    }
   } catch (e) {
     console.error('  ❌ Rates fetch failed:', e.message)
     await updateNextCheck(booking.id, 1)
