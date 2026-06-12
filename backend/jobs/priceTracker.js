@@ -160,19 +160,19 @@ async function processBooking(booking) {
   // ── Fetch live rates from liteAPI ─────────────────────────────────────────
   console.log(`  💰 Checking price (${hotelId})...`)
 
-  let rooms = []
+  let roomTypes = []
   try {
-    const adults   = booking.num_adults   || 2
-    const children = booking.num_children || 0
-    const rooms    = booking.num_rooms    || 1
-    const childAges = children > 0 ? Array(children).fill(5) : []
+    const numAdults   = booking.num_adults   || 2
+    const numChildren = booking.num_children || 0
+    const numRooms    = booking.num_rooms    || 1
+    const childAges   = numChildren > 0 ? Array(numChildren).fill(5) : []
     const ratesResp = await axios.post(`${LITEAPI_BASE}/hotels/rates`, {
       hotelIds:         [hotelId],
       checkin:          booking.check_in,
       checkout:         booking.check_out,
       currency:         'INR',
       guestNationality: 'IN',
-      occupancies:      [{ rooms, adults, children: childAges }],
+      occupancies:      [{ rooms: numRooms, adults: numAdults, children: childAges }],
       limit:            1,
       maxRatesPerHotel: 1,
       timeout:          8,
@@ -185,10 +185,10 @@ async function processBooking(booking) {
       return { mapped: didMap }
     }
     const hotelData = ratesResp.data?.data?.[0]
-    rooms = hotelData?.roomTypes || []
-    console.log(`  📊 Rooms found: ${rooms.length} | hotelData: ${hotelData ? 'yes' : 'no'} | data length: ${ratesResp.data?.data?.length || 0}`)
-    if (ratesResp.data?.data?.length === 0) {
-      console.log(`  ⚠️  No availability returned. Raw: ${JSON.stringify(ratesResp.data).slice(0,300)}`)
+    roomTypes = hotelData?.roomTypes || []
+    console.log(`  📊 RoomTypes found: ${roomTypes.length} | data length: ${ratesResp.data?.data?.length || 0}`)
+    if (roomTypes.length === 0) {
+      console.log(`  ⚠️  No availability. Raw: ${JSON.stringify(ratesResp.data).slice(0,300)}`)
     }
   } catch (e) {
     console.error('  ❌ Rates fetch failed:', e.message)
@@ -202,7 +202,7 @@ async function processBooking(booking) {
     status:          'tracking',
   }).eq('id', booking.id)
 
-  if (!rooms.length) {
+  if (!roomTypes.length) {
     console.log(`  ❓ No availability`)
     await supabase.from('price_checks').insert({
       booking_id:            booking.id,
@@ -219,7 +219,7 @@ async function processBooking(booking) {
   let lowestRoom  = null
   let lowestRate  = null
 
-  for (const room of rooms) {
+  for (const room of roomTypes) {
     for (const rate of (room.rates || [])) {
       // liteAPI returns retailRate in INR when currency=INR
       const priceINR = parseFloat(rate.retailRate?.total?.[0]?.amount || rate.retailRate?.total || rate.net || 0)
