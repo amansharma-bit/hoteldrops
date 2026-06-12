@@ -157,14 +157,20 @@ async function processBooking(booking) {
 
   let rooms = []
   try {
+    const adults   = booking.num_adults   || 2
+    const children = booking.num_children || 0
+    const rooms    = booking.num_rooms    || 1
+    const childAges = children > 0 ? Array(children).fill(5) : []
     const ratesResp = await axios.post(`${LITEAPI_BASE}/hotels/rates`, {
-      hotelIds: [hotelId],
-      checkin:  booking.check_in,
-      checkout: booking.check_out,
-      adults:   booking.num_adults   || 2,
-      children: booking.num_children || 0,
-      rooms:    booking.num_rooms    || 1,
-      currency: 'INR',
+      hotelIds:         [hotelId],
+      checkin:          booking.check_in,
+      checkout:         booking.check_out,
+      currency:         'INR',
+      guestNationality: 'IN',
+      occupancies:      [{ rooms, adults, children: childAges }],
+      limit:            1,
+      maxRatesPerHotel: 1,
+      timeout:          8,
     }, { headers: liteHeaders, timeout: 15000, validateStatus: () => true })
 
     if (ratesResp.status !== 200) {
@@ -175,6 +181,7 @@ async function processBooking(booking) {
     // liteAPI returns data.data[0].roomTypes
     const hotelData = ratesResp.data?.data?.[0]
     rooms = hotelData?.roomTypes || []
+    console.log(`  📊 Rooms found: ${rooms.length}, raw status: ${ratesResp.status}`)
   } catch (e) {
     console.error('  ❌ Rates fetch failed:', e.message)
     await updateNextCheck(booking.id, 1)
