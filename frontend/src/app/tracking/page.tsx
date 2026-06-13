@@ -120,8 +120,8 @@ function TrackingContent() {
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FCD34D", display: "inline-block" }} />
             PRICE TRACKER ACTIVATED
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 32 : 56, alignItems: "center" }}>
-            <div>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 32 : 56, alignItems: "stretch" }}>
+            <div style={{ display: "flex", flexDirection: "column" as const, justifyContent: "space-between" }}>
               <h1 className="sora" style={{ fontSize: isMobile ? 34 : 48, fontWeight: 800, color: "#fff", lineHeight: 1.08, marginBottom: 20 }}>
                 We&apos;re on it.<br />
                 <span style={{ color: "#FCD34D" }}>Watching 24/7</span><br />
