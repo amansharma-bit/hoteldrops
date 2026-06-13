@@ -258,108 +258,86 @@ function TrackingContent() {
             </div>
           </div>
 
-          {/* What happens next */}
-          <div style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)", border: "1.5px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 28 }}>
+          {/* Member deal — right column */}
+          <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a", animation: "pulse 2s infinite" }} />
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.07em", color: "#16a34a" }}>Live Member Rate</span>
+            </div>
+            {/* Hotel image */}
+            {liveHotelImg && (
+              <div style={{ height: 160, overflow: "hidden", position: "relative" as const }}>
+                <img src={liveHotelImg} alt={booking.hotel_name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute" as const, inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)" }} />
+                <div style={{ position: "absolute" as const, bottom: 12, left: 14, fontSize: 14, fontWeight: 700, color: "#fff" }}>{booking.hotel_name}</div>
+              </div>
+            )}
+            <div style={{ padding: 20 }}>
+              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>{booking.hotel_city} · {fmtDate(booking.check_in)} → {fmtDate(booking.check_out)} · {numNights} night{numNights !== 1 ? "s" : ""}</div>
+
+              {livePriceLoading && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "20px 0" }}>
+                  <div style={{ width: 18, height: 18, border: `2px solid #e2e8f0`, borderTop: `2px solid ${B}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                  <span style={{ fontSize: 13, color: "#64748b" }}>Fetching live rate…</span>
+                </div>
+              )}
+
+              {!livePriceLoading && livePrice && (
+                <>
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 4 }}>Member rate · taxes included</div>
+                    <div style={{ fontSize: 34, fontWeight: 800, color: B, fontFamily: "'Sora',sans-serif", lineHeight: 1 }}>₹{livePrice.toLocaleString("en-IN")}</div>
+                    {totalPaid > 0 && <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>You paid: <span style={{ textDecoration: "line-through" }}>₹{totalPaid.toLocaleString("en-IN")}</span></div>}
+                  </div>
+                  {liveSaving && liveSaving > 0 && (
+                    <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#16a34a" }}>You save</span>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: "#16a34a" }}>₹{liveSaving.toLocaleString("en-IN")} <span style={{ fontSize: 12 }}>({liveSavingPct}% off)</span></span>
+                    </div>
+                  )}
+                  {liveSaving !== null && liveSaving <= 0 && (
+                    <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>
+                      <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>✓ You got a great rate on this hotel!</span>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {!livePriceLoading && (livePriceError || !livePrice) && (
+                <div style={{ padding: "12px 0", marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, color: "#64748b" }}>{liteapiHotelId ? "Check hotel page for live availability." : "Sign in to see member rates."}</div>
+                </div>
+              )}
+
+              <button
+                onClick={() => router.push(hotelDetailUrl)}
+                style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "13px 0", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%", textAlign: "center" as const }}
+              >
+                View hotel & book →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* WHAT HAPPENS NEXT — full width below */}
+        <div style={{ maxWidth: 1000, margin: "0 auto", marginBottom: 32 }}>
+          <div style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)", border: "1.5px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: isMobile ? 20 : 28 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
               <div style={{ width: 36, height: 36, background: "rgba(255,255,255,0.1)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
               </div>
               <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>What happens next</div>
             </div>
-            {whatNext.map((item, i) => (
-              <div key={i} style={{ display: "flex", gap: 14, marginBottom: i < 3 ? 20 : 0 }}>
-                <div style={{ width: 38, height: 38, background: "rgba(255,255,255,0.08)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#fff" }}>{item.icon}</div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 3 }}>{item.title}</div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>{item.text}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* LIVE MEMBER DEAL — for the actual uploaded hotel */}
-        <div style={{ maxWidth: 1000, margin: "0 auto", marginBottom: 40 }}>
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: "#94a3b8", marginBottom: 6 }}>Members only · exclusive rate</div>
-            <div className="sora" style={{ fontSize: isMobile ? 20 : 24, fontWeight: 800, color: NAVY }}>Current member deal — {booking.hotel_name}</div>
-            <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>Live rate for your same dates. Members get pre-negotiated pricing.</div>
-          </div>
-
-          {/* Live price card */}
-          <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "300px 1fr", minHeight: 200 }}>
-              {/* Hotel image */}
-              <div style={{ background: "#e2e8f0", position: "relative" as const, minHeight: 200, overflow: "hidden" }}>
-                {liveHotelImg ? (
-                  <img src={liveHotelImg} alt={booking.hotel_name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", position: "absolute", inset: 0 }} />
-                ) : (
-                  <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #1447b8 0%, #1e3a5f 100%)", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
-                    <div style={{ textAlign: "center" as const }}>
-                      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 28, fontWeight: 800, color: "#fff", opacity: 0.4 }}>r.</div>
-                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>{booking.hotel_name}</div>
-                    </div>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: 20 }}>
+              {whatNext.map((item, i) => (
+                <div key={i} style={{ display: "flex", gap: 12 }}>
+                  <div style={{ width: 36, height: 36, background: "rgba(255,255,255,0.08)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "#fff" }}>{item.icon}</div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", marginBottom: 3 }}>{item.title}</div>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>{item.text}</div>
                   </div>
-                )}
-                <div style={{ position: "absolute" as const, top: 12, left: 12, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, color: "#fff" }}>Member rate</div>
-              </div>
-
-              {/* Price details */}
-              <div style={{ padding: 28, display: "flex", flexDirection: "column" as const, justifyContent: "space-between" }}>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{booking.hotel_name}</div>
-                  <div style={{ fontSize: 13, color: "#64748b", marginBottom: 16 }}>{booking.hotel_city} · {fmtDate(booking.check_in)} → {fmtDate(booking.check_out)} · {numNights} nights</div>
-
-                  {livePriceLoading && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 0" }}>
-                      <div style={{ width: 20, height: 20, border: "2px solid #e2e8f0", borderTop: `2px solid ${B}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                      <span style={{ fontSize: 13, color: "#64748b" }}>Fetching live member rate…</span>
-                    </div>
-                  )}
-
-                  {!livePriceLoading && livePrice && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 8 }}>
-                        <div>
-                          <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.05em", marginBottom: 2 }}>Your member rate</div>
-                          <div style={{ fontSize: 32, fontWeight: 800, color: B, fontFamily: "'Sora',sans-serif" }}>₹{livePrice.toLocaleString("en-IN")}</div>
-                          <div style={{ fontSize: 12, color: "#64748b" }}>total for {numNights} nights · taxes included</div>
-                        </div>
-                        {liveSaving && liveSaving > 0 && (
-                          <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 10, padding: "10px 14px", textAlign: "center" as const }}>
-                            <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700, marginBottom: 2 }}>YOU SAVE</div>
-                            <div style={{ fontSize: 20, fontWeight: 800, color: "#16a34a" }}>₹{liveSaving.toLocaleString("en-IN")}</div>
-                            {liveSavingPct && <div style={{ fontSize: 11, color: "#16a34a" }}>{liveSavingPct}% off</div>}
-                          </div>
-                        )}
-                      </div>
-                      {totalPaid > 0 && (
-                        <div style={{ fontSize: 12, color: "#94a3b8" }}>
-                          You paid: <span style={{ textDecoration: "line-through" }}>₹{totalPaid.toLocaleString("en-IN")}</span>
-                          {liveSaving && liveSaving <= 0 && <span style={{ color: "#16a34a", marginLeft: 8 }}>✓ You got a great rate!</span>}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {!livePriceLoading && (livePriceError || !livePrice) && !livePriceLoading && (
-                    <div style={{ padding: "12px 16px", background: "#f8fafc", borderRadius: 10, marginBottom: 16 }}>
-                      <div style={{ fontSize: 13, color: "#64748b" }}>
-                        {liteapiHotelId
-                          ? "Live rate not available for these dates. Check the hotel page for availability."
-                          : "Enter your dates on the hotel page to see live member rates."}
-                      </div>
-                    </div>
-                  )}
                 </div>
-
-                <button
-                  onClick={() => router.push(hotelDetailUrl)}
-                  style={{ background: B, color: "#fff", border: "none", borderRadius: 10, padding: "14px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8, width: "fit-content" }}
-                >
-                  View hotel & book →
-                </button>
-              </div>
+              ))}
             </div>
           </div>
         </div>
