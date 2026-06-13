@@ -65,16 +65,16 @@ const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, textTransform:
 const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }
 
 const CARDS = [
-  { img: "/atlantisdubai.jpg",        name: "Dubai",       flag: "🇦🇪", placeId: "ChIJRcbZaklDXz4RYlEphFBu5r0", hotels: "2,400+" },
-  { img: "/Westinmaldives.jpg",       name: "Maldives",    flag: "🇲🇻", placeId: "ChIJvV7vDFMi6TkRmSFRaDPo5OE", hotels: "180+"   },
-  { img: "/lemeridienbali.jpg",       name: "Bali",        flag: "🇮🇩", placeId: "ChIJoQ8Q6NNB0S0RkOYkS7EPkSQ", hotels: "1,200+" },
-  { img: "/hyattregencybangkok.jpg",  name: "Bangkok",     flag: "🇹🇭", placeId: "ChIJ82ENKDJgHTERIEjiXbIAAQE", hotels: "3,100+" },
-  { img: "/theroseatenewdelhi.jpg",   name: "New Delhi",   flag: "🇮🇳", placeId: "ChIJLbZ-NFv9DDkRQJY4FbcFcgM", hotels: "900+"   },
-  { img: "/wgoa.jpg",                 name: "Goa",         flag: "🇮🇳", placeId: "ChIJQbc2YxC6vzsRkkDzYv-H-Oo", hotels: "600+"   },
-  { img: "/andazsingapore.jpg",       name: "Singapore",   flag: "🇸🇬", placeId: "ChIJdZOLiiMR2jERxPWrUs9peIg", hotels: "700+"   },
-  { img: "/langhamlondon.jpg",        name: "London",      flag: "🇬🇧", placeId: "ChIJdd4hrwug2EcRmSrV3Vo6llI", hotels: "4,200+" },
-  { img: "/fourseasonsmumbai.jpg",    name: "Mumbai",      flag: "🇮🇳", placeId: "ChIJwe1EZjDG5zsRaYxkjY_tpF0", hotels: "1,800+" },
-  { img: "/Crowneplazayasidland.jpg", name: "Abu Dhabi",   flag: "🇦🇪", placeId: "ChIJKW6EkDdMXz4REnToVWFV4hI", hotels: "500+"   },
+  { img: "/atlantisdubai.jpg",        name: "Dubai",     flag: "🇦🇪", country: "AE", hotels: "2,400+" },
+  { img: "/Westinmaldives.jpg",       name: "Maldives",  flag: "🇲🇻", country: "MV", hotels: "180+"   },
+  { img: "/lemeridienbali.jpg",       name: "Bali",      flag: "🇮🇩", country: "ID", hotels: "1,200+" },
+  { img: "/hyattregencybangkok.jpg",  name: "Bangkok",   flag: "🇹🇭", country: "TH", hotels: "3,100+" },
+  { img: "/theroseatenewdelhi.jpg",   name: "New Delhi", flag: "🇮🇳", country: "IN", hotels: "900+"   },
+  { img: "/wgoa.jpg",                 name: "Goa",       flag: "🇮🇳", country: "IN", hotels: "600+"   },
+  { img: "/andazsingapore.jpg",       name: "Singapore", flag: "🇸🇬", country: "SG", hotels: "700+"   },
+  { img: "/langhamlondon.jpg",        name: "London",    flag: "🇬🇧", country: "GB", hotels: "4,200+" },
+  { img: "/fourseasonsmumbai.jpg",    name: "Mumbai",    flag: "🇮🇳", country: "IN", hotels: "1,800+" },
+  { img: "/Crowneplazayasidland.jpg", name: "Abu Dhabi", flag: "🇦🇪", country: "AE", hotels: "500+"   },
 ];
 
 const STATS = [
@@ -995,7 +995,7 @@ export default function Home() {
             const checkOut = new Date(); checkOut.setDate(checkOut.getDate() + 15);
             const ci = checkIn.toISOString().split('T')[0];
             const co = checkOut.toISOString().split('T')[0];
-            const url = `/search?destination=${encodeURIComponent(c.name)}&checkIn=${ci}&checkOut=${co}&adults=2&rooms=1&children=0&placeId=${c.placeId}`;
+            const url = `/search?destination=${encodeURIComponent(c.name)}&checkIn=${ci}&checkOut=${co}&adults=2&rooms=1&children=0&countryCode=${c.country}`;
             return (
               <div key={i} className="hotel-card" onClick={() => window.location.href = url} style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
                 <img src={c.img} alt={c.name} className="hotel-card-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
