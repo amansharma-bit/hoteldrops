@@ -62,6 +62,10 @@ function TrackingContent() {
 
   if (!booking) return null;
 
+  const hotelDetailUrl = liteapiHotelId
+    ? `/hotel/${liteapiHotelId}?checkIn=${booking.check_in}&checkOut=${booking.check_out}&adults=${booking.num_adults || 2}&children=${booking.num_children || 0}&rooms=${booking.num_rooms || 1}`
+    : `/search-hotels`;
+
   const numNights = booking.check_in && booking.check_out
     ? Math.max(1, Math.round((new Date(booking.check_out).getTime() - new Date(booking.check_in).getTime()) / 86400000))
     : 0;
