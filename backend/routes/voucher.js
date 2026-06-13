@@ -410,7 +410,8 @@ router.post('/submit', async (req, res) => {
       liteapi_hotel_id: liteapi_hotel_id || null,
       voucher_url: voucher_url || null,
       doc_type: doc_type || 'confirmed_voucher',  // ← NEW: save document type
-      status: 'active',
+      status: 'tracking',
+      tracking_active: true,
       created_at: new Date().toISOString(),
     }).select().single();
 
@@ -467,7 +468,7 @@ router.post('/submit', async (req, res) => {
       console.warn('⚠️ Email failed (booking still saved):', emailErr.message);
     }
 
-    return res.json({ success: true, booking_id: booking.id });
+    return res.json({ success: true, booking_id: booking.id, liteapi_hotel_id: liteapi_hotel_id || null });
 
   } catch (err) {
     console.error('Submit error:', err);
@@ -476,3 +477,4 @@ router.post('/submit', async (req, res) => {
 });
 
 module.exports = router;
+
