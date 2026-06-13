@@ -126,7 +126,7 @@ function TrackingContent() {
 
       {/* NAV + HERO wrapper */}
       <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)" }}>
-        <nav style={{ background: "transparent", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 32px", position: "sticky", top: 0, zIndex: 300 }}>
+        <nav style={{ background: "#1447b8", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 32px", position: "sticky", top: 0, zIndex: 300 }}>
           <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none" }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
           {!isMobile && (
             <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
@@ -169,9 +169,9 @@ function TrackingContent() {
                     </div>
                   </div>
                 )}
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" as const }}>
-                  <button onClick={() => { sessionStorage.removeItem("rebuq_booking"); router.push("/"); }} style={{ background: "#fff", color: B, border: "none", padding: "13px 26px", borderRadius: 10, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>← Back to home</button>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" as const, marginTop: 8 }}>
                   <button onClick={() => { sessionStorage.removeItem("rebuq_booking"); router.push("/"); }} style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", padding: "13px 26px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Track another booking</button>
+                  <button onClick={() => router.push(hotelDetailUrl)} style={{ background: "#FCD34D", color: "#0f172a", border: "none", padding: "13px 26px", borderRadius: 10, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>Check member deals for {booking.hotel_name} →</button>
                 </div>
               </div>
 
