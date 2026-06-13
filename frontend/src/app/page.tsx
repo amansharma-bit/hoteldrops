@@ -374,7 +374,7 @@ export default function Home() {
         setBlockInfo({ reason: 'duplicate', message: json.message }); setUploadStep('blocked'); return;
       }
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to submit');
-      sessionStorage.setItem('rebuq_booking', JSON.stringify({ extracted, bookingId: json.booking_id }));
+      sessionStorage.setItem('rebuq_booking', JSON.stringify({ extracted, bookingId: json.booking_id, liteapi_hotel_id: json.liteapi_hotel_id || null }));
       router.push('/tracking');
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
@@ -1070,3 +1070,4 @@ export default function Home() {
     </div>
   );
 }
+
