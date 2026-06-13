@@ -65,16 +65,16 @@ const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, textTransform:
 const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }
 
 const CARDS = [
-  { img: "/atlantisdubai.jpg", price: "₹22,400", name: "Atlantis The Palm, Dubai", pct: "↓19%" },
-  { img: "/Westinmaldives.jpg", price: "₹31,600", name: "The Westin, Maldives", pct: "↓20%" },
-  { img: "/lemeridienbali.jpg", price: "₹18,200", name: "Le Meridien, Bali", pct: "↓22%" },
-  { img: "/hyattregencybangkok.jpg", price: "₹17,400", name: "Hyatt Regency, Bangkok", pct: "↓28%" },
-  { img: "/theroseatenewdelhi.jpg", price: "₹14,800", name: "The Roseate, New Delhi", pct: "↓16%" },
-  { img: "/wgoa.jpg", price: "₹21,000", name: "W Goa", pct: "↓18%" },
-  { img: "/andazsingapore.jpg", price: "₹19,500", name: "Andaz, Singapore", pct: "↓23%" },
-  { img: "/langhamlondon.jpg", price: "₹26,200", name: "The Langham, London", pct: "↓21%" },
-  { img: "/fourseasonsmumbai.jpg", price: "₹16,900", name: "Four Seasons, Mumbai", pct: "↓25%" },
-  { img: "/Crowneplazayasidland.jpg", price: "₹48,000", name: "Crowne Plaza, Yas Island", pct: "↓12%" },
+  { img: "/atlantisdubai.jpg",        name: "Dubai",       flag: "🇦🇪", placeId: "ChIJRcbZaklDXz4RYlEphFBu5r0", hotels: "2,400+" },
+  { img: "/Westinmaldives.jpg",       name: "Maldives",    flag: "🇲🇻", placeId: "ChIJvV7vDFMi6TkRmSFRaDPo5OE", hotels: "180+"   },
+  { img: "/lemeridienbali.jpg",       name: "Bali",        flag: "🇮🇩", placeId: "ChIJoQ8Q6NNB0S0RkOYkS7EPkSQ", hotels: "1,200+" },
+  { img: "/hyattregencybangkok.jpg",  name: "Bangkok",     flag: "🇹🇭", placeId: "ChIJ82ENKDJgHTERIEjiXbIAAQE", hotels: "3,100+" },
+  { img: "/theroseatenewdelhi.jpg",   name: "New Delhi",   flag: "🇮🇳", placeId: "ChIJLbZ-NFv9DDkRQJY4FbcFcgM", hotels: "900+"   },
+  { img: "/wgoa.jpg",                 name: "Goa",         flag: "🇮🇳", placeId: "ChIJQbc2YxC6vzsRkkDzYv-H-Oo", hotels: "600+"   },
+  { img: "/andazsingapore.jpg",       name: "Singapore",   flag: "🇸🇬", placeId: "ChIJdZOLiiMR2jERxPWrUs9peIg", hotels: "700+"   },
+  { img: "/langhamlondon.jpg",        name: "London",      flag: "🇬🇧", placeId: "ChIJdd4hrwug2EcRmSrV3Vo6llI", hotels: "4,200+" },
+  { img: "/fourseasonsmumbai.jpg",    name: "Mumbai",      flag: "🇮🇳", placeId: "ChIJwe1EZjDG5zsRaYxkjY_tpF0", hotels: "1,800+" },
+  { img: "/Crowneplazayasidland.jpg", name: "Abu Dhabi",   flag: "🇦🇪", placeId: "ChIJKW6EkDdMXz4REnToVWFV4hI", hotels: "500+"   },
 ];
 
 const STATS = [
@@ -990,7 +990,23 @@ export default function Home() {
         <div style={{ textAlign: "center", padding: isMobile ? "0 20px 20px" : "0 40px 28px" }}><p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 12 }}>Real savings · Verified drops</p><h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>rebuq members saved on these hotels</h2></div>
         <div style={{ overflow: "hidden", padding: isMobile ? "0 16px" : "0 40px" }} onTouchStart={e => { const t = e.touches[0]; (e.currentTarget as any)._touchStartX = t.clientX; }} onTouchEnd={e => { const startX = (e.currentTarget as any)._touchStartX; const endX = e.changedTouches[0].clientX; const diff = startX - endX; if (Math.abs(diff) > 50) { scrollCarousel(diff > 0 ? 1 : -1); } }}>
           <div style={{ display: "flex", gap: 16, transform: `translateX(-${carouselPos * (CARD_WIDTH + 16)}px)`, transition: "transform 0.4s cubic-bezier(.4,0,.2,1)" }}>
-            {CARDS.map((c, i) => (<div key={i} className="hotel-card" style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}><img src={c.img} alt={c.name} className="hotel-card-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /><div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.62) 0%, transparent 60%)" }} /><div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}><span style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 700, display: "block" }}>{c.price}</span><span style={{ fontSize: 12, opacity: 0.85 }}>{c.name}</span></div><div style={{ position: "absolute", top: 12, right: 12, background: "#16a34a", color: "#fff", fontSize: 13, fontWeight: 700, padding: "4px 10px", borderRadius: 8 }}>{c.pct}</div></div>))}
+            {CARDS.map((c, i) => {
+            const checkIn = new Date(); checkIn.setDate(checkIn.getDate() + 14);
+            const checkOut = new Date(); checkOut.setDate(checkOut.getDate() + 15);
+            const ci = checkIn.toISOString().split('T')[0];
+            const co = checkOut.toISOString().split('T')[0];
+            const url = `/search?destination=${encodeURIComponent(c.name)}&checkIn=${ci}&checkOut=${co}&adults=2&rooms=1&children=0&placeId=${c.placeId}`;
+            return (
+              <div key={i} className="hotel-card" onClick={() => window.location.href = url} style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer", boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}>
+                <img src={c.img} alt={c.name} className="hotel-card-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 55%)" }} />
+                <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
+                  <span style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 20 : 24, fontWeight: 800, display: "block", lineHeight: 1.1 }}>{c.flag} {c.name}</span>
+                  <span style={{ fontSize: 12, opacity: 0.8, marginTop: 3, display: "block" }}>{c.hotels} hotels</span>
+                </div>
+              </div>
+            );
+          })}
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}><button onClick={() => scrollCarousel(-1)} disabled={carouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos === 0 ? 0.4 : 1 }}>‹</button><div style={{ display: "flex", gap: 6 }}>{Array.from({ length: CARDS.length - VISIBLE + 1 }, (_, i) => (<div key={i} onClick={() => setCarouselPos(i)} style={{ width: i === carouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === carouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />))}</div><button onClick={() => scrollCarousel(1)} disabled={carouselPos >= MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: carouselPos >= MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: carouselPos >= MAX_POS ? 0.4 : 1 }}>›</button></div>
