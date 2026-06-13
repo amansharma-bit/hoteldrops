@@ -39,6 +39,7 @@ function TrackingContent() {
   const isMobile = useIsMobile();
   const [user, setUser] = useState<{ name: string } | null>(null);
   const [booking, setBooking] = useState<any>(null);
+  const [liteapiHotelId, setLiteapiHotelId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
