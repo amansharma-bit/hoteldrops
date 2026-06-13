@@ -67,7 +67,7 @@ async function runPriceTracker(force = false) {
       .from('bookings')
       .select('*')
       .eq('tracking_active', true)
-      .in('status', ['pending', 'tracking'])
+      .in('status', ['pending', 'tracking', 'active'])
       .not('status', 'eq', 'non-refundable')
       .order('created_at', { ascending: true })
       .limit(10)
@@ -263,7 +263,17 @@ async function processBooking(booking) {
       .limit(1)
 
     if (existing?.length) {
-      console.log(`  ⏭️  Offer already exists`)
+      const pendingOffer = existing.find(o => o.status === 'pending')
+      if (pendingOffer) {
+        console.log(`  🔄  Offer exists but never sent — retrying alerts`)
+        await sendAlerts(booking, pendingOffer, {
+          offerPrice: pendingOffer.offer_price,
+          customerSaving: pendingOffer.customer_saving,
+          ourMargin: pendingOffer.our_margin,
+        })
+        return { drop: true, mapped: didMap }
+      }
+      console.log(`  ⏭️  Offer already sent`)
       return { mapped: didMap }
     }
 
@@ -325,7 +335,8 @@ _Offer valid 24 hours._`
     const twilio    = require('twilio')
     const client    = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
     const formatted = phone.startsWith('+') ? `whatsapp:${phone}` : `whatsapp:+91${phone}`
-    await client.messages.create({ from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM || '+14155238886'}`, to: formatted, body: msg })
+    const twilioFrom = (process.env.TWILIO_WHATSAPP_FROM || '+14155238886').replace('whatsapp:', '')
+    await client.messages.create({ from: `whatsapp:${twilioFrom}`, to: formatted, body: msg })
     await supabase.from('offers').update({ whatsapp_sent_at: new Date().toISOString(), status: 'sent' }).eq('id', savedOffer.id)
     console.log(`  📱 WhatsApp sent → ${phone}`)
   } catch (e) {
@@ -349,7 +360,7 @@ _Offer valid 24 hours._`
       newRate:      offerData.offerPrice,
       saving:       offerData.customerSaving,
       hotelPageUrl,
-    }).catch(e => console.error(`  ❌ Price drop email failed:`, e.message))
+    }).catch(e => console.error(`  ❌ Price drop email failed:`, e.message, e.stack))
   }
 }
 
