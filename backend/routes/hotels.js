@@ -296,8 +296,9 @@ async function enrichWithCoords(hotels) {
   const missing = hotels.filter(h => !cached[String(h.code)])
   if (missing.length > 0) {
     const toUpsert = []
-    await Promise.all(missing.map(async (hotel) => {
+    for (const hotel of missing) {
       try {
+        await sleep(200)
         const r = await axios.get(`${BASE_URL}/data/hotel?hotelId=${hotel.code}`, {
           headers: getHeaders(), timeout: 8000, validateStatus: () => true
         })
@@ -316,7 +317,7 @@ async function enrichWithCoords(hotels) {
       } catch (e) {
         cached[String(hotel.code)] = { hotel_id: String(hotel.code), latitude: null, longitude: null, amenities: [] }
       }
-    }))
+    }
     if (toUpsert.length) {
       await supabase.from('hotels_cache').upsert(toUpsert, { onConflict: 'hotel_id' })
     }
@@ -674,7 +675,7 @@ router.get('/search', async (req, res) => {
       currency: 'INR',
       guestNationality: 'IN',
       occupancies: buildOccupancies(rooms, adults, children),
-      limit: 200,
+      limit: 50,
       maxRatesPerHotel: 1,
       includeHotelData: true,
       timeout: 8,
@@ -747,7 +748,7 @@ router.get('/search', async (req, res) => {
     }).filter(Boolean)
 
     hotels = await enrichWithCoords(hotels)
-    memSet(cacheKey, hotels, 6 * 3600000)
+    memSet(cacheKey, hotels)
     return res.json({ hotels: { hotels, total: hotels.length, checkIn, checkOut } })
 
   } catch (err) {
