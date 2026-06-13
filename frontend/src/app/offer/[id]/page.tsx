@@ -52,7 +52,7 @@ export default function OfferPage() {
       }
 
       // Redirect to hotel page with all params pre-filled
-      const hotelCode = booking.hotelbeds_hotel_code;
+      const hotelCode = booking.liteapi_hotel_id;
       const params = new URLSearchParams({
         checkIn:  booking.check_in,
         checkOut: booking.check_out,
