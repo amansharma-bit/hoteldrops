@@ -50,7 +50,9 @@ function TrackingContent() {
     try {
       const stored = sessionStorage.getItem("rebuq_booking");
       if (stored) {
-        setBooking(JSON.parse(stored).extracted || JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setBooking(parsed.extracted || parsed);
+        setLiteapiHotelId((parsed.liteapi_hotel_id) || null);
       } else {
         router.replace("/");
       }
@@ -94,7 +96,7 @@ function TrackingContent() {
 
       {/* NAV + HERO wrapper */}
       <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)" }}>
-      <nav style={{ background: "transparent", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 32px", position: "sticky", top: 0, zIndex: 300 }}>
+      <nav style={{ background: "#1447b8", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 32px", position: "sticky", top: 0, zIndex: 300 }}>
         <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none" }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
         {!isMobile && (
           <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
@@ -113,7 +115,7 @@ function TrackingContent() {
 
       {/* HERO */}
       <div style={{ background: "transparent", padding: isMobile ? "40px 20px" : "64px 40px" }}>
-        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(252,211,77,0.2)", border: "1px solid rgba(252,211,77,0.4)", padding: "6px 16px", borderRadius: 100, fontSize: 12, fontWeight: 700, color: "#FCD34D", marginBottom: 28, letterSpacing: "0.04em" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FCD34D", display: "inline-block" }} />
             PRICE TRACKER ACTIVATED
@@ -137,9 +139,9 @@ function TrackingContent() {
                   </div>
                 </div>
               )}
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" as const }}>
-                <button onClick={() => { sessionStorage.removeItem("rebuq_booking"); router.push("/"); }} style={{ background: "#fff", color: B, border: "none", padding: "13px 26px", borderRadius: 10, fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>← Back to home</button>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" as const, marginTop: 32 }}>
                 <button onClick={() => { sessionStorage.removeItem("rebuq_booking"); router.push("/"); }} style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", padding: "13px 26px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Track another booking</button>
+                <button onClick={() => router.push(hotelDetailUrl)} style={{ background: "#FCD34D", color: "#0f172a", border: "none", padding: "13px 26px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Check member deals for {booking.hotel_name} →</button>
               </div>
             </div>
 
@@ -183,7 +185,7 @@ function TrackingContent() {
                 </div>
                 <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8, fontStyle: "italic" }}>Same room · same meals · like-for-like</div>
               </div>
-              <div style={{ background: "#FCD34D", border: "none", borderRadius: "14px 14px 2px 14px", padding: "11px 16px", fontSize: 13, fontWeight: 700, color: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8 }}>
+              <div style={{ background: "#FCD34D", border: "none", borderRadius: "14px 14px 2px 14px", padding: "11px 16px", fontSize: 13, fontWeight: 700, color: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
                 YES — rebook now
               </div>
@@ -196,7 +198,7 @@ function TrackingContent() {
 
       {/* BOOKING SUMMARY + WHAT'S NEXT */}
       <div style={{ background: "#f8fafc", padding: isMobile ? "32px 20px" : "48px 40px" }}>
-        <div style={{ maxWidth: 1000, margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24, marginBottom: 48 }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 24, marginBottom: 48 }}>
           {/* Booking summary */}
           <div style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, padding: 28 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
@@ -247,7 +249,7 @@ function TrackingContent() {
         </div>
 
         {/* EXPLORE DEALS */}
-        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap" as const, gap: 12 }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: "#94a3b8", marginBottom: 6 }}>Members only · exclusive rates</div>
