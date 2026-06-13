@@ -1,23 +1,38 @@
 // utils/emailTemplates.js
-// All HTML email templates matching rebuq website style
-// Used by nodemailer in your Express backend
 
-// ── BRAND ──
-const NAVY  = '#0A0A1E'
-const BLUE  = '#1A3AF7'
-const WHITE = '#FFFFFF'
-const G50   = '#F8F9FC'
-const G100  = '#F0F1F5'
-const G400  = '#9498AA'
-const G600  = '#545769'
-const G800  = '#1E2030'
-const GREEN = '#1A8A4A'
-const GREEN_L = '#E8F5EE'
-const AMBER = '#B85A00'
-const AMBER_L = '#FFF3E0'
-const RED   = '#C0272A'
-const RED_L = '#FDEAEA'
-const BLUE_L = '#E8ECFF'
+const BLUE    = '#1447b8'
+const NAVY    = '#0f172a'
+const WHITE   = '#ffffff'
+const BG      = '#f8fafc'
+const BORDER  = '#e2e8f0'
+const GREY    = '#64748b'
+const DARK    = '#1e293b'
+const GREEN   = '#16a34a'
+const GREEN_L = '#f0fdf4'
+const GREEN_B = '#bbf7d0'
+const AMBER   = '#b45309'
+const AMBER_L = '#fffbeb'
+const AMBER_B = '#fcd34d'
+const RED     = '#dc2626'
+const RED_L   = '#fef2f2'
+const BLUE_L  = '#eff6ff'
+const BLUE_B  = '#bfdbfe'
+
+// Safe date formatter — handles both "2026-07-26" and already-formatted strings
+function fmt(d) {
+  if (!d) return '—'
+  try {
+    const parsed = new Date(d + (d.includes('T') ? '' : 'T00:00:00'))
+    if (isNaN(parsed.getTime())) return d
+    return parsed.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  } catch(e) { return d }
+}
+
+function fmtPrice(n) {
+  const num = Number(n)
+  if (!num || isNaN(num)) return '—'
+  return '₹' + num.toLocaleString('en-IN')
+}
 
 function base(content) {
   return `<!DOCTYPE html>
@@ -27,37 +42,43 @@ function base(content) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>rebuq.</title>
 </head>
-<body style="margin:0;padding:0;background:${G50};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${G50};">
+<body style="margin:0;padding:0;background:${BG};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BG};">
   <tr>
     <td align="center" style="padding:32px 16px;">
-      <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
+      <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:${WHITE};border-radius:16px;overflow:hidden;border:1px solid ${BORDER};">
+
+        <!-- HEADER -->
         <tr>
-          <td style="background:${NAVY};border-radius:16px 16px 0 0;padding:28px 36px;">
+          <td style="padding:24px 32px;border-bottom:1px solid ${BORDER};">
             <table width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td><span style="font-size:22px;font-weight:800;color:${WHITE};letter-spacing:-0.03em;">rebuq<span style="color:${BLUE};">.</span></span></td>
-                <td align="right"><span style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.1em;text-transform:uppercase;">Post-Booking Price Tracker</span></td>
+                <td>
+                  <span style="font-size:20px;font-weight:800;color:${NAVY};letter-spacing:-0.03em;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">rebuq<span style="color:${BLUE};">.</span></span>
+                </td>
+                <td align="right">
+                  <span style="font-size:11px;color:${GREY};letter-spacing:0.06em;text-transform:uppercase;">Hotel Price Tracker</span>
+                </td>
               </tr>
             </table>
           </td>
         </tr>
+
+        <!-- BODY -->
+        <tr><td style="padding:0;">${content}</td></tr>
+
+        <!-- FOOTER -->
         <tr>
-          <td style="background:${WHITE};padding:0;">${content}</td>
-        </tr>
-        <tr>
-          <td style="background:${G100};border-radius:0 0 16px 16px;padding:24px 36px;text-align:center;">
-            <p style="margin:0 0 8px;font-size:12px;color:${G400};">rebuq. — Post-Booking Hotel Price Tracker</p>
-            <p style="margin:0 0 8px;font-size:12px;color:${G400};">You're receiving this because you have an active booking on rebuq.com</p>
-            <p style="margin:0;font-size:12px;">
-              <a href="#" style="color:${BLUE};text-decoration:none;">Unsubscribe</a>
-              <span style="color:${G400};margin:0 8px;">|</span>
-              <a href="#" style="color:${BLUE};text-decoration:none;">Privacy Policy</a>
-              <span style="color:${G400};margin:0 8px;">|</span>
-              <a href="mailto:help@rebuq.com" style="color:${BLUE};text-decoration:none;">Help Centre</a>
+          <td style="padding:24px 32px;border-top:1px solid ${BORDER};background:${BG};text-align:center;">
+            <p style="margin:0 0 6px;font-size:12px;color:${GREY};">rebuq. — Post-Booking Hotel Price Tracker</p>
+            <p style="margin:0;font-size:12px;color:${GREY};">
+              <a href="https://rebuq.com" style="color:${BLUE};text-decoration:none;">rebuq.com</a>
+              &nbsp;·&nbsp;
+              <a href="mailto:help@rebuq.com" style="color:${BLUE};text-decoration:none;">help@rebuq.com</a>
             </p>
           </td>
         </tr>
+
       </table>
     </td>
   </tr>
@@ -66,242 +87,209 @@ function base(content) {
 </html>`
 }
 
-function hero(title, subtitle, bg = NAVY) {
+function heroBlock(icon, title, subtitle, accentColor) {
+  const bg = accentColor || BLUE
   return `
   <table width="100%" cellpadding="0" cellspacing="0" border="0">
     <tr>
-      <td style="background:${bg};padding:32px 36px 28px;">
-        <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:${WHITE};line-height:1.2;">${title}</p>
-        <p style="margin:0;font-size:14px;color:rgba(197,208,251,0.9);line-height:1.5;">${subtitle}</p>
+      <td style="padding:36px 32px 28px;">
+        <div style="display:inline-block;width:44px;height:44px;background:${bg}18;border-radius:12px;text-align:center;line-height:44px;font-size:22px;margin-bottom:16px;">${icon}</div>
+        <p style="margin:0 0 6px;font-size:24px;font-weight:800;color:${NAVY};line-height:1.2;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${title}</p>
+        <p style="margin:0;font-size:14px;color:${GREY};line-height:1.6;">${subtitle}</p>
       </td>
     </tr>
   </table>`
 }
 
-function body(content) {
-  return `<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:28px 36px;">${content}</td></tr></table>`
+function divider() {
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:0 32px;"><div style="border-top:1px solid ${BORDER};"></div></td></tr></table>`
 }
 
-function para(text, opts = {}) {
-  const color  = opts.color  || G800
-  const size   = opts.size   || '14px'
-  const weight = opts.bold   ? '600' : '400'
-  const mb     = opts.mb !== undefined ? opts.mb : '16px'
-  return `<p style="margin:0 0 ${mb};font-size:${size};font-weight:${weight};color:${color};line-height:1.6;">${text}</p>`
+function section(content) {
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding:24px 32px;">${content}</td></tr></table>`
 }
 
-function infoTable(rows) {
+function para(text, color, size, bold) {
+  return `<p style="margin:0 0 14px;font-size:${size||'14px'};font-weight:${bold?'600':'400'};color:${color||DARK};line-height:1.6;">${text}</p>`
+}
+
+function infoGrid(rows) {
   const cells = rows.map(([label, value, valueColor]) => `
     <tr>
-      <td style="padding:10px 14px;font-size:13px;color:${G600};width:40%;border-bottom:1px solid ${G100};">${label}</td>
-      <td style="padding:10px 14px;font-size:13px;font-weight:600;color:${valueColor || G800};border-bottom:1px solid ${G100};">${value}</td>
+      <td style="padding:10px 16px;font-size:13px;color:${GREY};border-bottom:1px solid ${BORDER};width:42%;vertical-align:top;">${label}</td>
+      <td style="padding:10px 16px;font-size:13px;font-weight:600;color:${valueColor||DARK};border-bottom:1px solid ${BORDER};vertical-align:top;">${value}</td>
     </tr>`).join('')
   return `
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BLUE_L};border-radius:12px;overflow:hidden;margin:0 0 20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BG};border-radius:12px;border:1px solid ${BORDER};overflow:hidden;margin:0 0 20px;">
     ${cells}
   </table>`
 }
 
-function alertBox(text, bg = AMBER_L, color = AMBER, icon = '⚠️') {
+function savingsCard(oldPrice, newPrice, saving) {
+  const pct = oldPrice ? Math.round(((oldPrice - newPrice) / oldPrice) * 100) : 0
   return `
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
     <tr>
-      <td style="background:${bg};border-radius:10px;padding:14px 16px;">
-        <p style="margin:0;font-size:13px;font-weight:600;color:${color};line-height:1.5;">${icon}&nbsp; ${text}</p>
+      <td style="padding:24px;background:${GREEN_L};border-radius:14px;border:1.5px solid ${GREEN_B};text-align:center;">
+        <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:${GREEN};text-transform:uppercase;letter-spacing:0.06em;">Price Drop Found</p>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0;">
+          <tr>
+            <td style="text-align:center;width:40%;">
+              <p style="margin:0 0 4px;font-size:11px;color:${GREY};text-transform:uppercase;letter-spacing:0.05em;">You paid</p>
+              <p style="margin:0;font-size:20px;font-weight:700;color:${GREY};text-decoration:line-through;">${fmtPrice(oldPrice)}</p>
+            </td>
+            <td style="text-align:center;width:20%;">
+              <p style="margin:0;font-size:20px;color:${GREEN};">→</p>
+            </td>
+            <td style="text-align:center;width:40%;">
+              <p style="margin:0 0 4px;font-size:11px;color:${GREEN};text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">New price</p>
+              <p style="margin:0;font-size:26px;font-weight:800;color:${GREEN};">${fmtPrice(newPrice)}</p>
+            </td>
+          </tr>
+        </table>
+        <div style="background:${WHITE};border-radius:10px;padding:14px;display:inline-block;">
+          <p style="margin:0 0 2px;font-size:12px;color:${GREY};">Your saving</p>
+          <p style="margin:0;font-size:28px;font-weight:800;color:${GREEN};">${fmtPrice(saving)} <span style="font-size:14px;font-weight:600;">(${pct}% off)</span></p>
+        </div>
       </td>
     </tr>
   </table>`
 }
 
-function ctaBtn(text, href = '#', bg = BLUE) {
+function ctaBtn(text, href) {
   return `
   <table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
     <tr>
-      <td style="background:${bg};border-radius:10px;padding:13px 24px;">
-        <a href="${href}" style="font-size:14px;font-weight:600;color:${WHITE};text-decoration:none;white-space:nowrap;">${text}</a>
+      <td style="background:${BLUE};border-radius:10px;">
+        <a href="${href}" style="display:inline-block;padding:14px 28px;font-size:14px;font-weight:700;color:${WHITE};text-decoration:none;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${text} →</a>
       </td>
     </tr>
   </table>`
 }
 
-function savingsTable(oldRate, newRate, saving, currency) {
+function alertBox(text, bg, border, textColor) {
   return `
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius:12px;overflow:hidden;margin:0 0 20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
     <tr>
-      <td style="background:${G100};padding:10px 14px;font-size:12px;font-weight:600;color:${G600};"></td>
-      <td style="background:${G100};padding:10px 14px;font-size:12px;font-weight:600;color:${G600};text-align:center;">Current rate</td>
-      <td style="background:${G100};padding:10px 14px;font-size:12px;font-weight:600;color:${GREEN};text-align:center;">Lower rate found</td>
-    </tr>
-    <tr>
-      <td style="background:${WHITE};padding:10px 14px;font-size:13px;color:${G600};border-bottom:1px solid ${G100};">Per night</td>
-      <td style="background:${WHITE};padding:10px 14px;font-size:13px;color:${G800};text-align:center;border-bottom:1px solid ${G100};">${currency} ${oldRate}</td>
-      <td style="background:${WHITE};padding:10px 14px;font-size:13px;font-weight:600;color:${GREEN};text-align:center;border-bottom:1px solid ${G100};">${currency} ${newRate}</td>
-    </tr>
-    <tr>
-      <td style="background:${GREEN_L};padding:12px 14px;font-size:13px;font-weight:600;color:${GREEN};">You could save</td>
-      <td style="background:${GREEN_L};padding:12px 14px;"></td>
-      <td style="background:${GREEN_L};padding:12px 14px;font-size:16px;font-weight:700;color:${GREEN};text-align:center;">${currency} ${saving}</td>
+      <td style="background:${bg||AMBER_L};border-radius:10px;border:1.5px solid ${border||AMBER_B};padding:14px 16px;">
+        <p style="margin:0;font-size:13px;color:${textColor||AMBER};line-height:1.5;">${text}</p>
+      </td>
     </tr>
   </table>`
-}
-
-function steps(items) {
-  return items.map((item, i) => `
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 10px;">
-    <tr>
-      <td style="width:28px;vertical-align:top;padding-top:1px;">
-        <div style="width:22px;height:22px;background:${BLUE};border-radius:50%;text-align:center;line-height:22px;font-size:11px;font-weight:700;color:${WHITE};">${i + 1}</div>
-      </td>
-      <td style="padding-left:10px;font-size:13px;color:${G800};line-height:1.5;">${item}</td>
-    </tr>
-  </table>`).join('')
-}
-
-function divider() {
-  return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;"><tr><td style="border-top:1px solid ${G100};"></td></tr></table>`
 }
 
 const emailTemplates = {
 
   welcome({ name }) {
     return {
-      subject: `Welcome to rebuq. — let's start saving.`,
+      subject: `Welcome to rebuq. — let's start saving on hotels`,
       html: base(`
-        ${hero("Welcome to rebuq.", "You'll never overpay for a hotel again.")}
-        ${body(`
-          ${para(`Hi ${name},`)}
-          ${para("Your rebuq account is ready. Here's how it works:")}
-          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
+        ${heroBlock('👋', `Welcome, ${name}!`, 'You\'ll never overpay for a hotel again. Here\'s how it works.', BLUE)}
+        ${divider()}
+        ${section(`
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;">
             <tr>
-              <td style="background:${BLUE_L};border-radius:10px;padding:16px;text-align:center;width:30%;">
-                <p style="margin:0 0 6px;font-size:24px;font-weight:800;color:${BLUE};">1</p>
-                <p style="margin:0;font-size:12px;color:${G800};line-height:1.4;">Upload your refundable hotel voucher</p>
+              <td style="background:${BLUE_L};border-radius:12px;padding:16px;text-align:center;width:30%;vertical-align:top;">
+                <p style="margin:0 0 8px;font-size:26px;font-weight:800;color:${BLUE};">1</p>
+                <p style="margin:0;font-size:12px;color:${DARK};line-height:1.4;">Upload your refundable hotel voucher</p>
               </td>
-              <td style="width:5%;"></td>
-              <td style="background:${BLUE_L};border-radius:10px;padding:16px;text-align:center;width:30%;">
-                <p style="margin:0 0 6px;font-size:24px;font-weight:800;color:${BLUE};">2</p>
-                <p style="margin:0;font-size:12px;color:${G800};line-height:1.4;">We monitor hotel prices every 6 hours</p>
+              <td style="width:4%;"></td>
+              <td style="background:${BLUE_L};border-radius:12px;padding:16px;text-align:center;width:30%;vertical-align:top;">
+                <p style="margin:0 0 8px;font-size:26px;font-weight:800;color:${BLUE};">2</p>
+                <p style="margin:0;font-size:12px;color:${DARK};line-height:1.4;">We scan prices every 6 hours automatically</p>
               </td>
-              <td style="width:5%;"></td>
-              <td style="background:${BLUE_L};border-radius:10px;padding:16px;text-align:center;width:30%;">
-                <p style="margin:0 0 6px;font-size:24px;font-weight:800;color:${BLUE};">3</p>
-                <p style="margin:0;font-size:12px;color:${G800};line-height:1.4;">If the price drops, we WhatsApp you instantly</p>
+              <td style="width:4%;"></td>
+              <td style="background:${BLUE_L};border-radius:12px;padding:16px;text-align:center;width:30%;vertical-align:top;">
+                <p style="margin:0 0 8px;font-size:26px;font-weight:800;color:${BLUE};">3</p>
+                <p style="margin:0;font-size:12px;color:${DARK};line-height:1.4;">Price drops → instant WhatsApp alert</p>
               </td>
             </tr>
           </table>
-          ${para("Got a trip coming up?", { bold: true, color: NAVY })}
-          ${para("Upload your first hotel voucher now and we'll start watching straight away.")}
-          ${ctaBtn("Upload My First Booking →", "https://rebuq.com/upload")}
-          ${divider()}
-          ${para("Questions? We're at <a href='mailto:help@rebuq.com' style='color:" + BLUE + ";'>help@rebuq.com</a> — always happy to help.", { color: G600, size: '12px' })}
+          ${ctaBtn('Upload My First Booking', 'https://rebuq.com')}
+          ${para('Questions? Email us at <a href="mailto:help@rebuq.com" style="color:'+BLUE+';">help@rebuq.com</a>', GREY, '12px')}
         `)}
       `)
     }
   },
 
   bookingReceived({ name, booking }) {
-    const fmt = (d) => { try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) } catch(e) { return d } }
-    const children = booking.children?.length ? booking.children.map(a=>`${a} yrs`).join(', ') : 'None'
-    const cancelLine = booking.cancellationDeadline
-      ? `Free cancel until ${fmt(booking.cancellationDeadline)}`
-      : 'Refundable'
+    // Accept both camelCase and snake_case field names
+    const hotelName   = booking.hotelName   || booking.hotel_name   || '—'
+    const city        = booking.city        || booking.hotel_city   || '—'
+    const checkIn     = booking.checkIn     || booking.checkinDate  || booking.check_in   || null
+    const checkOut    = booking.checkOut    || booking.checkoutDate || booking.check_out  || null
+    const roomType    = booking.roomType    || booking.room_type    || '—'
+    const adults      = booking.adults      || booking.num_adults   || 2
+    const children    = booking.children?.length ? booking.children.map(a=>`${a} yrs`).join(', ') : 'None'
+    const totalPaid   = booking.totalPaid   || booking.amountPaid   || booking.total_price_paid || null
+    const otaName     = booking.platform    || booking.otaName      || booking.ota_name   || '—'
+    const bookingRef  = booking.bookingRef  || booking.booking_reference || '—'
+    const cancelDeadline = booking.cancellationDeadline || booking.cancellation_deadline || null
+    const cancelLine  = cancelDeadline ? `Free cancel until ${fmt(cancelDeadline)}` : 'Refundable'
+    const nights      = booking.nights || (checkIn && checkOut ? Math.round((new Date(checkOut+'T00:00:00') - new Date(checkIn+'T00:00:00')) / 86400000) : null)
+
     return {
-      subject: `Your ${booking.hotelName} booking is being tracked — rebuq`,
+      subject: `Your ${hotelName} booking is being tracked — rebuq`,
       html: base(`
-        ${hero("We're watching your booking.", "You'll hear from us the moment the price drops.")}
-        ${body(`
+        ${heroBlock('✅', 'We\'re watching your booking.', 'You\'ll hear from us the moment the price drops.', GREEN)}
+        ${divider()}
+        ${section(`
           ${para(`Hi ${name},`)}
-          ${para("Your booking has been added to rebuq. We're monitoring the rate and will alert you instantly if the price drops for the same room and meal plan.")}
-          ${infoTable([
-            ["Hotel",             booking.hotelName],
-            ["Location",          booking.city],
-            ["Check-in",          fmt(booking.checkinDate)],
-            ["Check-out",         fmt(booking.checkoutDate)],
-            ["Room",              booking.roomType || '—'],
-            ["Adults",            booking.adults],
-            ["Children",          children],
-            ["Total paid",        `₹${Number(booking.amountPaid).toLocaleString('en-IN')}`],
-            ["Booked on",         booking.otaName || '—'],
-            ["Booking reference", booking.bookingRef || '—'],
-            ["Cancellation",      cancelLine],
+          ${para('Your booking has been added to rebuq. We\'re monitoring the rate and will alert you instantly if the price drops for the same room and meal plan.')}
+          ${infoGrid([
+            ['Hotel',             hotelName],
+            ['Location',          city],
+            ['Check-in',          fmt(checkIn)],
+            ['Check-out',         fmt(checkOut)],
+            ['Duration',          nights ? `${nights} night${nights>1?'s':''}` : '—'],
+            ['Room',              roomType],
+            ['Adults',            String(adults)],
+            ['Children',          children],
+            ['Total paid',        fmtPrice(totalPaid)],
+            ['Booked on',         otaName],
+            ['Booking reference', bookingRef],
+            ['Cancellation',      cancelLine],
           ])}
-          ${para("What happens next?", { bold: true, color: NAVY })}
-          ${para("The moment we find a lower rate for the same hotel, room, and dates — we'll send you a WhatsApp with a direct link to rebook. Cancel your existing booking, rebook at the lower rate, and keep the difference.")}
-          ${para("The saving is yours to keep. We just find it.", { color: G600 })}
+          ${para('The moment we find a lower rate for the same hotel, room and dates — we\'ll send you a WhatsApp with a direct rebooking link.', GREY, '13px')}
         `)}
       `)
     }
   },
 
   priceDropAlert({ name, booking, oldRate, newRate, saving, hotelPageUrl }) {
-    return {
-      subject: `💰 Price drop on ${booking.hotelName} — save ${booking.currency} ${saving}`,
-      html: base(`
-        ${hero("Price drop found on your hotel.", "Act now to secure the lower rate.")}
-        ${body(`
-          ${para(`Hi ${name},`)}
-          ${para("We've found a lower price on your upcoming stay. Here's what we found:")}
-          ${savingsTable(oldRate, newRate, saving, booking.currency)}
-          ${alertBox("This rate may not last long. Hotel prices change frequently.", AMBER_L, AMBER, "⚡")}
-          ${para("How to secure this saving:", { bold: true, color: NAVY })}
-          ${steps([
-            "We've sent you a WhatsApp with the hotel page link.",
-            "Open the WhatsApp, tap the link, and select your room and board preference.",
-            `Cancel your existing booking on ${booking.otaName || 'your OTA'}.`,
-            "Complete your new booking at the lower rate.",
-          ])}
-          ${para("Didn't get the WhatsApp?", { bold: true, color: NAVY, mb: '8px' })}
-          ${ctaBtn("View Hotel Page →", hotelPageUrl)}
-          ${infoTable([
-            ["Hotel",            booking.hotelName],
-            ["Check-in",         booking.checkinDate],
-            ["Check-out",        booking.checkoutDate],
-            ["Your booking ref", booking.bookingRef || '—'],
-            ["Lower rate valid", "As of today — act quickly"],
-          ])}
-        `)}
-      `)
-    }
-  },
+    const hotelName  = booking.hotelName  || booking.hotel_name  || '—'
+    const city       = booking.city       || booking.hotel_city  || '—'
+    const checkIn    = booking.checkinDate  || booking.checkIn   || booking.check_in  || null
+    const checkOut   = booking.checkoutDate || booking.checkOut  || booking.check_out || null
+    const bookingRef = booking.bookingRef   || booking.booking_reference || '—'
+    const otaName    = booking.otaName      || booking.ota_name  || 'your OTA'
 
-  monitoringUpdate({ name, booking, checksRun, daysMonitored }) {
     return {
-      subject: `Monitoring update — ${booking.hotelName} (${booking.checkinDate})`,
+      subject: `💰 Price drop on ${hotelName} — save ${fmtPrice(saving)}`,
       html: base(`
-        ${hero("Still watching. No drop yet.", "We'll alert you the moment something changes.")}
-        ${body(`
+        ${heroBlock('💰', 'Price drop found on your hotel.', `Act now before this rate disappears.`, GREEN)}
+        ${divider()}
+        ${section(`
           ${para(`Hi ${name},`)}
-          ${para("Quick update on your upcoming stay. We've been monitoring rates every 6 hours and haven't found a better price yet.")}
-          ${infoTable([
-            ["Hotel",             booking.hotelName],
-            ["Check-in",         `${booking.checkinDate} — ${booking.daysToCheckin} days to go`],
-            ["Checks run",       `${checksRun} checks over ${daysMonitored} days`],
-            ["Current best rate",`${booking.currency} ${booking.currentBestRate} — no saving yet`],
-            ["Status",           "Active — checking every 6 hours"],
+          ${para(`We found a lower price on your upcoming stay at <strong>${hotelName}</strong>.`)}
+          ${savingsCard(oldRate, newRate, saving)}
+          ${alertBox('⚡ &nbsp;This rate may not last long — hotel prices change frequently. Act quickly.', AMBER_L, AMBER_B, AMBER)}
+          ${para('How to secure this saving:', DARK, '14px', true)}
+          <ol style="margin:0 0 20px;padding-left:20px;color:${DARK};font-size:13px;line-height:1.8;">
+            <li>Tap the button below to view the hotel page</li>
+            <li>Select your room and confirm the new booking</li>
+            <li>Cancel your existing booking on ${otaName}</li>
+            <li>Keep the difference — it\'s yours</li>
+          </ol>
+          ${ctaBtn('View deal & rebook', hotelPageUrl || 'https://rebuq.com')}
+          ${infoGrid([
+            ['Hotel',      hotelName],
+            ['Location',   city],
+            ['Check-in',   fmt(checkIn)],
+            ['Check-out',  fmt(checkOut)],
+            ['Booking ref',bookingRef],
           ])}
-          ${para("We'll WhatsApp you the moment we find a lower price.", { color: G600 })}
-        `)}
-      `)
-    }
-  },
-
-  cancellationWindowToday({ name, booking, deadline }) {
-    return {
-      subject: `⏰ Urgent — your cancellation window closes today (${booking.hotelName})`,
-      html: base(`
-        ${hero("Your cancellation window closes today.", "Our team will personally reach out within the hour.")}
-        ${body(`
-          ${para(`Hi ${name},`)}
-          ${para("Your free cancellation window on this booking expires today.")}
-          ${alertBox("Our team will personally reach out to you within the hour to review the current rates and assist you in securing the best available option before your cancellation deadline expires. Please keep an eye on your phone.", BLUE_L, BLUE, "📞")}
-          ${infoTable([
-            ["Hotel",                booking.hotelName],
-            ["Check-in",             booking.checkinDate],
-            ["Cancellation deadline",`Today — ${deadline}`],
-            ["Your current rate",    `${booking.currency} ${booking.amountPaid.toLocaleString()}`],
-            ["Best rate found",      booking.bestRate ? `${booking.currency} ${booking.bestRate}` : "Still searching"],
-          ])}
-          ${ctaBtn("View Current Rates →", "https://rebuq.com/dashboard")}
+          ${para('Same hotel · same room · same meals · taxes included', GREY, '12px')}
         `)}
       `)
     }
@@ -309,21 +297,43 @@ const emailTemplates = {
 
   checkinPassed({ name, booking, checksRun, alertsSent }) {
     return {
-      subject: `Your ${booking.hotelName} stay has begun — monitoring complete`,
+      subject: `Your ${booking.hotelName||booking.hotel_name} stay has begun — monitoring complete`,
       html: base(`
-        ${hero("Your check-in date has passed.", "Monitoring is now closed for this booking.")}
-        ${body(`
+        ${heroBlock('🏨', 'Enjoy your stay!', 'Monitoring is now complete for this booking.', BLUE)}
+        ${divider()}
+        ${section(`
           ${para(`Hi ${name},`)}
-          ${para(`Your check-in date for ${booking.hotelName} has now passed. We've closed monitoring on this booking.`)}
-          ${infoTable([
-            ["Hotel",       booking.hotelName],
-            ["Stay",        `${booking.checkinDate} → ${booking.checkoutDate}`],
-            ["Checks run",  `${checksRun} checks`],
-            ["Alerts sent", alertsSent > 0 ? `${alertsSent} price drop alert(s) sent` : "No price drop found"],
-            ["Status",      "Monitoring closed"],
+          ${para(`Your check-in date for <strong>${booking.hotelName||booking.hotel_name}</strong> has passed. We've closed monitoring on this booking.`)}
+          ${infoGrid([
+            ['Hotel',       booking.hotelName||booking.hotel_name],
+            ['Stay',        `${fmt(booking.checkinDate||booking.check_in)} → ${fmt(booking.checkoutDate||booking.check_out)}`],
+            ['Checks run',  `${checksRun} price checks`],
+            ['Alerts sent', alertsSent > 0 ? `${alertsSent} price drop alert(s) sent` : 'No price drop found'],
           ])}
-          ${para("Have another trip coming up?", { bold: true, color: NAVY, mb: '8px' })}
-          ${ctaBtn("Upload Next Booking →", "https://rebuq.com/upload")}
+          ${para('Have another trip coming up?', DARK, '14px', true)}
+          ${ctaBtn('Upload next booking', 'https://rebuq.com')}
+        `)}
+      `)
+    }
+  },
+
+  noSavingFound({ name, booking, checksRun }) {
+    return {
+      subject: `Monitoring complete — ${booking.hotelName||booking.hotel_name}`,
+      html: base(`
+        ${heroBlock('📊', 'Monitoring complete.', 'No price drop was found this time.', BLUE)}
+        ${divider()}
+        ${section(`
+          ${para(`Hi ${name},`)}
+          ${para(`We ran ${checksRun} checks on your booking but couldn't find a lower rate this time.`)}
+          ${infoGrid([
+            ['Hotel',      booking.hotelName||booking.hotel_name],
+            ['Stay',       `${fmt(booking.checkinDate||booking.check_in)} → ${fmt(booking.checkoutDate||booking.check_out)}`],
+            ['Checks run', `${checksRun} checks`],
+            ['Result',     'No price drop found'],
+          ])}
+          ${para('It doesn\'t always happen — but when it does, the savings are real. Upload your next booking and we\'ll watch again.', GREY, '13px')}
+          ${ctaBtn('Upload next booking', 'https://rebuq.com')}
         `)}
       `)
     }
@@ -331,20 +341,21 @@ const emailTemplates = {
 
   nonRefundable({ name, booking }) {
     return {
-      subject: `Unable to monitor — ${booking.hotelName} is non-refundable`,
+      subject: `Unable to monitor — ${booking.hotelName||booking.hotel_name} is non-refundable`,
       html: base(`
-        ${hero("This booking is non-refundable.", "We're unable to monitor this stay.")}
-        ${body(`
+        ${heroBlock('⚠️', 'This booking is non-refundable.', 'We\'re unable to monitor this stay.', AMBER)}
+        ${divider()}
+        ${section(`
           ${para(`Hi ${name},`)}
-          ${para("Thank you for uploading your booking. Unfortunately, we've identified this as a non-refundable rate.")}
-          ${alertBox("Non-refundable rate detected. Monitoring not possible for this booking.", RED_L, RED, "✕")}
-          ${infoTable([
-            ["Hotel",     booking.hotelName],
-            ["Check-in",  booking.checkinDate],
-            ["Rate type", "Non-refundable"],
-            ["Status",    "Not monitored — no action taken"],
+          ${para('Thank you for uploading your booking. Unfortunately we\'ve identified this as a non-refundable rate — so even if the price drops, rebooking wouldn\'t be possible.')}
+          ${alertBox('Non-refundable rate detected. Monitoring not activated.', RED_L, RED+'44', RED)}
+          ${infoGrid([
+            ['Hotel',     booking.hotelName||booking.hotel_name],
+            ['Check-in',  fmt(booking.checkinDate||booking.check_in)],
+            ['Rate type', 'Non-refundable'],
           ])}
-          ${para("For your next booking, choose a flexible or free cancellation rate.", { color: G600 })}
+          ${para('For your next booking, choose a flexible or free cancellation rate and upload it to rebuq.', GREY, '13px')}
+          ${ctaBtn('Upload a flexible booking', 'https://rebuq.com')}
         `)}
       `)
     }
@@ -354,24 +365,67 @@ const emailTemplates = {
     return {
       subject: `Action needed — we couldn't read your hotel voucher`,
       html: base(`
-        ${hero("We couldn't read your voucher.", "Two options to get your booking monitored.")}
-        ${body(`
+        ${heroBlock('📄', 'We couldn\'t read your voucher.', 'Two quick options to get you tracked.', AMBER)}
+        ${divider()}
+        ${section(`
           ${para(`Hi ${name},`)}
-          ${para("We received your voucher but had trouble reading the booking details.")}
+          ${para('We received your voucher but had trouble reading the booking details. Here\'s how to fix it:')}
           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
             <tr>
-              <td style="background:${BLUE_L};border-radius:10px;padding:16px;width:47%;vertical-align:top;">
-                <p style="margin:0 0 6px;font-size:14px;font-weight:600;color:${BLUE};">Option 1 — Reupload</p>
-                <p style="margin:0;font-size:13px;color:${G800};line-height:1.5;">Upload a clearer version. A direct PDF from your email works best.</p>
+              <td style="background:${BLUE_L};border-radius:12px;padding:16px;width:47%;vertical-align:top;">
+                <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:${BLUE};">Option 1 — Reupload</p>
+                <p style="margin:0;font-size:13px;color:${DARK};line-height:1.5;">Upload a clearer image or PDF. A direct PDF from your email works best.</p>
               </td>
               <td style="width:6%;"></td>
-              <td style="background:${BLUE_L};border-radius:10px;padding:16px;width:47%;vertical-align:top;">
-                <p style="margin:0 0 6px;font-size:14px;font-weight:600;color:${BLUE};">Option 2 — Enter manually</p>
-                <p style="margin:0;font-size:13px;color:${G800};line-height:1.5;">Enter your booking details directly. Takes under a minute.</p>
+              <td style="background:${BLUE_L};border-radius:12px;padding:16px;width:47%;vertical-align:top;">
+                <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:${BLUE};">Option 2 — Enter manually</p>
+                <p style="margin:0;font-size:13px;color:${DARK};line-height:1.5;">Enter your booking details directly. Takes under a minute.</p>
               </td>
             </tr>
           </table>
-          ${ctaBtn("Reupload or Enter Manually →", "https://rebuq.com/upload")}
+          ${ctaBtn('Go to rebuq', 'https://rebuq.com')}
+        `)}
+      `)
+    }
+  },
+
+  monitoringUpdate({ name, booking, checksRun, daysMonitored }) {
+    return {
+      subject: `Monitoring update — ${booking.hotelName||booking.hotel_name}`,
+      html: base(`
+        ${heroBlock('👁️', 'Still watching. No drop yet.', 'We\'ll alert you the moment something changes.', BLUE)}
+        ${divider()}
+        ${section(`
+          ${para(`Hi ${name},`)}
+          ${para('Quick update on your upcoming stay. We\'ve been checking every 6 hours and haven\'t found a better price yet.')}
+          ${infoGrid([
+            ['Hotel',       booking.hotelName||booking.hotel_name],
+            ['Check-in',    fmt(booking.checkinDate||booking.check_in)],
+            ['Checks run',  `${checksRun} checks over ${daysMonitored} days`],
+            ['Status',      'Active — checking every 6 hours'],
+          ])}
+          ${para('We\'ll WhatsApp you the moment we find a lower price.', GREY, '13px')}
+        `)}
+      `)
+    }
+  },
+
+  cancellationWindowToday({ name, booking, deadline }) {
+    return {
+      subject: `⏰ Urgent — cancellation window closes today (${booking.hotelName||booking.hotel_name})`,
+      html: base(`
+        ${heroBlock('⏰', 'Cancellation window closes today.', 'Our team will reach out to you within the hour.', AMBER)}
+        ${divider()}
+        ${section(`
+          ${para(`Hi ${name},`)}
+          ${para('Your free cancellation window on this booking expires today.')}
+          ${alertBox('📞 &nbsp;Our team will personally reach out within the hour to review current rates and assist you before your deadline expires.', BLUE_L, BLUE_B, BLUE)}
+          ${infoGrid([
+            ['Hotel',                  booking.hotelName||booking.hotel_name],
+            ['Check-in',               fmt(booking.checkinDate||booking.check_in)],
+            ['Cancellation deadline',  `Today — ${deadline}`],
+          ])}
+          ${ctaBtn('View current rates', 'https://rebuq.com/dashboard')}
         `)}
       `)
     }
@@ -379,26 +433,24 @@ const emailTemplates = {
 
   directBookingConfirmed({ name, booking, memberRate, otaRate, saving, bookingRef }) {
     return {
-      subject: `Booking confirmed — you saved ${booking.currency} ${saving} vs OTA 🎉`,
+      subject: `Booking confirmed — you saved ${fmtPrice(saving)} vs OTA`,
       html: base(`
-        ${hero("Booking confirmed at your member rate.", "You've already saved vs the public OTA price.")}
-        ${body(`
+        ${heroBlock('🎉', 'Booking confirmed at your member rate.', 'You\'ve already saved vs the public OTA price.', GREEN)}
+        ${divider()}
+        ${section(`
           ${para(`Hi ${name},`)}
-          ${para("Your hotel booking has been confirmed through rebuq at your exclusive member rate.")}
-          ${infoTable([
-            ["Hotel",            booking.hotelName],
-            ["Location",         booking.city],
-            ["Check-in",         booking.checkinDate],
-            ["Check-out",        booking.checkoutDate],
-            ["Room type",        booking.roomType],
-            ["Adults",           booking.adults],
-            ["Children",         booking.children?.length ? booking.children.map(a=>`${a}yrs`).join(', ') : 'None'],
-            ["Your member rate", `${booking.currency} ${memberRate.toLocaleString()}/night`],
-            ["OTA public rate",  `${booking.currency} ${otaRate.toLocaleString()}/night`],
-            ["You saved vs OTA", `${booking.currency} ${saving.toLocaleString()} ✓`, GREEN],
-            ["Booking ref",      bookingRef],
+          ${para('Your hotel booking has been confirmed through rebuq at your exclusive member rate.')}
+          ${infoGrid([
+            ['Hotel',            booking.hotelName||booking.hotel_name],
+            ['Location',         booking.city||booking.hotel_city],
+            ['Check-in',         fmt(booking.checkinDate||booking.check_in)],
+            ['Check-out',        fmt(booking.checkoutDate||booking.check_out)],
+            ['Your member rate', fmtPrice(memberRate) + '/night', GREEN],
+            ['OTA public rate',  fmtPrice(otaRate) + '/night'],
+            ['You saved',        fmtPrice(saving), GREEN],
+            ['Booking ref',      bookingRef],
           ])}
-          ${para("We'll continue monitoring in case the rate drops further.", { color: G600 })}
+          ${para('We\'ll continue monitoring in case the rate drops further.', GREY, '13px')}
         `)}
       `)
     }
@@ -406,18 +458,19 @@ const emailTemplates = {
 
   bookingCancelled({ name, booking }) {
     return {
-      subject: `Monitoring stopped — ${booking.hotelName} booking cancelled`,
+      subject: `Monitoring stopped — ${booking.hotelName||booking.hotel_name} booking cancelled`,
       html: base(`
-        ${hero("Booking cancelled. Monitoring stopped.", "")}
-        ${body(`
+        ${heroBlock('🚫', 'Monitoring stopped.', 'Your booking has been cancelled.', GREY)}
+        ${divider()}
+        ${section(`
           ${para(`Hi ${name},`)}
-          ${para("We've stopped monitoring this stay and no further alerts will be sent.")}
-          ${infoTable([
-            ["Hotel",    booking.hotelName],
-            ["Check-in", booking.checkinDate],
-            ["Status",   "Cancelled — monitoring stopped"],
+          ${para('We\'ve stopped monitoring this stay and no further alerts will be sent.')}
+          ${infoGrid([
+            ['Hotel',    booking.hotelName||booking.hotel_name],
+            ['Check-in', fmt(booking.checkinDate||booking.check_in)],
+            ['Status',   'Cancelled — monitoring stopped'],
           ])}
-          ${ctaBtn("Upload a New Booking →", "https://rebuq.com/upload")}
+          ${ctaBtn('Upload a new booking', 'https://rebuq.com')}
         `)}
       `)
     }
@@ -425,20 +478,19 @@ const emailTemplates = {
 
   partialRefund({ name, booking }) {
     return {
-      subject: `Partial refund policy detected — ${booking.hotelName} not monitored`,
+      subject: `Partial refund policy detected — ${booking.hotelName||booking.hotel_name}`,
       html: base(`
-        ${hero("This booking has a partial refund policy.", "We've treated it as non-refundable for your protection.")}
-        ${body(`
+        ${heroBlock('⚠️', 'Partial refund policy detected.', 'Monitoring not activated for your protection.', AMBER)}
+        ${divider()}
+        ${section(`
           ${para(`Hi ${name},`)}
-          ${para("To protect you from any unintended cancellation charges, we've treated this as non-refundable and monitoring will not be activated.")}
-          ${alertBox("Partial refund policy detected. Monitoring not activated.", AMBER_L, AMBER, "⚠️")}
-          ${infoTable([
-            ["Hotel",     booking.hotelName],
-            ["Check-in",  booking.checkinDate],
-            ["Rate type", "Partial refundable"],
-            ["Status",    "Not monitored"],
+          ${para('To protect you from unintended cancellation charges, we\'ve treated this as non-refundable and monitoring will not be activated.')}
+          ${infoGrid([
+            ['Hotel',     booking.hotelName||booking.hotel_name],
+            ['Check-in',  fmt(booking.checkinDate||booking.check_in)],
+            ['Rate type', 'Partial refundable'],
           ])}
-          ${para("Reply to this email if you'd like us to review manually.", { color: G600, size: '12px' })}
+          ${para('Reply to this email if you\'d like us to review manually.', GREY, '12px')}
         `)}
       `)
     }
@@ -446,44 +498,25 @@ const emailTemplates = {
 
   monitoringScheduled({ name, booking, activatesOn }) {
     return {
-      subject: `Booking received — monitoring starts ${activatesOn} (${booking.hotelName})`,
+      subject: `Booking received — monitoring starts ${activatesOn} (${booking.hotelName||booking.hotel_name})`,
       html: base(`
-        ${hero("Booking received. Monitoring starts closer to your stay.", "We'll activate tracking at the right time.")}
-        ${body(`
+        ${heroBlock('📅', 'Booking received.', 'Monitoring activates closer to your stay.', BLUE)}
+        ${divider()}
+        ${section(`
           ${para(`Hi ${name},`)}
-          ${para("Your check-in is more than 90 days away. We'll activate monitoring closer to your stay when savings opportunities are highest.")}
-          ${infoTable([
-            ["Hotel",               booking.hotelName],
-            ["Check-in",            booking.checkinDate],
-            ["Monitoring activates",activatesOn],
-            ["Status",              "Scheduled — not yet active"],
+          ${para('Your check-in is more than 90 days away. We\'ll activate monitoring closer to your stay when savings opportunities are highest.')}
+          ${infoGrid([
+            ['Hotel',               booking.hotelName||booking.hotel_name],
+            ['Check-in',            fmt(booking.checkinDate||booking.check_in)],
+            ['Monitoring activates',activatesOn],
+            ['Status',              'Scheduled'],
           ])}
-          ${para("We'll WhatsApp you when monitoring activates.", { color: G600 })}
+          ${para('We\'ll WhatsApp you when monitoring activates.', GREY, '13px')}
         `)}
       `)
     }
   },
 
-  noSavingFound({ name, booking, checksRun }) {
-    return {
-      subject: `Your ${booking.hotelName} stay is complete — no price drop found this time`,
-      html: base(`
-        ${hero("Your stay is complete.", "No price drop was found this time.")}
-        ${body(`
-          ${para(`Hi ${name},`)}
-          ${para(`We monitored your booking for ${checksRun} checks but weren't able to find a lower rate this time.`)}
-          ${infoTable([
-            ["Hotel",      booking.hotelName],
-            ["Stay",       `${booking.checkinDate} → ${booking.checkoutDate}`],
-            ["Checks run", `${checksRun} checks`],
-            ["Result",     "No price drop found"],
-          ])}
-          ${para("It doesn't always happen — but when it does, the savings are real.", { color: G600 })}
-          ${ctaBtn("Upload Next Booking →", "https://rebuq.com/upload")}
-        `)}
-      `)
-    }
-  },
 }
 
 module.exports = emailTemplates
