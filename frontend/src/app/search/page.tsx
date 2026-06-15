@@ -757,7 +757,6 @@ function SearchResults(){
   const[guests,setGuests]=useState<GuestState>({rooms:parseInt(searchParams.get("rooms")||"1"),adults:parseInt(searchParams.get("adults")||"2"),children:parseInt(searchParams.get("children")||"0"),childAges:[]});
   const[hotels,setHotels]=useState<Hotel[]>([]);
   const[loading,setLoading]=useState(true);const[error,setError]=useState<string|null>(null);
-  const[loadingMore,setLoadingMore]=useState(false);
   const[user,setUser]=useState<{name:string}|null>(null);const[showAuthModal,setShowAuthModal]=useState(false);
   const[showMap,setShowMap]=useState(false);const[favorites,setFavorites]=useState<Set<string|number>>(new Set());
   const[sortBy,setSortBy]=useState("popularity");const[page,setPage]=useState(1);
@@ -790,7 +789,7 @@ function SearchResults(){
     const d=dest||destination,c1=ci||checkIn,c2=co||checkOut,gs=g||guests;
     const placeId=pid!==undefined?pid:(searchParams.get("placeId")||"");
     if(!c1||!c2){setLoading(false);setError("Please select check-in and check-out dates.");return;}
-    setLoading(true);setError(null);setPage(1);setHotels([]);setLoadingMore(false);
+    setLoading(true);setError(null);setPage(1);setHotels([]);
 
     const baseUrl=placeId
       ?`${API}/search?placeId=${encodeURIComponent(placeId)}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}&rooms=${gs.rooms}`
@@ -806,8 +805,7 @@ function SearchResults(){
       // Only placeId-based searches paginate; destination-only searches return everything in one go
       if(!placeId||!data.hotels.hasMore)return;
 
-      // Pages 1-4 stream in afterwards and get appended
-      setLoadingMore(true);
+      // Pages 1-4 stream in afterwards and get appended silently
       for(let p=1;p<=4;p++){
         try{
           const r=await fetch(`${baseUrl}&page=${p}`,{cache:"no-store"});
@@ -823,7 +821,6 @@ function SearchResults(){
           if(!d.hotels?.hasMore)break;
         }catch{break;}
       }
-      setLoadingMore(false);
     }catch{setError("Could not connect to server.");setLoading(false);}
   },[destination,checkIn,checkOut,guests,searchParams]);
 
@@ -1054,7 +1051,6 @@ function SearchResults(){
                   {activeRefLabel ? `Hotels near ${activeRefLabel}` : `Hotels in ${destination}`}
                 </span>
                 {!loading&&<span style={{fontSize:13,color:"#64748b",marginLeft:8}}>{sortedHotels.length} properties found</span>}
-                {loadingMore&&<span style={{fontSize:12,color:"#94a3b8",marginLeft:10,display:"inline-flex",alignItems:"center",gap:6}}><span style={{width:11,height:11,border:"2px solid #e2e8f0",borderTop:"2px solid #1447b8",borderRadius:"50%",display:"inline-block",animation:"spin 0.8s linear infinite"}}/>Finding more hotels…</span>}
               </div>
               {!isMobile&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"7px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,background:"#fff",cursor:"pointer",outline:"none"}}>
                 {(activeRefLabel)&&<option value="distance">Nearest first</option>}
