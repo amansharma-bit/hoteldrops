@@ -1083,10 +1083,13 @@ function SearchResults(){
               const rating=hotel.rating||getRating(hotel.code);const discount=getDiscount(hotel.code);const price=priceINR(hotel);const globalIdx=(page-1)*perPage+idx;const cardAmenities=getCardAmenities(hotel);
               const area=hotel.city||null;
               const distLabel=getDistanceLabel(hotel);
-              // Location line: distance from ref if available, else area, else address
+              // Prefer a specific area/neighbourhood (first segment of the address) over the
+              // generic city name, which is identical for every hotel and not useful as a label.
+              const shortAddress=hotel.address?hotel.address.split(",")[0].trim():null;
+              // Location line: distance from ref if available, else neighbourhood, else city
               const locationLine = distLabel
                 ? `${distLabel} from ${activeRefLabel}`
-                : area || hotel.address || destination;
+                : (shortAddress&&shortAddress.toLowerCase()!==String(area||"").toLowerCase()?shortAddress:null) || area || hotel.address || destination;
 
               return isMobile?(
                 <div key={String(hotel.code)} className="hcard-m" onClick={()=>handleHotelClick(hotel)}>
@@ -1098,7 +1101,7 @@ function SearchResults(){
                     <div className="sora" style={{fontSize:16,fontWeight:700,color:NAVY,marginBottom:3}}>{hotel.name}</div>
                     <div style={{fontSize:12,color:"#64748b",marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
                       {hotel.stars?<span style={{color:"#f59e0b"}}>{"★".repeat(hotel.stars)}</span>:null}
-                      <span>· 📍 {locationLine}</span>
+                      <span>· <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style={{display:"inline-block",verticalAlign:"-1px",flexShrink:0}}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg> {locationLine}</span>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
                       <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:12,fontWeight:700,padding:"3px 8px",borderRadius:6}}>{rating.toFixed(1)}</span>
@@ -1123,14 +1126,14 @@ function SearchResults(){
                         <div style={{flex:1}}>
                           <div className="sora" style={{fontSize:17,fontWeight:700,color:NAVY,marginBottom:4}}>{hotel.name}{hotel.stars?<span style={{color:"#f59e0b",fontSize:12,marginLeft:6}}>{"★".repeat(hotel.stars)}</span>:null}</div>
                           <div style={{fontSize:12.5,color:"#64748b",marginBottom:8,display:"flex",alignItems:"center",gap:4}}>
-                            <span>📍</span>
+                            <span><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style={{display:"inline-block",verticalAlign:"-1px",flexShrink:0}}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg></span>
                             <span>{locationLine}</span>
                             {distLabel&&<span style={{background:"#eff6ff",color:B,fontSize:11,fontWeight:600,padding:"1px 7px",borderRadius:10,marginLeft:4}}>{distLabel} away</span>}
                           </div>
                           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
                             <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:12.5,fontWeight:700,padding:"3px 8px",borderRadius:6}}>{rating.toFixed(1)}</span>
                             <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
-                            {hotel.isRefundable!=null&&<span style={{fontSize:11,fontWeight:600,color:hotel.isRefundable?"#16a34a":"#dc2626",background:hotel.isRefundable?"#dcfce7":"#fee2e2",padding:"2px 7px",borderRadius:5}}>{hotel.isRefundable?"✓ Free Cancellation":"Non-refundable"}</span>}
+                            {hotel.isRefundable!=null&&<span style={{fontSize:11,fontWeight:600,color:hotel.isRefundable?"#16a34a":"#dc2626",background:hotel.isRefundable?"#dcfce7":"#fee2e2",padding:"2px 7px",borderRadius:5}}>{hotel.isRefundable?"Free Cancellation":"Non-refundable"}</span>}
                           </div>
                           {cardAmenities.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:"4px 14px",marginBottom:8}}>{cardAmenities.map((a,i)=><span key={i} style={{fontSize:12.5,color:"#475569"}}>• {a}</span>)}</div>}
                         </div>
