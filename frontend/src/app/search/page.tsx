@@ -5,6 +5,22 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
 const API = "https://hoteldrops-production-7e5a.up.railway.app/api/hotels";
+
+// Verified placeIds for major destinations — instant, reliable lookup,
+// avoids depending on /suggest (and its name-matching) for common cities.
+const CITY_PLACE_IDS: Record<string, string> = {
+  "dubai": "ChIJRcbZaklDXz4RYlEphFBu5r0",
+  "maldives": "ChIJvXv7qr-ZtSQRiWKVgeEJRUE",
+  "bali": "ChIJoQ8Q6NNB0S0RkOYkS7EPkSQ",
+  "bangkok": "ChIJ82ENKDJgHTERIEjiXbIAAQE",
+  "new delhi": "ChIJLbZ-NFv9DDkRQJY4FbcFcgM",
+  "delhi": "ChIJLbZ-NFv9DDkRQJY4FbcFcgM",
+  "goa": "ChIJQbc2YxC6vzsRkkDzYv-H-Oo",
+  "singapore": "ChIJdZOLiiMR2jERxPWrUs9peIg",
+  "london": "ChIJdd4hrwug2EcRmSrV3Vo6llI",
+  "mumbai": "ChIJwe1EZjDG5zsRaYxkjY_tpF0",
+  "abu dhabi": "ChIJufI-cg9EXj4RCBGXQZMuzMc",
+};
 const MAPBOX_TOKEN = "pk.eyJ1Ijoib21zYWlyYW0wMSIsImEiOiJjbXB4bngxdWwwMWI2MnBzZ3p2dGM3bW5rIn0.8qCkSAodMjGVg6qhiCZHzw";
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 const B = "#1447b8";
@@ -956,12 +972,19 @@ function SearchResults(){
     const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
     // Always resolve placeId fresh for the destination text being searched —
     // never reuse a placeId that may belong to a previously-searched city.
-    try{
-      const res=await fetch(`${API}/suggest?q=${encodeURIComponent(d)}`);
-      const data=await res.json();
-      const match=(data.cities||[]).find((c:any)=>c.name?.toLowerCase()===d.toLowerCase());
-      if(match?.placeId)p.set("placeId",match.placeId);
-    }catch{}
+    // /search requires a placeId (or hotelId), so we must always end up with one.
+    const known=CITY_PLACE_IDS[d.toLowerCase().trim()];
+    if(known){
+      p.set("placeId",known);
+    }else{
+      try{
+        const res=await fetch(`${API}/suggest?q=${encodeURIComponent(d)}`);
+        const data=await res.json();
+        const cities=data.cities||[];
+        const match=cities.find((c:any)=>c.name?.toLowerCase()===d.toLowerCase())||cities[0];
+        if(match?.placeId)p.set("placeId",match.placeId);
+      }catch{}
+    }
     // Hard navigation forces full remount so new city loads fresh
     window.location.href=`/search?${p.toString()}`;
   };
