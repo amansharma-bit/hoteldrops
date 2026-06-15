@@ -860,7 +860,7 @@ export default function SearchHotelsPage() {
               {isMobile ? (
                 <div>
                   <div style={{ padding: "13px 16px", borderBottom: "1px solid #f1f5f9", borderRadius: "16px 16px 0 0", position: "relative" }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or hotel</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination</div>
                     <input type="text" placeholder="Where to? e.g. Dubai" value={inputText}
                       onChange={e => { setInputText(e.target.value); setSelection(null); setShowSuggestions(true); setSearchError(""); }}
                       onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 300)}
@@ -889,7 +889,7 @@ export default function SearchHotelsPage() {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: 72 }}>
                   <div className="sfield" style={{ padding: "0 24px", borderRight: "1px solid #e2e8f0", borderRadius: "16px 0 0 16px", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or hotel</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination</div>
                     <input type="text" placeholder="Enter City name" value={inputText}
                       onChange={e => { setInputText(e.target.value); setSelection(null); setShowSuggestions(true); setSearchError(""); }}
                       onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 300)}
@@ -976,7 +976,7 @@ export default function SearchHotelsPage() {
 
       {/* STATS */}
       <div style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", paddingTop: isMobile ? 48 : 56 }} ref={statsRef}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "20px" : "26px 40px", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)" }}>
+        <div style={{ padding: isMobile ? "20px" : "26px 40px", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)" }}>
           {STATS.map((s, i) => (
             <div key={i} style={{ textAlign: "center", borderRight: !isMobile && i < 3 ? "1px solid #e2e8f0" : "none", padding: "0 20px" }}>
               <div className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY }}>{statVals[i]}</div>
@@ -987,7 +987,7 @@ export default function SearchHotelsPage() {
       </div>
 
       {/* TOP DESTINATIONS */}
-      <div style={{ padding: isMobile ? "50px 20px" : "70px 40px", maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ padding: isMobile ? "50px 20px" : "70px 40px" }}>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Explore by destination</p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28, flexWrap: "wrap" as const, gap: 12 }}>
           <div>
@@ -1025,7 +1025,7 @@ export default function SearchHotelsPage() {
 
       {/* HOTELS */}
       <div id="hotels-section" style={{ background: "#f8fafc", padding: isMobile ? "50px 0" : "70px 0" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "0 20px" : "0 40px" }}>
+        <div style={{ padding: isMobile ? "0 20px" : "0 40px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Member exclusive rates</p>
           <div style={{ marginBottom: 24 }}>
             <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Member Exclusive Hotels</h2>
