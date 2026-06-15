@@ -950,12 +950,18 @@ function SearchResults(){
   const perPage=10;const paginatedHotels=sortedHotels.slice((page-1)*perPage,page*perPage);const totalPages=Math.ceil(sortedHotels.length/perPage);
   const filterProps:FiltersPanelProps={destination,areaOptions,filterLocation,setFilterLocation,filterPriceMin,filterPriceMax,setPriceRange:(min,max)=>{setFilterPriceMin(min);setFilterPriceMax(max);},filterRefundable,setFilterRefundable,filterBreakfast,setFilterBreakfast,filterRating,setFilterRating,filterStars,setFilterStars,filterFacilities,setFilterFacilities,hasActiveFilters,clearAllFilters,onHotelSearch:setHotelSearch};
 
-  const handleSearch=()=>{
+  const handleSearch=async()=>{
     if(!user){setShowAuthModal(true);return;}
     const d=destInput.trim()||destination;
-    const currentPlaceId=(d===destination)?(selectedPlaceId||searchParams.get("placeId")||""):"";
     const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
-    if(currentPlaceId)p.set("placeId",currentPlaceId);
+    // Always resolve placeId fresh for the destination text being searched —
+    // never reuse a placeId that may belong to a previously-searched city.
+    try{
+      const res=await fetch(`${API}/suggest?q=${encodeURIComponent(d)}`);
+      const data=await res.json();
+      const match=(data.cities||[]).find((c:any)=>c.name?.toLowerCase()===d.toLowerCase());
+      if(match?.placeId)p.set("placeId",match.placeId);
+    }catch{}
     // Hard navigation forces full remount so new city loads fresh
     window.location.href=`/search?${p.toString()}`;
   };
