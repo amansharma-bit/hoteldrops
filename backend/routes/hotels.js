@@ -286,42 +286,28 @@ function parseRoomName(rawName) {
 async function enrichWithCoords(hotels) {
   if (!hotels.length) return hotels
   const ids = hotels.map(h => String(h.code))
-  const { data: rows, error } = await supabase
-    .from('hotels_cache')
-    .select('hotel_id, latitude, longitude, amenities, star_rating')
-    .in('hotel_id', ids)
-  if (error) console.warn('⚠️ Supabase read error:', error.message)
+
+  // Look up cached lat/long/amenities — chunked so the IN() list never gets too long
+  const CHUNK = 100
   const cached = {}
-  for (const row of (rows || [])) cached[row.hotel_id] = row
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const chunk = ids.slice(i, i + CHUNK)
+    const { data: rows, error } = await supabase
+      .from('hotels_cache')
+      .select('hotel_id, latitude, longitude, amenities, star_rating')
+      .in('hotel_id', chunk)
+    if (error) { console.warn('⚠️ Supabase read error:', error.message); continue }
+    for (const row of (rows || [])) cached[row.hotel_id] = row
+  }
+
   const missing = hotels.filter(h => !cached[String(h.code)])
   if (missing.length > 0) {
-    const toUpsert = []
-    for (const hotel of missing) {
-      try {
-        await sleep(200)
-        const r = await axios.get(`${BASE_URL}/data/hotel?hotelId=${hotel.code}`, {
-          headers: getHeaders(), timeout: 8000, validateStatus: () => true
-        })
-        const d = r.status === 200 ? r.data?.data : null
-        const row = {
-          hotel_id: String(hotel.code),
-          name: (d ? d.name : null) || hotel.name,
-          latitude: d?.location?.latitude || null,
-          longitude: d?.location?.longitude || null,
-          amenities: d ? (d.hotelFacilities || []).map(f => typeof f === 'string' ? f : f.name).filter(Boolean) : [],
-          star_rating: d?.starRating ? Math.round(parseFloat(d.starRating)) : (hotel.stars || null),
-          cached_at: new Date().toISOString(),
-        }
-        cached[String(hotel.code)] = row
-        toUpsert.push(row)
-      } catch (e) {
-        cached[String(hotel.code)] = { hotel_id: String(hotel.code), latitude: null, longitude: null, amenities: [] }
-      }
-    }
-    if (toUpsert.length) {
-      await supabase.from('hotels_cache').upsert(toUpsert, { onConflict: 'hotel_id' })
-    }
+    // Don't block this response on slow per-hotel detail calls — backfill
+    // hotels_cache in the background so the NEXT search for this city is
+    // fully enriched. Returned results just fall back to null lat/long for now.
+    enrichMissingInBackground(missing).catch(e => console.warn('⚠️ background enrich failed:', e.message))
   }
+
   return hotels.map(h => {
     const c = cached[String(h.code)] || {}
     return {
@@ -332,6 +318,38 @@ async function enrichWithCoords(hotels) {
       stars: c.star_rating || h.stars || null,
     }
   })
+}
+
+async function enrichMissingInBackground(missing) {
+  const CONCURRENCY = 5
+  const toUpsert = []
+  for (let i = 0; i < missing.length; i += CONCURRENCY) {
+    const batch = missing.slice(i, i + CONCURRENCY)
+    const results = await Promise.all(batch.map(async hotel => {
+      try {
+        const r = await axios.get(`${BASE_URL}/data/hotel?hotelId=${hotel.code}`, {
+          headers: getHeaders(), timeout: 8000, validateStatus: () => true
+        })
+        const d = r.status === 200 ? r.data?.data : null
+        return {
+          hotel_id: String(hotel.code),
+          name: (d ? d.name : null) || hotel.name,
+          latitude: d?.location?.latitude || null,
+          longitude: d?.location?.longitude || null,
+          amenities: d ? (d.hotelFacilities || []).map(f => typeof f === 'string' ? f : f.name).filter(Boolean) : [],
+          star_rating: d?.starRating ? Math.round(parseFloat(d.starRating)) : (hotel.stars || null),
+          cached_at: new Date().toISOString(),
+        }
+      } catch (e) {
+        return { hotel_id: String(hotel.code), latitude: null, longitude: null, amenities: [], cached_at: new Date().toISOString() }
+      }
+    }))
+    toUpsert.push(...results)
+    if (i + CONCURRENCY < missing.length) await sleep(250)
+  }
+  if (toUpsert.length) {
+    await supabase.from('hotels_cache').upsert(toUpsert, { onConflict: 'hotel_id' })
+  }
 }
 
 // ── POST /api/hotels/chat ────────────────────────────────────────────────────
@@ -669,38 +687,70 @@ router.get('/search', async (req, res) => {
     const hit = memGet(cacheKey)
     if (hit) return res.json({ hotels: { hotels: hit, total: hit.length, checkIn, checkOut } })
 
-    const body = {
+    const baseBody = {
       checkin: checkIn,
       checkout: checkOut,
       currency: 'INR',
       guestNationality: 'IN',
       occupancies: buildOccupancies(rooms, adults, children),
-      limit: 50,
       maxRatesPerHotel: 1,
       includeHotelData: true,
-      timeout: 8,
+      timeout: 10,
     }
 
+    let ratesList = []
+    let hotelsMetaList = []
+
     if (hotelId) {
-      body.hotelIds = [hotelId]
-      body.limit = 1
+      const resp = await axios.post(`${BASE_URL}/hotels/rates`, {
+        ...baseBody, hotelIds: [hotelId], limit: 1,
+      }, { headers: getHeaders(), timeout: 30000, validateStatus: () => true })
+
+      if (resp.status !== 200) {
+        return res.status(502).json({ error: `liteAPI returned ${resp.status}`, detail: resp.data })
+      }
+      ratesList = resp.data.data || []
+      hotelsMetaList = resp.data.hotels || []
+
     } else if (placeId) {
-      body.placeId = placeId
+      // Fetch multiple pages in PARALLEL so we surface most/all hotels in a
+      // city without taking N x longer. liteAPI's default page size is 200
+      // (expandable to 5,000) — 3 parallel pages = up to 600 raw hotels.
+      const PAGE_SIZE = 200
+      const PAGE_OFFSETS = [0, 200, 400]
+
+      const responses = await Promise.all(PAGE_OFFSETS.map(offset =>
+        axios.post(`${BASE_URL}/hotels/rates`, {
+          ...baseBody, placeId, limit: PAGE_SIZE, offset,
+        }, { headers: getHeaders(), timeout: 30000, validateStatus: () => true })
+          .catch(e => ({ status: 0, data: null, _err: e.message }))
+      ))
+
+      const okResponses = responses.filter(r => r.status === 200 && r.data)
+      if (okResponses.length === 0) {
+        const first = responses[0] || {}
+        return res.status(502).json({ error: `liteAPI returned ${first.status}`, detail: first.data || first._err })
+      }
+
+      for (const resp of okResponses) {
+        ratesList.push(...(resp.data.data || []))
+        hotelsMetaList.push(...(resp.data.hotels || []))
+      }
+
+      // De-dupe in case pages overlap
+      const seen = new Set()
+      ratesList = ratesList.filter(h => {
+        if (seen.has(h.hotelId)) return false
+        seen.add(h.hotelId)
+        return true
+      })
+
     } else {
       return res.status(400).json({ error: 'Please select a destination from the dropdown' })
     }
 
-    const resp = await axios.post(`${BASE_URL}/hotels/rates`, body, {
-      headers: getHeaders(), timeout: 30000, validateStatus: () => true,
-    })
-
-    if (resp.status !== 200) {
-      return res.status(502).json({ error: `liteAPI returned ${resp.status}`, detail: resp.data })
-    }
-
-    const ratesList = resp.data.data || []
     const hotelMeta = {}
-    for (const h of (resp.data.hotels || [])) hotelMeta[h.id] = h
+    for (const h of hotelsMetaList) hotelMeta[h.id] = h
 
     let hotels = ratesList.map(h => {
       const meta = hotelMeta[h.hotelId] || {}
@@ -755,6 +805,7 @@ router.get('/search', async (req, res) => {
     return res.status(500).json({ error: err.message })
   }
 })
+
 
 
 // ── GET /api/hotels/resolve-hotel ────────────────────────────────────────────
