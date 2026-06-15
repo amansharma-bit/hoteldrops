@@ -97,6 +97,19 @@ const FAQS = [
   { q: "What if I have a non-refundable booking?", a: "rebuq works best with refundable bookings. If your booking is non-refundable, we'll let you know when you upload — and suggest booking a flexible rate next time so you can benefit from price drops." },
 ];
 
+async function uploadVoucherToStorage(file: File): Promise<string | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || 'anonymous';
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `${userId}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('vouchers').upload(path, file, { contentType: file.type, upsert: false });
+    if (error) { console.error('Storage upload error:', error); return null; }
+    const { data } = supabase.storage.from('vouchers').getPublicUrl(path);
+    return data?.publicUrl || null;
+  } catch (e) { console.error('Storage error:', e); return null; }
+}
+
 export default function Home() {
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -131,6 +144,7 @@ export default function Home() {
   const [docType, setDocType] = useState<string>('confirmed_voucher');
   const [selectedHotelIdx, setSelectedHotelIdx] = useState<number | null>(null);
   const [selectedRoomIdx, setSelectedRoomIdx] = useState<number | null>(null);
+  const [voucherUrl, setVoucherUrl]   = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -169,7 +183,7 @@ export default function Home() {
   });
 
   const openModal = () => {
-    setModalOpen(true); setUploadStep(1); setFile(null); setFileSource(null); setExtracted(null); setDocType('confirmed_voucher');
+    setModalOpen(true); setUploadStep(1); setFile(null); setFileSource(null); setVoucherUrl(null); setExtracted(null); setDocType('confirmed_voucher');
     setPhone(''); setEmailVal(''); setSubmitError(''); setBlockInfo(null); setWarnings({}); setLoading(false);
     setExtractResult(null); setSelectedHotelIdx(null); setSelectedRoomIdx(null); setEditMode(false); setShowChildAgePopup(false);
   };
@@ -219,6 +233,8 @@ export default function Home() {
     const msgs = ['Reading your voucher…', 'Identifying hotel & dates…', 'Extracting pricing…', 'Checking cancellation policy…', 'Almost done…'];
     let i = 0; setScanMsg(msgs[0]);
     const interval = setInterval(() => { i++; if (i < msgs.length) setScanMsg(msgs[i]); }, 900);
+    const uploadedUrl = await uploadVoucherToStorage(file);
+    setVoucherUrl(uploadedUrl);
     try {
       const formData = new FormData();
       formData.append('voucher', file);
@@ -364,7 +380,7 @@ export default function Home() {
       const res = await fetch('https://hoteldrops-production-7e5a.up.railway.app/api/voucher/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...extracted, phone: phone.startsWith('+') ? phone : `+91${phone}`, email: emailVal }),
+        body: JSON.stringify({ ...extracted, phone: phone.startsWith('+') ? phone : `+91${phone}`, email: emailVal, voucher_url: voucherUrl || null, doc_type: docType }),
       });
       const json = await res.json();
       if (json.blocked && json.reason === 'non_refundable') {
