@@ -708,6 +708,8 @@ export default function SearchHotelsPage() {
     .sfield:hover { background: rgba(0,0,0,0.02); }
     .fs { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; flex-direction: column; animation: slideInRight 0.22s ease; }
     .ybtn:hover { background: #e6b800 !important; }
+    .scroll-x { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .scroll-x::-webkit-scrollbar { display: none; }
   `;
 
   return (
@@ -1007,7 +1009,7 @@ export default function SearchHotelsPage() {
             <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Member Exclusive Hotels</h2>
             <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Members save an average of <strong>₹24,600</strong> on these properties.</p>
           </div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto", paddingBottom: 4 }}>
+          <div className="scroll-x" style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto", paddingBottom: 4 }}>
             {CITY_FILTERS.map(f => {
               const dest = DESTINATIONS.find(d => d.city === f);
               return (
