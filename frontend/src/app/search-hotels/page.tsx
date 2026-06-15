@@ -113,23 +113,23 @@ const DESTINATIONS = [
 const HOTELS_BY_CITY: Record<string, Array<{
   name: string; loc: string; city: string; stars: number; rating: string;
   tags: string[]; was: string; now: string; save: string;
-  badges: [string,string][]; img: string;
+  badges: [string,string][]; img: string; code?: string;
 }>> = {
   "All Hotels": [
-    { name: "Atlantis The Palm", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach","Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/atlantisthepalmdubai.jpg" },
+    { name: "Atlantis The Palm", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach","Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lp42f57.jpg", code: "lp42f57" },
     { name: "Four Seasons Resort Bali", loc: "Bali, Indonesia", city: "Bali", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view","Spa","Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending","trending"],["3.5% Off","off"]], img: "/FourSeasonsbali.jpg" },
     { name: "Marina Bay Sands", loc: "Singapore", city: "Singapore", stars: 5, rating: "4.7 (19.1k)", tags: ["Infinity pool","SkyPark","Casino"], was: "₹47,000", now: "₹34,600", save: "Save ₹12,400", badges: [["AI Watching","watching"],["4% Off","off"]], img: "/marinabaysandssingapore.jpg" },
-    { name: "The Leela Palace New Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.9 (8.2k)", tags: ["Pool","Spa","Fine dining"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/theleelapalace.jpg" },
+    { name: "The Leela Palace New Delhi", loc: "Diplomatic Enclave, New Delhi, India", city: "New Delhi", stars: 5, rating: "4.9 (8.2k)", tags: ["Pool","Spa","Fine dining"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp5635d.jpg", code: "lp5635d" },
     { name: "Taj Mahal Palace", loc: "Mumbai, India", city: "Mumbai", stars: 5, rating: "4.9 (22.4k)", tags: ["Heritage","Sea view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/tajmahalpalacemumbai.jpg" },
     { name: "The Leela Goa", loc: "Goa, India", city: "Goa", stars: 5, rating: "4.8 (12.1k)", tags: ["Beach","Lagoon","Golf"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/leelagoa.jpg" },
   ],
   "Dubai": [
-    { name: "Atlantis The Palm", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/atlantisthepalmdubai.jpg" },
-    { name: "Burj Al Arab", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.8 (12.3k)", tags: ["Iconic","Private beach"], was: "₹1,20,000", now: "₹84,000", save: "Save ₹36,000", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/burjalarab.jpg" },
-    { name: "Four Seasons Hotel Dubai", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.7 (6.2k)", tags: ["City view","Spa"], was: "₹38,000", now: "₹26,600", save: "Save ₹11,400", badges: [["Best Value","best"],["3% Off","off"]], img: "/fourseasonsdifc.jpg" },
-    { name: "Jumeirah Al Qasr", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.6 (8.9k)", tags: ["Beach","Pool"], was: "₹44,000", now: "₹31,800", save: "Save ₹12,200", badges: [["Trending","trending"],["5% Off","off"]], img: "/jumeirahalqasr.jpg" },
-    { name: "Address Downtown Dubai", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.7 (14.2k)", tags: ["Burj view","Rooftop pool"], was: "₹52,000", now: "₹37,400", save: "Save ₹14,600", badges: [["AI Watching","watching"],["6% Off","off"]], img: "/addressdowntown.jpg" },
-    { name: "W Dubai Palm Jumeirah", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.5 (9.1k)", tags: ["Palm view","Beach"], was: "₹35,000", now: "₹24,500", save: "Save ₹10,500", badges: [["Best Value","best"],["4% Off","off"]], img: "/wdubaipalm.jpg" },
+    { name: "Atlantis The Palm", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach","Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lp42f57.jpg", code: "lp42f57" },
+    { name: "InterContinental Dubai Marina by IHG", loc: "Dubai Marina, UAE", city: "Dubai", stars: 5, rating: "4.6 (8.7k)", tags: ["Marina view","Spa","Pool"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["AI Watching","watching"],["7% Off","off"]], img: "/hotels/lp769d6.jpg", code: "lp769d6" },
+    { name: "ME Dubai by Meliá", loc: "Downtown Dubai, UAE", city: "Dubai", stars: 5, rating: "4.6 (3.1k)", tags: ["Design hotel","Rooftop","Spa"], was: "₹36,000", now: "₹25,200", save: "Save ₹10,800", badges: [["Luxury","luxury"],["Trending","trending"]], img: "/hotels/lp6554ba8e.jpg", code: "lp6554ba8e" },
+    { name: "Pullman Dubai Downtown", loc: "Downtown Dubai, UAE", city: "Dubai", stars: 4, rating: "4.4 (5.6k)", tags: ["Burj view","Rooftop pool"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Best Value","best"],["AI Watching","watching"]], img: "/hotels/lp894ae.jpg", code: "lp894ae" },
+    { name: "Hilton Garden Inn Dubai, Mall Avenue", loc: "Al Barsha, Dubai, UAE", city: "Dubai", stars: 4, rating: "4.3 (4.2k)", tags: ["Near Mall of Emirates","Business"], was: "₹16,000", now: "₹11,200", save: "Save ₹4,800", badges: [["Best Value","best"],["5% Off","off"]], img: "/hotels/lp897a8.jpg", code: "lp897a8" },
+    { name: "Rove Dubai Marina", loc: "Dubai Marina, UAE", city: "Dubai", stars: 3, rating: "4.4 (9.8k)", tags: ["Marina","Trendy","Budget"], was: "₹12,000", now: "₹8,400", save: "Save ₹3,600", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lpcdd85.jpg", code: "lpcdd85" },
   ],
   "Bali": [
     { name: "Four Seasons Resort Bali", loc: "Bali, Indonesia", city: "Bali", stars: 5, rating: "4.9 (8.1k)", tags: ["Jungle view","Spa","Yoga"], was: "₹29,200", now: "₹22,800", save: "Save ₹6,400", badges: [["Trending","trending"],["3.5% Off","off"]], img: "/FourSeasonsbali.jpg" },
@@ -148,12 +148,12 @@ const HOTELS_BY_CITY: Record<string, Array<{
     { name: "Andaz Singapore", loc: "Singapore", city: "Singapore", stars: 5, rating: "4.6 (4.2k)", tags: ["Rooftop","City view"], was: "₹32,000", now: "₹22,400", save: "Save ₹9,600", badges: [["Best Value","best"],["4% Off","off"]], img: "/andazsingapore.jpg" },
   ],
   "New Delhi": [
-    { name: "The Leela Palace New Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.9 (8.2k)", tags: ["Pool","Spa","Fine dining"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/theleelapalace.jpg" },
-    { name: "The Oberoi New Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.8 (6.4k)", tags: ["Golf course view","Spa"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Best Value","best"],["5% Off","off"]], img: "/oberoinewdelhi.jpg" },
-    { name: "ITC Maurya New Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.7 (11.2k)", tags: ["Bukhara","Pool"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Trending","trending"],["4% Off","off"]], img: "/ITCmaurya.jpg" },
-    { name: "Taj Mahal Hotel New Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.8 (14.1k)", tags: ["Heritage","Pool"], was: "₹26,000", now: "₹18,200", save: "Save ₹7,800", badges: [["Luxury","luxury"],["6% Off","off"]], img: "/tajmahalnewdelhi.jpg" },
-    { name: "The Imperial New Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.7 (9.8k)", tags: ["Colonial","Art collection"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Best Value","best"],["5% Off","off"]], img: "/theimperialnewdelhi.jpg" },
-    { name: "Hyatt Regency Delhi", loc: "New Delhi, India", city: "New Delhi", stars: 5, rating: "4.6 (18.4k)", tags: ["Pool","Spa"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["AI Watching","watching"],["4% Off","off"]], img: "/hyattregencynewdelhi.jpg" },
+    { name: "The Leela Palace New Delhi", loc: "Diplomatic Enclave, New Delhi, India", city: "New Delhi", stars: 5, rating: "4.9 (8.2k)", tags: ["Pool","Spa","Fine dining"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp5635d.jpg", code: "lp5635d" },
+    { name: "Taj Palace, New Delhi", loc: "Diplomatic Enclave, New Delhi, India", city: "New Delhi", stars: 5, rating: "4.7 (9.6k)", tags: ["Luxury","Spa","Gardens"], was: "₹26,000", now: "₹18,200", save: "Save ₹7,800", badges: [["Luxury","luxury"],["6% Off","off"]], img: "/hotels/lp25093.jpg", code: "lp25093" },
+    { name: "Roseate House", loc: "Aerocity, New Delhi, India", city: "New Delhi", stars: 5, rating: "4.6 (4.4k)", tags: ["Boutique","Rooftop","Aerocity"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lp7c680.jpg", code: "lp7c680" },
+    { name: "Crowne Plaza New Delhi Okhla by IHG", loc: "Okhla, New Delhi, India", city: "New Delhi", stars: 5, rating: "4.4 (6.1k)", tags: ["Business","Pool","Spa"], was: "₹14,000", now: "₹9,800", save: "Save ₹4,200", badges: [["Best Value","best"],["AI Watching","watching"]], img: "/hotels/lp57c34.jpg", code: "lp57c34" },
+    { name: "Aloft by Marriott New Delhi Aerocity", loc: "Aerocity, New Delhi, India", city: "New Delhi", stars: 4, rating: "4.3 (5.2k)", tags: ["Trendy","Near airport"], was: "₹11,000", now: "₹7,700", save: "Save ₹3,300", badges: [["Best Value","best"],["7% Off","off"]], img: "/hotels/lpe15b1.jpg", code: "lpe15b1" },
+    { name: "Radisson Blu Hotel New Delhi Dwarka", loc: "Dwarka, New Delhi, India", city: "New Delhi", stars: 4, rating: "4.3 (3.8k)", tags: ["Business","Pool"], was: "₹12,000", now: "₹8,400", save: "Save ₹3,600", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lp5f77a.jpg", code: "lp5f77a" },
   ],
   "Goa": [
     { name: "The Leela Goa", loc: "Goa, India", city: "Goa", stars: 5, rating: "4.8 (12.1k)", tags: ["Beach","Lagoon","Golf"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/leelagoa.jpg" },
@@ -402,10 +402,16 @@ export default function SearchHotelsPage() {
     setTimeout(() => { setCalMode("checkin"); setCalOpen(true); }, 100);
   };
 
-  const handleHotelCardClick = async (hotelName: string, city: string) => {
+  const handleHotelCardClick = async (hotelName: string, city: string, hotelCode?: string) => {
     requireAuth(async () => {
       const ci = checkIn || defaults.checkIn;
       const co = checkOut || defaults.checkOut;
+      if (hotelCode) {
+        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children) });
+        const url = `/hotel/${hotelCode}?${params.toString()}`;
+        isMobile ? router.push(url) : window.open(url, '_blank');
+        return;
+      }
       try {
         const res = await fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(hotelName)}`);
         const data = await res.json();
@@ -992,7 +998,7 @@ export default function SearchHotelsPage() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20 }}>
             {hotels.map((h, i) => (
-              <div key={i} className="hotel-card" onClick={() => handleHotelCardClick(h.name, h.city)}
+              <div key={i} className="hotel-card" onClick={() => handleHotelCardClick(h.name, h.city, h.code)}
                 style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1.5px solid #e2e8f0" }}>
                 <div style={{ height: 190, position: "relative", overflow: "hidden" }}>
                   <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
