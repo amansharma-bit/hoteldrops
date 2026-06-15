@@ -1004,7 +1004,7 @@ export default function SearchHotelsPage() {
           <div style={{ display: "flex", gap: 14, transform: `translateX(-${destCarouselPos * (DEST_CARD_WIDTH + 14)}px)`, transition: "transform 0.4s cubic-bezier(.4,0,.2,1)" }}>
             {DEST_CARDS.map((d, i) => (
               <div key={i} className="dest-card" onClick={() => handleDestCardClick(d.city)}
-                style={{ flex: `0 0 ${DEST_CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", height: isMobile ? 140 : 200, cursor: "pointer" }}>
+                style={{ flex: `0 0 ${DEST_CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", height: 190, cursor: "pointer" }}>
                 <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={e => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80&fit=crop"; }} />
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 55%)" }} />
                 {d.badge && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, padding: "3px 9px", borderRadius: 6, background: d.badgeColor, color: d.badgeText }}>{d.badge}</span>}
@@ -1056,7 +1056,7 @@ export default function SearchHotelsPage() {
                   </div>
                   <div style={{ padding: "16px 18px 18px" }}>
                     <div style={{ color: "#f59e0b", fontSize: 12, marginBottom: 4 }}>{"★".repeat(h.stars)}</div>
-                    <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{h.name}</div>
+                    <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4, minHeight: 42, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>{h.name}</div>
                     <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{h.loc} · {h.rating}</div>
                     <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5, marginBottom: 14 }}>
                       {h.tags.map(t => <span key={t} style={{ background: "#f8fafc", color: "#64748b", fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 500 }}>{t}</span>)}
