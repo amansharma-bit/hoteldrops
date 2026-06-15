@@ -1084,7 +1084,6 @@ function SearchResults(){
                   {activeRefLabel ? `Hotels near ${activeRefLabel}` : `Hotels in ${destination}`}
                 </span>
                 {!loading&&<span style={{fontSize:13,color:"#64748b",marginLeft:8}}>{sortedHotels.length} properties found</span>}
-                <div style={{fontSize:10,color:"#cbd5e1",marginTop:2}}>debug placeId: {searchParams.get("placeId")||"(none)"}</div>
               </div>
               {!isMobile&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"7px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,background:"#fff",cursor:"pointer",outline:"none"}}>
                 {(activeRefLabel)&&<option value="distance">Nearest first</option>}
