@@ -217,6 +217,7 @@ const HOTEL_CITIES = [
 ]
 
 let HOTEL_CACHE = []
+let HOTEL_CACHE_BY_ID = {}
 
 async function buildHotelIndex() {
   console.log('📦 Building hotel index...')
@@ -232,6 +233,9 @@ async function buildHotelIndex() {
             type: 'hotel', name: h.name, city: h.city || city,
             country: h.country || country, countryCode: h.countryCode || country,
             hotelId: h.id,
+            latitude: h.latitude ?? h.location?.latitude ?? null,
+            longitude: h.longitude ?? h.location?.longitude ?? null,
+            stars: h.stars || (h.starRating ? Math.round(parseFloat(h.starRating)) : null),
           })
         })
       }
@@ -239,7 +243,10 @@ async function buildHotelIndex() {
     } catch (e) { console.log(`⚠️ Hotels ${city}: ${e.message}`) }
   }
   HOTEL_CACHE = allHotels
-  console.log(`✅ Hotel index ready: ${HOTEL_CACHE.length} hotels`)
+  HOTEL_CACHE_BY_ID = {}
+  for (const h of HOTEL_CACHE) HOTEL_CACHE_BY_ID[String(h.hotelId)] = h
+  const withCoords = HOTEL_CACHE.filter(h => h.latitude && h.longitude).length
+  console.log(`✅ Hotel index ready: ${HOTEL_CACHE.length} hotels (${withCoords} with coordinates)`)
 }
 
 setTimeout(buildHotelIndex, 2000)
@@ -309,13 +316,17 @@ async function enrichWithCoords(hotels) {
   }
 
   return hotels.map(h => {
-    const c = cached[String(h.code)] || {}
+    const c  = cached[String(h.code)] || {}
+    // HOTEL_CACHE_BY_ID comes from /data/hotels (built at startup, ~1000
+    // hotels/city incl. lat/long) — an instant, no-extra-call fallback so
+    // the map can plot nearly every result even before hotels_cache fills in.
+    const hc = HOTEL_CACHE_BY_ID[String(h.code)] || {}
     return {
       ...h,
-      latitude: c.latitude || h.latitude || null,
-      longitude: c.longitude || h.longitude || null,
+      latitude: c.latitude || hc.latitude || h.latitude || null,
+      longitude: c.longitude || hc.longitude || h.longitude || null,
       amenities: c.amenities?.length ? c.amenities : (h.amenities || []),
-      stars: c.star_rating || h.stars || null,
+      stars: c.star_rating || hc.stars || h.stars || null,
     }
   })
 }
