@@ -241,6 +241,7 @@ export default function SearchHotelsPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<any>({ cities: [], hotels: [], areas: [], landmarks: [], airport: null });
   const [activeCity, setActiveCity] = useState("Top Sellers");
+  const [destCarouselPos, setDestCarouselPos] = useState(0);
   const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
   const [statVals, setStatVals] = useState(STATS.map(s => `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
@@ -712,6 +713,12 @@ export default function SearchHotelsPage() {
     .scroll-x::-webkit-scrollbar { display: none; }
   `;
 
+  const DEST_CARDS = DESTINATIONS.slice(0, 10);
+  const DEST_CARD_WIDTH = isMobile ? 200 : 256;
+  const DEST_VISIBLE = isMobile ? 2 : 4;
+  const DEST_MAX_POS = DEST_CARDS.length - DEST_VISIBLE;
+  const scrollDestCarousel = (dir: number) => setDestCarouselPos(prev => Math.max(0, Math.min(DEST_MAX_POS, prev + dir)));
+
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, overflowX: "hidden" }}>
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -985,19 +992,28 @@ export default function SearchHotelsPage() {
             <span style={{ width: 7, height: 7, background: "#16a34a", borderRadius: "50%", display: "inline-block", animation: "pulse 1.5s infinite" }} /> Live rates
           </span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 14 }}>
-          {DESTINATIONS.slice(0, 6).map((d, i) => (
-            <div key={i} className="dest-card" onClick={() => handleDestCardClick(d.city)}
-              style={{ borderRadius: 14, overflow: "hidden", position: "relative", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", height: isMobile ? 140 : 200 }}>
-              <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={e => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80&fit=crop"; }} />
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 55%)" }} />
-              {d.badge && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, padding: "3px 9px", borderRadius: 6, background: d.badgeColor, color: d.badgeText }}>{d.badge}</span>}
-              <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
-                <div className="sora" style={{ fontSize: 17, fontWeight: 700 }}>{d.flag} {d.city}</div>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>{d.country}</div>
+        <div style={{ overflow: "hidden" }}
+          onTouchStart={e => { const t = e.touches[0]; (e.currentTarget as any)._touchStartX = t.clientX; }}
+          onTouchEnd={e => { const startX = (e.currentTarget as any)._touchStartX; const endX = e.changedTouches[0].clientX; const diff = startX - endX; if (Math.abs(diff) > 50) { scrollDestCarousel(diff > 0 ? 1 : -1); } }}>
+          <div style={{ display: "flex", gap: 14, transform: `translateX(-${destCarouselPos * (DEST_CARD_WIDTH + 14)}px)`, transition: "transform 0.4s cubic-bezier(.4,0,.2,1)" }}>
+            {DEST_CARDS.map((d, i) => (
+              <div key={i} className="dest-card" onClick={() => handleDestCardClick(d.city)}
+                style={{ flex: `0 0 ${DEST_CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", height: isMobile ? 140 : 200, cursor: "pointer" }}>
+                <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={e => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80&fit=crop"; }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 55%)" }} />
+                {d.badge && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, padding: "3px 9px", borderRadius: 6, background: d.badgeColor, color: d.badgeText }}>{d.badge}</span>}
+                <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
+                  <div className="sora" style={{ fontSize: 17, fontWeight: 700 }}>{d.flag} {d.city}</div>
+                  <div style={{ fontSize: 12, opacity: 0.8 }}>{d.country}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
+          <button onClick={() => scrollDestCarousel(-1)} disabled={destCarouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: destCarouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: destCarouselPos === 0 ? 0.4 : 1 }}>‹</button>
+          <div style={{ display: "flex", gap: 6 }}>{Array.from({ length: DEST_CARDS.length - DEST_VISIBLE + 1 }, (_, i) => (<div key={i} onClick={() => setDestCarouselPos(i)} style={{ width: i === destCarouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === destCarouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />))}</div>
+          <button onClick={() => scrollDestCarousel(1)} disabled={destCarouselPos >= DEST_MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: destCarouselPos >= DEST_MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: destCarouselPos >= DEST_MAX_POS ? 0.4 : 1 }}>›</button>
         </div>
       </div>
 
