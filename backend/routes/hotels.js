@@ -694,9 +694,19 @@ router.get('/search', async (req, res) => {
       return res.status(400).json({ error: 'checkIn and checkOut are required' })
     }
 
+    // pageNum is null for "all-pages" callers (no ?page=), or 0-4 for progressive mode.
+    // hasMore is purely a function of pageNum, so it must be attached on EVERY response
+    // path — including cache hits — or a cached page (e.g. page=1 from an earlier
+    // request) comes back without hasMore and the frontend's progressive loop stops early.
+    const pageNum = (page !== undefined) ? Math.max(0, Math.min(4, parseInt(page, 10) || 0)) : null
+
     const cacheKey = `s:${placeId || hotelId || destination}:${checkIn}:${checkOut}:${adults}:${children}:${rooms}:${page ?? 'all'}`
     const hit = memGet(cacheKey)
-    if (hit) return res.json({ hotels: { hotels: hit, total: hit.length, checkIn, checkOut } })
+    if (hit) {
+      const payload = { hotels: { hotels: hit, total: hit.length, checkIn, checkOut } }
+      if (pageNum !== null) { payload.hotels.page = pageNum; payload.hotels.hasMore = pageNum < 4 }
+      return res.json(payload)
+    }
 
     const baseBody = {
       checkin: checkIn,
@@ -726,11 +736,10 @@ router.get('/search', async (req, res) => {
     } else if (placeId) {
       const PAGE_SIZE = 200
 
-      if (page !== undefined) {
+      if (pageNum !== null) {
         // ── Single-page mode (progressive loading) ─────────────────────
         // Frontend fetches page 0 first for a fast first paint, then pages
         // 1-4 in the background and appends results as they arrive.
-        const pageNum = Math.max(0, Math.min(4, parseInt(page, 10) || 0))
         const offset = pageNum * PAGE_SIZE
 
         const resp = await axios.post(`${BASE_URL}/hotels/rates`, {
