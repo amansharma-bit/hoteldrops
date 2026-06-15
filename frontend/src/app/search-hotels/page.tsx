@@ -242,6 +242,8 @@ export default function SearchHotelsPage() {
   const [suggestions, setSuggestions] = useState<any>({ cities: [], hotels: [], areas: [], landmarks: [], airport: null });
   const [activeCity, setActiveCity] = useState("Top Sellers");
   const [destCarouselPos, setDestCarouselPos] = useState(0);
+  const [hotelCarouselPos, setHotelCarouselPos] = useState(0);
+  useEffect(() => { setHotelCarouselPos(0); }, [activeCity]);
   const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
   const [statVals, setStatVals] = useState(STATS.map(s => `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
@@ -510,6 +512,10 @@ export default function SearchHotelsPage() {
 
   const ticker = TICKER_ITEMS[tickerIdx];
   const hotels = HOTELS_BY_CITY[activeCity] || HOTELS_BY_CITY["Top Sellers"];
+  const HOTEL_CARD_WIDTH = isMobile ? 300 : 340;
+  const HOTEL_VISIBLE = isMobile ? 1 : 3;
+  const HOTEL_MAX_POS = Math.max(0, hotels.length - HOTEL_VISIBLE);
+  const scrollHotelCarousel = (dir: number) => setHotelCarouselPos(prev => Math.max(0, Math.min(HOTEL_MAX_POS, prev + dir)));
   const d1 = new Date(today.getFullYear(), today.getMonth() + calMonthOffset);
   const d2 = new Date(today.getFullYear(), today.getMonth() + calMonthOffset + 1);
 
@@ -713,7 +719,7 @@ export default function SearchHotelsPage() {
     .scroll-x::-webkit-scrollbar { display: none; }
   `;
 
-  const DEST_CARDS = DESTINATIONS.slice(0, 10);
+  const DEST_CARDS = DESTINATIONS.slice(0, 6);
   const DEST_CARD_WIDTH = isMobile ? 200 : 256;
   const DEST_VISIBLE = isMobile ? 2 : 4;
   const DEST_MAX_POS = DEST_CARDS.length - DEST_VISIBLE;
@@ -1035,33 +1041,36 @@ export default function SearchHotelsPage() {
               );
             })}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 20 }}>
-            {hotels.map((h, i) => (
-              <div key={i} className="hotel-card" onClick={() => handleHotelCardClick(h.name, h.city, h.code)}
-                style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1.5px solid #e2e8f0" }}>
-                <div style={{ height: 190, position: "relative", overflow: "hidden" }}>
-                  <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                    {h.badges.map(([label, type]) => { const s = BADGE_STYLES[type] || BADGE_STYLES.luxury; return <span key={label} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, letterSpacing: "0.04em", textTransform: "uppercase" as const, background: s.bg, color: s.color }}>{label}</span>; })}
-                  </div>
-                </div>
-                <div style={{ padding: "16px 18px 18px" }}>
-                  <div style={{ color: "#f59e0b", fontSize: 12, marginBottom: 4 }}>{"★".repeat(h.stars)}</div>
-                  <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{h.name}</div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{h.loc} · {h.rating}</div>
-                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5, marginBottom: 14 }}>
-                    {h.tags.map(t => <span key={t} style={{ background: "#f8fafc", color: "#64748b", fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 500 }}>{t}</span>)}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#16a34a" }}>
-                      <span style={{ width: 7, height: 7, background: "#16a34a", borderRadius: "50%", display: "inline-block", animation: "pulse 1.5s infinite", flexShrink: 0 }} />
-                      AI-tracked live rate
+          <div style={{ overflow: "hidden" }}
+            onTouchStart={e => { const t = e.touches[0]; (e.currentTarget as any)._touchStartX = t.clientX; }}
+            onTouchEnd={e => { const startX = (e.currentTarget as any)._touchStartX; const endX = e.changedTouches[0].clientX; const diff = startX - endX; if (Math.abs(diff) > 50) { scrollHotelCarousel(diff > 0 ? 1 : -1); } }}>
+            <div style={{ display: "flex", gap: 20, transform: `translateX(-${hotelCarouselPos * (HOTEL_CARD_WIDTH + 20)}px)`, transition: "transform 0.4s cubic-bezier(.4,0,.2,1)" }}>
+              {hotels.map((h, i) => (
+                <div key={i} className="hotel-card" onClick={() => handleHotelCardClick(h.name, h.city, h.code)}
+                  style={{ flex: `0 0 ${HOTEL_CARD_WIDTH}px`, background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1.5px solid #e2e8f0" }}>
+                  <div style={{ height: 190, position: "relative", overflow: "hidden" }}>
+                    <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                      {h.badges.map(([label, type]) => { const s = BADGE_STYLES[type] || BADGE_STYLES.luxury; return <span key={label} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, letterSpacing: "0.04em", textTransform: "uppercase" as const, background: s.bg, color: s.color }}>{label}</span>; })}
                     </div>
-                    <button style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const }}>View deal →</button>
+                  </div>
+                  <div style={{ padding: "16px 18px 18px" }}>
+                    <div style={{ color: "#f59e0b", fontSize: 12, marginBottom: 4 }}>{"★".repeat(h.stars)}</div>
+                    <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4 }}>{h.name}</div>
+                    <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{h.loc} · {h.rating}</div>
+                    <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5, marginBottom: 14 }}>
+                      {h.tags.map(t => <span key={t} style={{ background: "#f8fafc", color: "#64748b", fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 500 }}>{t}</span>)}
+                    </div>
+                    <button style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const }}>Check Members Rate →</button>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
+            <button onClick={() => scrollHotelCarousel(-1)} disabled={hotelCarouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: hotelCarouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: hotelCarouselPos === 0 ? 0.4 : 1 }}>‹</button>
+            <div style={{ display: "flex", gap: 6 }}>{Array.from({ length: Math.max(0, hotels.length - HOTEL_VISIBLE + 1) }, (_, i) => (<div key={i} onClick={() => setHotelCarouselPos(i)} style={{ width: i === hotelCarouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === hotelCarouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />))}</div>
+            <button onClick={() => scrollHotelCarousel(1)} disabled={hotelCarouselPos >= HOTEL_MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: hotelCarouselPos >= HOTEL_MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: hotelCarouselPos >= HOTEL_MAX_POS ? 0.4 : 1 }}>›</button>
           </div>
           <div style={{ textAlign: "center", marginTop: 36 }}>
             <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>↑ Search for more hotels</button>
