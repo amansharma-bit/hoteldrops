@@ -953,7 +953,7 @@ function SearchResults(){
   const handleSearch=()=>{
     if(!user){setShowAuthModal(true);return;}
     const d=destInput.trim()||destination;
-    const currentPlaceId=selectedPlaceId||searchParams.get("placeId")||"";
+    const currentPlaceId=(d===destination)?(selectedPlaceId||searchParams.get("placeId")||""):"";
     const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
     if(currentPlaceId)p.set("placeId",currentPlaceId);
     // Hard navigation forces full remount so new city loads fresh
