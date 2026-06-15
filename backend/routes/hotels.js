@@ -748,8 +748,10 @@ router.get('/search', async (req, res) => {
         var _pageInfo = {
           page: pageNum,
           rawCount: ratesList.length,
-          // If this page came back full, there's likely more to fetch
-          hasMore: pageNum < 4 && ratesList.length === PAGE_SIZE,
+          // Always walk through all 5 pages (0-4) — liteAPI's per-page raw
+          // counts aren't reliably == PAGE_SIZE even when later offsets still
+          // have results, so we can't use that as a stopping signal.
+          hasMore: pageNum < 4,
         }
 
       } else {
@@ -893,9 +895,12 @@ router.get('/resolve-hotel', async (req, res) => {
 // ── GET /api/hotels/cache-dump ────────────────────────────────────────────────
 router.get('/cache-dump', (req, res) => {
   const fmt = req.query.format || 'json';
+  const cityFilter = (req.query.city || '').toLowerCase();
+  const list = cityFilter ? HOTEL_CACHE.filter(h => (h.city || '').toLowerCase() === cityFilter) : HOTEL_CACHE;
+
   if (fmt === 'csv') {
     const rows = ['hotelId,name,city,country'];
-    for (const h of HOTEL_CACHE) {
+    for (const h of list) {
       const name = (h.name || '').replace(/,/g, ' ');
       rows.push(`${h.hotelId},${name},${h.city || ''},${h.country || ''}`);
     }
@@ -903,7 +908,14 @@ router.get('/cache-dump', (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="rebuq_hotel_cache.csv"');
     return res.send(rows.join('\n'));
   }
-  return res.json({ total: HOTEL_CACHE.length, hotels: HOTEL_CACHE.map(h => ({ hotelId: h.hotelId, name: h.name, city: h.city, country: h.country })) });
+  if (fmt === 'count') {
+    // Quick counts grouped by city (or just the filtered total if ?city= given)
+    if (cityFilter) return res.json({ city: req.query.city, total: list.length });
+    const byCity = {};
+    for (const h of HOTEL_CACHE) { const c = h.city || 'Unknown'; byCity[c] = (byCity[c] || 0) + 1; }
+    return res.json({ total: HOTEL_CACHE.length, byCity });
+  }
+  return res.json({ total: list.length, hotels: list.map(h => ({ hotelId: h.hotelId, name: h.name, city: h.city, country: h.country })) });
 });
 
 // ── GET /api/hotels/cache-search ─────────────────────────────────────────────
