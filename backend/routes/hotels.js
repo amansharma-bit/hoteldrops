@@ -715,13 +715,13 @@ router.get('/search', async (req, res) => {
     } else if (placeId) {
       // Fetch multiple pages in PARALLEL so we surface most/all hotels in a
       // city without taking N x longer. liteAPI's default page size is 200
-      // (expandable to 5,000) — 3 parallel pages = up to 600 raw hotels.
+      // (expandable to 5,000) — 5 parallel pages = up to 1000 raw hotel IDs searched.
       const PAGE_SIZE = 200
-      const PAGE_OFFSETS = [0, 200, 400]
+      const PAGE_OFFSETS = [0, 200, 400, 600, 800]
 
       const responses = await Promise.all(PAGE_OFFSETS.map(offset =>
         axios.post(`${BASE_URL}/hotels/rates`, {
-          ...baseBody, placeId, limit: PAGE_SIZE, offset,
+          ...baseBody, placeId, limit: PAGE_SIZE, offset, timeout: 12,
         }, { headers: getHeaders(), timeout: 30000, validateStatus: () => true })
           .catch(e => ({ status: 0, data: null, _err: e.message }))
       ))
@@ -732,10 +732,15 @@ router.get('/search', async (req, res) => {
         return res.status(502).json({ error: `liteAPI returned ${first.status}`, detail: first.data || first._err })
       }
 
+      const pageRawCounts = responses.map(r => (r.status === 200 && r.data) ? (r.data.data || []).length : 0)
+      const pageStatuses  = responses.map(r => r.status)
+
       for (const resp of okResponses) {
         ratesList.push(...(resp.data.data || []))
         hotelsMetaList.push(...(resp.data.hotels || []))
       }
+
+      const totalBeforeDedup = ratesList.length
 
       // De-dupe in case pages overlap
       const seen = new Set()
@@ -744,6 +749,14 @@ router.get('/search', async (req, res) => {
         seen.add(h.hotelId)
         return true
       })
+
+      var _debugInfo = {
+        pageOffsets: PAGE_OFFSETS,
+        pageStatuses,
+        pageRawCounts,
+        totalBeforeDedup,
+        totalAfterDedup: ratesList.length,
+      }
 
     } else {
       return res.status(400).json({ error: 'Please select a destination from the dropdown' })
@@ -799,7 +812,11 @@ router.get('/search', async (req, res) => {
 
     hotels = await enrichWithCoords(hotels)
     memSet(cacheKey, hotels)
-    return res.json({ hotels: { hotels, total: hotels.length, checkIn, checkOut } })
+    const responsePayload = { hotels: { hotels, total: hotels.length, checkIn, checkOut } }
+    if (typeof _debugInfo !== 'undefined') {
+      responsePayload.hotels._debug = { ..._debugInfo, totalAfterFilter: hotels.length }
+    }
+    return res.json(responsePayload)
 
   } catch (err) {
     return res.status(500).json({ error: err.message })
