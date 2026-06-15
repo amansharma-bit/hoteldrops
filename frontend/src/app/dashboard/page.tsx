@@ -404,7 +404,7 @@ export default function Dashboard() {
                           <a href={b.voucher_url} target="_blank" rel="noreferrer" style={{ background: "#f0fdf4", color: "#16a34a", border: "1.5px solid #bbf7d0", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>View Voucher</a>
                         )}
                         {isDropFound && (
-                          <button style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Claim Saving →</button>
+                          <button onClick={() => offer && router.push(`/offer/${offer.id}`)} style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Claim Saving →</button>
                         )}
                         <button onClick={() => router.push("/")} style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Track another</button>
                       </div>
