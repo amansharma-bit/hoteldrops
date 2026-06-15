@@ -687,14 +687,14 @@ router.get('/search', async (req, res) => {
     const {
       destination, checkIn, checkOut,
       adults = '2', children = '0', rooms = '1',
-      placeId, hotelId,
+      placeId, hotelId, page,
     } = req.query
 
     if (!checkIn || !checkOut) {
       return res.status(400).json({ error: 'checkIn and checkOut are required' })
     }
 
-    const cacheKey = `s:${placeId || hotelId || destination}:${checkIn}:${checkOut}:${adults}:${children}:${rooms}`
+    const cacheKey = `s:${placeId || hotelId || destination}:${checkIn}:${checkOut}:${adults}:${children}:${rooms}:${page ?? 'all'}`
     const hit = memGet(cacheKey)
     if (hit) return res.json({ hotels: { hotels: hit, total: hit.length, checkIn, checkOut } })
 
@@ -724,49 +724,79 @@ router.get('/search', async (req, res) => {
       hotelsMetaList = resp.data.hotels || []
 
     } else if (placeId) {
-      // Fetch multiple pages in PARALLEL so we surface most/all hotels in a
-      // city without taking N x longer. liteAPI's default page size is 200
-      // (expandable to 5,000) — 5 parallel pages = up to 1000 raw hotel IDs searched.
       const PAGE_SIZE = 200
-      const PAGE_OFFSETS = [0, 200, 400, 600, 800]
 
-      const responses = await Promise.all(PAGE_OFFSETS.map(offset =>
-        axios.post(`${BASE_URL}/hotels/rates`, {
+      if (page !== undefined) {
+        // ── Single-page mode (progressive loading) ─────────────────────
+        // Frontend fetches page 0 first for a fast first paint, then pages
+        // 1-4 in the background and appends results as they arrive.
+        const pageNum = Math.max(0, Math.min(4, parseInt(page, 10) || 0))
+        const offset = pageNum * PAGE_SIZE
+
+        const resp = await axios.post(`${BASE_URL}/hotels/rates`, {
           ...baseBody, placeId, limit: PAGE_SIZE, offset, timeout: 12,
         }, { headers: getHeaders(), timeout: 30000, validateStatus: () => true })
           .catch(e => ({ status: 0, data: null, _err: e.message }))
-      ))
 
-      const okResponses = responses.filter(r => r.status === 200 && r.data)
-      if (okResponses.length === 0) {
-        const first = responses[0] || {}
-        return res.status(502).json({ error: `liteAPI returned ${first.status}`, detail: first.data || first._err })
-      }
+        if (resp.status !== 200 || !resp.data) {
+          return res.status(502).json({ error: `liteAPI returned ${resp.status}`, detail: resp.data || resp._err })
+        }
 
-      const pageRawCounts = responses.map(r => (r.status === 200 && r.data) ? (r.data.data || []).length : 0)
-      const pageStatuses  = responses.map(r => r.status)
+        ratesList = resp.data.data || []
+        hotelsMetaList = resp.data.hotels || []
 
-      for (const resp of okResponses) {
-        ratesList.push(...(resp.data.data || []))
-        hotelsMetaList.push(...(resp.data.hotels || []))
-      }
+        var _pageInfo = {
+          page: pageNum,
+          rawCount: ratesList.length,
+          // If this page came back full, there's likely more to fetch
+          hasMore: pageNum < 4 && ratesList.length === PAGE_SIZE,
+        }
 
-      const totalBeforeDedup = ratesList.length
+      } else {
+        // ── All-pages mode (backward compatible — e.g. other callers) ──
+        // Fetch multiple pages in PARALLEL so we surface most/all hotels in a
+        // city without taking N x longer. liteAPI's default page size is 200
+        // (expandable to 5,000) — 5 parallel pages = up to 1000 raw hotel IDs searched.
+        const PAGE_OFFSETS = [0, 200, 400, 600, 800]
 
-      // De-dupe in case pages overlap
-      const seen = new Set()
-      ratesList = ratesList.filter(h => {
-        if (seen.has(h.hotelId)) return false
-        seen.add(h.hotelId)
-        return true
-      })
+        const responses = await Promise.all(PAGE_OFFSETS.map(offset =>
+          axios.post(`${BASE_URL}/hotels/rates`, {
+            ...baseBody, placeId, limit: PAGE_SIZE, offset, timeout: 12,
+          }, { headers: getHeaders(), timeout: 30000, validateStatus: () => true })
+            .catch(e => ({ status: 0, data: null, _err: e.message }))
+        ))
 
-      var _debugInfo = {
-        pageOffsets: PAGE_OFFSETS,
-        pageStatuses,
-        pageRawCounts,
-        totalBeforeDedup,
-        totalAfterDedup: ratesList.length,
+        const okResponses = responses.filter(r => r.status === 200 && r.data)
+        if (okResponses.length === 0) {
+          const first = responses[0] || {}
+          return res.status(502).json({ error: `liteAPI returned ${first.status}`, detail: first.data || first._err })
+        }
+
+        const pageRawCounts = responses.map(r => (r.status === 200 && r.data) ? (r.data.data || []).length : 0)
+        const pageStatuses  = responses.map(r => r.status)
+
+        for (const resp of okResponses) {
+          ratesList.push(...(resp.data.data || []))
+          hotelsMetaList.push(...(resp.data.hotels || []))
+        }
+
+        const totalBeforeDedup = ratesList.length
+
+        // De-dupe in case pages overlap
+        const seen = new Set()
+        ratesList = ratesList.filter(h => {
+          if (seen.has(h.hotelId)) return false
+          seen.add(h.hotelId)
+          return true
+        })
+
+        var _debugInfo = {
+          pageOffsets: PAGE_OFFSETS,
+          pageStatuses,
+          pageRawCounts,
+          totalBeforeDedup,
+          totalAfterDedup: ratesList.length,
+        }
       }
 
     } else {
@@ -824,6 +854,10 @@ router.get('/search', async (req, res) => {
     hotels = await enrichWithCoords(hotels)
     memSet(cacheKey, hotels)
     const responsePayload = { hotels: { hotels, total: hotels.length, checkIn, checkOut } }
+    if (typeof _pageInfo !== 'undefined') {
+      responsePayload.hotels.page = _pageInfo.page
+      responsePayload.hotels.hasMore = _pageInfo.hasMore
+    }
     if (typeof _debugInfo !== 'undefined') {
       responsePayload.hotels._debug = { ..._debugInfo, totalAfterFilter: hotels.length }
     }
