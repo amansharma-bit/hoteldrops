@@ -115,7 +115,7 @@ const HOTELS_BY_CITY: Record<string, Array<{
   tags: string[]; was: string; now: string; save: string;
   badges: [string,string][]; img: string; code?: string;
 }>> = {
-  "All Hotels": [
+  "Top Sellers": [
     { name: "Atlantis The Palm", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach","Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lp42f57.jpg", code: "lp42f57" },
     { name: "Roseate House", loc: "Aerocity, New Delhi, India", city: "New Delhi", stars: 5, rating: "4.6 (4.4k)", tags: ["Boutique","Rooftop","Aerocity"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lp7c680.jpg", code: "lp7c680" },
     { name: "Holiday Inn Express Singapore Katong by IHG", loc: "Katong, Singapore", city: "Singapore", stars: 3, rating: "4.2 (3.8k)", tags: ["Katong","Budget","Free WiFi"], was: "₹9,000", now: "₹6,300", save: "Save ₹2,700", badges: [["Best Value","best"],["3% Off","off"]], img: "/hotels/lp8aef1.jpg", code: "lp8aef1" },
@@ -199,7 +199,7 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
   watching: { bg: "rgba(20,71,184,0.92)", color: "#fff" }, trending: { bg: "#f59e0b", color: "#1a1a1a" }, off: { bg: "#ef4444", color: "#fff" },
 };
 
-const CITY_FILTERS = ["All Hotels", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai", "Bangalore", "Tokyo"];
+const CITY_FILTERS = ["Top Sellers", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai", "Bangalore", "Tokyo"];
 
 const STATS = [
   { id: 0, target: 4200, prefix: "", suffix: "+", label: "Member deals live right now" },
@@ -240,7 +240,7 @@ export default function SearchHotelsPage() {
   const [guests, setGuests] = useState<GuestState>({ rooms: 1, adults: 2, children: 0, childAges: [] });
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<any>({ cities: [], hotels: [], areas: [], landmarks: [], airport: null });
-  const [activeCity, setActiveCity] = useState("All Hotels");
+  const [activeCity, setActiveCity] = useState("Top Sellers");
   const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
   const [statVals, setStatVals] = useState(STATS.map(s => `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
@@ -508,7 +508,7 @@ export default function SearchHotelsPage() {
   };
 
   const ticker = TICKER_ITEMS[tickerIdx];
-  const hotels = HOTELS_BY_CITY[activeCity] || HOTELS_BY_CITY["All Hotels"];
+  const hotels = HOTELS_BY_CITY[activeCity] || HOTELS_BY_CITY["Top Sellers"];
   const d1 = new Date(today.getFullYear(), today.getMonth() + calMonthOffset);
   const d2 = new Date(today.getFullYear(), today.getMonth() + calMonthOffset + 1);
 
@@ -875,7 +875,7 @@ export default function SearchHotelsPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: 72 }}>
                   <div className="sfield" style={{ padding: "0 24px", borderRight: "1px solid #e2e8f0", borderRadius: "16px 0 0 16px", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination or hotel</div>
-                    <input type="text" placeholder="Enter city or hotel name" value={inputText}
+                    <input type="text" placeholder="Enter City name" value={inputText}
                       onChange={e => { setInputText(e.target.value); setSelection(null); setShowSuggestions(true); setSearchError(""); }}
                       onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 300)}
                       style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 15, fontWeight: 500, color: NAVY, background: "transparent", padding: 0, width: "100%" }} />
@@ -1012,7 +1012,7 @@ export default function SearchHotelsPage() {
               const dest = DESTINATIONS.find(d => d.city === f);
               return (
                 <button key={f} onClick={() => setActiveCity(f)} style={{ background: activeCity === f ? NAVY : "#fff", border: `1.5px solid ${activeCity === f ? NAVY : "#e2e8f0"}`, color: activeCity === f ? "#fff" : NAVY, fontSize: 13, fontWeight: 500, padding: "7px 18px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, flexShrink: 0, transition: "all 0.2s" }}>
-                  {f === "All Hotels" ? f : `${dest?.flag || ""} ${f}`}
+                  {f === "Top Sellers" ? f : `${dest?.flag || ""} ${f}`}
                 </button>
               );
             })}
@@ -1067,6 +1067,17 @@ export default function SearchHotelsPage() {
           </div>
         </div>
       </div>
+      <footer style={{ background: NAVY, padding: isMobile ? "40px 20px 24px" : "48px 40px 32px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
+            <div><div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 10 }}>rebuq<span style={{ color: B }}>.</span></div><p style={{ fontSize: 13.5, color: "#94a3b8", maxWidth: 260, lineHeight: 1.6 }}>AI-powered hotel price monitoring for Indian travelers. Never overpay for a hotel again.</p></div>
+            <div style={{ display: "flex", gap: isMobile ? 28 : 48, flexDirection: isMobile ? "column" : "row" }}>{[{ title: "Product", links: ["How it works", "Results", "Why rebuq", "Exclusive Member Deals"] }, { title: "Company", links: ["About", "Privacy", "Terms"] }].map(col => (<div key={col.title}><h4 style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b", marginBottom: 14 }}>{col.title}</h4>{col.links.map(l => <a key={l} href="#" style={{ display: "block", fontSize: 14, color: "#94a3b8", textDecoration: "none", marginBottom: 10 }}>{l}</a>)}</div>))}</div>
+          </div>
+          <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
+            <span style={{ fontSize: 13, color: "#475569" }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
