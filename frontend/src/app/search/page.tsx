@@ -1079,12 +1079,6 @@ function SearchResults(){
         {!isMobile&&<div style={{display:"flex",gap:24,alignItems:"center"}}><a href="/search-hotels" style={{fontSize:14,color:B,textDecoration:"none",fontWeight:600}}>Exclusive Member Deals</a>{user?<div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>window.location.href="/dashboard"}><div style={{width:32,height:32,borderRadius:"50%",background:B,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700}}>{user.name[0].toUpperCase()}</div><span style={{fontSize:14,fontWeight:600,color:NAVY}}>{user.name.split(" ")[0]}</span></div>:<button onClick={()=>setShowAuthModal(true)} style={{background:B,color:"#fff",border:"none",borderRadius:8,padding:"8px 18px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Sign in</button>}</div>}
       </nav>
 
-      {/* Distance reference banner */}
-      {activeRefLabel&&<div style={{background:"#eff6ff",borderBottom:"1px solid #bfdbfe",padding:"8px 32px",fontSize:13,color:B,fontWeight:500,display:"flex",alignItems:"center",gap:6}}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-        Showing hotels near <strong>{activeRefLabel}</strong> — sorted by distance
-      </div>}
-
       {isMobile&&<div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 16px",position:"sticky",top:60,zIndex:200,display:"flex",alignItems:"center",gap:10}}><button onClick={()=>router.back()} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:"#64748b",flexShrink:0}}>←</button><div style={{flex:1,background:"#f8fafc",border:"1.5px solid #e2e8f0",borderRadius:100,padding:"10px 16px",display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setShowCal(true)}><div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:700,color:NAVY,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{destination}</div><div style={{fontSize:12,color:"#64748b",whiteSpace:"nowrap"}}>{checkIn&&checkOut?`${formatDateShort(checkIn)} – ${formatDateShort(checkOut)}`:"Select dates"} · {guestSummary(guests)}</div></div></div></div>}
 
       {!isMobile&&<div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 32px",position:"sticky",top:60,zIndex:200}}>
