@@ -26,7 +26,7 @@ function genSessionId() {
 function countryCodeToFlag(cc?: string): string {
   if (!cc || cc.length !== 2) return "";
   const code = cc.toUpperCase();
-  return String.fromCodePoint(...[...code].map(c => 0x1F1E6 + (c.charCodeAt(0) - 65)));
+  return String.fromCodePoint(...code.split("").map(c => 0x1F1E6 + (c.charCodeAt(0) - 65)));
 }
 
 // How wide a net to cast around a resolved point, based on what kind of place it is.
