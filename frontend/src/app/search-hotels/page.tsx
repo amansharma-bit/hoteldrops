@@ -41,17 +41,28 @@ function mapboxPlaceTypeToRadius(placeTypes: string[]): number {
   return 15000;
 }
 
-// Resolves whatever the user types — a city OR a specific landmark/area — to exact
-// coordinates via Mapbox, which has far better landmark/POI coverage than relying
-// solely on liteAPI's Google-Places wrapper for this.
-async function fetchMapboxPlaces(query: string): Promise<any[]> {
+// City tier = whole places (country/region/place). Area tier = anything more
+// specific within a city (locality/neighborhood/poi/address) — landmarks fall here.
+function mapboxTier(placeTypes: string[]): "city" | "area" {
+  return placeTypes.some(t => ["place", "region", "country"].includes(t)) ? "city" : "area";
+}
+
+// Known major cities we already curate on the homepage — used to make sure a
+// famous city always outranks an obscure same-named village elsewhere.
+// (Defined after DESTINATIONS below, since it depends on that list.)
+
+// Resolves whatever the user types to exact coordinates via Mapbox, split into
+// City and Area tiers so a real city/landmark always outranks an incidental
+// substring match buried in a hotel's marketing name.
+async function fetchMapboxPlaces(query: string): Promise<{ cities: any[]; areas: any[] }> {
   try {
     const res = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&types=country,region,place,locality,neighborhood,poi&limit=8`
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&types=country,region,place,locality,neighborhood,poi&limit=10`
     );
     const data = await res.json();
     const features = data.features || [];
-    return features
+    const seen = new Set<string>();
+    const mapped = features
       // Mapbox returns a 0-1 relevance score per match — when someone types a
       // hotel name (not a real place), it still returns its closest fuzzy text
       // matches with low relevance. Filtering those out keeps junk from
@@ -60,22 +71,43 @@ async function fetchMapboxPlaces(query: string): Promise<any[]> {
       .map((f: any) => {
         const countryCtx = (f.context || []).find((c: any) => c.id?.startsWith("country"));
         const countryCode = countryCtx?.short_code?.toUpperCase() || "";
-        const subtext = (f.place_name || "").split(", ").slice(1).join(", ");
+        const placeTypes: string[] = f.place_type || [];
+        const tier = mapboxTier(placeTypes);
+        const countryName = countryCtx?.text || "";
+        const cityCtx = (f.context || []).find((c: any) => c.id?.startsWith("place"));
         return {
-          type: "city",
+          type: tier === "city" ? "city" : "area",
+          tier,
           name: f.text,
-          subtext,
-          countryName: countryCtx?.text || "",
-          flag: countryCodeToFlag(countryCode),
+          parentCity: tier === "area" ? (cityCtx?.text || "") : "",
+          countryName,
           placeId: null,
           lat: f.center?.[1],
           lng: f.center?.[0],
-          radius: mapboxPlaceTypeToRadius(f.place_type || []),
-          placeTypes: f.place_type || [],
+          radius: mapboxPlaceTypeToRadius(placeTypes),
+          placeTypes,
+          relevance: f.relevance ?? 1,
+          isCurated: tier === "city" && CURATED_CITY_NAMES.has((f.text || "").toLowerCase()),
+          _dedupeKey: `${(f.text || "").toLowerCase()}|${countryCode}`,
         };
+      })
+      .filter((item: any) => {
+        if (seen.has(item._dedupeKey)) return false;
+        seen.add(item._dedupeKey);
+        return true;
       });
+
+    const cities = mapped.filter((m: any) => m.tier === "city").sort((a: any, b: any) => {
+      // Curated/well-known cities win ties between identically-named places
+      // (e.g. Dubai, UAE vs. a village also called Dubai elsewhere).
+      if (a.name.toLowerCase() === b.name.toLowerCase() && a.isCurated !== b.isCurated) return a.isCurated ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+    const areas = mapped.filter((m: any) => m.tier === "area").sort((a: any, b: any) => b.relevance - a.relevance);
+
+    return { cities, areas };
   } catch {
-    return [];
+    return { cities: [], areas: [] };
   }
 }
 
@@ -174,6 +206,10 @@ const DESTINATIONS = [
   { flag: "🇺🇸", city: "Las Vegas", country: "United States", img: "/lasvegas.jpg" },
   { flag: "🇺🇸", city: "Miami", country: "United States", img: "/miami.jpg" },
 ];
+
+// Known major cities we already curate above — used to make sure a famous
+// city always outranks an obscure same-named village elsewhere.
+const CURATED_CITY_NAMES = new Set(DESTINATIONS.map(d => d.city.toLowerCase()));
 
 const HOTELS_BY_CITY: Record<string, Array<{
   name: string; loc: string; city: string; stars: number; rating: string;
@@ -327,7 +363,7 @@ export default function SearchHotelsPage() {
   const statsAnimated = useRef(false);
 
   const defaultSuggestions = {
-    cities: DESTINATIONS.map(d => ({ type: 'city', name: d.city, subtext: d.country, flag: d.flag, placeId: null, placeType: 'city' })),
+    cities: DESTINATIONS.map(d => ({ type: 'city', name: d.city, countryName: d.country, placeId: null, placeTypes: ['place'] })),
     hotels: [], areas: [], landmarks: [], airport: null
   };
 
@@ -336,19 +372,25 @@ export default function SearchHotelsPage() {
     if (inputText.length < 2) return;
     const timer = setTimeout(async () => {
       try {
-        const [mapboxCities, backendRes] = await Promise.all([
+        const wantsAreas = inputText.length >= 3;
+        const wantsHotels = inputText.length >= 5;
+        const [mapboxResult, backendRes] = await Promise.all([
           fetchMapboxPlaces(inputText),
-          fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(inputText)}`).then(r => r.json()).catch(() => ({ hotels: [] })),
+          wantsHotels
+            ? fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(inputText)}`).then(r => r.json()).catch(() => ({ hotels: [] }))
+            : Promise.resolve({ hotels: [] }),
         ]);
+        const cities = mapboxResult.cities;
+        const areas = wantsAreas ? mapboxResult.areas : [];
         const hotels = backendRes.hotels || [];
-        if (mapboxCities.length === 0 && hotels.length === 0) {
+        if (cities.length === 0 && areas.length === 0 && hotels.length === 0) {
           const q = inputText.toLowerCase();
           const matched = defaultSuggestions.cities.filter((c: any) =>
             c.name.toLowerCase().includes(q)
           );
           setSuggestions({ cities: matched, hotels: [], areas: [], landmarks: [], airport: null });
         } else {
-          setSuggestions({ cities: mapboxCities, hotels, areas: [], landmarks: [], airport: null });
+          setSuggestions({ cities, hotels, areas, landmarks: [], airport: null });
         }
       } catch {
         const q = inputText.toLowerCase();
@@ -731,47 +773,35 @@ export default function SearchHotelsPage() {
   }
 
   const SuggestionDropdown = ({ style }: { style?: React.CSSProperties }) => {
-    if (!showSuggestions || (!suggestions.cities.length && !suggestions.hotels.length)) return null;
+    if (!showSuggestions || (!suggestions.cities.length && !suggestions.areas.length && !suggestions.hotels.length)) return null;
+    const Row = ({ icon, name, tag, onPick }: { icon: React.ReactNode; name: string; tag: string; onPick: () => void }) => (
+      <div onMouseDown={onPick}
+        style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
+        onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+        <span style={{ color: "#64748b", flexShrink: 0, display: "flex" }}>{icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+          <div style={{ fontSize: 12, color: "#94a3b8" }}>{tag}</div>
+        </div>
+      </div>
+    );
     return (
       <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.13)", zIndex: 9999, maxHeight: 380, overflowY: "auto", marginTop: 4, ...style }}>
-        {suggestions.hotels.length > 0 && (
-          <>
-            <div style={{ padding: "5px 16px 3px", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", background: "#f8fafc" }}>Hotels</div>
-            {suggestions.hotels.map((h: any, i: number) => {
-              const hInfo = getCityInfo(h.city || h.name);
-              const hFlag = h.flag || hInfo?.flag || "🏨";
-              const hCountry = h.countryName || hInfo?.country || "";
-              return (
-                <div key={i} onMouseDown={() => handleSelect(h, 'hotel')}
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                  <span style={{ fontSize: 20, flexShrink: 0 }}>{hFlag}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: NAVY, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" }}>{h.name}</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>{h.city}{hCountry ? `, ${hCountry}` : ""}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        )}
         {suggestions.cities.map((c: any, i: number) => {
           const info = getCityInfo(c.name);
-          const flag = c.flag || info?.flag || "";
           const country = c.countryName || info?.country || "";
-          return (
-            <div key={i} onMouseDown={() => handleSelect(c, 'city')}
-              style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-              <span style={{ fontSize: 22, flexShrink: 0, lineHeight: 1 }}>{flag}</span>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{c.name}</div>
-                {country && <div style={{ fontSize: 12, color: "#94a3b8" }}>{country}</div>}
-              </div>
-            </div>
-          );
+          return <Row key={`c${i}`} icon={<IconCity />} name={c.name} tag={country ? `City in ${country}` : "City"} onPick={() => handleSelect(c, 'city')} />;
+        })}
+        {suggestions.areas.map((a: any, i: number) => {
+          const tagParts = [a.parentCity, a.countryName].filter(Boolean).join(", ");
+          return <Row key={`a${i}`} icon={<IconPin />} name={a.name} tag={tagParts ? `Area in ${tagParts}` : "Area"} onPick={() => handleSelect(a, 'area')} />;
+        })}
+        {suggestions.hotels.map((h: any, i: number) => {
+          const hInfo = getCityInfo(h.city || h.name);
+          const hCountry = h.countryName || hInfo?.country || "";
+          const tagParts = [h.city, hCountry].filter(Boolean).join(", ");
+          return <Row key={`h${i}`} icon={<IconHotel />} name={h.name} tag={tagParts ? `Hotel in ${tagParts}` : "Hotel"} onPick={() => handleSelect(h, 'hotel')} />;
         })}
       </div>
     );
