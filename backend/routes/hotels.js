@@ -251,12 +251,26 @@ async function buildHotelIndex() {
 
 setTimeout(buildHotelIndex, 2000)
 
-function buildOccupancies(rooms, adults, children) {
+function buildOccupancies(rooms, adults, children, childAges) {
   const r = parseInt(rooms) || 1
   const a = parseInt(adults) || 2
   const c = parseInt(children) || 0
-  const childAges = c > 0 ? Array(c).fill(5) : []
-  return [{ rooms: r, adults: a, children: childAges }]
+
+  let ages = []
+  if (childAges) {
+    ages = String(childAges).split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n))
+  }
+  // If real ages were supplied, use them. Pad with age 5 only for any slots
+  // that genuinely have no age supplied (legacy callers / safety net) —
+  // never overwrite a real selected age.
+  if (c > 0) {
+    if (ages.length < c) ages = [...ages, ...Array(c - ages.length).fill(5)]
+    else if (ages.length > c) ages = ages.slice(0, c)
+  } else {
+    ages = []
+  }
+
+  return [{ rooms: r, adults: a, children: ages }]
 }
 
 function parseRoomName(rawName) {
@@ -686,7 +700,7 @@ router.get('/search', async (req, res) => {
   try {
     const {
       destination, checkIn, checkOut,
-      adults = '2', children = '0', rooms = '1',
+      adults = '2', children = '0', childAges, rooms = '1',
       placeId, hotelId, page,
     } = req.query
 
@@ -700,7 +714,7 @@ router.get('/search', async (req, res) => {
     // request) comes back without hasMore and the frontend's progressive loop stops early.
     const pageNum = (page !== undefined) ? Math.max(0, Math.min(4, parseInt(page, 10) || 0)) : null
 
-    const cacheKey = `s:${placeId || hotelId || destination}:${checkIn}:${checkOut}:${adults}:${children}:${rooms}:${page ?? 'all'}`
+    const cacheKey = `s:${placeId || hotelId || destination}:${checkIn}:${checkOut}:${adults}:${children}:${childAges || ''}:${rooms}:${page ?? 'all'}`
     const hit = memGet(cacheKey)
     if (hit) {
       const payload = { hotels: { hotels: hit, total: hit.length, checkIn, checkOut } }
@@ -713,7 +727,7 @@ router.get('/search', async (req, res) => {
       checkout: checkOut,
       currency: 'INR',
       guestNationality: 'IN',
-      occupancies: buildOccupancies(rooms, adults, children),
+      occupancies: buildOccupancies(rooms, adults, children, childAges),
       maxRatesPerHotel: 1,
       includeHotelData: true,
       timeout: 10,
@@ -950,7 +964,7 @@ router.get('/cache-search', (req, res) => {
 router.get('/:code', async (req, res) => {
   try {
     const { code } = req.params
-    const { checkIn, checkOut, adults = '2', children = '0', rooms = '1' } = req.query
+    const { checkIn, checkOut, adults = '2', children = '0', childAges, rooms = '1' } = req.query
     if (!checkIn || !checkOut) return res.status(400).json({ error: 'checkIn and checkOut required' })
     const nights = Math.max(1, Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000))
 
@@ -958,7 +972,7 @@ router.get('/:code', async (req, res) => {
       axios.get(`${BASE_URL}/data/hotel?hotelId=${code}`, { headers: getHeaders(), timeout: 12000, validateStatus: () => true }),
       axios.post(`${BASE_URL}/hotels/rates`, {
         checkin: checkIn, checkout: checkOut, currency: 'INR', guestNationality: 'IN',
-        hotelIds: [code], occupancies: buildOccupancies(rooms, adults, children),
+        hotelIds: [code], occupancies: buildOccupancies(rooms, adults, children, childAges),
         includeHotelData: false, roomMapping: true,
       }, { headers: getHeaders(), timeout: 30000, validateStatus: () => true }),
       axios.get(`${BASE_URL}/data/reviews?hotelId=${code}&timeout=4&getSentiment=true`, { headers: getHeaders(), timeout: 6000, validateStatus: () => true }),
