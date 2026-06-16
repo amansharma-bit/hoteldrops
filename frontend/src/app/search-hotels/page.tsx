@@ -29,47 +29,20 @@ function countryCodeToFlag(cc?: string): string {
   return String.fromCodePoint(...code.split("").map(c => 0x1F1E6 + (c.charCodeAt(0) - 65)));
 }
 
-// How wide a net to cast around a resolved point, based on what kind of place it is.
-// A city needs a city-sized radius; a specific landmark needs a tight one.
-function mapboxPlaceTypeToRadius(placeTypes: string[]): number {
-  if (placeTypes.includes("country")) return 50000;
-  if (placeTypes.includes("region")) return 40000;
-  if (placeTypes.includes("place")) return 20000;
-  if (placeTypes.includes("locality") || placeTypes.includes("neighborhood")) return 5000;
-  if (placeTypes.includes("poi")) return 1500;
-  if (placeTypes.includes("address")) return 1000;
-  return 15000;
-}
-
-// Resolves whatever the user types — a city OR a specific landmark/area — to exact
-// coordinates via Mapbox, which has far better landmark/POI coverage than relying
-// solely on liteAPI's Google-Places wrapper for this.
-async function fetchMapboxPlaces(query: string): Promise<any[]> {
+// Clean city-only autocomplete, sourced from liteAPI's own city/country data
+// via the backend — no Mapbox, no landmarks, no embassies/councils/rivers.
+async function fetchCitySuggestions(query: string): Promise<any[]> {
   try {
-    const res = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&types=country,region,place&limit=8`
-    );
+    const res = await fetch(`${API}/api/hotels/cities-search?q=${encodeURIComponent(query)}`);
     const data = await res.json();
-    const features = data.features || [];
-    return features
-      .filter((f: any) => (f.relevance ?? 1) >= 0.5)
-      .map((f: any) => {
-        const countryCtx = (f.context || []).find((c: any) => c.id?.startsWith("country"));
-        const countryCode = countryCtx?.short_code?.toUpperCase() || "";
-        const subtext = (f.place_name || "").split(", ").slice(1).join(", ");
-        return {
-          type: "city",
-          name: f.text,
-          subtext,
-          countryName: countryCtx?.text || "",
-          flag: countryCodeToFlag(countryCode),
-          placeId: null,
-          lat: f.center?.[1],
-          lng: f.center?.[0],
-          radius: mapboxPlaceTypeToRadius(f.place_type || []),
-          placeTypes: f.place_type || [],
-        };
-      });
+    return (data.cities || []).map((c: any) => ({
+      type: "city",
+      name: c.name,
+      countryName: c.countryName || "",
+      flag: c.flag || "",
+      placeId: null,
+      placeTypes: ["place"],
+    }));
   } catch {
     return [];
   }
@@ -337,7 +310,7 @@ export default function SearchHotelsPage() {
     if (inputText.length < 2) return;
     const timer = setTimeout(async () => {
       try {
-        const mapboxCities = await fetchMapboxPlaces(inputText);
+        const mapboxCities = await fetchCitySuggestions(inputText);
         if (mapboxCities.length === 0) {
           const q = inputText.toLowerCase();
           const matched = defaultSuggestions.cities.filter((c: any) =>
