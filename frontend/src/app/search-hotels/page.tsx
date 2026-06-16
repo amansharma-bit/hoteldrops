@@ -51,22 +51,29 @@ async function fetchMapboxPlaces(query: string): Promise<any[]> {
     );
     const data = await res.json();
     const features = data.features || [];
-    return features.map((f: any) => {
-      const countryCtx = (f.context || []).find((c: any) => c.id?.startsWith("country"));
-      const countryCode = countryCtx?.short_code?.toUpperCase() || "";
-      const subtext = (f.place_name || "").split(", ").slice(1).join(", ");
-      return {
-        type: "city",
-        name: f.text,
-        subtext,
-        countryName: countryCtx?.text || "",
-        flag: countryCodeToFlag(countryCode),
-        placeId: null,
-        lat: f.center?.[1],
-        lng: f.center?.[0],
-        radius: mapboxPlaceTypeToRadius(f.place_type || []),
-      };
-    });
+    return features
+      // Mapbox returns a 0-1 relevance score per match — when someone types a
+      // hotel name (not a real place), it still returns its closest fuzzy text
+      // matches with low relevance. Filtering those out keeps junk from
+      // crowding out genuine hotel-name results.
+      .filter((f: any) => (f.relevance ?? 1) >= 0.5)
+      .map((f: any) => {
+        const countryCtx = (f.context || []).find((c: any) => c.id?.startsWith("country"));
+        const countryCode = countryCtx?.short_code?.toUpperCase() || "";
+        const subtext = (f.place_name || "").split(", ").slice(1).join(", ");
+        return {
+          type: "city",
+          name: f.text,
+          subtext,
+          countryName: countryCtx?.text || "",
+          flag: countryCodeToFlag(countryCode),
+          placeId: null,
+          lat: f.center?.[1],
+          lng: f.center?.[0],
+          radius: mapboxPlaceTypeToRadius(f.place_type || []),
+          placeTypes: f.place_type || [],
+        };
+      });
   } catch {
     return [];
   }
@@ -276,6 +283,7 @@ interface Selection {
   lat?: number;
   lng?: number;
   radius?: number;
+  placeTypes?: string[];
 }
 
 // SVG icons
@@ -438,21 +446,27 @@ export default function SearchHotelsPage() {
       });
       params.set('sessionId', genSessionId());
       params.set('destination', sel.label);
+
+      const isLandmark = !!sel.placeTypes?.some(t => ['poi', 'neighborhood', 'locality', 'address'].includes(t));
+      const isCityLevel = !!sel.placeTypes?.some(t => ['place', 'region', 'country'].includes(t));
+
       if (sel.type === 'hotel' && sel.hotelId) {
         router.push(`/hotel/${sel.hotelId}?${params.toString()}`);
-      } else if (sel.lat != null && sel.lng != null) {
-        // Mapbox-resolved point — works the same whether it's a whole city or a
-        // specific landmark/area, since the radius already matches the place type.
+      } else if (isLandmark && sel.lat != null && sel.lng != null) {
+        // A specific landmark/area — this is the case liteAPI's placeId search
+        // doesn't reliably resolve, so we go straight to coordinates instead.
         params.set('refLat', String(sel.lat));
         params.set('refLng', String(sel.lng));
-        params.set('radius', String(sel.radius || 20000));
+        params.set('radius', String(sel.radius || 5000));
         params.set('refLabel', sel.label);
         router.push(`/search?${params.toString()}`);
-      } else if (sel.placeId) {
+      } else if (sel.placeId && !isCityLevel) {
         params.set('placeId', sel.placeId);
         router.push(`/search?${params.toString()}`);
       } else {
-        // No placeId or coords (rare fallback-list pick) — resolve via suggest API
+        // City/region/country-level pick, or a fallback-list pick with no
+        // coordinates at all — resolve via the proven suggest-API placeId path
+        // rather than lat/long, since whole-city radius search has shown gaps.
         try {
           const res = await fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(sel.label)}`);
           const data = await res.json();
@@ -485,6 +499,7 @@ export default function SearchHotelsPage() {
       lat: item.lat || undefined,
       lng: item.lng || undefined,
       radius: item.radius || undefined,
+      placeTypes: item.placeTypes || undefined,
     };
     setSelection(sel);
     setInputText(item.name);
@@ -719,26 +734,9 @@ export default function SearchHotelsPage() {
     if (!showSuggestions || (!suggestions.cities.length && !suggestions.hotels.length)) return null;
     return (
       <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.13)", zIndex: 9999, maxHeight: 380, overflowY: "auto", marginTop: 4, ...style }}>
-        {suggestions.cities.map((c: any, i: number) => {
-          const info = getCityInfo(c.name);
-          const flag = c.flag || info?.flag || "";
-          const country = c.countryName || info?.country || "";
-          return (
-            <div key={i} onMouseDown={() => handleSelect(c, 'city')}
-              style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-              <span style={{ fontSize: 22, flexShrink: 0, lineHeight: 1 }}>{flag}</span>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{c.name}</div>
-                {country && <div style={{ fontSize: 12, color: "#94a3b8" }}>{country}</div>}
-              </div>
-            </div>
-          );
-        })}
         {suggestions.hotels.length > 0 && (
           <>
-            <div style={{ padding: "5px 16px 3px", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", borderTop: "1px solid #f1f5f9", background: "#f8fafc" }}>Hotels</div>
+            <div style={{ padding: "5px 16px 3px", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", background: "#f8fafc" }}>Hotels</div>
             {suggestions.hotels.map((h: any, i: number) => {
               const hInfo = getCityInfo(h.city || h.name);
               const hFlag = h.flag || hInfo?.flag || "🏨";
@@ -758,6 +756,23 @@ export default function SearchHotelsPage() {
             })}
           </>
         )}
+        {suggestions.cities.map((c: any, i: number) => {
+          const info = getCityInfo(c.name);
+          const flag = c.flag || info?.flag || "";
+          const country = c.countryName || info?.country || "";
+          return (
+            <div key={i} onMouseDown={() => handleSelect(c, 'city')}
+              style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+              <span style={{ fontSize: 22, flexShrink: 0, lineHeight: 1 }}>{flag}</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{c.name}</div>
+                {country && <div style={{ fontSize: 12, color: "#94a3b8" }}>{country}</div>}
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   };
