@@ -760,14 +760,14 @@ router.get('/search', async (req, res) => {
     const {
       destination, checkIn, checkOut,
       adults = '2', children = '0', childAges, rooms = '1',
-      placeId, hotelId, page, sessionId,
+      placeId, hotelId, page, sessionId, cityName, countryCode,
     } = req.query
 
     if (!checkIn || !checkOut) {
       return res.status(400).json({ error: 'checkIn and checkOut are required' })
     }
 
-    console.log(`🔎 search: dest="${destination}" ${placeId ? `placeId=${placeId}` : hotelId ? `hotelId=${hotelId}` : 'no-location'} ${checkIn}→${checkOut} page=${page ?? 'all'}`)
+    console.log(`🔎 search: dest="${destination}" ${placeId ? `placeId=${placeId}` : hotelId ? `hotelId=${hotelId}` : (cityName && countryCode) ? `cityName=${cityName},countryCode=${countryCode}` : 'no-location'} ${checkIn}→${checkOut} page=${page ?? 'all'}`)
 
     // pageNum is null for "all-pages" callers (no ?page=), or 0-4 for progressive mode.
     // hasMore is purely a function of pageNum, so it must be attached on EVERY response
@@ -779,7 +779,8 @@ router.get('/search', async (req, res) => {
     // session, not part of what makes two searches "the same search" for caching
     // purposes. A cache hit just won't carry liteAPI's price-consistency guarantee for
     // that particular response (no live call was made), same as before this feature.
-    const cacheKey = `s:${placeId || hotelId || destination}:${checkIn}:${checkOut}:${adults}:${children}:${childAges || ''}:${rooms}:${page ?? 'all'}`
+    const locationKey = placeId || hotelId || (cityName && countryCode ? `${cityName}|${countryCode}` : destination)
+    const cacheKey = `s:${locationKey}:${checkIn}:${checkOut}:${adults}:${children}:${childAges || ''}:${rooms}:${page ?? 'all'}`
     const hit = memGet(cacheKey)
     if (hit) {
       const payload = { hotels: { hotels: hit, total: hit.length, checkIn, checkOut } }
@@ -813,7 +814,13 @@ router.get('/search', async (req, res) => {
       ratesList = resp.data.data || []
       hotelsMetaList = resp.data.hotels || []
 
-    } else if (placeId) {
+    } else if (placeId || (cityName && countryCode)) {
+      // Two ways to identify "which city": a Google-Places placeId (legacy
+      // path), or liteAPI's own cityName+countryCode straight from our city
+      // cache — no placeId round-trip, no dependency on Google Places
+      // recognizing the name at all. Both get passed through identically
+      // below via locationParams.
+      const locationParams = placeId ? { placeId } : { cityName, countryCode }
       const PAGE_SIZE = 200
 
       if (pageNum !== null) {
@@ -830,7 +837,7 @@ router.get('/search', async (req, res) => {
         const offset = pageNum === 0 ? 0 : FAST_FIRST_PAGE_SIZE + (pageNum - 1) * PAGE_SIZE
 
         const resp = await axios.post(`${BASE_URL}/hotels/rates`, {
-          ...baseBody, placeId, limit, offset, timeout: liteApiTimeout,
+          ...baseBody, ...locationParams, limit, offset, timeout: liteApiTimeout,
         }, { headers: getHeaders(), timeout: 30000, validateStatus: () => true })
           .catch(e => ({ status: 0, data: null, _err: e.message }))
 
@@ -840,7 +847,7 @@ router.get('/search', async (req, res) => {
 
         ratesList = resp.data.data || []
         hotelsMetaList = resp.data.hotels || []
-        console.log(`✅ search: page=${pageNum} placeId=${placeId} → ${ratesList.length} raw rates from liteAPI`)
+        console.log(`✅ search: page=${pageNum} ${placeId ? `placeId=${placeId}` : `cityName=${cityName},countryCode=${countryCode}`} → ${ratesList.length} raw rates from liteAPI`)
 
         var _pageInfo = {
           page: pageNum,
@@ -860,7 +867,7 @@ router.get('/search', async (req, res) => {
 
         const responses = await Promise.all(PAGE_OFFSETS.map(offset =>
           axios.post(`${BASE_URL}/hotels/rates`, {
-            ...baseBody, placeId, limit: PAGE_SIZE, offset, timeout: 12,
+            ...baseBody, ...locationParams, limit: PAGE_SIZE, offset, timeout: 12,
           }, { headers: getHeaders(), timeout: 30000, validateStatus: () => true })
             .catch(e => ({ status: 0, data: null, _err: e.message }))
         ))
