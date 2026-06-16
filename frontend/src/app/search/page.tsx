@@ -836,13 +836,11 @@ function SearchResults(){
       :`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}${sessionParam}`;
 
     try{
-      if(placeId||hasCoords){
-        // True incremental search — liteAPI pushes each hotel's rate down an
-        // open connection the moment it's ready; cards appear as they arrive
-        // instead of everyone waiting for a full batch.
-        const locationParam=hasCoords
-          ?`refLat=${encodeURIComponent(refLat)}&refLng=${encodeURIComponent(refLng)}&radius=${encodeURIComponent(radius||"20000")}`
-          :`placeId=${encodeURIComponent(placeId)}`;
+      if(hasCoords){
+        // True incremental search via Mapbox-resolved coordinates (landmarks/areas) —
+        // liteAPI pushes each hotel's rate down an open connection the moment it's
+        // ready; cards appear as they arrive instead of everyone waiting for a batch.
+        const locationParam=`refLat=${encodeURIComponent(refLat)}&refLng=${encodeURIComponent(refLng)}&radius=${encodeURIComponent(radius||"20000")}`;
         const streamUrl=`${API}/search-stream?${locationParam}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}${sessionParam}`;
         const resp=await fetch(streamUrl,{cache:"no-store"});
         if(!resp.ok){
@@ -886,7 +884,35 @@ function SearchResults(){
         return;
       }
 
-      // No placeId resolved (rare) — single request, no streaming
+      if(placeId){
+        // Whole-city search — kept on the proven page-based /search route rather
+        // than /search-stream, since liteAPI's stream mode combined with a
+        // placeId (as opposed to coordinates) has been coming back with 0 raw
+        // rates for city-wide searches. Page 0 is small/fast for an instant
+        // first paint; pages 1-4 follow in parallel and append as they land.
+        const page0Resp=await fetch(`${baseUrl}&page=0`,{cache:"no-store"});
+        const page0Data=await page0Resp.json();
+        if(!page0Data.hotels?.hotels){setError(page0Data.error||"No hotels found.");setLoading(false);return;}
+        setHotels(page0Data.hotels.hotels);
+        setLoading(false);
+
+        const morePages=await Promise.all([1,2,3,4].map(p=>
+          fetch(`${baseUrl}&page=${p}`,{cache:"no-store"}).then(r=>r.json()).catch(()=>null)
+        ));
+        setHotels(prev=>{
+          const seen=new Set(prev.map(h=>String(h.code)));
+          let merged=[...prev];
+          for(const data of morePages){
+            const fresh=((data?.hotels?.hotels||[]) as Hotel[]).filter(h=>!seen.has(String(h.code)));
+            fresh.forEach(h=>seen.add(String(h.code)));
+            merged=[...merged,...fresh];
+          }
+          return merged;
+        });
+        return;
+      }
+
+      // No placeId resolved and no coords (rare) — single request, no streaming
       const res=await fetch(`${baseUrl}&page=0`,{cache:"no-store"});const data=await res.json();
       if(!data.hotels?.hotels){setError(data.error||"No hotels found.");setLoading(false);return;}
       setHotels(data.hotels.hotels);
