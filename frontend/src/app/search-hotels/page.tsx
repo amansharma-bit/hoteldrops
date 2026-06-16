@@ -39,6 +39,7 @@ async function fetchCitySuggestions(query: string): Promise<any[]> {
       type: "city",
       name: c.name,
       countryName: c.countryName || "",
+      countryCode: c.countryCode || "",
       flag: c.flag || "",
       placeId: null,
       placeTypes: ["place"],
@@ -258,6 +259,7 @@ interface Selection {
   lng?: number;
   radius?: number;
   placeTypes?: string[];
+  countryCode?: string;
 }
 
 // SVG icons
@@ -430,6 +432,14 @@ export default function SearchHotelsPage() {
         params.set('radius', String(sel.radius || 5000));
         params.set('refLabel', sel.label);
         router.push(`/search?${params.toString()}`);
+      } else if (sel.type === 'city' && sel.countryCode) {
+        // City picked from our own liteAPI-sourced cache — pass cityName +
+        // countryCode straight through, no Google-Places placeId round-trip,
+        // no dependency on Google recognizing the name at all. liteAPI's own
+        // rates search accepts this pair natively.
+        params.set('cityName', sel.label);
+        params.set('countryCode', sel.countryCode);
+        router.push(`/search?${params.toString()}`);
       } else if (sel.placeId && !isCityLevel) {
         params.set('placeId', sel.placeId);
         router.push(`/search?${params.toString()}`);
@@ -470,6 +480,7 @@ export default function SearchHotelsPage() {
       lng: item.lng || undefined,
       radius: item.radius || undefined,
       placeTypes: item.placeTypes || undefined,
+      countryCode: item.countryCode || undefined,
     };
     setSelection(sel);
     setInputText(item.name);
