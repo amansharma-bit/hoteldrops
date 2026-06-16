@@ -13,12 +13,63 @@ const B = "#1447b8";
 const YELLOW = "#FCD34D";
 const NAVY = "#0f172a";
 const API = "https://hoteldrops-production-7e5a.up.railway.app";
+const MAPBOX_TOKEN = "pk.eyJ1Ijoib21zYWlyYW0wMSIsImEiOiJjbXB4bngxdWwwMWI2MnBzZ3p2dGM3bW5rIn0.8qCkSAodMjGVg6qhiCZHzw";
 
 // One fresh sessionId per real search (new destination/dates) — keeps rates
 // consistent listing→detail when liteAPI's price-consistency feature is on.
 function genSessionId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   return `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
+// Builds a flag emoji from a 2-letter ISO country code — no hardcoded lookup table needed.
+function countryCodeToFlag(cc?: string): string {
+  if (!cc || cc.length !== 2) return "";
+  const code = cc.toUpperCase();
+  return String.fromCodePoint(...[...code].map(c => 0x1F1E6 + (c.charCodeAt(0) - 65)));
+}
+
+// How wide a net to cast around a resolved point, based on what kind of place it is.
+// A city needs a city-sized radius; a specific landmark needs a tight one.
+function mapboxPlaceTypeToRadius(placeTypes: string[]): number {
+  if (placeTypes.includes("country")) return 50000;
+  if (placeTypes.includes("region")) return 40000;
+  if (placeTypes.includes("place")) return 20000;
+  if (placeTypes.includes("locality") || placeTypes.includes("neighborhood")) return 5000;
+  if (placeTypes.includes("poi")) return 1500;
+  if (placeTypes.includes("address")) return 1000;
+  return 15000;
+}
+
+// Resolves whatever the user types — a city OR a specific landmark/area — to exact
+// coordinates via Mapbox, which has far better landmark/POI coverage than relying
+// solely on liteAPI's Google-Places wrapper for this.
+async function fetchMapboxPlaces(query: string): Promise<any[]> {
+  try {
+    const res = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&types=country,region,place,locality,neighborhood,poi&limit=8`
+    );
+    const data = await res.json();
+    const features = data.features || [];
+    return features.map((f: any) => {
+      const countryCtx = (f.context || []).find((c: any) => c.id?.startsWith("country"));
+      const countryCode = countryCtx?.short_code?.toUpperCase() || "";
+      const subtext = (f.place_name || "").split(", ").slice(1).join(", ");
+      return {
+        type: "city",
+        name: f.text,
+        subtext,
+        countryName: countryCtx?.text || "",
+        flag: countryCodeToFlag(countryCode),
+        placeId: null,
+        lat: f.center?.[1],
+        lng: f.center?.[0],
+        radius: mapboxPlaceTypeToRadius(f.place_type || []),
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 function useIsMobile() {
@@ -224,6 +275,7 @@ interface Selection {
   hotelId?: string;
   lat?: number;
   lng?: number;
+  radius?: number;
 }
 
 // SVG icons
@@ -276,19 +328,19 @@ export default function SearchHotelsPage() {
     if (inputText.length < 2) return;
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(inputText)}`);
-        const data = await res.json();
-        const cities = data.cities || [];
-        const hotels = data.hotels || [];
-        // Only fall back to defaults if API returned nothing AND input is short
-        if (cities.length === 0 && hotels.length === 0) {
+        const [mapboxCities, backendRes] = await Promise.all([
+          fetchMapboxPlaces(inputText),
+          fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(inputText)}`).then(r => r.json()).catch(() => ({ hotels: [] })),
+        ]);
+        const hotels = backendRes.hotels || [];
+        if (mapboxCities.length === 0 && hotels.length === 0) {
           const q = inputText.toLowerCase();
           const matched = defaultSuggestions.cities.filter((c: any) =>
             c.name.toLowerCase().includes(q)
           );
           setSuggestions({ cities: matched, hotels: [], areas: [], landmarks: [], airport: null });
         } else {
-          setSuggestions({ cities, hotels, areas: [], landmarks: [], airport: null });
+          setSuggestions({ cities: mapboxCities, hotels, areas: [], landmarks: [], airport: null });
         }
       } catch {
         const q = inputText.toLowerCase();
@@ -385,14 +437,22 @@ export default function SearchHotelsPage() {
         ...(guests.childAges.length > 0 ? { childAges: guests.childAges.join(",") } : {}),
       });
       params.set('sessionId', genSessionId());
+      params.set('destination', sel.label);
       if (sel.type === 'hotel' && sel.hotelId) {
         router.push(`/hotel/${sel.hotelId}?${params.toString()}`);
+      } else if (sel.lat != null && sel.lng != null) {
+        // Mapbox-resolved point — works the same whether it's a whole city or a
+        // specific landmark/area, since the radius already matches the place type.
+        params.set('refLat', String(sel.lat));
+        params.set('refLng', String(sel.lng));
+        params.set('radius', String(sel.radius || 20000));
+        params.set('refLabel', sel.label);
+        router.push(`/search?${params.toString()}`);
       } else if (sel.placeId) {
         params.set('placeId', sel.placeId);
-        params.set('destination', sel.label);
         router.push(`/search?${params.toString()}`);
       } else {
-        // No placeId — fetch it from suggest API first
+        // No placeId or coords (rare fallback-list pick) — resolve via suggest API
         try {
           const res = await fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(sel.label)}`);
           const data = await res.json();
@@ -403,9 +463,6 @@ export default function SearchHotelsPage() {
             params.set('placeId', match.placeId);
           }
         } catch {}
-        params.set('destination', sel.label);
-        if (sel.lat) params.set('refLat', String(sel.lat));
-        if (sel.lng) params.set('refLng', String(sel.lng));
         router.push(`/search?${params.toString()}`);
       }
     });
@@ -427,6 +484,7 @@ export default function SearchHotelsPage() {
       hotelId: item.hotelId || undefined,
       lat: item.lat || undefined,
       lng: item.lng || undefined,
+      radius: item.radius || undefined,
     };
     setSelection(sel);
     setInputText(item.name);
