@@ -337,19 +337,15 @@ export default function SearchHotelsPage() {
     if (inputText.length < 2) return;
     const timer = setTimeout(async () => {
       try {
-        const [mapboxCities, backendRes] = await Promise.all([
-          fetchMapboxPlaces(inputText),
-          fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(inputText)}`).then(r => r.json()).catch(() => ({ hotels: [] })),
-        ]);
-        const hotels = backendRes.hotels || [];
-        if (mapboxCities.length === 0 && hotels.length === 0) {
+        const mapboxCities = await fetchMapboxPlaces(inputText);
+        if (mapboxCities.length === 0) {
           const q = inputText.toLowerCase();
           const matched = defaultSuggestions.cities.filter((c: any) =>
             c.name.toLowerCase().includes(q)
           );
           setSuggestions({ cities: matched, hotels: [], areas: [], landmarks: [], airport: null });
         } else {
-          setSuggestions({ cities: mapboxCities, hotels, areas: [], landmarks: [], airport: null });
+          setSuggestions({ cities: mapboxCities, hotels: [], areas: [], landmarks: [], airport: null });
         }
       } catch {
         const q = inputText.toLowerCase();
@@ -732,31 +728,9 @@ export default function SearchHotelsPage() {
   }
 
   const SuggestionDropdown = ({ style }: { style?: React.CSSProperties }) => {
-    if (!showSuggestions || (!suggestions.cities.length && !suggestions.hotels.length)) return null;
+    if (!showSuggestions || !suggestions.cities.length) return null;
     return (
       <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.13)", zIndex: 9999, maxHeight: 380, overflowY: "auto", marginTop: 4, ...style }}>
-        {suggestions.hotels.length > 0 && (
-          <>
-            <div style={{ padding: "5px 16px 3px", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", background: "#f8fafc" }}>Hotels</div>
-            {suggestions.hotels.map((h: any, i: number) => {
-              const hInfo = getCityInfo(h.city || h.name);
-              const hFlag = h.flag || hInfo?.flag || "🏨";
-              const hCountry = h.countryName || hInfo?.country || "";
-              return (
-                <div key={i} onMouseDown={() => handleSelect(h, 'hotel')}
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                  <span style={{ fontSize: 20, flexShrink: 0 }}>{hFlag}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: NAVY, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" }}>{h.name}</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>{h.city}{hCountry ? `, ${hCountry}` : ""}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        )}
         {suggestions.cities.map((c: any, i: number) => {
           const info = getCityInfo(c.name);
           const flag = c.flag || info?.flag || "";
@@ -767,6 +741,7 @@ export default function SearchHotelsPage() {
               onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
               <span style={{ fontSize: 22, flexShrink: 0, lineHeight: 1 }}>{flag}</span>
+
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{c.name}</div>
                 {country && <div style={{ fontSize: 12, color: "#94a3b8" }}>{country}</div>}
