@@ -6,6 +6,13 @@ import { createClient } from "@supabase/supabase-js";
 
 const API = "https://hoteldrops-production-7e5a.up.railway.app/api/hotels";
 
+// One fresh sessionId per real search (new destination/dates) — keeps rates
+// consistent listing→detail when liteAPI's price-consistency feature is on.
+function genSessionId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
 // Verified placeIds for major destinations — instant, reliable lookup,
 // avoids depending on /suggest (and its name-matching) for common cities.
 const CITY_PLACE_IDS: Record<string, string> = {
@@ -768,6 +775,7 @@ export default function SearchPage(){
 function SearchResults(){
   const searchParams=useSearchParams();const router=useRouter();const isMobile=useIsMobile();const today=new Date();
   const[destination,setDestination]=useState((searchParams.get("destination")||"Dubai").split(",")[0].trim());
+  const[sessionId,setSessionId]=useState(()=>searchParams.get("sessionId")||genSessionId());
   const[checkIn,setCheckIn]=useState(searchParams.get("checkIn")||"");
   const[checkOut,setCheckOut]=useState(searchParams.get("checkOut")||"");
   const[guests,setGuests]=useState<GuestState>({rooms:parseInt(searchParams.get("rooms")||"1"),adults:parseInt(searchParams.get("adults")||"2"),children:parseInt(searchParams.get("children")||"0"),childAges:(searchParams.get("childAges")||"").split(",").map(s=>parseInt(s)).filter(n=>!isNaN(n))});
@@ -801,16 +809,18 @@ function SearchResults(){
   const handleDestInput=(val:string)=>{setDestInput(val);if(val.length>=1){const q=val.toLowerCase();setDestSuggestions(DESTINATIONS.filter(d=>d.label.toLowerCase().includes(q)||d.key.includes(q)));setShowDestDrop(true);}else{setDestSuggestions([]);setShowDestDrop(false);}};
   const selectDest=(d:typeof DESTINATIONS[0])=>{setDestInput(d.label);setDestination(d.label);setSelectedPlaceId((d as any).placeId||'');setShowDestDrop(false);};
 
-  const fetchHotels=useCallback(async(dest?:string,ci?:string,co?:string,g?:GuestState,pid?:string)=>{
+  const fetchHotels=useCallback(async(dest?:string,ci?:string,co?:string,g?:GuestState,pid?:string,sid?:string)=>{
     const d=dest||destination,c1=ci||checkIn,c2=co||checkOut,gs=g||guests;
     const placeId=pid!==undefined?pid:(searchParams.get("placeId")||"");
+    const sessId=sid||sessionId;
     if(!c1||!c2){setLoading(false);setError("Please select check-in and check-out dates.");return;}
     setLoading(true);setError(null);setPage(1);setHotels([]);
 
     const childAgesParam=gs.childAges&&gs.childAges.length>0?`&childAges=${gs.childAges.join(",")}`:"";
+    const sessionParam=sessId?`&sessionId=${encodeURIComponent(sessId)}`:"";
     const baseUrl=placeId
-      ?`${API}/search?placeId=${encodeURIComponent(placeId)}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}`
-      :`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}`;
+      ?`${API}/search?placeId=${encodeURIComponent(placeId)}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}${sessionParam}`
+      :`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}${sessionParam}`;
 
     try{
       // Page 0 first — fast first paint
@@ -839,7 +849,7 @@ function SearchResults(){
         }catch{break;}
       }
     }catch{setError("Could not connect to server.");setLoading(false);}
-  },[destination,checkIn,checkOut,guests,searchParams]);
+  },[destination,checkIn,checkOut,guests,searchParams,sessionId]);
 
   useEffect(()=>{
     const pid = searchParams.get("placeId") || "";
@@ -973,6 +983,7 @@ function SearchResults(){
     const d=destInput.trim()||destination;
     const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
     if(guests.childAges&&guests.childAges.length>0)p.set("childAges",guests.childAges.join(","));
+    p.set("sessionId",genSessionId());
     // Always resolve placeId fresh for the destination text being searched —
     // never reuse a placeId that may belong to a previously-searched city.
     // /search requires a placeId (or hotelId), so we must always end up with one.
@@ -995,7 +1006,7 @@ function SearchResults(){
   const handleHotelClick=(hotel:Hotel)=>{
     if(!user){setShowAuthModal(true);return;}
     const childAgesParam=guests.childAges&&guests.childAges.length>0?`&childAges=${guests.childAges.join(",")}`:"";
-    const url=`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}${childAgesParam}`;
+    const url=`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}${childAgesParam}&sessionId=${encodeURIComponent(sessionId)}`;
     isMobile?router.push(url):window.open(url,'_blank');
   };
   const desktopDayClick=(ds:string)=>{if(desktopCalMode==="checkin"){setCheckIn(ds);setCheckOut("");setDesktopCalMode("checkout");}else{if(ds<=checkIn)return;setCheckOut(ds);setDesktopCalOpen(false);}};
