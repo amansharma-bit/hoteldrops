@@ -823,31 +823,57 @@ function SearchResults(){
       :`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}${sessionParam}`;
 
     try{
-      // Page 0 first — fast first paint
+      if(placeId){
+        // True incremental search — liteAPI pushes each hotel's rate down an
+        // open connection the moment it's ready; cards appear as they arrive
+        // instead of everyone waiting for a full batch.
+        const streamUrl=`${API}/search-stream?placeId=${encodeURIComponent(placeId)}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}${sessionParam}`;
+        const resp=await fetch(streamUrl,{cache:"no-store"});
+        if(!resp.ok){
+          let msg="Could not connect to server.";
+          try{const j=await resp.json();msg=j.error||msg;}catch{}
+          setError(msg);setLoading(false);return;
+        }
+        if(!resp.body){setError("Could not connect to server.");setLoading(false);return;}
+
+        const reader=resp.body.pipeThrough(new TextDecoderStream()).getReader();
+        let buffer="";
+        let gotAny=false;
+        while(true){
+          const{value,done}=await reader.read();
+          if(done)break;
+          buffer+=value;
+          const parts=buffer.split("\n\n");
+          buffer=parts.pop()||"";
+          for(const part of parts){
+            const line=part.trim();
+            if(!line.startsWith("data:"))continue;
+            const payload=line.slice(5).trim();
+            if(!payload||payload==="[DONE]")continue;
+            let msg:any;
+            try{msg=JSON.parse(payload);}catch{continue;}
+            if(msg.error){setError(msg.error);continue;}
+            if(Array.isArray(msg.hotels)&&msg.hotels.length){
+              gotAny=true;
+              setLoading(false);
+              setHotels(prev=>{
+                const seen=new Set(prev.map(h=>String(h.code)));
+                const fresh=(msg.hotels as Hotel[]).filter(h=>!seen.has(String(h.code)));
+                return [...prev,...fresh];
+              });
+            }
+          }
+        }
+        setLoading(false);
+        if(!gotAny)setError("No hotels found.");
+        return;
+      }
+
+      // No placeId resolved (rare) — single request, no streaming
       const res=await fetch(`${baseUrl}&page=0`,{cache:"no-store"});const data=await res.json();
       if(!data.hotels?.hotels){setError(data.error||"No hotels found.");setLoading(false);return;}
       setHotels(data.hotels.hotels);
       setLoading(false);
-
-      // Only placeId-based searches paginate; destination-only searches return everything in one go
-      if(!placeId||!data.hotels.hasMore)return;
-
-      // Pages 1-4 stream in afterwards and get appended silently
-      for(let p=1;p<=4;p++){
-        try{
-          const r=await fetch(`${baseUrl}&page=${p}`,{cache:"no-store"});
-          const d=await r.json();
-          const more:Hotel[]=d.hotels?.hotels||[];
-          if(more.length){
-            setHotels(prev=>{
-              const seen=new Set(prev.map(h=>String(h.code)));
-              const fresh=more.filter(h=>!seen.has(String(h.code)));
-              return [...prev,...fresh];
-            });
-          }
-          if(!d.hotels?.hasMore)break;
-        }catch{break;}
-      }
     }catch{setError("Could not connect to server.");setLoading(false);}
   },[destination,checkIn,checkOut,guests,searchParams,sessionId]);
 
