@@ -236,6 +236,7 @@ async function buildHotelIndex() {
             latitude: h.latitude ?? h.location?.latitude ?? null,
             longitude: h.longitude ?? h.location?.longitude ?? null,
             stars: h.stars || (h.starRating ? Math.round(parseFloat(h.starRating)) : null),
+            imageUrl: h.main_photo || h.thumbnail || null,
           })
         })
       }
@@ -905,7 +906,167 @@ router.get('/search', async (req, res) => {
   }
 })
 
+// ── Builds a display-ready hotel card for one streamed liteAPI rate entry ──
+// Pulls name/city/stars/photo from our own pre-built HOTEL_CACHE_BY_ID (built
+// at server startup, instant, no extra network call) rather than waiting for
+// liteAPI's own hotel-metadata block, which only arrives at the END of a
+// streamed response. Returns null for hotels with no usable rate at all.
+function buildStreamHotelCard(h, destinationFallback) {
+  const firstRT = h.roomTypes?.[0]
+  const firstRate = firstRT?.rates?.[0]
+  if (!firstRate) return null
 
+  const taxes = firstRate?.taxesAndFees || []
+  const hasPayAtHotel = Array.isArray(taxes) && taxes.some(t => t.included === false)
+  if (hasPayAtHotel) return null
+
+  const priceINR = parseFloat(firstRate?.retailRate?.total?.[0]?.amount || firstRate?.net || 0)
+  if (!priceINR) return null
+  const rebuqPriceINR = Math.round(priceINR * MARKUP)
+  const otaPriceINR = Math.round(priceINR)
+
+  const meta = HOTEL_CACHE_BY_ID[String(h.hotelId)] || {}
+  const refTag = firstRate?.cancellationPolicies?.refundableTag || null
+  const boardType = firstRate?.boardType || firstRate?.boardCode || 'RO'
+
+  return {
+    code: h.hotelId,
+    name: meta.name || 'Hotel',
+    city: meta.city || destinationFallback || '',
+    stars: meta.stars || null,
+    minRate: rebuqPriceINR,
+    lowestPriceINR: rebuqPriceINR,
+    otaPriceINR,
+    memberSaving: 0,
+    currency: 'INR',
+    imageUrl: meta.imageUrl || null,
+    latitude: meta.latitude || null,
+    longitude: meta.longitude || null,
+    isRefundable: refTag === 'RFN' ? true : refTag === 'NRFN' ? false : null,
+    hasBreakfast: !['RO', 'Room Only', '', null, undefined].includes(boardType),
+    taxesIncluded: true,
+    amenities: [],
+    roomTypes: h.roomTypes || [],
+  }
+}
+
+// ── GET /api/hotels/search-stream ───────────────────────────────────────────
+// True incremental search: liteAPI pushes each hotel's rate down an open SSE
+// connection the moment it's ready, instead of us waiting for a full batch.
+// Replaces the old "16 fast, then 4 pages of 200 in the background" workaround
+// for the placeId-based listing search. Always hits liteAPI live (no internal
+// cache), which also means sessionId's price-consistency guarantee is honored
+// on every request through this path, not just on cache misses.
+router.get('/search-stream', async (req, res) => {
+  const {
+    destination, checkIn, checkOut,
+    adults = '2', children = '0', childAges, rooms = '1',
+    placeId, sessionId,
+  } = req.query
+
+  if (!checkIn || !checkOut || !placeId) {
+    return res.status(400).json({ error: 'checkIn, checkOut and placeId are required' })
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.setHeader('X-Accel-Buffering', 'no')
+  if (res.flushHeaders) res.flushHeaders()
+
+  let closed = false
+  req.on('close', () => { closed = true })
+  const safeWrite = (s) => { if (!closed) { try { res.write(s) } catch {} } }
+  const finish = () => { if (!closed) { safeWrite('data: [DONE]\n\n'); try { res.end() } catch {} ; closed = true } }
+
+  try {
+    const body = {
+      checkin: checkIn,
+      checkout: checkOut,
+      currency: 'INR',
+      guestNationality: 'IN',
+      occupancies: buildOccupancies(rooms, adults, children, childAges),
+      maxRatesPerHotel: 1,
+      includeHotelData: true,
+      placeId,
+      limit: 400,
+      timeout: 10,
+      stream: true,
+      ...(sessionId ? { sessionId } : {}),
+    }
+
+    const liteResp = await axios.post(`${BASE_URL}/hotels/rates`, body, {
+      headers: { ...getHeaders(), Accept: 'text/event-stream' },
+      responseType: 'stream',
+      timeout: 30000,
+      validateStatus: () => true,
+    })
+
+    if (liteResp.status !== 200) {
+      safeWrite(`data: ${JSON.stringify({ error: `liteAPI returned ${liteResp.status}` })}\n\n`)
+      return finish()
+    }
+
+    let buffer = ''
+    let endMeta = null
+    const unresolved = []
+
+    // Sends a chunk of hotel cards down OUR stream. On the first pass,
+    // hotels we can't yet name (not in our local cache) are held back rather
+    // than shown as "Hotel" — they get a real name once the stream ends.
+    const flushCards = (rawRates, isBackfillPass) => {
+      const cards = []
+      for (const r of rawRates) {
+        if (isBackfillPass && !HOTEL_CACHE_BY_ID[String(r.hotelId)] && endMeta?.[r.hotelId]) {
+          HOTEL_CACHE_BY_ID[String(r.hotelId)] = endMeta[r.hotelId]
+        }
+        const card = buildStreamHotelCard(r, destination)
+        if (!card) continue
+        if (card.name === 'Hotel' && !isBackfillPass) { unresolved.push(r); continue }
+        cards.push(card)
+      }
+      if (cards.length) safeWrite(`data: ${JSON.stringify({ hotels: cards })}\n\n`)
+    }
+
+    liteResp.data.on('data', (chunk) => {
+      if (closed) return
+      buffer += chunk.toString('utf8')
+      const parts = buffer.split('\n\n')
+      buffer = parts.pop()
+      for (const part of parts) {
+        const line = part.trim()
+        if (!line.startsWith('data:')) continue
+        const payload = line.slice(5).trim()
+        if (!payload || payload === '[DONE]') continue
+        let msg
+        try { msg = JSON.parse(payload) } catch { continue }
+        if (Array.isArray(msg.rates)) {
+          flushCards(msg.rates, false)
+        } else if (Array.isArray(msg.hotels)) {
+          endMeta = {}
+          for (const hm of msg.hotels) {
+            endMeta[hm.id] = { name: hm.name, city: destination, imageUrl: hm.main_photo || hm.thumbnail || null, stars: null, latitude: null, longitude: null }
+          }
+        }
+      }
+    })
+
+    liteResp.data.on('end', () => {
+      if (unresolved.length) flushCards(unresolved, true)
+      finish()
+    })
+
+    liteResp.data.on('error', (e) => {
+      console.error('⚠️ liteAPI stream error:', e.message)
+      finish()
+    })
+
+  } catch (e) {
+    console.error('⚠️ /search-stream error:', e.message)
+    safeWrite(`data: ${JSON.stringify({ error: e.message })}\n\n`)
+    finish()
+  }
+})
 
 // ── GET /api/hotels/resolve-hotel ────────────────────────────────────────────
 router.get('/resolve-hotel', async (req, res) => {
