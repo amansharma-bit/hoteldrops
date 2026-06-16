@@ -780,7 +780,7 @@ function SearchResults(){
   const[mobileSheet,setMobileSheet]=useState<"filter"|"sort"|null>(null);
   const[desktopCalOpen,setDesktopCalOpen]=useState(false);const[desktopCalMode,setDesktopCalMode]=useState<"checkin"|"checkout">("checkin");
   const[desktopCalOffset,setDesktopCalOffset]=useState(0);const[desktopGuestOpen,setDesktopGuestOpen]=useState(false);
-  const[destInput,setDestInput]=useState(destination);const[selectedPlaceId,setSelectedPlaceId]=useState(searchParams.get('placeId')||'');const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);const[destError,setDestError]=useState<string|null>(null);
+  const[destInput,setDestInput]=useState(destination);const[selectedPlaceId,setSelectedPlaceId]=useState(searchParams.get('placeId')||'');const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);
   const destRef=useRef<HTMLDivElement>(null);const desktopCalRef=useRef<HTMLDivElement>(null);const desktopGuestRef=useRef<HTMLDivElement>(null);
   const[chatOpen,setChatOpen]=useState(false);
   const[chatMessages,setChatMessages]=useState<{role:string;content:string}[]>([
@@ -798,7 +798,7 @@ function SearchResults(){
 
   useEffect(()=>{supabase.auth.getUser().then(({data})=>{if(data.user){const m=data.user.user_metadata;setUser({name:m?.full_name||m?.name||data.user.email?.split("@")[0]||"Member"});}});supabase.auth.onAuthStateChange((_,session)=>{if(session?.user){const m=session.user.user_metadata;setUser({name:m?.full_name||m?.name||session.user.email?.split("@")[0]||"Member"});setShowAuthModal(false);}});},[]);
   useEffect(()=>{const handler=(e:MouseEvent)=>{if(desktopCalRef.current&&!desktopCalRef.current.contains(e.target as Node))setDesktopCalOpen(false);if(desktopGuestRef.current&&!desktopGuestRef.current.contains(e.target as Node))setDesktopGuestOpen(false);if(destRef.current&&!destRef.current.contains(e.target as Node))setShowDestDrop(false);};document.addEventListener("mousedown",handler);return()=>document.removeEventListener("mousedown",handler);},[]);
-  const handleDestInput=(val:string)=>{setDestInput(val);setDestError(null);if(val.length>=1){const q=val.toLowerCase();setDestSuggestions(DESTINATIONS.filter(d=>d.label.toLowerCase().includes(q)||d.key.includes(q)));setShowDestDrop(true);}else{setDestSuggestions([]);setShowDestDrop(false);}};
+  const handleDestInput=(val:string)=>{setDestInput(val);if(val.length>=1){const q=val.toLowerCase();setDestSuggestions(DESTINATIONS.filter(d=>d.label.toLowerCase().includes(q)||d.key.includes(q)));setShowDestDrop(true);}else{setDestSuggestions([]);setShowDestDrop(false);}};
   const selectDest=(d:typeof DESTINATIONS[0])=>{setDestInput(d.label);setDestination(d.label);setSelectedPlaceId((d as any).placeId||'');setShowDestDrop(false);};
 
   const fetchHotels=useCallback(async(dest?:string,ci?:string,co?:string,g?:GuestState,pid?:string)=>{
@@ -969,37 +969,22 @@ function SearchResults(){
   const handleSearch=async()=>{
     if(!user){setShowAuthModal(true);return;}
     const d=destInput.trim()||destination;
+    const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
     // Always resolve placeId fresh for the destination text being searched —
     // never reuse a placeId that may belong to a previously-searched city.
     // /search requires a placeId (or hotelId), so we must always end up with one.
-    let placeId="";
-    let resolvedName=d;
     const known=CITY_PLACE_IDS[d.toLowerCase().trim()];
     if(known){
-      placeId=known;
+      p.set("placeId",known);
     }else{
       try{
         const res=await fetch(`${API}/suggest?q=${encodeURIComponent(d)}`);
         const data=await res.json();
         const cities=data.cities||[];
-        const exact=cities.find((c:any)=>c.name?.toLowerCase()===d.toLowerCase());
-        const match=exact||cities[0];
-        if(match?.placeId){
-          placeId=match.placeId;
-          if(!exact&&match.name)resolvedName=match.name; // closest match, not exact — use its real name
-        }
+        const match=cities.find((c:any)=>c.name?.toLowerCase()===d.toLowerCase())||cities[0];
+        if(match?.placeId)p.set("placeId",match.placeId);
       }catch{}
     }
-    if(!placeId){
-      // Nothing matched at all — don't search, ask the user to pick a city.
-      setDestError("We couldn't find that destination — please select a city from the suggestions.");
-      handleDestInput(d);
-      return;
-    }
-    const p=new URLSearchParams({destination:resolvedName,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
-    p.set("placeId",placeId);
-    // If we silently corrected the destination, tell the results page so it can confirm to the user
-    if(resolvedName.toLowerCase()!==d.toLowerCase())p.set("queryText",d);
     // Hard navigation forces full remount so new city loads fresh
     window.location.href=`/search?${p.toString()}`;
   };
@@ -1049,7 +1034,6 @@ function SearchResults(){
           <div ref={destRef} className="sfd" style={{padding:"0 20px",borderRight:"1px solid #e2e8f0",display:"flex",flexDirection:"column",justifyContent:"center",borderRadius:"12px 0 0 12px",position:"relative"}}>
             <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Destination</div>
             <div style={{display:"flex",alignItems:"center",gap:4}}><input value={destInput} onChange={e=>handleDestInput(e.target.value)} onFocus={()=>{setDestFocused(true);if(destInput.length>=1)setShowDestDrop(true);}} onBlur={()=>{setTimeout(()=>{setDestFocused(false);if(!destInput.trim())setDestInput(destination);setShowDestDrop(false);},200);}} onKeyDown={e=>{if(e.key==="Enter"){setShowDestDrop(false);handleSearch();}if(e.key==="Escape"){setDestInput(destination);setShowDestDrop(false);}}} placeholder="City or destination" style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:15,fontWeight:600,color:NAVY,background:"transparent",padding:0,flex:1}}/>{destInput&&destFocused&&<button onClick={()=>{setDestInput("");setDestSuggestions([]);setShowDestDrop(false);}} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:18,padding:"0 2px",flexShrink:0,lineHeight:1}}>×</button>}</div>
-            {destError&&!(showDestDrop&&destSuggestions.length>0)&&<div style={{position:"absolute",top:"calc(100% + 6px)",left:0,fontSize:11.5,fontWeight:600,color:"#dc2626",background:"#fff",border:"1.5px solid #fecaca",borderRadius:8,padding:"6px 10px",zIndex:30,whiteSpace:"nowrap"}}>{destError}</div>}
             {showDestDrop&&destSuggestions.length>0&&<div style={{position:"absolute",top:"calc(100% + 10px)",left:0,width:"100%",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.14)",zIndex:9999,maxHeight:280,overflowY:"auto"}}>{destSuggestions.map(d=><div key={d.key} onClick={()=>selectDest(d)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",borderBottom:"1px solid #f8fafc",transition:"background 0.1s"}} onMouseEnter={e=>(e.currentTarget.style.background="#f8fafc")} onMouseLeave={e=>(e.currentTarget.style.background="#fff")}><span style={{fontSize:20}}>{d.flag}</span><div><div style={{fontSize:14,fontWeight:600,color:NAVY}}>{d.label}</div><div style={{fontSize:12,color:"#94a3b8"}}>{d.country}</div></div></div>)}</div>}
           </div>
           <div className="sfd" style={{padding:"0 18px",borderRight:"1px solid #e2e8f0",display:"flex",flexDirection:"column",justifyContent:"center",background:desktopCalOpen&&desktopCalMode==="checkin"?"#f0f7ff":"transparent"}} onClick={()=>{setDesktopCalMode("checkin");setDesktopCalOpen(true);setDesktopCalOffset(0);}}>
@@ -1084,7 +1068,7 @@ function SearchResults(){
           {!isMobile&&<div style={{minWidth:0}}>
             <div style={{borderRadius:12,overflow:"hidden",marginBottom:16,border:"1.5px solid #e2e8f0",cursor:"pointer",position:"relative"}} onClick={()=>setShowMap(true)}>
               <img src={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${hotels.find(h=>h.longitude&&h.latitude)?`${hotels.find(h=>h.longitude&&h.latitude)!.longitude},${hotels.find(h=>h.longitude&&h.latitude)!.latitude},11`:"55.2708,25.2048,11"}/268x140?access_token=${MAPBOX_TOKEN}`} alt="Map" style={{width:"100%",height:140,objectFit:"cover",display:"block"}} onError={e=>{(e.target as HTMLImageElement).style.display="none";}}/>
-              <div style={{position:"absolute",top:0,left:0,right:0,bottom:28,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}><div style={{background:"rgba(255,255,255,0.92)",borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:700,color:NAVY,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>🗺️ {hotels.filter(h=>h.latitude&&h.longitude).length} hotels on map</div></div>
+              <div style={{position:"absolute",top:0,left:0,right:0,bottom:28,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}><div style={{background:"rgba(255,255,255,0.92)",borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:700,color:NAVY,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>🗺️ {loading?"Loading hotels…":`${hotels.filter(h=>h.latitude&&h.longitude).length} hotels on map`}</div></div>
               <div style={{padding:"9px 14px",background:"#fff",textAlign:"center",color:B,fontSize:13,fontWeight:700,borderTop:"1px solid #e2e8f0"}}>📍 Explore on Map</div>
             </div>
             <div style={{background:"#fff",borderRadius:12,border:"1.5px solid #e2e8f0",padding:18}}>
@@ -1100,7 +1084,6 @@ function SearchResults(){
                   {activeRefLabel ? `Hotels near ${activeRefLabel}` : `Hotels in ${destination}`}
                 </span>
                 {!loading&&<span style={{fontSize:13,color:"#64748b",marginLeft:8}}>{sortedHotels.length} properties found</span>}
-                {searchParams.get("queryText")&&<div style={{fontSize:12,color:"#64748b",marginTop:4}}>Showing results for <strong>{destination}</strong> — closest match for "{searchParams.get("queryText")}"</div>}
               </div>
               {!isMobile&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"7px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,background:"#fff",cursor:"pointer",outline:"none"}}>
                 {(activeRefLabel)&&<option value="distance">Nearest first</option>}
