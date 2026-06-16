@@ -13,6 +13,13 @@ const API = "https://hoteldrops-production-7e5a.up.railway.app/api/hotels";
 const B = "#1447b8";
 const NAVY = "#0f172a";
 
+// One fresh sessionId per real search (new destination/dates) — keeps rates
+// consistent listing→detail when liteAPI's price-consistency feature is on.
+function genSessionId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
 function useIsMobile() {
   const [m, setM] = useState(false);
   useEffect(() => { const c = () => setM(window.innerWidth < 960); c(); window.addEventListener("resize", c); return () => window.removeEventListener("resize", c); }, []);
@@ -76,6 +83,7 @@ function HotelDetailContent() {
   const [editRooms, setEditRooms] = useState("1");
   const [editChildren, setEditChildren] = useState(childrenParam);
   const [editChildAges, setEditChildAges] = useState<number[]>(childAgesFromUrl);
+  const [sessionId] = useState(() => searchParams.get("sessionId") || genSessionId());
   const [guestDropOpen, setGuestDropOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
   const [calMode, setCalMode] = useState<"checkin"|"checkout">("checkin");
@@ -98,7 +106,8 @@ function HotelDetailContent() {
   useEffect(() => {
     if (!checkIn || !checkOut) return;
     const childAgesQS = editChildAges.length > 0 ? `&childAges=${editChildAges.join(",")}` : "";
-    fetch(`${API}/${code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&rooms=${editRooms}&children=${editChildren}${childAgesQS}`)
+    const sessionQS = sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : "";
+    fetch(`${API}/${code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&rooms=${editRooms}&children=${editChildren}${childAgesQS}${sessionQS}`)
       .then(r => r.json())
       .then(d => {
         if (d.success) {
@@ -303,7 +312,7 @@ function HotelDetailContent() {
                 </div>
               )}
             </div>
-            <button onClick={() => router.push(`/search?destination=${encodeURIComponent(hotel.city)}&checkIn=${editCheckIn}&checkOut=${editCheckOut}&adults=${editAdults}&rooms=${editRooms}&children=${editChildren}${editChildAges.length>0?`&childAges=${editChildAges.join(",")}`:""}`)}
+            <button onClick={() => router.push(`/search?destination=${encodeURIComponent(hotel.city)}&checkIn=${editCheckIn}&checkOut=${editCheckOut}&adults=${editAdults}&rooms=${editRooms}&children=${editChildren}${editChildAges.length>0?`&childAges=${editChildAges.join(",")}`:""}&sessionId=${genSessionId()}`)}
               style={{ background: "#FCD34D", color: NAVY, border: "none", borderLeft: "1px solid #e2e8f0", padding: "0 28px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Sora',sans-serif", borderRadius: "0 12px 12px 0" }}>
               Search
             </button>
