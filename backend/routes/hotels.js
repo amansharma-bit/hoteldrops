@@ -740,10 +740,17 @@ router.get('/search', async (req, res) => {
         // ── Single-page mode (progressive loading) ─────────────────────
         // Frontend fetches page 0 first for a fast first paint, then pages
         // 1-4 in the background and appends results as they arrive.
-        const offset = pageNum * PAGE_SIZE
+        // Page 0 uses a smaller limit + shorter liteAPI timeout so the very
+        // first hotels appear in ~2-3s instead of waiting on a full 200-hotel,
+        // 12s-budget batch. Pages 1-4 keep the full PAGE_SIZE/timeout since
+        // they load silently in the background after first paint.
+        const FAST_FIRST_PAGE_SIZE = 16
+        const limit = pageNum === 0 ? FAST_FIRST_PAGE_SIZE : PAGE_SIZE
+        const liteApiTimeout = pageNum === 0 ? 5 : 12
+        const offset = pageNum === 0 ? 0 : FAST_FIRST_PAGE_SIZE + (pageNum - 1) * PAGE_SIZE
 
         const resp = await axios.post(`${BASE_URL}/hotels/rates`, {
-          ...baseBody, placeId, limit: PAGE_SIZE, offset, timeout: 12,
+          ...baseBody, placeId, limit, offset, timeout: liteApiTimeout,
         }, { headers: getHeaders(), timeout: 30000, validateStatus: () => true })
           .catch(e => ({ status: 0, data: null, _err: e.message }))
 
