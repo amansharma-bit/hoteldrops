@@ -106,10 +106,20 @@ async function fetchMapboxPlaces(query: string): Promise<{ cities: any[]; areas:
     fetchMapboxTier(query, "locality,neighborhood,poi", 6, seen),
   ]);
 
+  const q = query.toLowerCase();
   const cities = cityFeatures.sort((a: any, b: any) => {
-    // Curated/well-known cities win ties between identically-named places
+    // An exact match to what was typed always wins outright — no fuzzy
+    // typo-distance match (e.g. "Duba") should ever outrank it.
+    const aExact = a.name.toLowerCase() === q;
+    const bExact = b.name.toLowerCase() === q;
+    if (aExact !== bExact) return aExact ? -1 : 1;
+    // Otherwise, trust Mapbox's own text-match quality score first.
+    if (a.relevance !== b.relevance) return b.relevance - a.relevance;
+    // Curated/well-known cities win ties between identically-relevant places
     // (e.g. Dubai, UAE vs. a village also called Dubai elsewhere).
-    if (a.name.toLowerCase() === b.name.toLowerCase() && a.isCurated !== b.isCurated) return a.isCurated ? -1 : 1;
+    if (a.isCurated !== b.isCurated) return a.isCurated ? -1 : 1;
+    // Final tie-break: alphabetical (covers genuine multi-city prefix
+    // matches, e.g. typing "DU" → Dubai/Dublin/Durban with no clear winner).
     return a.name.localeCompare(b.name);
   });
   const areas = areaFeatures.sort((a: any, b: any) => b.relevance - a.relevance);
