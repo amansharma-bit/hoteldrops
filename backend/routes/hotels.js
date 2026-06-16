@@ -252,6 +252,64 @@ async function buildHotelIndex() {
 
 setTimeout(buildHotelIndex, 2000)
 
+// Same regional-indicator trick as the frontend — works for any ISO-2 code,
+// not just the ~50 we have hardcoded names for above.
+function isoToFlag(cc) {
+  if (!cc || cc.length !== 2) return ''
+  const code = cc.toUpperCase()
+  return String.fromCodePoint(...code.split('').map(c => 0x1F1E6 + (c.charCodeAt(0) - 65)))
+}
+
+// ── City cache, sourced from liteAPI's own city/country data (not Mapbox,
+// not the Google-Places wrapper) — only real, bookable cities, no rivers,
+// embassies, polytechnics, or administrative councils mixed in.
+let CITY_CACHE = []
+
+async function buildCityIndex() {
+  console.log('🌍 Building city index from liteAPI...')
+  try {
+    const countriesResp = await axios.get(`${BASE_URL}/data/countries`, {
+      headers: getHeaders(), timeout: 10000, validateStatus: () => true,
+    })
+    if (countriesResp.status !== 200 || !countriesResp.data?.data) {
+      console.log(`⚠️ City index: countries fetch failed (status ${countriesResp.status})`)
+      return
+    }
+    const countries = countriesResp.data.data
+      .map(c => ({
+        code: c.code || c.countryCode || c.iso2 || c.country_code || '',
+        name: c.name || c.countryName || c.country || '',
+      }))
+      .filter(c => c.code)
+
+    const allCities = []
+    const CONCURRENCY = 15
+    for (let i = 0; i < countries.length; i += CONCURRENCY) {
+      const batch = countries.slice(i, i + CONCURRENCY)
+      const results = await Promise.all(batch.map(({ code, name }) =>
+        axios.get(`${BASE_URL}/data/cities?countryCode=${code}`, {
+          headers: getHeaders(), timeout: 8000, validateStatus: () => true,
+        }).then(resp => ({ code, name, resp })).catch(e => ({ code, name, error: e.message }))
+      ))
+      for (const { code, name, resp, error } of results) {
+        if (error) { console.log(`⚠️ Cities ${code}: ${error}`); continue }
+        if (resp.status === 200 && Array.isArray(resp.data?.data)) {
+          for (const item of resp.data.data) {
+            const city = item.city || item.name
+            if (city) allCities.push({ city, countryCode: code, countryName: name || COUNTRY_NAMES[code] || code })
+          }
+        }
+      }
+    }
+    CITY_CACHE = allCities
+    console.log(`✅ City index ready: ${CITY_CACHE.length} cities across ${countries.length} countries`)
+  } catch (e) {
+    console.log(`⚠️ City index build failed: ${e.message}`)
+  }
+}
+
+setTimeout(buildCityIndex, 6000)
+
 function buildOccupancies(rooms, adults, children, childAges) {
   const r = parseInt(rooms) || 1
   const a = parseInt(adults) || 2
@@ -709,6 +767,8 @@ router.get('/search', async (req, res) => {
       return res.status(400).json({ error: 'checkIn and checkOut are required' })
     }
 
+    console.log(`🔎 search: dest="${destination}" ${placeId ? `placeId=${placeId}` : hotelId ? `hotelId=${hotelId}` : 'no-location'} ${checkIn}→${checkOut} page=${page ?? 'all'}`)
+
     // pageNum is null for "all-pages" callers (no ?page=), or 0-4 for progressive mode.
     // hasMore is purely a function of pageNum, so it must be attached on EVERY response
     // path — including cache hits — or a cached page (e.g. page=1 from an earlier
@@ -780,6 +840,7 @@ router.get('/search', async (req, res) => {
 
         ratesList = resp.data.data || []
         hotelsMetaList = resp.data.hotels || []
+        console.log(`✅ search: page=${pageNum} placeId=${placeId} → ${ratesList.length} raw rates from liteAPI`)
 
         var _pageInfo = {
           page: pageNum,
@@ -1154,6 +1215,55 @@ router.get('/cache-search', (req, res) => {
     .slice(0, 10)
     .map(h => ({ hotelId: h.hotelId, name: h.name, city: h.city, country: h.country }));
   return res.json({ results, total: HOTEL_CACHE.length });
+});
+
+// ── GET /api/hotels/cities-search ───────────────────────────────────────────
+// Clean city-only autocomplete, sourced from liteAPI's own /data/cities +
+// /data/countries — not Mapbox, not the Google-Places wrapper. No landmarks,
+// embassies, or administrative councils can show up here, since liteAPI's
+// own city list never contained them in the first place.
+router.get('/cities-search', (req, res) => {
+  const { q } = req.query;
+  if (!q || q.length < 2) return res.json({ cities: [] });
+  const query = q.toLowerCase().trim();
+  const cities = CITY_CACHE
+    .filter(c => c.city.toLowerCase().includes(query))
+    .sort((a, b) => {
+      const aExact = a.city.toLowerCase() === query;
+      const bExact = b.city.toLowerCase() === query;
+      if (aExact !== bExact) return aExact ? -1 : 1;
+      const aStart = a.city.toLowerCase().startsWith(query);
+      const bStart = b.city.toLowerCase().startsWith(query);
+      if (aStart !== bStart) return aStart ? -1 : 1;
+      return a.city.localeCompare(b.city);
+    })
+    .slice(0, 8)
+    .map(c => ({
+      type: 'city',
+      name: c.city,
+      countryName: c.countryName,
+      countryCode: c.countryCode,
+      flag: isoToFlag(c.countryCode),
+      placeId: null,
+    }));
+  return res.json({ cities, total: CITY_CACHE.length });
+});
+
+// ── GET /api/hotels/cities-dump ──────────────────────────────────────────────
+router.get('/cities-dump', (req, res) => {
+  const fmt = req.query.format || 'json';
+  if (fmt === 'csv') {
+    const rows = ['city,countryCode,countryName'];
+    for (const c of CITY_CACHE) {
+      const city = (c.city || '').replace(/,/g, ' ');
+      const countryName = (c.countryName || '').replace(/,/g, ' ');
+      rows.push(`${city},${c.countryCode || ''},${countryName}`);
+    }
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="rebuq_cities.csv"');
+    return res.send(rows.join('\n'));
+  }
+  return res.json({ total: CITY_CACHE.length, cities: CITY_CACHE });
 });
 
 // ── GET /api/hotels/:code ─────────────────────────────────────────────────────
