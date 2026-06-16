@@ -49,6 +49,8 @@ function HotelDetailContent() {
   const checkIn  = searchParams.get("checkIn") || "";
   const checkOut = searchParams.get("checkOut") || "";
   const adults   = searchParams.get("adults") || "2";
+  const childrenParam = searchParams.get("children") || "0";
+  const childAgesFromUrl = (searchParams.get("childAges")||"").split(",").map(s=>parseInt(s)).filter(n=>!isNaN(n));
   const offerId  = searchParams.get("offerId") || "";
   const saving   = searchParams.get("saving") || "";
   const newPrice = searchParams.get("newPrice") || "";
@@ -72,7 +74,8 @@ function HotelDetailContent() {
   const [editCheckOut, setEditCheckOut] = useState(checkOut);
   const [editAdults, setEditAdults] = useState(adults);
   const [editRooms, setEditRooms] = useState("1");
-  const [editChildren, setEditChildren] = useState("0");
+  const [editChildren, setEditChildren] = useState(childrenParam);
+  const [editChildAges, setEditChildAges] = useState<number[]>(childAgesFromUrl);
   const [guestDropOpen, setGuestDropOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
   const [calMode, setCalMode] = useState<"checkin"|"checkout">("checkin");
@@ -94,7 +97,8 @@ function HotelDetailContent() {
 
   useEffect(() => {
     if (!checkIn || !checkOut) return;
-    fetch(`${API}/${code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&rooms=${editRooms}&children=${editChildren}`)
+    const childAgesQS = editChildAges.length > 0 ? `&childAges=${editChildAges.join(",")}` : "";
+    fetch(`${API}/${code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&rooms=${editRooms}&children=${editChildren}${childAgesQS}`)
       .then(r => r.json())
       .then(d => {
         if (d.success) {
@@ -180,6 +184,23 @@ function HotelDetailContent() {
 
   const px = isMobile ? "0 16px" : "0 40px";
 
+  const buildCheckoutUrl = (room: any) => {
+    const childAgesQS = editChildAges.length > 0 ? `&childAges=${editChildAges.join(",")}` : "";
+    const cancelInfo = room.isRefundable
+      ? (room.freeCancelUntil ? `Free cancellation until ${room.freeCancelUntil}` : "Free cancellation")
+      : "Non-refundable";
+    const cleanImportant = (hotel.importantInfo || "").replace(/<[^>]+>/g, "").slice(0, 500);
+    return `/checkout?hotel=${encodeURIComponent(hotel.name)}` +
+      `&address=${encodeURIComponent(hotel.address || "")}&city=${encodeURIComponent(hotel.city || "")}` +
+      `&img=${encodeURIComponent(hotel.images?.[0]?.url || "")}&stars=${hotel.stars || ""}&rating=${hotel.rating || ""}` +
+      `&checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&rooms=${editRooms}&children=${editChildren}${childAgesQS}` +
+      `&room=${encodeURIComponent(room.name)}&price=${room.pricePerNight}&offerId=${room.offerId}` +
+      `&board=${encodeURIComponent(room.boardName || "")}&refundable=${room.isRefundable ? "1" : "0"}` +
+      `&cancelInfo=${encodeURIComponent(cancelInfo)}` +
+      `&checkInTime=${encodeURIComponent(hotel.checkInTime || "")}&checkOutTime=${encodeURIComponent(hotel.checkOutTime || "")}` +
+      `&importantInfo=${encodeURIComponent(cleanImportant)}`;
+  };
+
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#f8fafc", color: "#1e293b", width: "100%" }}>
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -252,7 +273,7 @@ function HotelDetailContent() {
               <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{editRooms} Room · {editAdults} Adult{parseInt(editAdults) > 1 ? "s" : ""}</div>
               {guestDropOpen && (
                 <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 300, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 20 }}>
-                  {[{ label: "Rooms", min: 1, max: 4, val: parseInt(editRooms), set: (v: number) => setEditRooms(String(v)) }, { label: "Adults", min: 1, max: 16, val: parseInt(editAdults), set: (v: number) => setEditAdults(String(v)) }, { label: "Children", min: 0, max: 8, val: parseInt(editChildren), set: (v: number) => setEditChildren(String(v)) }].map(item => (
+                  {[{ label: "Rooms", min: 1, max: 4, val: parseInt(editRooms), set: (v: number) => setEditRooms(String(v)) }, { label: "Adults", min: 1, max: 16, val: parseInt(editAdults), set: (v: number) => setEditAdults(String(v)) }, { label: "Children", min: 0, max: 8, val: parseInt(editChildren), set: (v: number) => { setEditChildren(String(v)); setEditChildAges(prev => v > prev.length ? [...prev, ...Array(v - prev.length).fill(5)] : prev.slice(0, v)); } }].map(item => (
                     <div key={item.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{item.label}</div>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -262,11 +283,27 @@ function HotelDetailContent() {
                       </div>
                     </div>
                   ))}
+                  {parseInt(editChildren) > 0 && (
+                    <div style={{ padding: "12px 0", borderBottom: "1px solid #f1f5f9" }}>
+                      <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>Age of children at check-in</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        {Array.from({ length: parseInt(editChildren) }).map((_, idx) => (
+                          <div key={idx}>
+                            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>Child {idx + 1}</div>
+                            <select value={editChildAges[idx] ?? 5} onChange={e => { e.stopPropagation(); setEditChildAges(prev => { const a = [...prev]; a[idx] = parseInt(e.target.value); return a; }); }}
+                              style={{ width: "100%", border: "1.5px solid #e2e8f0", borderRadius: 6, padding: "6px 8px", fontSize: 13, fontFamily: "inherit", color: NAVY, background: "#fff" }}>
+                              {Array.from({ length: 13 }, (_, a) => <option key={a} value={a}>{a === 0 ? "Under 1" : `${a} yr`}</option>)}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <button onClick={() => setGuestDropOpen(false)} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 12 }}>Done</button>
                 </div>
               )}
             </div>
-            <button onClick={() => router.push(`/search?destination=${encodeURIComponent(hotel.city)}&checkIn=${editCheckIn}&checkOut=${editCheckOut}&adults=${editAdults}&rooms=${editRooms}`)}
+            <button onClick={() => router.push(`/search?destination=${encodeURIComponent(hotel.city)}&checkIn=${editCheckIn}&checkOut=${editCheckOut}&adults=${editAdults}&rooms=${editRooms}&children=${editChildren}${editChildAges.length>0?`&childAges=${editChildAges.join(",")}`:""}`)}
               style={{ background: "#FCD34D", color: NAVY, border: "none", borderLeft: "1px solid #e2e8f0", padding: "0 28px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Sora',sans-serif", borderRadius: "0 12px 12px 0" }}>
               Search
             </button>
@@ -539,7 +576,7 @@ function HotelDetailContent() {
                               </div>
                             </div>
                             <button onClick={() => isSel
-                              ? router.push(`/checkout?hotel=${encodeURIComponent(hotel.name)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&room=${encodeURIComponent(room.name)}&price=${room.pricePerNight}&offerId=${room.offerId}`)
+                              ? router.push(buildCheckoutUrl(room))
                               : setSelectedOffer(room.offerId)}
                               style={{ width: "100%", background: isSel ? NAVY : B, color: "#fff", border: "none", borderRadius: 8, padding: "11px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
                               {isSel ? "Book Now →" : "Reserve"}
@@ -634,7 +671,7 @@ function HotelDetailContent() {
                                   <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>✓ Taxes included</div>
                                 </div>
                                 <button onClick={() => isSel
-                                  ? router.push(`/checkout?hotel=${encodeURIComponent(hotel.name)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&room=${encodeURIComponent(room.name)}&price=${room.pricePerNight}&offerId=${room.offerId}`)
+                                  ? router.push(buildCheckoutUrl(room))
                                   : setSelectedOffer(room.offerId)}
                                   style={{ background: isSel ? NAVY : "#FCD34D", color: isSel ? "#fff" : NAVY, border: "none", borderRadius: 8, padding: "11px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%", marginTop: 12 }}>
                                   {isSel ? "Book Now →" : "Reserve"}
@@ -804,7 +841,7 @@ function HotelDetailContent() {
             <div className="sora" style={{ fontSize: 20, fontWeight: 800, color: NAVY }}>{fmtINR(selectedRoom.pricePerNight)}</div>
             <div style={{ fontSize: 10, color: "#64748b" }}>per night · taxes included</div>
           </div>
-          <button onClick={() => router.push(`/checkout?hotel=${encodeURIComponent(hotel.name)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&room=${encodeURIComponent(selectedRoom.name)}&price=${selectedRoom.pricePerNight}&offerId=${selectedRoom.offerId}`)}
+          <button onClick={() => router.push(buildCheckoutUrl(selectedRoom))}
             style={{ background: B, color: "#fff", border: "none", padding: "12px 22px", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Book Now →</button>
         </div>
       )}
