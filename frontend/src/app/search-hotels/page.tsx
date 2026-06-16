@@ -47,7 +47,7 @@ function mapboxPlaceTypeToRadius(placeTypes: string[]): number {
 async function fetchMapboxPlaces(query: string): Promise<any[]> {
   try {
     const res = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&types=country,region,place,locality,neighborhood,poi&limit=8`
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&types=country,region,place&limit=8`
     );
     const data = await res.json();
     const features = data.features || [];
