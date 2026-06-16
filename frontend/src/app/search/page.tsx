@@ -824,7 +824,10 @@ function SearchResults(){
     const refLat=searchParams.get("refLat")||"";
     const refLng=searchParams.get("refLng")||"";
     const radius=searchParams.get("radius")||"";
+    const cityName=searchParams.get("cityName")||"";
+    const countryCode=searchParams.get("countryCode")||"";
     const hasCoords=!!(refLat&&refLng);
+    const hasCityCountry=!!(cityName&&countryCode);
     const sessId=sid||sessionId;
     if(!c1||!c2){setLoading(false);setError("Please select check-in and check-out dates.");return;}
     setLoading(true);setError(null);setPage(1);setHotels([]);
@@ -833,6 +836,8 @@ function SearchResults(){
     const sessionParam=sessId?`&sessionId=${encodeURIComponent(sessId)}`:"";
     const baseUrl=placeId
       ?`${API}/search?placeId=${encodeURIComponent(placeId)}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}${sessionParam}`
+      :hasCityCountry
+      ?`${API}/search?cityName=${encodeURIComponent(cityName)}&countryCode=${encodeURIComponent(countryCode)}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}${sessionParam}`
       :`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}${sessionParam}`;
 
     try{
@@ -884,11 +889,13 @@ function SearchResults(){
         return;
       }
 
-      if(placeId){
+      if(placeId||hasCityCountry){
         // Whole-city search — kept on the proven page-based /search route rather
         // than /search-stream, since liteAPI's stream mode combined with a
         // placeId (as opposed to coordinates) has been coming back with 0 raw
-        // rates for city-wide searches. Page 0 is small/fast for an instant
+        // rates for city-wide searches; cityName+countryCode goes through the
+        // same proven path for the same reason, since that combo with stream
+        // mode is equally unverified. Page 0 is small/fast for an instant
         // first paint; pages 1-4 follow in parallel and append as they land.
         const page0Resp=await fetch(`${baseUrl}&page=0`,{cache:"no-store"});
         const page0Data=await page0Resp.json();
@@ -912,7 +919,7 @@ function SearchResults(){
         return;
       }
 
-      // No placeId resolved and no coords (rare) — single request, no streaming
+      // No placeId/cityName resolved and no coords (rare) — single request, no streaming
       const res=await fetch(`${baseUrl}&page=0`,{cache:"no-store"});const data=await res.json();
       if(!data.hotels?.hotels){setError(data.error||"No hotels found.");setLoading(false);return;}
       setHotels(data.hotels.hotels);
