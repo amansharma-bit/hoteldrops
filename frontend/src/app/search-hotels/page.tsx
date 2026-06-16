@@ -1,10 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
-const API = "https://hoteldrops-production-7e5a.up.railway.app/api/hotels";
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+const B = "#1447b8";
+const YELLOW = "#FCD34D";
+const NAVY = "#0f172a";
+const API = "https://hoteldrops-production-7e5a.up.railway.app";
+const MAPBOX_TOKEN = "pk.eyJ1Ijoib21zYWlyYW0wMSIsImEiOiJjbXB4bngxdWwwMWI2MnBzZ3p2dGM3bW5rIn0.8qCkSAodMjGVg6qhiCZHzw";
 
 // One fresh sessionId per real search (new destination/dates) — keeps rates
 // consistent listing→detail when liteAPI's price-consistency feature is on.
@@ -13,1330 +22,1196 @@ function genSessionId() {
   return `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
-// Verified placeIds for major destinations — instant, reliable lookup,
-// avoids depending on /suggest (and its name-matching) for common cities.
-const CITY_PLACE_IDS: Record<string, string> = {
-  "dubai": "ChIJRcbZaklDXz4RYlEphFBu5r0",
-  "maldives": "ChIJvXv7qr-ZtSQRiWKVgeEJRUE",
-  "bali": "ChIJoQ8Q6NNB0S0RkOYkS7EPkSQ",
-  "bangkok": "ChIJ82ENKDJgHTERIEjiXbIAAQE",
-  "new delhi": "ChIJLbZ-NFv9DDkRQJY4FbcFcgM",
-  "delhi": "ChIJLbZ-NFv9DDkRQJY4FbcFcgM",
-  "goa": "ChIJQbc2YxC6vzsRkkDzYv-H-Oo",
-  "singapore": "ChIJdZOLiiMR2jERxPWrUs9peIg",
-  "london": "ChIJdd4hrwug2EcRmSrV3Vo6llI",
-  "mumbai": "ChIJwe1EZjDG5zsRaYxkjY_tpF0",
-  "abu dhabi": "ChIJufI-cg9EXj4RCBGXQZMuzMc",
-};
-const MAPBOX_TOKEN = "pk.eyJ1Ijoib21zYWlyYW0wMSIsImEiOiJjbXB4bngxdWwwMWI2MnBzZ3p2dGM3bW5rIn0.8qCkSAodMjGVg6qhiCZHzw";
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-const B = "#1447b8";
-const NAVY = "#0f172a";
-const YELLOW = "#FCD34D";
-
-// ── Haversine distance ────────────────────────────────────────────────────────
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-function formatDistance(km: number): string {
-  return km < 1 ? `${Math.round(km*1000)} m` : `${km.toFixed(1)} km`;
+// Builds a flag emoji from a 2-letter ISO country code — no hardcoded lookup table needed.
+function countryCodeToFlag(cc?: string): string {
+  if (!cc || cc.length !== 2) return "";
+  const code = cc.toUpperCase();
+  return String.fromCodePoint(...code.split("").map(c => 0x1F1E6 + (c.charCodeAt(0) - 65)));
 }
 
-const DESTINATIONS: { label: string; key: string; flag: string; country: string; city: string }[] = [
-  { label:"Dubai", key:"dubai", flag:"🇦🇪", country:"AE", city:"Dubai" },
-  { label:"Abu Dhabi", key:"abu dhabi", flag:"🇦🇪", country:"AE", city:"Abu Dhabi" },
-  { label:"Sharjah", key:"sharjah", flag:"🇦🇪", country:"AE", city:"Sharjah" },
-  { label:"New Delhi", key:"new delhi", flag:"🇮🇳", country:"IN", city:"New Delhi" },
-  { label:"Mumbai", key:"mumbai", flag:"🇮🇳", country:"IN", city:"Mumbai" },
-  { label:"Goa", key:"goa", flag:"🇮🇳", country:"IN", city:"Goa" },
-  { label:"Bangalore", key:"bangalore", flag:"🇮🇳", country:"IN", city:"Bangalore" },
-  { label:"Chennai", key:"chennai", flag:"🇮🇳", country:"IN", city:"Chennai" },
-  { label:"Kolkata", key:"kolkata", flag:"🇮🇳", country:"IN", city:"Kolkata" },
-  { label:"Hyderabad", key:"hyderabad", flag:"🇮🇳", country:"IN", city:"Hyderabad" },
-  { label:"Jaipur", key:"jaipur", flag:"🇮🇳", country:"IN", city:"Jaipur" },
-  { label:"Kochi", key:"kochi", flag:"🇮🇳", country:"IN", city:"Kochi" },
-  { label:"Agra", key:"agra", flag:"🇮🇳", country:"IN", city:"Agra" },
-  { label:"Singapore", key:"singapore", flag:"🇸🇬", country:"SG", city:"Singapore" },
-  { label:"Bangkok", key:"bangkok", flag:"🇹🇭", country:"TH", city:"Bangkok" },
-  { label:"Phuket", key:"phuket", flag:"🇹🇭", country:"TH", city:"Phuket" },
-  { label:"Bali", key:"bali", flag:"🇮🇩", country:"ID", city:"Bali" },
-  { label:"Kuala Lumpur", key:"kuala lumpur", flag:"🇲🇾", country:"MY", city:"Kuala Lumpur" },
-  { label:"London", key:"london", flag:"🇬🇧", country:"GB", city:"London" },
-  { label:"Paris", key:"paris", flag:"🇫🇷", country:"FR", city:"Paris" },
-  { label:"Rome", key:"rome", flag:"🇮🇹", country:"IT", city:"Rome" },
-  { label:"Barcelona", key:"barcelona", flag:"🇪🇸", country:"ES", city:"Barcelona" },
-  { label:"Amsterdam", key:"amsterdam", flag:"🇳🇱", country:"NL", city:"Amsterdam" },
-  { label:"Istanbul", key:"istanbul", flag:"🇹🇷", country:"TR", city:"Istanbul" },
-  { label:"Tokyo", key:"tokyo", flag:"🇯🇵", country:"JP", city:"Tokyo" },
-  { label:"Hong Kong", key:"hong kong", flag:"🇭🇰", country:"HK", city:"Hong Kong" },
-  { label:"Seoul", key:"seoul", flag:"🇰🇷", country:"KR", city:"Seoul" },
-  { label:"Sydney", key:"sydney", flag:"🇦🇺", country:"AU", city:"Sydney" },
-  { label:"New York", key:"new york", flag:"🇺🇸", country:"US", city:"New York" },
-  { label:"Doha", key:"doha", flag:"🇶🇦", country:"QA", city:"Doha" },
-  { label:"Riyadh", key:"riyadh", flag:"🇸🇦", country:"SA", city:"Riyadh" },
-  { label:"Muscat", key:"muscat", flag:"🇴🇲", country:"OM", city:"Muscat" },
-  { label:"Maldives", key:"maldives", flag:"🇲🇻", country:"MV", city:"Male" },
-  { label:"Cairo", key:"cairo", flag:"🇪🇬", country:"EG", city:"Cairo" },
-];
-
-// [name, minLat, maxLat, minLng, maxLng]
-const ALL_CITY_AREAS: Record<string,[string,number,number,number,number][]> = {
-  dubai: [
-    ["Palm Jumeirah",25.095,25.135,55.117,55.168],
-    ["Dubai Marina",25.062,25.092,55.128,55.162],
-    ["JBR – Jumeirah Beach Residence",25.070,25.090,55.118,55.142],
-    ["Downtown Dubai",25.182,25.205,55.268,55.298],
-    ["Business Bay",25.170,25.195,55.275,55.315],
-    ["DIFC",25.204,25.222,55.268,55.288],
-    ["Deira",25.252,25.295,55.290,55.345],
-    ["Bur Dubai",25.225,25.262,55.275,55.322],
-    ["Sheikh Zayed Road",25.198,25.232,55.258,55.288],
-    ["Al Barsha",25.090,25.135,55.162,55.215],
-    ["Jumeirah",25.152,25.208,55.212,55.268],
-    ["Dubai Creek Harbour",25.192,25.228,55.325,55.368],
-    ["City Walk",25.192,25.218,55.242,55.272],
-    ["Dubai Hills Estate",25.112,25.158,55.218,55.272],
-    ["Festival City",25.218,25.252,55.348,55.388],
-    ["Jebel Ali",24.965,25.042,55.035,55.125],
-    ["Al Quoz",25.138,25.175,55.218,55.258],
-    ["Mirdif",25.215,25.248,55.395,55.438],
-    ["Al Nahda",25.270,25.302,55.362,55.398],
-    ["International City",25.158,25.192,55.398,55.438],
-    ["Al Rashidiya",25.228,25.262,55.378,55.415],
-    ["Oud Metha",25.228,25.248,55.308,55.332],
-    ["Al Karama",25.238,25.258,55.295,55.322],
-  ],
-  "abu dhabi": [
-    ["Corniche",24.461,24.490,54.320,54.380],["Yas Island",24.480,24.510,54.580,54.640],
-    ["Saadiyat Island",24.530,24.560,54.420,54.480],["Al Reem Island",24.490,24.520,54.390,54.430],
-    ["Downtown Abu Dhabi",24.470,24.500,54.350,54.400],["Al Maryah Island",24.495,24.515,54.380,54.410],
-  ],
-  singapore: [
-    ["Orchard Road",1.295,1.320,103.820,103.845],["Marina Bay",1.270,1.295,103.845,103.875],
-    ["Clarke Quay",1.285,1.300,103.840,103.860],["Sentosa",1.235,1.260,103.815,103.850],
-    ["Bugis",1.295,1.315,103.850,103.870],["Little India",1.300,1.320,103.845,103.865],
-    ["Chinatown",1.278,1.295,103.838,103.855],["Jurong",1.330,1.360,103.695,103.740],
-    ["Changi",1.345,1.380,103.970,104.010],["Harbourfront",1.258,1.275,103.815,103.835],
-  ],
-  bangkok: [
-    ["Sukhumvit",13.715,13.750,100.545,100.590],["Silom",13.715,13.735,100.515,100.545],
-    ["Siam",13.740,13.760,100.525,100.550],["Khao San Road",13.750,13.770,100.490,100.510],
-    ["Asok",13.728,13.748,100.555,100.575],["Chatuchak",13.790,13.820,100.540,100.565],
-    ["Riverside",13.720,13.745,100.490,100.520],
-  ],
-  phuket: [
-    ["Patong Beach",7.875,7.920,98.280,98.320],["Kata Beach",7.815,7.855,98.285,98.315],
-    ["Karon Beach",7.845,7.880,98.285,98.310],["Phuket Town",7.875,7.910,98.375,98.410],
-    ["Kamala Beach",7.940,7.975,98.255,98.285],["Surin Beach",7.975,8.010,98.255,98.285],
-  ],
-  bali: [
-    ["Kuta",-8.740,-8.700,115.155,115.185],["Seminyak",-8.700,-8.670,115.150,115.180],
-    ["Canggu",-8.660,-8.630,115.125,115.165],["Ubud",-8.525,-8.485,115.250,115.290],
-    ["Nusa Dua",-8.815,-8.775,115.215,115.255],["Jimbaran",-8.800,-8.760,115.145,115.185],
-    ["Seminyak",-8.700,-8.670,115.150,115.180],
-  ],
-  "kuala lumpur": [
-    ["KLCC",3.148,3.168,101.705,101.725],["Bukit Bintang",3.140,3.158,101.705,101.725],
-    ["Bangsar",3.118,3.140,101.668,101.695],["Mont Kiara",3.168,3.195,101.650,101.680],
-    ["Petaling Jaya",3.090,3.120,101.625,101.660],["Chow Kit",3.160,3.180,101.690,101.715],
-  ],
-  london: [
-    ["Mayfair",51.503,51.520,-0.160,-0.130],["Soho",51.508,51.520,-0.140,-0.120],
-    ["Covent Garden",51.508,51.520,-0.130,-0.110],["Shoreditch",51.518,51.535,-0.085,-0.060],
-    ["Kensington",51.492,51.510,-0.205,-0.175],["Canary Wharf",51.498,51.512,-0.030,-0.005],
-    ["Westminster",51.495,51.512,-0.140,-0.110],["Camden",51.530,51.550,-0.155,-0.130],
-  ],
-  paris: [
-    ["Eiffel Tower Area",48.847,48.868,2.285,2.310],["Champs-Élysées",48.864,48.882,2.290,2.320],
-    ["Le Marais",48.852,48.868,2.345,2.370],["Montmartre",48.880,48.900,2.330,2.360],
-    ["Latin Quarter",48.845,48.862,2.340,2.360],["Saint-Germain",48.848,48.862,2.325,2.345],
-    ["Opera",48.866,48.880,2.325,2.350],
-  ],
-  rome: [
-    ["Colosseum Area",41.883,41.900,12.482,12.502],["Vatican",41.895,41.912,12.445,12.465],
-    ["Trastevere",41.882,41.898,12.462,12.482],["Termini",41.894,41.910,12.492,12.512],
-    ["Spanish Steps",41.904,41.918,12.477,12.495],["Navona",41.895,41.910,12.468,12.482],
-  ],
-  barcelona: [
-    ["Gothic Quarter",41.378,41.392,2.168,2.185],["Eixample",41.385,41.405,2.145,2.175],
-    ["Barceloneta",41.374,41.388,2.183,2.200],["Gracia",41.400,41.420,2.148,2.168],
-    ["Sagrada Familia Area",41.400,41.415,2.168,2.188],["El Born",41.382,41.396,2.178,2.195],
-  ],
-  amsterdam: [
-    ["City Centre",52.368,52.382,4.888,4.910],["Jordaan",52.370,52.385,4.878,4.898],
-    ["De Pijp",52.350,52.368,4.888,4.908],["Leidseplein",52.360,52.375,4.876,4.896],
-    ["Museumplein",52.355,52.370,4.874,4.896],["Amsterdam Noord",52.385,52.410,4.885,4.920],
-  ],
-  istanbul: [
-    ["Sultanahmet",41.004,41.020,28.970,28.992],["Taksim",41.034,41.050,28.978,28.998],
-    ["Beyoglu",41.028,41.044,28.970,28.990],["Besiktas",41.040,41.058,29.000,29.025],
-    ["Kadikoy",40.980,40.998,29.020,29.042],["Sisli",41.052,41.068,28.980,29.000],
-  ],
-  tokyo: [
-    ["Shinjuku",35.685,35.705,139.688,139.715],["Shibuya",35.652,35.670,139.692,139.715],
-    ["Asakusa",35.706,35.724,139.788,139.812],["Ginza",35.664,35.678,139.758,139.778],
-    ["Akihabara",35.694,35.710,139.768,139.788],["Roppongi",35.655,35.672,139.725,139.745],
-    ["Ikebukuro",35.726,35.742,139.706,139.726],["Odaiba",35.620,35.638,139.768,139.792],
-  ],
-  "hong kong": [
-    ["Tsim Sha Tsui",22.292,22.310,114.165,114.185],["Central",22.278,22.295,114.152,114.172],
-    ["Mong Kok",22.312,22.328,114.162,114.178],["Causeway Bay",22.276,22.292,114.178,114.198],
-    ["Wan Chai",22.274,22.290,114.168,114.188],["Kowloon",22.305,22.325,114.155,114.185],
-  ],
-  seoul: [
-    ["Gangnam",37.495,37.520,127.018,127.055],["Myeongdong",37.558,37.575,126.978,126.998],
-    ["Hongdae",37.548,37.565,126.918,126.938],["Insadong",37.570,37.585,126.982,126.998],
-    ["Itaewon",37.532,37.550,126.988,127.008],["Dongdaemun",37.566,37.582,127.002,127.022],
-  ],
-  sydney: [
-    ["CBD",-33.875,-33.858,151.198,151.218],["Darling Harbour",-33.878,-33.862,151.195,151.210],
-    ["Bondi Beach",-33.900,-33.882,151.268,151.290],["Manly",-33.802,-33.784,151.278,151.300],
-    ["The Rocks",-33.862,-33.848,151.200,151.215],["Surry Hills",-33.890,-33.872,151.205,151.225],
-  ],
-  "new york": [
-    ["Midtown",40.748,40.768,-73.995,-73.970],["Times Square Area",40.752,40.768,-73.995,-73.978],
-    ["Upper East Side",40.768,40.790,-73.968,-73.948],["Brooklyn",40.668,40.700,-73.998,-73.960],
-    ["SoHo",40.720,40.738,-74.008,-73.988],["Chelsea",40.738,40.755,-74.008,-73.988],
-    ["Financial District",40.702,40.720,-74.020,-74.000],
-  ],
-  mumbai: [
-    ["Bandra",19.048,19.072,72.818,72.842],["Juhu",19.088,19.112,72.815,72.840],
-    ["Colaba",18.895,18.920,72.808,72.832],["Andheri",19.102,19.128,72.855,72.880],
-    ["Lower Parel",18.988,19.008,72.818,72.838],["BKC",19.054,19.078,72.858,72.882],
-    ["Powai",19.108,19.132,72.895,72.920],["Worli",18.998,19.020,72.808,72.828],
-  ],
-  "new delhi": [
-    ["Connaught Place",28.622,28.640,77.208,77.228],["Aerocity",28.548,28.566,77.104,77.126],
-    ["Hauz Khas",28.542,28.560,77.192,77.212],["Lajpat Nagar",28.564,28.582,77.230,77.250],
-    ["Karol Bagh",28.644,28.660,77.182,77.202],["Saket",28.520,28.540,77.202,77.222],
-    ["Dwarka",28.568,28.598,77.038,77.078],["Nehru Place",28.544,28.562,77.245,77.265],
-  ],
-  bangalore: [
-    ["MG Road",12.972,12.988,77.608,77.628],["Whitefield",12.968,12.998,77.730,77.760],
-    ["Koramangala",12.924,12.944,77.618,77.645],["Indiranagar",12.972,12.990,77.638,77.658],
-    ["Electronic City",12.840,12.870,77.658,77.688],["Hebbal",13.032,13.055,77.588,77.612],
-    ["Yelahanka",13.090,13.120,77.578,77.608],
-  ],
-  doha: [
-    ["West Bay",25.315,25.340,51.520,51.548],["The Pearl",25.368,25.392,51.540,51.568],
-    ["Souq Waqif",25.285,25.302,51.530,51.548],["Lusail",25.400,25.430,51.500,51.535],
-    ["Al Waab",25.248,25.268,51.445,51.468],
-  ],
-  cairo: [
-    ["Downtown",30.042,30.062,31.230,31.252],["Zamalek",30.058,30.075,31.215,31.232],
-    ["Giza Pyramids Area",29.968,29.990,31.120,31.145],["Heliopolis",30.085,30.108,31.318,31.342],
-    ["Maadi",29.960,29.980,31.245,31.268],
-  ],
-  riyadh: [
-    ["Al Olaya",24.688,24.710,46.678,46.702],["Al Malaz",24.670,24.692,46.720,46.745],
-    ["Diplomatic Quarter",24.685,24.710,46.595,46.625],["King Abdullah Road",24.720,24.748,46.648,46.678],
-  ],
-  muscat: [
-    ["Muttrah",23.612,23.632,58.582,58.605],["Al Qurum",23.588,23.610,58.525,58.550],
-    ["Al Khuwair",23.595,23.618,58.488,58.512],["Madinat Qaboos",23.578,23.600,58.462,58.488],
-  ],
-  goa: [
-    ["North Goa",15.490,15.560,73.740,73.790],["Calangute",15.535,15.558,73.752,73.775],
-    ["Baga",15.548,15.572,73.748,73.772],["Anjuna",15.572,15.595,73.732,73.758],
-    ["South Goa",15.200,15.320,73.920,73.980],["Panjim",15.490,15.510,73.820,73.845],
-  ],
-  chennai: [
-    ["T Nagar",13.035,13.052,80.228,80.248],["Adyar",13.000,13.020,80.248,80.268],
-    ["Anna Nagar",13.068,13.088,80.198,80.218],["Egmore",13.070,13.088,80.255,80.275],
-    ["ECR",12.840,12.960,80.235,80.265],["OMR",12.870,12.980,80.218,80.248],
-  ],
-  kolkata: [
-    ["Park Street",22.548,22.565,88.348,88.368],["Salt Lake",22.568,22.592,88.388,88.415],
-    ["New Town",22.572,22.602,88.440,88.472],["Howrah",22.578,22.600,88.295,88.325],
-    ["Ballygunge",22.520,22.540,88.355,88.378],
-  ],
-  hyderabad: [
-    ["Banjara Hills",17.408,17.428,78.438,78.460],["Jubilee Hills",17.418,17.440,78.402,78.428],
-    ["HITEC City",17.438,17.458,78.370,78.395],["Secunderabad",17.438,17.460,78.490,78.518],
-    ["Gachibowli",17.430,17.452,78.348,78.372],["Old City",17.348,17.370,78.468,78.492],
-  ],
-  jaipur: [
-    ["Old City",26.920,26.942,75.820,75.845],["C-Scheme",26.888,26.908,75.795,75.820],
-    ["Malviya Nagar",26.852,26.872,75.800,75.825],["Vaishali Nagar",26.908,26.928,75.745,75.770],
-  ],
-  kochi: [
-    ["Fort Kochi",9.960,9.980,76.230,76.252],["Ernakulam",9.978,9.998,76.278,76.302],
-    ["Marine Drive",9.978,9.998,76.285,76.308],["Aluva",10.098,10.118,76.348,76.372],
-  ],
-  agra: [
-    ["Taj Mahal Area",27.168,27.188,78.038,78.062],["Fatehabad Road",27.158,27.178,78.025,78.050],
-    ["Civil Lines",27.175,27.195,78.000,78.025],
-  ],
-  maldives: [
-    ["Male City",4.168,4.188,73.505,73.530],["North Male Atoll",4.200,4.350,73.400,73.600],
-    ["South Male Atoll",3.800,4.050,73.400,73.600],
-  ],
-};
-
-const CITY_LOCATIONS: Record<string, string[]> = {
-  "abu dhabi": ["Yas Island", "Saadiyat Island", "Al Maryah Island", "Corniche", "Downtown Abu Dhabi", "Al Khalidiyah", "Al Zahiyah", "Khalifa City", "Yas Marina"],
-  "adelaide": ["Adelaide CBD", "Glenelg Beachfront", "North Adelaide", "Norwood", "Hahndorf"],
-  "agadir": ["Agadir Beachfront", "Cite Founty", "City Centre", "Talborjt", "Marina Agadir"],
-  "agra": ["Taj Ganj", "Fatehabad Road", "Sanjay Place", "Sadar Bazaar", "Rakabganj", "Sikandra", "Dayalbagh", "Cantonment"],
-  "ahmedabad": ["Ashram Road", "SG Highway", "Satellite", "Vastrapur", "CG Road", "Prahlad Nagar", "Bodakdev", "Navrangpura", "Ellisbridge", "Sabarmati"],
-  "ajman": ["Ajman Corniche", "Al Rashidiya", "Al Nuaimiya", "Al Rawda", "Al Bustan", "Al Mowaihat", "Al Jurf"],
-  "alexandria": ["Corniche", "Al Manshiyah", "Stanley", "El Montaza", "Smouha", "Maamoura", "San Stefano", "Sidi Gaber"],
-  "algarve": ["Albufeira Old Town", "Vilamoura Marina", "Lagos Marina", "Faro Centro", "Carvoeiro", "Portimao", "Tavira", "Sagres"],
-  "almaty": ["Almalinsky Downtown", "Medeusky District", "Bostandyksky", "Kok Tobe", "Republic Square"],
-  "amalfi": ["Amalfi Town Centre", "Atrani", "Marina Grande", "Valle dei Mulini"],
-  "amman": ["Abdali", "Jabal Amman", "Sweifieh", "Al Shmeisani", "Weibdeh", "Seventh Circle", "Third Circle", "Khalda"],
-  "amritsar": ["Golden Temple", "Ranjit Avenue", "Town Hall", "Hall Bazaar", "Lawrence Road", "GT Road", "Civil Lines"],
-  "amsterdam": ["Centrum Canal Ring", "Jordaan", "De Pijp", "Oud-West", "Amsterdam Noord", "Museumquarter", "Plantage"],
-  "andaman islands": ["Port Blair", "Havelock Island", "Neil Island", "Baratang", "Diglipur", "Mayabunder"],
-  "antalya": ["Kaleici Old Town", "Lara Beach", "Konyaalti Beachfront", "Antalya City Centre", "Kepez", "Muratpasa"],
-  "aqaba": ["Aqaba City Centre", "Tala Bay", "Al-Ghandour Beach", "Marina Square", "North Beach"],
-  "athens": ["Plaka", "Monastiraki", "Syntagma", "Koukaki", "Psiri", "Kolonaki", "Glyfada", "Thissio"],
-  "auckland": ["Auckland CBD", "Viaduct Harbour", "Ponsonby", "Parnell", "Newmarket", "Britomart", "Devonport"],
-  "bagan": ["Old Bagan", "New Bagan", "Nyaung-U", "Wetkyi-In", "Myinkaba"],
-  "baku": ["Icherisheher Old City", "Baku Boulevard", "Sabayil", "Yasamal", "Nasimi", "Narimanov"],
-  "bali": ["Kuta", "Seminyak", "Canggu", "Ubud", "Nusa Dua", "Jimbaran", "Legian", "Sanur", "Uluwatu", "Lovina"],
-  "bandar seri begawan": ["Kianggeh Downtown", "Gadong Shopping", "Kampong Ayer", "Berakas", "Kiulap", "Jerudong"],
-  "bangalore": ["Indiranagar", "Koramangala", "MG Road", "Whitefield", "Electronic City", "Jayanagar", "HSR Layout", "Malleshwaram", "Marathahalli", "Hebbal", "Yelahanka"],
-  "bangkok": ["Sukhumvit", "Silom", "Siam", "Khao San Road", "Asok", "Chatuchak", "Riverside", "Ratchada", "Ekkamai", "Thong Lo"],
-  "barbados": ["St. Lawrence Gap", "Bridgetown Downtown", "Holetown West Coast", "Oistins", "Hastings"],
-  "barcelona": ["Gothic Quarter", "Eixample", "El Born", "El Raval", "Gracia", "Barceloneta", "Poblenou", "Sants"],
-  "batumi": ["Old Batumi", "Batumi Boulevard", "New Boulevard", "Sherif Khimshiashvili Street"],
-  "beijing": ["Wangfujing", "Sanlitun", "Forbidden City", "Chaoyang CBD", "Qianmen", "Houhai", "Xidan", "Zhongguancun"],
-  "beirut": ["Hamra", "Ashrafieh", "Downtown", "Mar Mikhael", "Gemmayzeh", "Raouche", "Verdun", "Badaro"],
-  "bengaluru": ["Indiranagar", "Koramangala", "MG Road", "Whitefield", "Electronic City", "Jayanagar", "HSR Layout", "Malleshwaram", "Marathahalli", "Hebbal"],
-  "bergen": ["Bryggen Historic Wharf", "Bergen Sentrum", "Nordnes", "Sandviken", "Arstad"],
-  "berlin": ["Mitte", "Kreuzberg", "Prenzlauer Berg", "Friedrichshain", "Charlottenburg", "Neukolln", "Schoneberg", "Tiergarten"],
-  "bern": ["Innere Stadt Old Town", "Breitenrain-Lorraine", "Kirchenfeld-Schosshalde", "Mattenhof-Weissenbuehl"],
-  "bhopal": ["Arera Colony", "MP Nagar", "Shamla Hills", "TT Nagar", "Misrod", "Koh-e-Fiza", "Govindpura"],
-  "bhubaneswar": ["Jayadev Vihar", "Nayapalli", "Master Canteen Square", "Patia", "Cuttack Road", "Sahid Nagar"],
-  "birmingham": ["City Centre Bullring", "Jewellery Quarter", "Brindleyplace", "Digbeth", "Edgbaston", "Mailbox"],
-  "bishkek": ["Ala-Too Square", "Chuy Avenue", "Erkindik Boulevard", "Osh Bazaar", "Pervomaysky", "Leninsky"],
-  "bled": ["Lake Bled Waterfront", "Bled Center", "Mlino", "Grad Castle Hill", "Recica"],
-  "bodrum": ["Bodrum Town Centre", "Gumbet", "Bitez", "Yalikavak Marina", "Turgutreis", "Turkbuku", "Ortakent"],
-  "bogota": ["La Candelaria Historic", "Zona Rosa", "Parque de la 93", "Chapinero", "Usaquen"],
-  "bologna": ["Centro Storico Piazza Maggiore", "Bolognina", "San Donato", "Santo Stefano"],
-  "boracay": ["White Beach Station 1", "White Beach Station 2", "White Beach Station 3", "Bulabog Beach", "Diniwid Beach", "Yapak"],
-  "bordeaux": ["Centre Ville", "Chartrons", "Saint-Michel", "Bastide", "Gare Saint-Jean", "Les Bassins a Flot"],
-  "boston": ["Back Bay", "Downtown Faneuil Hall", "North End", "South End", "Beacon Hill", "Seaport District", "Cambridge Harvard"],
-  "brisbane": ["Brisbane CBD", "South Bank", "Fortitude Valley", "West End", "Spring Hill", "New Farm", "Kangaroo Point"],
-  "brno": ["Brno-stred City Centre", "Veveri", "Kralovo Pole", "Zabrdovice", "Stare Brno"],
-  "bruges": ["Historic Centre Markt", "Sint-Anna", "Sint-Gilles", "Steenstraat", "Bruges Station"],
-  "brussels": ["Grand Place City Centre", "European Quarter", "Ixelles", "Saint-Gilles", "Sablon", "Louise", "Atomium"],
-  "budapest": ["District V Belvaros", "District VI Terezvaros", "Jewish Quarter", "Castle District", "District VIII Jozsefvaros", "Ferencvaros"],
-  "buenos aires": ["Palermo Soho", "Palermo Hollywood", "Recoleta", "San Telmo", "Puerto Madero", "Microcentro", "Retiro"],
-  "busan": ["Haeundae Beach", "Seomyeon", "Nampo-dong", "Gwangalli Beach", "Centum City"],
-  "cairns": ["Cairns Esplanade", "Cairns CBD", "Palm Cove", "Trinity Beach", "Cairns North"],
-  "cairo": ["Zamalek", "Garden City", "Downtown Cairo", "Giza", "Heliopolis", "Maadi", "New Cairo", "Nasr City", "Dokki", "Mohandessin"],
-  "calgary": ["Downtown Calgary", "Beltline", "Kensington", "Inglewood", "17th Avenue SW"],
-  "cambridge": ["City Centre Market", "Chesterton", "Mill Road", "Trumpington", "Newnham"],
-  "cancun": ["Zona Hotelera", "El Centro Downtown", "Puerto Juarez", "Playa Mujeres"],
-  "cannes": ["La Croisette", "Le Suquet Old Town", "Rue d'Antibes", "Pointe Croisette", "Carnot"],
-  "cape town": ["V&A Waterfront", "Green Point", "Sea Point", "Camps Bay", "Cape Town CBD", "Woodstock", "Constantia", "Clifton", "Hout Bay"],
-  "cappadocia": ["Goreme", "Urgup", "Uchisar", "Avanos", "Ortahisar", "Cavusin", "Mustafapasa"],
-  "cartagena": ["Walled City", "Bocagrande", "Getsemani", "San Diego", "El Laguito"],
-  "casablanca": ["Sour Djedid", "Gauthier", "Maarif", "Anfa", "Bourgogne", "Corniche Ain Diab", "Habous", "City Centre"],
-  "cebu": ["Cebu Business Park", "IT Park Lahug", "Fuente Osmena", "Mactan Beachfront", "Mandaue", "Colon Street"],
-  "chandigarh": ["Sector 17", "Sector 35", "Sector 22", "Sector 43", "Sector 8", "Sukhna Lake", "Sector 26"],
-  "chengdu": ["Chunxi Road", "Tianfu Square", "Jinjiang District", "Wuhou District", "Qingyang", "Hi-Tech Zone"],
-  "chennai": ["T Nagar", "Nungambakkam", "Mylapore", "Adyar", "OMR", "Velachery", "Anna Nagar", "Egmore", "Guindy", "Royapettah", "ECR", "Marina Beach"],
-  "chiang mai": ["Old City Moat", "Nimman Road", "Chang Puak", "Riverside", "Santitham", "Night Bazaar", "Hang Dong", "Doi Suthep"],
-  "chicago": ["The Loop", "Magnificent Mile", "River North", "Lincoln Park", "Wicker Park", "West Loop", "Gold Coast", "Streeterville"],
-  "christchurch": ["Christchurch Central City", "Riccarton", "Merivale", "Addington", "Lyttelton"],
-  "coimbatore": ["Peelamedu", "RS Puram", "Gandhipuram", "Race Course Road", "Saibaba Colony", "Ramanathapuram"],
-  "cologne": ["Altstadt-Nord Cathedral", "Altstadt-Sud", "Ehrenfeld", "Belgisches Viertel", "Deutz"],
-  "colombo": ["Fort", "Colombo 3 Kollupitiya", "Bambalapitiya", "Wellawatte", "Dehiwala", "Mount Lavinia", "Pettah", "Borella"],
-  "copenhagen": ["Nyhavn", "Indre By City Centre", "Vesterbro", "Norrebro", "Osterbro", "Christianshavn", "Frederiksberg"],
-  "corfu": ["Corfu Town Historic", "Kavos", "Paleokastritsa", "Sidari", "Kassiopi", "Gouvia", "Benitses"],
-  "crete": ["Chania Old Town", "Heraklion Centro", "Rethymno Old Town", "Elounda", "Agios Nikolaos", "Hersonissos"],
-  "da nang": ["My Khe Beach", "Hai Chau Downtown", "Son Tra Peninsula", "Marble Mountains", "Lien Chieu", "Hoa Vang"],
-  "dammam": ["Dammam Corniche", "Al Shatea", "Al Hamra", "Al Faisaliyah", "Downtown Dammam", "Al Nour"],
-  "dar es salaam": ["Kivukoni", "Masaki", "Oyster Bay", "Mikocheni", "Upanga", "Kariakoo", "City Centre", "Mbezi Beach", "Msasani Peninsula"],
-  "darjeeling": ["Chauk Bazaar", "Gandhi Road", "Chowrasta Mall", "Lebong", "Ghoom", "Peace Pagoda", "Happy Valley"],
-  "darwin": ["Darwin CBD", "Waterfront Precinct", "Cullen Bay", "Fannie Bay", "Parap"],
-  "delhi": ["Connaught Place", "Karol Bagh", "South Extension", "Saket", "Aerocity", "Paharganj", "Chandni Chowk", "Dwarka", "Rajouri Garden", "Vasant Kunj", "Chanakyapuri", "Greater Kailash"],
-  "dhaka": ["Gulshan", "Banani", "Dhanmondi", "Uttara", "Motijheel", "Mirpur", "Bashundhara"],
-  "doha": ["West Bay", "The Pearl", "Msheireb Downtown", "Souq Waqif", "Al Sadd", "Lusail", "Katara Cultural Village", "Diplomatic Area"],
-  "dubai": ["Downtown Dubai", "Dubai Marina", "Palm Jumeirah", "Deira", "Bur Dubai", "JBR", "Al Barsha", "Business Bay", "Sheikh Zayed Road", "Jumeirah", "Al Fahidi", "Trade Centre"],
-  "dublin": ["Temple Bar", "Grafton Street", "O'Connell Street", "Portobello", "Docklands", "Smithfield", "Ranelagh", "Ballsbridge"],
-  "dubrovnik": ["Old Town", "Lapad Peninsula", "Babin Kuk", "Ploce", "Gruz Port", "Pile"],
-  "durban": ["Golden Mile", "Umhlanga Rocks", "Durban North", "Morningside", "Musgrave", "Ballito Village"],
-  "dusseldorf": ["Altstadt Old Town", "Stadtmitte", "MedienHafen", "Unterbilk", "Pempelfort"],
-  "edinburgh": ["Old Town", "New Town", "Leith", "Stockbridge", "Haymarket", "West End", "Bruntsfield", "Holyrood"],
-  "fes": ["Fes El Bali", "Fes El Jdid", "Ville Nouvelle", "Narjiss", "Atlas"],
-  "fiji": ["Denarau Island", "Nadi Downtown", "Coral Coast", "Suva CBD", "Mamanuca Islands", "Yasawa Islands"],
-  "florence": ["Duomo Centro", "Santa Maria Novella", "Santa Croce", "San Lorenzo", "Oltrarno", "San Marco"],
-  "frankfurt": ["Innenstadt", "Bahnhofsviertel", "Sachsenhausen", "Westend", "Bornheim", "Gallus"],
-  "fujairah": ["Al Aqah", "Fujairah City Centre", "Dibba Al-Fujairah", "Al Faseel", "Khor Fakkan", "Al Gurf", "Mirbah"],
-  "fukuoka": ["Hakata Station", "Tenjin Downtown", "Nakasu", "Chuo Ward", "Momochi Beach"],
-  "galapagos": ["Puerto Ayora Santa Cruz", "Puerto Baquerizo Moreno", "Puerto Villamil Isabela"],
-  "galle": ["Galle Fort", "Unawatuna", "Hikkaduwa", "Koggala", "Ahangama", "Midigama"],
-  "geneva": ["Paquis Lakefront", "Geneva Old Town", "Plainpalais", "Eaux-Vives", "Carouge"],
-  "glasgow": ["City Centre", "West End Hillhead", "Merchant City", "Finnieston", "Southside", "East End"],
-  "goa": ["Calangute", "Baga", "Candolim", "Panaji", "Margao", "Anjuna", "Vagator", "Colva", "Palolem", "Morjim", "Arambol", "Dona Paula", "Bambolim"],
-  "gold coast": ["Surfers Paradise", "Broadbeach", "Burleigh Heads", "Main Beach", "Coolangatta", "Southport", "Mermaid Beach"],
-  "grand baie": ["Grand Baie Downtown", "Pereybere", "Pointe aux Canonniers", "Bain Boeuf", "Mont Choisy", "Trou aux Biches"],
-  "guangzhou": ["Tianhe CBD", "Yuexiu District", "Liwan", "Haizhu", "Panyu", "Huadu Airport", "Baiyun District"],
-  "guilin": ["Elephant Trunk Hill", "Diecai", "Seven Star Park", "Yanshan", "Yangshuo West Street", "Longji Terraces"],
-  "guwahati": ["Paltan Bazaar", "GS Road", "Gayanagar", "Dispur", "Khanapara", "Pan Bazaar", "Fancy Bazaar", "Kamakhya"],
-  "hamburg": ["Altona", "St. Pauli", "HafenCity", "Hamburg-Mitte", "St. Georg", "Sternschanze"],
-  "hanoi": ["Old Quarter", "Hoan Kiem", "Ba Dinh", "Tay Ho West Lake", "Hai Ba Trung", "Cau Giay", "Dong Da"],
-  "havana": ["Old Havana", "Vedado", "Centro Habana", "Miramar", "Playa"],
-  "helsinki": ["Kluuvi City Centre", "Kamppi", "Punavuori", "Kallio", "Toolo", "Katajanokka", "Ruoholahti"],
-  "hiroshima": ["Downtown Hondori", "Peace Memorial Park", "Hiroshima Station", "Naka Ward", "Miyajima Island"],
-  "ho chi minh city": ["District 1", "District 3", "Thao Dien", "District 5 Chinatown", "Phu My Hung", "Binh Thanh", "Tan Binh"],
-  "hoi an": ["Ancient Town", "An Bang Beach", "Cam Chau", "Cua Dai Beach", "Cam An"],
-  "hong kong": ["Tsim Sha Tsui", "Central", "Mong Kok", "Causeway Bay", "Wan Chai", "Sheung Wan", "Jordan", "Lantau"],
-  "honolulu": ["Waikiki Beachfront", "Downtown Honolulu", "Ala Moana", "Diamond Head", "Kakaako"],
-  "hua hin": ["Hua Hin Beach", "Hua Hin Town", "Khao Takiab", "Cha-am", "Pranburi"],
-  "hurghada": ["Sahl Hasheesh", "Makadi Bay", "El Gouna", "Soma Bay", "El Dahar", "Sheraton Road", "Hurghada Marina"],
-  "hyderabad": ["Gachibowli", "HITECH City", "Banjara Hills", "Jubilee Hills", "Madhapur", "Secunderabad", "Begumpet", "Abids", "Charminar", "Kukatpally", "Kondapur", "Ameerpet"],
-  "ibiza": ["Ibiza Town", "Playa d'en Bossa", "San Antonio", "Santa Eularia", "Talamanca"],
-  "indore": ["Vijay Nagar", "Palasia", "MG Road", "Rau", "Rajwada", "South Tukoganj", "Scheme 54"],
-  "innsbruck": ["Innsbruck Innenstadt", "Hotting", "Pradl", "Wilten", "Mariahilf"],
-  "interlaken": ["Interlaken West", "Interlaken Ost", "Hoheweg Main Strip", "Unterseen", "Matten"],
-  "islamabad": ["F-6 Supermarket", "F-7 Jinnah", "F-8", "Blue Area", "G-9 Karachi Company", "DHA", "Bahria Town"],
-  "istanbul": ["Sultanahmet", "Taksim / Beyoglu", "Karakoy", "Besiktas", "Kadikoy", "Nisantasi", "Sisli", "Ortakoy", "Eminonu"],
-  "izmir": ["Alsancak", "Konak Square", "Karsiyaka", "Bornova", "Cesme", "Urla", "Bayrakli"],
-  "jaipur": ["Pink City", "C Scheme", "Malviya Nagar", "Vaishali Nagar", "Mansarovar", "Bani Park", "Tonk Road", "Raja Park", "Amer", "MI Road", "Sitapura"],
-  "jaisalmer": ["Jaisalmer Fort", "Sam Sand Dunes", "Khuri Sand Dunes", "Gadi Sagar Lake", "Kishan Ghat", "Amar Sagar Pol"],
-  "jakarta": ["Sudirman SCBD", "Kuningan", "Menteng", "Kemang", "Kelapa Gading", "Grogol", "Serpong", "Senayan"],
-  "jeddah": ["Corniche", "Al Hamra", "Al Rawdah", "Al Tahlia Street", "Ash Shati", "Al Balad", "Al Naeem", "Al Salamah"],
-  "jeju": ["Jeju City Downtown", "Seogwipo", "Jungmun Tourist Complex", "Seongsan", "Aewol", "Hyeopjae Beach"],
-  "jerusalem": ["Old City", "Mamilla", "City Centre", "Nachlaot", "German Colony", "Yemin Moshe", "Ein Karem", "Rehavia"],
-  "jodhpur": ["Clock Tower", "Ratanada", "Sardarpura", "Mandore", "Paota", "Shastri Nagar", "Circuit House Road"],
-  "johannesburg": ["Sandton", "Rosebank", "Melrose Arch", "Maboneng", "Braamfontein", "Fourways", "OR Tambo Airport"],
-  "johor bahru": ["JB Sentral", "Bukit Indah", "Taman Mount Austin", "Tebrau", "Permas Jaya", "Danga Bay"],
-  "kandy": ["Kandy City Centre", "Peradeniya", "Katugastota", "Kundasale", "Digana", "Gampola"],
-  "karachi": ["Clifton", "Defence", "Korangi", "Gulshan-e-Iqbal", "Saddar", "North Nazimabad", "Malir"],
-  "kathmandu": ["Thamel", "Patan", "Bhaktapur", "Boudhanath", "Pashupatinath", "Sanepa", "Lazimpat", "Durbarmarg"],
-  "kochi": ["Fort Kochi", "Mattancherry", "Ernakulam South", "MG Road", "Marine Drive", "Edappally", "Kakkanad", "Vyttila", "Willingdon Island", "Kalamassery"],
-  "koh samui": ["Chaweng Beach", "Lamai Beach", "Fisherman's Village", "Maenam", "Choeng Mon", "Nathon", "Bang Rak"],
-  "kolkata": ["Park Street", "Salt Lake", "New Town", "Ballygunge", "Elgin Road", "Esplanade", "Alipore", "Chowringhee", "Gariahat", "Lake Town"],
-  "kota kinabalu": ["KK City Centre", "Tanjung Aru", "Likas", "Inanam", "Penampang", "Sutera Harbour"],
-  "krabi": ["Ao Nang", "Railay Beach", "Krabi Town", "Klong Muang", "Noppharat Thara"],
-  "krakow": ["Old Town Stare Miasto", "Kazimierz Jewish Quarter", "Podgorze", "Grzegorzki", "Krowodrza"],
-  "kuala lumpur": ["KLCC", "Bukit Bintang", "Bangsar", "Mont Kiara", "Chow Kit", "Petaling Jaya", "Damansara", "Ampang"],
-  "kuwait city": ["Salmiya", "Sharq", "Fahaheel", "Hawally", "Downtown", "Jabriya", "Mahboula"],
-  "kyoto": ["Gion", "Kawaramachi", "Kyoto Station", "Arashiyama", "Higashiyama", "Karasuma", "Fushimi"],
-  "labuan bajo": ["Labuan Bajo Town", "Komodo Harbour", "Batu Cermin", "Wae Bo", "Golo Mori"],
-  "lahore": ["Gulberg", "DHA", "Johar Town", "Model Town", "Old City", "Cantonment", "Bahria Town"],
-  "langkawi": ["Pantai Cenang", "Kuah Town", "Pantai Tengah", "Datai Bay", "Tanjung Rhu", "Pantai Kok"],
-  "las vegas": ["The Strip", "Downtown Fremont Street", "Henderson", "Summerlin", "Paradise Road"],
-  "leh": ["Leh Main Bazaar", "Changspa", "Fort Road", "Tukcha", "Spituk", "Nubra Valley"],
-  "leh ladakh": ["Leh Main Bazaar", "Changspa", "Fort Road", "Tukcha", "Housing Colony", "Spituk", "Nubra Valley"],
-  "lima": ["Miraflores", "Barranco", "San Isidro", "Historic Centre", "San Miguel"],
-  "lisbon": ["Baixa / Chiado", "Alfama", "Bairro Alto", "Belem", "Parque das Nacoes", "Principe Real", "Avenida da Liberdade", "Santos"],
-  "liverpool": ["Albert Dock", "Baltic Triangle", "City Centre Ropewalks", "Georgian Quarter", "Knowledge Quarter"],
-  "ljubljana": ["Old Town Center", "Trnovo", "Tabor", "Bezigrad", "Siska", "Krakovo"],
-  "lombok": ["Senggigi Beach", "Gili Trawangan", "Mataram", "Kuta Lombok", "Gili Meno", "Gili Air"],
-  "london": ["Westminster", "Covent Garden", "Soho", "Kensington", "Chelsea", "Paddington", "Bloomsbury", "Shoreditch", "Southwark", "Mayfair", "Camden", "City of London"],
-  "los angeles": ["Hollywood", "Santa Monica", "Venice Beach", "Downtown DTLA", "Beverly Hills", "West Hollywood", "Koreatown", "Pasadena", "Malibu"],
-  "los cabos": ["Cabo San Lucas Marina", "San Jose del Cabo", "Tourist Corridor", "Medano Beach"],
-  "luang prabang": ["Old Town Peninsula", "Mount Phousi", "Nam Khan Riverbank", "Mekong Riverfront", "Mano Road"],
-  "lucerne": ["Lucerne Old Town", "Neustadt Station", "Lucerne Lakefront", "Tribschen", "Littau"],
-  "luxor": ["East Bank Downtown", "West Bank", "El Kawther", "Nile Corniche", "Khalid Ibn El Walid Street"],
-  "lyon": ["Vieux Lyon", "Presqu'ile", "Croix-Rousse", "Part-Dieu", "Confluence", "Guillotiere", "Vaise"],
-  "maafushi": ["Maafushi Beach", "Maafushi Town", "Cocoa Island", "Biyadhoo", "Guraidhoo"],
-  "macau": ["Cotai Strip", "Macau Peninsula", "Taipa Village", "Coloane", "Fisherman's Wharf", "Outer Harbour"],
-  "machu picchu": ["Aguas Calientes", "Train Station Market", "Pachacutec Avenue"],
-  "madrid": ["Sol / Gran Via", "Malasana", "Chueca", "La Latina", "Lavapies", "Retiro", "Salamanca", "Chamberi"],
-  "mahe": ["Beau Vallon", "Eden Island", "Anse Royale", "Glacis", "Takamaka", "Bel Ombre", "Grand Anse", "Baie Lazare"],
-  "malaga": ["Centro Historico", "La Malagueta", "Soho Art District", "Pedregalejo", "Teatinos"],
-  "male": ["Male City", "Hulhumale", "North Male Atoll", "South Male Atoll", "Baa Atoll"],
-  "mallorca": ["Palma Centro", "Palma Nova / Magaluf", "Alcudia Bay", "Cala d'Or", "Santa Ponsa", "Soller"],
-  "manali": ["Mall Road", "Old Manali", "Vashisht", "Solang Valley", "Aleo", "Prini", "Naggar Road"],
-  "manama": ["Juffair", "Seef District", "Amwaj Islands", "Diplomatic Area", "Adliya", "Bahrain Bay", "Hoora"],
-  "manchester": ["Northern Quarter", "Piccadilly", "Deansgate", "Spinningfields", "Ancoats", "Castlefield", "Salford Quays"],
-  "mandalay": ["Downtown Mandalay", "Mandalay Palace", "Chanayethazan", "Maha Aung Mye", "Amarapura"],
-  "manila": ["Makati CBD", "BGC", "Malate", "Ermita", "Intramuros", "Quezon City", "Ortigas", "Binondo Chinatown", "Alabang"],
-  "marrakech": ["Medina", "Gueliz", "Hivernage", "Palmeraie", "Agdal", "Kasbah", "Mellah", "Sidi Ghanem"],
-  "marseille": ["Vieux Port", "Le Panier", "La Canebiere", "La Joliette", "Prado-Perier", "Endoume", "Noailles"],
-  "mecca": ["Abraj Al Bait", "Ajyad", "Al Misfalah", "Al Aziziya", "Jabal Omar", "Al Haram", "Batha Quraish"],
-  "medina": ["Al Markaziya North", "Al Markaziya South", "Al Markaziya West", "Al Aridh", "Al Sayh", "Sultanah", "King Fahd District"],
-  "melbourne": ["CBD", "St Kilda", "Fitzroy", "Southbank", "Carlton", "Richmond", "South Melbourne", "Chapel Street", "Docklands", "Brunswick"],
-  "mexico city": ["La Condesa", "Roma Norte", "Polanco", "Centro Historico", "Coyoacan", "Zona Rosa", "Santa Fe", "San Angel"],
-  "miami": ["South Beach", "Mid-Beach", "Brickell", "Wynwood", "Little Havana", "Coral Gables", "Coconut Grove", "Key Biscayne"],
-  "milan": ["Duomo Centro", "Brera", "Navigli", "Porta Nuova", "Stazione Centrale", "Isola"],
-  "mombasa": ["Nyali", "Bamburi Beach", "Shanzu", "Diani Beach", "Tiwi", "Mtwapa", "Mombasa Island"],
-  "monaco": ["Monte Carlo", "Monaco-Ville", "La Condamine", "Fontvieille", "Larvotto Beachfront"],
-  "montreal": ["Old Montreal", "Downtown", "Le Plateau-Mont-Royal", "Mile End", "Griffintown", "Quartier Latin"],
-  "moscow": ["Tverskoy Red Square", "Arbat", "Presnensky Moscow City", "Basmanny", "Zamoskvorechye", "Khamovniki"],
-  "mumbai": ["Colaba", "Nariman Point", "Bandra West", "Juhu", "Andheri West", "Andheri East", "Powai", "Lower Parel", "Worli", "Fort", "Marine Drive", "Vashi"],
-  "munich": ["Altstadt-Lehel", "Maxvorstadt", "Ludwigsvorstadt", "Schwabing", "Au-Haidhausen", "Glockenbachviertel"],
-  "munnar": ["Munnar Town", "Old Munnar", "Pallivasal", "Devikulam", "Mattupetty", "Chinnakanal", "Anachal"],
-  "muscat": ["Al Khuwair", "Ruwi", "Muttrah Corniche", "Qurum", "Al Mouj", "Shatti Al Qurum", "Bawshar", "Seeb", "Ghubrah"],
-  "mykonos": ["Mykonos Town", "Ornos Beach", "Platys Gialos", "Paradise Beach", "Elia Beach", "Agios Ioannis"],
-  "mysore": ["Gokulam", "Mysuru Palace", "Jayalakshmipuram", "Hebbal", "Devaraja Market", "Bannimantap", "Kuvempunagar"],
-  "nagpur": ["Civil Lines", "Dharampeth", "Sitabuldi", "Sadar", "Ramdaspeth", "Manish Nagar"],
-  "nairobi": ["Westlands", "Kilimani", "Karen", "Upper Hill", "CBD", "Gigiri", "Lavington", "Parklands"],
-  "naples": ["Centro Storico", "Chiaia", "Vomero", "Lungomare Caracciolo", "Posillipo", "Stazione Centrale"],
-  "nara": ["Nara Park", "Kintetsu-Nara Station", "JR Nara Station", "Naramachi", "Shin-Omiya"],
-  "nassau": ["Downtown Nassau", "Paradise Island", "Cable Beach", "West Bay Street"],
-  "negombo": ["Negombo Beach", "Negombo City", "Ettukala", "Waikkal", "Kochchikade", "Kapuwatta"],
-  "new delhi": ["Connaught Place", "Karol Bagh", "South Extension", "Saket", "Aerocity", "Paharganj", "Chandni Chowk", "Dwarka", "Rajouri Garden", "Vasant Kunj", "Chanakyapuri", "Greater Kailash"],
-  "new orleans": ["French Quarter", "Garden District", "CBD", "Marigny", "Warehouse District", "Mid-City"],
-  "new york": ["Times Square", "Midtown", "Lower East Side", "SoHo", "Upper East Side", "Upper West Side", "Greenwich Village", "Williamsburg", "Financial District", "Harlem"],
-  "nha trang": ["Tran Phu Beachfront", "Loc Tho", "Vinh Phuoc", "Hon Tre Island", "Pham Van Dong Beach"],
-  "nice": ["Promenade des Anglais", "Vieux Nice", "Jean-Medecin", "Le Port", "Cimiez", "Gambetta", "Quartier des Musiciens"],
-  "ooty": ["Ooty Town Centre", "Botanical Garden", "Charing Cross", "Doddabetta", "Lovedale", "Fernhill", "Coonoor"],
-  "orlando": ["International Drive", "Lake Buena Vista", "Kissimmee", "Universal Studios", "Downtown Orlando", "Winter Park"],
-  "osaka": ["Namba", "Shinsaibashi", "Umeda", "Dotonbori", "Tennoji", "Osaka Castle", "Shin-Osaka", "Honmachi"],
-  "oslo": ["Sentrum City Centre", "Grunerløkka", "Frogner", "Aker Brygge", "Tjuvholmen", "Bjørvika", "Majorstuen"],
-  "oxford": ["City Centre", "Jericho", "Cowley Road", "Summertown", "Headington", "Botley"],
-  "palawan": ["El Nido Town", "Puerto Princesa CBD", "Coron Town", "San Vicente Long Beach", "Port Barton"],
-  "paris": ["Le Marais", "Montmartre", "Saint-Germain", "Latin Quarter", "Champs-Elysees", "Eiffel Tower District", "Opera", "Canal Saint-Martin", "Bastille", "Ile de la Cite"],
-  "paro": ["Paro Town", "Paro Valley", "Kyichu Lhakhang", "Dzong area", "Bondey", "Shaba"],
-  "pattaya": ["Walking Street", "Beach Road", "Jomtien Beach", "Naklua", "Pratumnak Hill", "Central Pattaya", "North Pattaya"],
-  "penang": ["George Town", "Batu Ferringhi", "Tanjung Bungah", "Bayan Lepas", "Gurney Drive", "Gelugor", "Air Itam"],
-  "perth": ["Perth CBD", "Fremantle", "Northbridge", "Scarborough Beach", "West Perth", "Subiaco", "East Perth"],
-  "petra": ["Wadi Musa", "Petra Visitor Centre", "Tourism Street", "Al Nawafleh", "Umm Sayhoun", "Beidha"],
-  "phnom penh": ["Riverside", "BKK1", "Tonle Bassac", "Tuol Kouk", "Chamkar Mon"],
-  "phu quoc": ["Duong Dong Town", "Long Beach", "Ong Lang Beach", "An Thoi", "Bai Sao", "Cua Can"],
-  "phuket": ["Patong Beach", "Kata Beach", "Karon Beach", "Phuket Town", "Kamala Beach", "Surin", "Bang Tao", "Rawai", "Nai Harn", "Mai Khao"],
-  "playa del carmen": ["Quinta Avenida", "Playacar", "Centro Beachfront", "Gonzalo Guerrero"],
-  "pokhara": ["Lakeside", "Pokhara Bazaar", "Damside", "Sarangkot", "Begnas Lake", "Bindyabasini"],
-  "pondicherry": ["White Town", "Heritage Town", "Auroville", "Promenade Beach", "Ousteri", "Muthialpet"],
-  "port louis": ["Caudan Waterfront", "Place d'Armes", "Ward IV", "Champ de Mars", "Sainte Croix", "Bell Village"],
-  "porto": ["Ribeira", "Baixa Downtown", "Cedofeita", "Foz do Douro", "Bonfim", "Vila Nova de Gaia", "Clerigos"],
-  "prague": ["Old Town", "Lesser Town", "New Town", "Zizkov", "Vinohrady", "Karlin", "Smichov", "Holesovice"],
-  "pune": ["Koregaon Park", "Kalyani Nagar", "Viman Nagar", "Hinjewadi", "Shivaji Nagar", "Kothrud", "Baner", "Wakad", "Camp", "Hadapsar", "Magarpatta"],
-  "punta cana": ["Bavaro Beach", "Cap Cana Marina", "Macao Beach", "Cabeza de Toro", "El Cortecito"],
-  "puri": ["Jagannath Temple", "Sea Beach Road", "Swargadwar", "Marine Drive", "Baliapanda", "CT Road", "Grand Road"],
-  "quebec city": ["Old Quebec", "Saint-Roch", "Montcalm", "Saint-Jean-Baptiste"],
-  "queenstown": ["Queenstown Town Centre", "Frankton", "Fernhill", "Kelvin Heights", "Arthurs Point"],
-  "ras al khaimah": ["Al Marjan Island", "Al Hamra Village", "Mina Al Arab", "Al Nakheel", "Al Dhait", "Jebel Jais", "Khuzam"],
-  "reykjavik": ["Midborg Downtown", "Vesturbær", "Hlidar", "Laugardalur", "Grandi Harbour"],
-  "rhodes": ["Rhodes Old Town", "Lindos Village", "Faliraki", "Ialyssos", "Kolymbia", "Pefkos"],
-  "rio de janeiro": ["Copacabana", "Ipanema", "Leblon", "Barra da Tijuca", "Lapa", "Santa Teresa", "Botafogo", "Centro"],
-  "riyadh": ["Al Olaya", "Al Malaz", "Al Murabba", "KAFD", "Al Muhammadiyah", "Al Sulaimaniyah", "Diplomatic Quarter", "Al Yasmin"],
-  "rome": ["Centro Storico", "Trastevere", "Monti", "Termini", "Prati", "Testaccio", "Campo de Fiori", "San Giovanni"],
-  "rotterdam": ["Stadsdriehoek City Centre", "Kop van Zuid", "Delfshaven", "Kralingen", "Oude Noorden"],
-  "salalah": ["Al Haffa", "Central Salalah", "Awqad", "Mirbat", "Taqah", "Raysut"],
-  "salzburg": ["Altstadt Old Town", "Elisabeth-Vorstadt", "Neustadt", "Nonntal", "Maxglan"],
-  "samarkand": ["Registan Square", "Gur-e-Amir", "Universitetskiy Boulevard", "Siab Bazaar", "Dagbit Street"],
-  "san francisco": ["Fisherman's Wharf", "Union Square", "Mission District", "Castro", "SOMA", "Haight-Ashbury", "Nob Hill", "Marina District", "Chinatown"],
-  "san sebastian": ["Parte Vieja Old Town", "Centro", "La Concha Beachfront", "Gros", "Antiguo"],
-  "santiago": ["Providencia", "Las Condes", "Santiago Centro", "Bellavista", "Lastarria", "Vitacura"],
-  "santorini": ["Fira", "Oia", "Imerovigli", "Firostefani", "Kamari Beach", "Perissa Beach", "Akrotiri", "Pyrgos"],
-  "sao paulo": ["Avenida Paulista", "Jardins", "Vila Madalena", "Itaim Bibi", "Pinheiros", "Moema", "Centro Historic"],
-  "sapporo": ["Odori Park", "Susukino", "Sapporo Station", "Nakajima Park", "Chuo Ward", "Jozankei Onsen"],
-  "seattle": ["Downtown Pike Place", "Capitol Hill", "Seattle Center", "Ballard", "Fremont", "Pioneer Square", "Queen Anne"],
-  "seoul": ["Myeongdong", "Gangnam", "Hongdae", "Itaewon", "Insadong", "Dongdaemun", "Jamsil", "Jongno", "Yeouido", "Sinchon"],
-  "seville": ["Santa Cruz", "El Arenal", "Triana", "Centro Regina", "Los Remedios", "Macarena"],
-  "shanghai": ["The Bund", "People's Square", "Pudong Lujiazui", "French Concession", "Jing'an", "Nanjing Road", "Xujiahui"],
-  "sharjah": ["Al Majaz", "Al Khan", "Al Nahda", "Corniche Al Buhaira", "Al Qasimia", "Rolla", "Al Taawun", "Muwaileh"],
-  "sharm el sheikh": ["Naama Bay", "Nabq Bay", "Sharks Bay", "El Hadaba", "Soho Square", "Ras Um Sid", "Old Market"],
-  "shenzhen": ["Futian CBD", "Luohu", "Nanshan Hi-Tech Park", "Shekou", "Bao'an", "Overseas Chinese Town", "Yantian"],
-  "shimla": ["Mall Road", "Ridge", "Chhotta Shimla", "Sanjauli", "New Shimla", "Summer Hill", "Kufri", "Mashobra"],
-  "sicily": ["Palermo Centro", "Catania Centro", "Taormina Town", "Syracuse Ortigia", "Cefalu", "Noto"],
-  "siem reap": ["Pub Street", "Old Market", "Wat Bo", "Charles de Gaulle Boulevard", "Svay Dangkum"],
-  "sihanoukville": ["Ochheuteal Beach", "Serendipity Beach", "Otres Beach", "Victory Beach", "Downtown Market"],
-  "singapore": ["Orchard Road", "Marina Bay", "Clarke Quay", "Sentosa", "Bugis", "Little India", "Chinatown", "Harbourfront", "Changi", "Novena", "Geylang"],
-  "split": ["Old Town Diocletians Palace", "Bacvice Beachfront", "Veli Varos", "Marjan", "Meje", "Lučac"],
-  "srinagar": ["Dal Lake", "Lal Chowk", "Rajbagh", "Sonwar", "Nishat", "Shalimar", "Hazratbal", "Nigeen Lake"],
-  "st petersburg": ["Central District Nevsky", "Admiralteysky", "Petrogradsky Island", "Vasilievsky Island"],
-  "stockholm": ["Gamla Stan Old Town", "Norrmalm Downtown", "Sodermalm", "Ostermalm", "Vasastan", "Kungsholmen", "Djurgarden"],
-  "strasbourg": ["Grande Ile Old Town", "Petite France", "Krutenau", "European Quarter", "Neudorf", "Gare Centrale"],
-  "stuttgart": ["Stuttgart-Mitte", "Stuttgart-West", "Stuttgart-Ost", "Bad Cannstatt", "Stuttgart-Sud"],
-  "surabaya": ["Tunjungan Plaza area", "Gubeng", "Genteng", "Sukolilo", "Wiyung", "Rungkut"],
-  "surat": ["Dumas Road", "Piplod", "Adajan", "Varachha", "Ring Road", "Athwa Lines", "Ghod Dod Road", "Vesu", "Katargam"],
-  "sydney": ["CBD", "The Rocks", "Darling Harbour", "Bondi Beach", "Surry Hills", "Newtown", "Manly", "Paddington", "Potts Point", "Coogee"],
-  "taichung": ["Fengjia Night Market", "West District", "Xitun CBD", "North District", "Central District", "Nantun"],
-  "taipei": ["Ximending", "Xinyi District", "Zhongshan", "Da'an", "Datong", "Wanhua", "Shilin", "Songshan"],
-  "tashkent": ["Yunusabad", "Mirabad", "Yakkasaray", "Shaykhantahur", "Chilanzar", "Chorsu Bazaar", "Alisher Navoi Opera"],
-  "tbilisi": ["Old Tbilisi", "Avlabari", "Chugureti Fabrika", "Vera", "Saburtalo", "Vake", "Rustaveli Avenue"],
-  "tel aviv": ["Promenade", "Rothschild Boulevard", "Jaffa", "Neve Tzedek", "Florentin", "Dizengoff Street", "Old North", "Sarona"],
-  "the hague": ["City Centre", "Scheveningen Beach", "Archipelbuurt", "Statenkwartier", "Zeeheldenkwartier"],
-  "thessaloniki": ["Aristotelous Square", "Ladadika", "Ano Poli Upper Town", "White Tower", "Kalamaria"],
-  "thimphu": ["Thimphu City Centre", "Norzin Lam", "Jungshina", "Motithang", "Lungtenzampa", "Chubachu"],
-  "thiruvananthapuram": ["Kovalam Beach", "Varkala Cliff", "Thampanoor", "Kazhakkoottam", "Technopark", "Palayam", "East Fort", "Vellayambalam", "Poovar"],
-  "tokyo": ["Shinjuku", "Shibuya", "Ginza", "Roppongi", "Asakusa", "Akihabara", "Ueno", "Ikebukuro", "Shinagawa", "Odaiba", "Minato"],
-  "toronto": ["Downtown", "Entertainment District", "Yorkville", "West Queen West", "Distillery District", "The Annex", "Harbourfront"],
-  "turin": ["Centro Storico", "San Salvario", "Crocetta", "Aurora", "Borgo Po", "Vanchiglia"],
-  "udaipur": ["Lake Pichola", "Old City", "Fatehsagar Lake", "Sukhadia Circle", "Hiran Magri", "Chetak Circle", "City Palace", "Mallatalai"],
-  "valencia": ["Ciutat Vella Old Town", "Ruzafa", "El Carmen", "El Cabanyal Beach", "City of Arts and Sciences"],
-  "vancouver": ["Downtown / Robson", "Gastown", "Yaletown", "West End", "Granville Island", "Kitsilano"],
-  "varanasi": ["Dashashwamedh Ghat", "Assi Ghat", "Godowlia", "Cantonment", "Sarnath", "Lanka", "Sigra", "Lahurabir"],
-  "venice": ["San Marco", "Cannaregio", "Dorsoduro", "San Polo", "Castello", "Santa Croce", "Lido di Venezia", "Mestre"],
-  "victoria": ["Bel Air", "Mont Fleuri", "Beau Vallon", "Saint Louis", "Plaisance", "English River"],
-  "vienna": ["Innere Stadt", "Leopoldstadt", "Landstrasse", "Wieden", "Neubau", "Mariahilf"],
-  "vientiane": ["Vientiane Riverside", "Sisaket Temple", "Patuxay Park", "Chanthabouly", "Sisattanak"],
-  "visakhapatnam": ["Rushikonda Beach", "Vizag Steel City", "RK Beach", "MVP Colony", "Madhurawada", "Gajuwaka"],
-  "warsaw": ["Old Town", "Srodmiescie City Centre", "Wola", "Mokotow", "Praga-Polnoc", "Wilanow"],
-  "washington dc": ["National Mall", "Dupont Circle", "Georgetown", "Downtown DC", "Adams Morgan", "Capitol Hill", "Foggy Bottom", "Navy Yard"],
-  "wellington": ["Lambton Quay CBD", "Te Aro Cuba Street", "Oriental Bay", "Thorndon", "Mount Victoria"],
-  "xi'an": ["Bell Tower Downtown", "Muslim Quarter", "Giant Wild Goose Pagoda", "Qujiang New District", "Xincheng"],
-  "xian": ["Bell Tower Downtown", "Muslim Quarter", "Giant Wild Goose Pagoda", "Qujiang New District", "Xincheng"],
-  "yangon": ["Downtown Yangon", "Bahan Shwedagon", "Yaw Min Gyi", "Kandawgyi Lake", "Inya Lake", "Mayangone"],
-  "yerevan": ["Kentron Downtown", "Cascade", "Arabkir", "Shengavit", "Nor Nork"],
-  "yogyakarta": ["Malioboro", "Kraton", "Prawirotaman", "Kaliurang", "Babarsari", "Condongcatur"],
-  "zagreb": ["Donji Grad Lower Town", "Gornji Grad Upper Town", "Maksimir", "Tresnjevka", "Novi Zagreb", "Jarun"],
-  "zanzibar": ["Stone Town", "Nungwi", "Kendwa", "Paje", "Jambiani", "Matemwe", "Kiwengwa", "Kizimkazi"],
-  "zurich": ["Altstadt", "Langstrasse", "Zurich West", "Enge", "Seefeld"],
-};function getAreasForCity(city: string): string[] {
-  const key = city.toLowerCase().trim()
-    .replace(/^(new |greater |old )/i, '')  // normalize
-    .trim();
-  return CITY_LOCATIONS[key] || CITY_LOCATIONS[city.toLowerCase().trim()] || [];
+// How wide a net to cast around a resolved point, based on what kind of place it is.
+// A city needs a city-sized radius; a specific landmark needs a tight one.
+function mapboxPlaceTypeToRadius(placeTypes: string[]): number {
+  if (placeTypes.includes("country")) return 50000;
+  if (placeTypes.includes("region")) return 40000;
+  if (placeTypes.includes("place")) return 20000;
+  if (placeTypes.includes("locality") || placeTypes.includes("neighborhood")) return 5000;
+  if (placeTypes.includes("poi")) return 1500;
+  if (placeTypes.includes("address")) return 1000;
+  return 15000;
 }
 
-function getAreaFromCoords(lat?: number|null, lng?: number|null, city?: string): string|null {
-  if (!lat||!lng||!city) return null;
-  const areas = ALL_CITY_AREAS[city.toLowerCase().trim()];
-  if (!areas) return null;
-  for (const [name,minLat,maxLat,minLng,maxLng] of areas as [string,number,number,number,number][]) {
-    if (lat>=minLat&&lat<=maxLat&&lng>=minLng&&lng<=maxLng) return name;
+// City tier = whole places (country/region/place). Area tier = anything more
+// specific within a city (locality/neighborhood/poi/address) — landmarks fall here.
+function mapboxTier(placeTypes: string[]): "city" | "area" {
+  return placeTypes.some(t => ["place", "region", "country"].includes(t)) ? "city" : "area";
+}
+
+// Resolves whatever the user types to exact coordinates via Mapbox. City-tier
+// and area-tier types are fetched as two SEPARATE requests, each with its own
+// limit — if they shared one limit, a flood of fuzzy city-name lookalikes
+// (e.g. "Beira", "Deir al Balah" for a "Deira" query) could fill the whole
+// quota before a real, exact area match like Deira ever gets a slot.
+function mapMapboxFeature(f: any, seen: Set<string>): any | null {
+  const countryCtx = (f.context || []).find((c: any) => c.id?.startsWith("country"));
+  const countryCode = countryCtx?.short_code?.toUpperCase() || "";
+  const placeTypes: string[] = f.place_type || [];
+  const tier = mapboxTier(placeTypes);
+  const countryName = countryCtx?.text || "";
+  const cityCtx = (f.context || []).find((c: any) => c.id?.startsWith("place"));
+  const dedupeKey = `${(f.text || "").toLowerCase()}|${countryCode}|${tier}`;
+  if (seen.has(dedupeKey)) return null;
+  seen.add(dedupeKey);
+  return {
+    type: tier === "city" ? "city" : "area",
+    tier,
+    name: f.text,
+    parentCity: tier === "area" ? (cityCtx?.text || "") : "",
+    countryName,
+    flag: countryCodeToFlag(countryCode),
+    placeId: null,
+    lat: f.center?.[1],
+    lng: f.center?.[0],
+    radius: mapboxPlaceTypeToRadius(placeTypes),
+    placeTypes,
+    relevance: f.relevance ?? 1,
+    isCurated: tier === "city" && CURATED_CITY_NAMES.has((f.text || "").toLowerCase()),
+  };
+}
+
+async function fetchMapboxTier(query: string, types: string, limit: number, seen: Set<string>): Promise<any[]> {
+  try {
+    const res = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&types=${types}&limit=${limit}`
+    );
+    const data = await res.json();
+    const features = data.features || [];
+    return features
+      // Mapbox returns a 0-1 relevance score per match — when someone types a
+      // hotel name (not a real place), it still returns its closest fuzzy text
+      // matches with low relevance. Filtering those out keeps junk from
+      // crowding out genuine hotel-name results.
+      .filter((f: any) => (f.relevance ?? 1) >= 0.5)
+      .map((f: any) => mapMapboxFeature(f, seen))
+      .filter(Boolean);
+  } catch {
+    return [];
   }
-  return null;
 }
 
-const PRIORITY_AMENITIES = ["Swimming Pool","Fitness Centre","Restaurant","Free WiFi"];
-const TOP_FACILITIES = ["Swimming Pool","Room Service","Fitness Centre","On-site Dining","Spa","Parking","Free WiFi","Airport Shuttle","Business Centre","Kids Club"];
+async function fetchMapboxPlaces(query: string): Promise<{ cities: any[]; areas: any[] }> {
+  const seen = new Set<string>();
+  const [cityFeatures, areaFeatures] = await Promise.all([
+    fetchMapboxTier(query, "country,region,place", 6, seen),
+    fetchMapboxTier(query, "locality,neighborhood,poi", 6, seen),
+  ]);
+
+  const cities = cityFeatures.sort((a: any, b: any) => {
+    // Curated/well-known cities win ties between identically-named places
+    // (e.g. Dubai, UAE vs. a village also called Dubai elsewhere).
+    if (a.name.toLowerCase() === b.name.toLowerCase() && a.isCurated !== b.isCurated) return a.isCurated ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+  const areas = areaFeatures.sort((a: any, b: any) => b.relevance - a.relevance);
+
+  return { cities, areas };
+}
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(()=>{ const c=()=>setIsMobile(window.innerWidth<768); c(); window.addEventListener("resize",c); return()=>window.removeEventListener("resize",c); },[]);
+  const [isMobile, setIsMobile] = useState(true);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 900);
+    check(); window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   return isMobile;
 }
 
-function formatINR(n: number) { return "₹"+Math.round(n).toLocaleString("en-IN"); }
-function formatDate(s: string) { if(!s)return""; const d=new Date(s+"T00:00:00"); return d.toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"}); }
-function formatDateShort(s: string) { if(!s)return""; const d=new Date(s+"T00:00:00"); return d.toLocaleDateString("en-IN",{day:"numeric",month:"short"}); }
-function toDateStr(y:number,m:number,d:number){return`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;}
-function getDaysInMonth(y:number,m:number){return new Date(y,m+1,0).getDate();}
-function getFirstDow(y:number,m:number){return new Date(y,m,1).getDay();}
-const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DOWS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-function codeToNum(code:string|number):number{if(typeof code==="number")return code;let h=0;for(let i=0;i<code.length;i++){h=((h<<5)-h)+code.charCodeAt(i);h|=0;}return Math.abs(h);}
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+}
 
-const IconBreakfast=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>;
+function toDateStr(y: number, m: number, d: number): string {
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
 
-interface Hotel{code:string|number;name:string;stars:number|null;minRate:number;currency:string;imageUrl?:string;address?:string;city?:string;chain?:string;rating?:number|null;latitude?:number|null;longitude?:number|null;distanceKm?:number|null;amenities?:string[];isRefundable?:boolean|null;hasBreakfast?:boolean;lowestPriceINR?:number;otaPriceINR?:number;memberSaving?:number;taxesIncluded?:boolean;}
-interface GuestState{rooms:number;adults:number;children:number;childAges:number[];}
+function getDaysInMonth(y: number, m: number): number { return new Date(y, m + 1, 0).getDate(); }
+function getFirstDow(y: number, m: number): number { return new Date(y, m, 1).getDay(); }
 
-const FALLBACK_IMGS=["https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1551882547-ff40c4fe1fa7?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=85&fit=crop","https://images.unsplash.com/photo-1540541338287-41700207dee6?w=600&q=85&fit=crop"];
+function getDefaultDates() {
+  const today = new Date();
+  const ci = new Date(today); ci.setDate(today.getDate() + 14);
+  const co = new Date(today); co.setDate(today.getDate() + 15);
+  return {
+    checkIn: toDateStr(ci.getFullYear(), ci.getMonth(), ci.getDate()),
+    checkOut: toDateStr(co.getFullYear(), co.getMonth(), co.getDate()),
+  };
+}
 
-interface FiltersPanelProps{destination:string;areaOptions:string[];filterLocation:string;setFilterLocation:(v:string)=>void;filterPriceMin:number|null;filterPriceMax:number|null;setPriceRange:(min:number|null,max:number|null)=>void;filterRefundable:boolean;setFilterRefundable:(v:boolean)=>void;filterBreakfast:boolean;setFilterBreakfast:(v:boolean)=>void;filterRating:number|null;setFilterRating:(v:number|null)=>void;filterStars:number[];setFilterStars:(v:number[])=>void;filterFacilities:string[];setFilterFacilities:(v:string[])=>void;hasActiveFilters:boolean;clearAllFilters:()=>void;onHotelSearch:(v:string)=>void;refLabel:string|null;filterMaxDistance:number|null;setFilterMaxDistance:(v:number|null)=>void;}
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DOWS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-function FiltersPanel({areaOptions,filterLocation,setFilterLocation,filterPriceMin,filterPriceMax,setPriceRange,filterRefundable,setFilterRefundable,filterBreakfast,setFilterBreakfast,filterRating,setFilterRating,filterStars,setFilterStars,filterFacilities,setFilterFacilities,hasActiveFilters,clearAllFilters,onHotelSearch,refLabel,filterMaxDistance,setFilterMaxDistance}:FiltersPanelProps){
-  const [showMore,setShowMore]=useState(false);const [sv,setSv]=useState("");
-  const CB=({active,onClick}:{active:boolean;onClick:()=>void})=><div onClick={onClick} style={{width:16,height:16,border:`1.5px solid ${active?B:"#e2e8f0"}`,borderRadius:4,background:active?B:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer"}}>{active&&<svg width="10" height="10" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}</div>;
-  const RB=({active,onClick}:{active:boolean;onClick:()=>void})=><div onClick={onClick} style={{width:16,height:16,border:`1.5px solid ${active?B:"#e2e8f0"}`,borderRadius:"50%",background:active?B:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer"}}>{active&&<div style={{width:6,height:6,borderRadius:"50%",background:"#fff"}}/>}</div>;
-  const Row=({children,onClick}:{children:React.ReactNode;onClick:()=>void})=><div onClick={onClick} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,cursor:"pointer"}}>{children}</div>;
-  return(
-    <div>
-      <div style={{display:"flex",alignItems:"center",gap:8,border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 12px",marginBottom:16}}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" placeholder="Hotel name, area or landmark" value={sv} onChange={e=>{setSv(e.target.value);onHotelSearch(e.target.value);}} style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:13,color:NAVY,background:"transparent",width:"100%"}}/>
-        {sv&&<button onClick={()=>{setSv("");onHotelSearch("");}} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:16,padding:0}}>×</button>}
+const TICKER_ITEMS = [
+  { name: "Rahul M.", hotel: "Park Hyatt, Maldives", saved: "₹31,600", time: "Just now" },
+  { name: "Priya S.", hotel: "Atlantis The Palm, Dubai", saved: "₹22,400", time: "4 min ago" },
+  { name: "Vikram S.", hotel: "Burj Al Arab, Dubai", saved: "₹48,000", time: "11 min ago" },
+  { name: "Neha R.", hotel: "Four Seasons, Bali", saved: "₹18,200", time: "23 min ago" },
+  { name: "Arjun T.", hotel: "The Langham, London", saved: "₹26,200", time: "31 min ago" },
+];
+
+const DESTINATIONS = [
+  { flag: "🇦🇪", city: "Dubai", country: "United Arab Emirates", img: "/dubai.jpg", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
+  { flag: "🇮🇳", city: "New Delhi", country: "India", img: "/newdelhi.jpg", badge: "Member Deal", badgeColor: "#1447b8", badgeText: "#fff" },
+  { flag: "🇸🇬", city: "Singapore", country: "Singapore", img: "/singapore.jpg" },
+  { flag: "🇮🇳", city: "Goa", country: "India", img: "/goa.jpg", badge: "Most Popular", badgeColor: "#f59e0b", badgeText: "#1a1a1a" },
+  { flag: "🇮🇩", city: "Bali", country: "Indonesia", img: "/bali.jpg" },
+  { flag: "🇮🇳", city: "Mumbai", country: "India", img: "/mumbai.jpg" },
+  { flag: "🇹🇭", city: "Bangkok", country: "Thailand", img: "/bangkok.jpg" },
+  { flag: "🇹🇭", city: "Phuket", country: "Thailand", img: "/phuket.jpg" },
+  { flag: "🇲🇾", city: "Kuala Lumpur", country: "Malaysia", img: "/kl.jpg" },
+  { flag: "🇯🇵", city: "Tokyo", country: "Japan", img: "/tokyo.jpg" },
+  { flag: "🇬🇧", city: "London", country: "United Kingdom", img: "/london.jpg" },
+  { flag: "🇫🇷", city: "Paris", country: "France", img: "/paris.jpg" },
+  { flag: "🇮🇹", city: "Rome", country: "Italy", img: "/rome.jpg" },
+  { flag: "🇪🇸", city: "Barcelona", country: "Spain", img: "/barcelona.jpg" },
+  { flag: "🇳🇱", city: "Amsterdam", country: "Netherlands", img: "/amsterdam.jpg" },
+  { flag: "🇹🇷", city: "Istanbul", country: "Turkey", img: "/istanbul.jpg" },
+  { flag: "🇶🇦", city: "Doha", country: "Qatar", img: "/doha.jpg" },
+  { flag: "🇦🇪", city: "Abu Dhabi", country: "United Arab Emirates", img: "/abudhabi.jpg" },
+  { flag: "🇲🇻", city: "Maldives", country: "Maldives", img: "/maldives.jpg" },
+  { flag: "🇦🇺", city: "Sydney", country: "Australia", img: "/sydney.jpg" },
+  { flag: "🇰🇷", city: "Seoul", country: "South Korea", img: "/seoul.jpg" },
+  { flag: "🇭🇰", city: "Hong Kong", country: "Hong Kong", img: "/hongkong.jpg" },
+  { flag: "🇩🇰", city: "Copenhagen", country: "Denmark", img: "/copenhagen.jpg" },
+  { flag: "🇸🇪", city: "Stockholm", country: "Sweden", img: "/stockholm.jpg" },
+  { flag: "🇳🇴", city: "Oslo", country: "Norway", img: "/oslo.jpg" },
+  { flag: "🇩🇪", city: "Berlin", country: "Germany", img: "/berlin.jpg" },
+  { flag: "🇦🇹", city: "Vienna", country: "Austria", img: "/vienna.jpg" },
+  { flag: "🇨🇭", city: "Zurich", country: "Switzerland", img: "/zurich.jpg" },
+  { flag: "🇵🇹", city: "Lisbon", country: "Portugal", img: "/lisbon.jpg" },
+  { flag: "🇬🇷", city: "Athens", country: "Greece", img: "/athens.jpg" },
+  { flag: "🇨🇿", city: "Prague", country: "Czech Republic", img: "/prague.jpg" },
+  { flag: "🇮🇪", city: "Dublin", country: "Ireland", img: "/dublin.jpg" },
+  { flag: "🇭🇷", city: "Dubrovnik", country: "Croatia", img: "/dubrovnik.jpg" },
+  { flag: "🇮🇳", city: "Jaipur", country: "India", img: "/jaipur.jpg" },
+  { flag: "🇮🇳", city: "Bangalore", country: "India", img: "/bangalore.jpg" },
+  { flag: "🇮🇳", city: "Hyderabad", country: "India", img: "/hyderabad.jpg" },
+  { flag: "🇮🇳", city: "Chennai", country: "India", img: "/chennai.jpg" },
+  { flag: "🇮🇳", city: "Kolkata", country: "India", img: "/kolkata.jpg" },
+  { flag: "🇮🇳", city: "Kochi", country: "India", img: "/kochi.jpg" },
+  { flag: "🇮🇳", city: "Agra", country: "India", img: "/agra.jpg" },
+  { flag: "🇪🇬", city: "Cairo", country: "Egypt", img: "/cairo.jpg" },
+  { flag: "🇸🇦", city: "Riyadh", country: "Saudi Arabia", img: "/riyadh.jpg" },
+  { flag: "🇴🇲", city: "Muscat", country: "Oman", img: "/muscat.jpg" },
+  { flag: "🇨🇳", city: "Beijing", country: "China", img: "/beijing.jpg" },
+  { flag: "🇨🇳", city: "Shanghai", country: "China", img: "/shanghai.jpg" },
+  { flag: "🇿🇦", city: "Cape Town", country: "South Africa", img: "/capetown.jpg" },
+  { flag: "🇺🇸", city: "New York", country: "United States", img: "/newyork.jpg" },
+  { flag: "🇺🇸", city: "Las Vegas", country: "United States", img: "/lasvegas.jpg" },
+  { flag: "🇺🇸", city: "Miami", country: "United States", img: "/miami.jpg" },
+];
+
+// Known major cities we already curate above — used to make sure a famous
+// city always outranks an obscure same-named village elsewhere.
+const CURATED_CITY_NAMES = new Set(DESTINATIONS.map(d => d.city.toLowerCase()));
+
+const HOTELS_BY_CITY: Record<string, Array<{
+  name: string; loc: string; city: string; stars: number; rating: string;
+  tags: string[]; was: string; now: string; save: string;
+  badges: [string,string][]; img: string; code?: string;
+}>> = {
+  "Top Sellers": [
+    { name: "Atlantis The Palm", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach","Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lp42f57.jpg", code: "lp42f57" },
+    { name: "Roseate House", loc: "Aerocity, New Delhi, India", city: "New Delhi", stars: 5, rating: "4.6 (4.4k)", tags: ["Boutique","Rooftop","Aerocity"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lp7c680.jpg", code: "lp7c680" },
+    { name: "Holiday Inn Express Singapore Katong by IHG", loc: "Katong, Singapore", city: "Singapore", stars: 3, rating: "4.2 (3.8k)", tags: ["Katong","Budget","Free WiFi"], was: "₹9,000", now: "₹6,300", save: "Save ₹2,700", badges: [["Best Value","best"],["3% Off","off"]], img: "/hotels/lp8aef1.jpg", code: "lp8aef1" },
+    { name: "Le Meridien Goa, Calangute", loc: "Calangute, Goa", city: "Goa", stars: 5, rating: "4.6 (3.1k)", tags: ["Calangute","Beach","Spa"], was: "₹15,000", now: "₹10,500", save: "Save ₹4,500", badges: [["Trending","trending"],["5% Off","off"]], img: "/hotels/lpaf35e.jpg", code: "lpaf35e" },
+    { name: "Four Points by Sheraton Bali, Kuta", loc: "Kuta, Bali", city: "Bali", stars: 4, rating: "4.3 (3.9k)", tags: ["Kuta","City view","Pool"], was: "₹8,500", now: "₹5,950", save: "Save ₹2,550", badges: [["Best Value","best"],["3% Off","off"]], img: "/hotels/lp82644.jpg", code: "lp82644" },
+    { name: "The Oberoi Mumbai", loc: "Nariman Point, Mumbai", city: "Mumbai", stars: 5, rating: "4.8 (4.9k)", tags: ["Nariman Point","Sea view","Luxury"], was: "₹34,000", now: "₹23,800", save: "Save ₹10,200", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp1e3f7.jpg", code: "lp1e3f7" },
+  ],
+  "Dubai": [
+    { name: "Atlantis The Palm", loc: "Dubai, UAE", city: "Dubai", stars: 5, rating: "4.5 (32.4k)", tags: ["Waterpark","Beach","Resort"], was: "₹41,200", now: "₹28,400", save: "Save ₹12,800", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lp42f57.jpg", code: "lp42f57" },
+    { name: "InterContinental Dubai Marina by IHG", loc: "Dubai Marina, UAE", city: "Dubai", stars: 5, rating: "4.6 (8.7k)", tags: ["Marina view","Spa","Pool"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["AI Watching","watching"],["7% Off","off"]], img: "/hotels/lp769d6.jpg", code: "lp769d6" },
+    { name: "ME Dubai by Meliá", loc: "Downtown Dubai, UAE", city: "Dubai", stars: 5, rating: "4.6 (3.1k)", tags: ["Design hotel","Rooftop","Spa"], was: "₹36,000", now: "₹25,200", save: "Save ₹10,800", badges: [["Luxury","luxury"],["Trending","trending"]], img: "/hotels/lp6554ba8e.jpg", code: "lp6554ba8e" },
+    { name: "Pullman Dubai Downtown", loc: "Downtown Dubai, UAE", city: "Dubai", stars: 4, rating: "4.4 (5.6k)", tags: ["Burj view","Rooftop pool"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Best Value","best"],["AI Watching","watching"]], img: "/hotels/lp894ae.jpg", code: "lp894ae" },
+    { name: "Hilton Garden Inn Dubai, Mall Avenue", loc: "Al Barsha, Dubai, UAE", city: "Dubai", stars: 4, rating: "4.3 (4.2k)", tags: ["Near Mall of Emirates","Business"], was: "₹16,000", now: "₹11,200", save: "Save ₹4,800", badges: [["Best Value","best"],["5% Off","off"]], img: "/hotels/lp897a8.jpg", code: "lp897a8" },
+    { name: "Rove Dubai Marina", loc: "Dubai Marina, UAE", city: "Dubai", stars: 3, rating: "4.4 (9.8k)", tags: ["Marina","Trendy","Budget"], was: "₹12,000", now: "₹8,400", save: "Save ₹3,600", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lpcdd85.jpg", code: "lpcdd85" },
+  ],
+    "Bali": [
+    { name: "Hard Rock Hotel Bali", loc: "Kuta, Bali", city: "Bali", stars: 5, rating: "4.5 (12.1k)", tags: ["Kuta","Beach","Pool"], was: "₹16,000", now: "₹11,200", save: "Save ₹4,800", badges: [["Trending","trending"],["5% Off","off"]], img: "/hotels/lp2d43b.jpg", code: "lp2d43b" },
+    { name: "Grand Mercure Bali Seminyak", loc: "Seminyak, Bali", city: "Bali", stars: 4, rating: "4.4 (4.8k)", tags: ["Seminyak","Beach","Pool"], was: "₹11,000", now: "₹7,700", save: "Save ₹3,300", badges: [["AI Watching","watching"],["4% Off","off"]], img: "/hotels/lp65590560.jpg", code: "lp65590560" },
+    { name: "Holiday Inn Resort Baruna Bali by IHG", loc: "Kuta, Bali", city: "Bali", stars: 4, rating: "4.3 (6.2k)", tags: ["Kuta","Beach","Family"], was: "₹9,500", now: "₹6,650", save: "Save ₹2,850", badges: [["Best Value","best"],["3% Off","off"]], img: "/hotels/lp246bd.jpg", code: "lp246bd" },
+    { name: "Four Points by Sheraton Bali, Kuta", loc: "Kuta, Bali", city: "Bali", stars: 4, rating: "4.3 (3.9k)", tags: ["Kuta","City view","Pool"], was: "₹8,500", now: "₹5,950", save: "Save ₹2,550", badges: [["Best Value","best"],["3% Off","off"]], img: "/hotels/lp82644.jpg", code: "lp82644" },
+    { name: "Grand Mirage Resort & Thalasso Bali - All Inclusive", loc: "Tanjung Benoa, Bali", city: "Bali", stars: 4, rating: "4.4 (2.7k)", tags: ["Tanjung Benoa","Beach","All-Inclusive"], was: "₹14,000", now: "₹9,800", save: "Save ₹4,200", badges: [["Trending","trending"],["4% Off","off"]], img: "/hotels/lp558a7.jpg", code: "lp558a7" },
+    { name: "The Ubud Village Resort & Spa", loc: "Ubud, Bali", city: "Bali", stars: 5, rating: "4.7 (1.8k)", tags: ["Ubud","Rice fields","Private pool"], was: "₹17,000", now: "₹11,900", save: "Save ₹5,100", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp41592.jpg", code: "lp41592" },
+  ],
+  
+  "Singapore": [
+    { name: "Hilton Singapore Orchard", loc: "Orchard Road, Singapore", city: "Singapore", stars: 5, rating: "4.5 (8.2k)", tags: ["Orchard Road","Shopping","Pool"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lp23603.jpg", code: "lp23603" },
+    { name: "Amara Singapore", loc: "Tanjong Pagar, Singapore", city: "Singapore", stars: 4, rating: "4.3 (6.1k)", tags: ["Tanjong Pagar","City view","Pool"], was: "₹14,000", now: "₹9,800", save: "Save ₹4,200", badges: [["Best Value","best"],["4% Off","off"]], img: "/hotels/lp1c24d.jpg", code: "lp1c24d" },
+    { name: "Grand Copthorne Waterfront Hotel Singapore", loc: "Riverside, Singapore", city: "Singapore", stars: 4, rating: "4.4 (5.4k)", tags: ["Riverside","Spa","Pool"], was: "₹13,000", now: "₹9,100", save: "Save ₹3,900", badges: [["AI Watching","watching"],["5% Off","off"]], img: "/hotels/lp24c34.jpg", code: "lp24c34" },
+    { name: "The Ritz-Carlton, Millenia Singapore", loc: "Marina Bay, Singapore", city: "Singapore", stars: 5, rating: "4.8 (9.6k)", tags: ["Marina Bay","Luxury","Spa"], was: "₹52,000", now: "₹36,400", save: "Save ₹15,600", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp1dac2.jpg", code: "lp1dac2" },
+    { name: "Holiday Inn Express Singapore Katong by IHG", loc: "Katong, Singapore", city: "Singapore", stars: 3, rating: "4.2 (3.8k)", tags: ["Katong","Budget","Free WiFi"], was: "₹9,000", now: "₹6,300", save: "Save ₹2,700", badges: [["Best Value","best"],["3% Off","off"]], img: "/hotels/lp8aef1.jpg", code: "lp8aef1" },
+    { name: "Paradox Singapore Merchant Court at Clarke Quay", loc: "Clarke Quay, Singapore", city: "Singapore", stars: 5, rating: "4.4 (4.7k)", tags: ["Clarke Quay","Riverside","Pool"], was: "₹15,000", now: "₹10,500", save: "Save ₹4,500", badges: [["Trending","trending"],["5% Off","off"]], img: "/hotels/lp1b632.jpg", code: "lp1b632" },
+  ],
+  
+"New Delhi": [
+    { name: "The Leela Palace New Delhi", loc: "Diplomatic Enclave, New Delhi, India", city: "New Delhi", stars: 5, rating: "4.9 (8.2k)", tags: ["Pool","Spa","Fine dining"], was: "₹28,000", now: "₹19,600", save: "Save ₹8,400", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp5635d.jpg", code: "lp5635d" },
+    { name: "Taj Palace, New Delhi", loc: "Diplomatic Enclave, New Delhi, India", city: "New Delhi", stars: 5, rating: "4.7 (9.6k)", tags: ["Luxury","Spa","Gardens"], was: "₹26,000", now: "₹18,200", save: "Save ₹7,800", badges: [["Luxury","luxury"],["6% Off","off"]], img: "/hotels/lp25093.jpg", code: "lp25093" },
+    { name: "Roseate House", loc: "Aerocity, New Delhi, India", city: "New Delhi", stars: 5, rating: "4.6 (4.4k)", tags: ["Boutique","Rooftop","Aerocity"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lp7c680.jpg", code: "lp7c680" },
+    { name: "Crowne Plaza New Delhi Okhla by IHG", loc: "Okhla, New Delhi, India", city: "New Delhi", stars: 5, rating: "4.4 (6.1k)", tags: ["Business","Pool","Spa"], was: "₹14,000", now: "₹9,800", save: "Save ₹4,200", badges: [["Best Value","best"],["AI Watching","watching"]], img: "/hotels/lp57c34.jpg", code: "lp57c34" },
+    { name: "Aloft by Marriott New Delhi Aerocity", loc: "Aerocity, New Delhi, India", city: "New Delhi", stars: 4, rating: "4.3 (5.2k)", tags: ["Trendy","Near airport"], was: "₹11,000", now: "₹7,700", save: "Save ₹3,300", badges: [["Best Value","best"],["7% Off","off"]], img: "/hotels/lpe15b1.jpg", code: "lpe15b1" },
+    { name: "Radisson Blu Hotel New Delhi Dwarka", loc: "Dwarka, New Delhi, India", city: "New Delhi", stars: 4, rating: "4.3 (3.8k)", tags: ["Business","Pool"], was: "₹12,000", now: "₹8,400", save: "Save ₹3,600", badges: [["Trending","trending"],["AI Watching","watching"]], img: "/hotels/lp5f77a.jpg", code: "lp5f77a" },
+  ],
+    "Goa": [
+    { name: "DoubleTree by Hilton Goa - Panaji", loc: "Panaji, Goa", city: "Goa", stars: 5, rating: "4.5 (4.2k)", tags: ["Panaji","River view","Pool"], was: "₹13,000", now: "₹9,100", save: "Save ₹3,900", badges: [["AI Watching","watching"],["5% Off","off"]], img: "/hotels/lpc425f.jpg", code: "lpc425f" },
+    { name: "Le Meridien Goa, Calangute", loc: "Calangute, Goa", city: "Goa", stars: 5, rating: "4.6 (3.1k)", tags: ["Calangute","Beach","Spa"], was: "₹15,000", now: "₹10,500", save: "Save ₹4,500", badges: [["Trending","trending"],["5% Off","off"]], img: "/hotels/lpaf35e.jpg", code: "lpaf35e" },
+    { name: "W Goa", loc: "Vagator, Goa", city: "Goa", stars: 5, rating: "4.7 (5.8k)", tags: ["Vagator","Beach","Luxury"], was: "₹22,000", now: "₹15,400", save: "Save ₹6,600", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp97d44.jpg", code: "lp97d44" },
+    { name: "Hyatt Centric Candolim Goa", loc: "Candolim, Goa", city: "Goa", stars: 4, rating: "4.5 (2.4k)", tags: ["Candolim","Beach","Pool"], was: "₹12,000", now: "₹8,400", save: "Save ₹3,600", badges: [["Best Value","best"],["4% Off","off"]], img: "/hotels/lp8956f.jpg", code: "lp8956f" },
+    { name: "Park Inn by Radisson Goa Candolim", loc: "Candolim, Goa", city: "Goa", stars: 4, rating: "4.2 (3.6k)", tags: ["Candolim","Pool","Free Breakfast"], was: "₹7,000", now: "₹4,900", save: "Save ₹2,100", badges: [["Best Value","best"],["3% Off","off"]], img: "/hotels/lp3561a.jpg", code: "lp3561a" },
+    { name: "Taj Exotica Resort & Spa, Goa", loc: "Benaulim, Goa", city: "Goa", stars: 5, rating: "4.7 (9.2k)", tags: ["Benaulim","Beach","Golf"], was: "₹24,000", now: "₹16,800", save: "Save ₹7,200", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp3a7f2.jpg", code: "lp3a7f2" },
+  ],
+  
+  "Mumbai": [
+    { name: "Ramada Plaza By Wyndham Palm Grove", loc: "Juhu, Mumbai", city: "Mumbai", stars: 4, rating: "4.2 (4.1k)", tags: ["Juhu","Pool","Free WiFi"], was: "₹9,000", now: "₹6,300", save: "Save ₹2,700", badges: [["Best Value","best"],["3% Off","off"]], img: "/hotels/lp3a654.jpg", code: "lp3a654" },
+    { name: "Novotel Mumbai Juhu Beach Hotel", loc: "Juhu Beach, Mumbai", city: "Mumbai", stars: 5, rating: "4.4 (6.7k)", tags: ["Juhu Beach","Pool","Sea view"], was: "₹12,000", now: "₹8,400", save: "Save ₹3,600", badges: [["AI Watching","watching"],["4% Off","off"]], img: "/hotels/lp4c211.jpg", code: "lp4c211" },
+    { name: "The St. Regis Mumbai", loc: "Lower Parel, Mumbai", city: "Mumbai", stars: 5, rating: "4.7 (5.9k)", tags: ["Lower Parel","Sky pool","Luxury"], was: "₹25,000", now: "₹17,500", save: "Save ₹7,500", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp655c3.jpg", code: "lp655c3" },
+    { name: "The Lalit Mumbai", loc: "Sahar, Mumbai", city: "Mumbai", stars: 5, rating: "4.4 (8.3k)", tags: ["Sahar","Airport","Pool"], was: "₹16,000", now: "₹11,200", save: "Save ₹4,800", badges: [["Trending","trending"],["5% Off","off"]], img: "/hotels/lp33bad.jpg", code: "lp33bad" },
+    { name: "Sofitel Mumbai BKC", loc: "BKC, Mumbai", city: "Mumbai", stars: 5, rating: "4.6 (4.4k)", tags: ["BKC","Business","Luxury"], was: "₹20,000", now: "₹14,000", save: "Save ₹6,000", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp5b6be.jpg", code: "lp5b6be" },
+    { name: "The Oberoi Mumbai", loc: "Nariman Point, Mumbai", city: "Mumbai", stars: 5, rating: "4.8 (4.9k)", tags: ["Nariman Point","Sea view","Luxury"], was: "₹34,000", now: "₹23,800", save: "Save ₹10,200", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp1e3f7.jpg", code: "lp1e3f7" },
+  ],
+  
+  "Bangalore": [
+    { name: "Hilton Bangalore Embassy GolfLinks", loc: "Embassy GolfLinks, Bengaluru", city: "Bangalore", stars: 5, rating: "4.5 (5.2k)", tags: ["Embassy GolfLinks","Golf","Pool"], was: "₹14,000", now: "₹9,800", save: "Save ₹4,200", badges: [["AI Watching","watching"],["4% Off","off"]], img: "/hotels/lp69fec.jpg", code: "lp69fec" },
+    { name: "ITC Windsor, a Luxury Collection Hotel, Bengaluru", loc: "Golf Course Road, Bengaluru", city: "Bangalore", stars: 5, rating: "4.6 (7.4k)", tags: ["Golf Course Road","Heritage","Luxury"], was: "₹19,000", now: "₹13,300", save: "Save ₹5,700", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp19d8d.jpg", code: "lp19d8d" },
+    { name: "Conrad Bengaluru", loc: "Ulsoor Lake, Bengaluru", city: "Bangalore", stars: 5, rating: "4.7 (6.8k)", tags: ["Ulsoor Lake","Luxury","Spa"], was: "₹18,000", now: "₹12,600", save: "Save ₹5,400", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lpb1787.jpg", code: "lpb1787" },
+    { name: "Hyatt Centric MG Road Bangalore", loc: "MG Road, Bengaluru", city: "Bangalore", stars: 4, rating: "4.4 (3.3k)", tags: ["MG Road","City Centre","Pool"], was: "₹11,000", now: "₹7,700", save: "Save ₹3,300", badges: [["Best Value","best"],["4% Off","off"]], img: "/hotels/lp3bf1a.jpg", code: "lp3bf1a" },
+    { name: "Four Points by Sheraton Bengaluru Whitefield", loc: "Whitefield, Bengaluru", city: "Bangalore", stars: 4, rating: "4.2 (2.7k)", tags: ["Whitefield","Business","Pool"], was: "₹8,000", now: "₹5,600", save: "Save ₹2,400", badges: [["Best Value","best"],["3% Off","off"]], img: "/hotels/lp40f31.jpg", code: "lp40f31" },
+    { name: "Sheraton Grand Bangalore Hotel at Brigade Gateway", loc: "Brigade Gateway, Bengaluru", city: "Bangalore", stars: 5, rating: "4.5 (4.6k)", tags: ["Brigade Gateway","Mall access","Pool"], was: "₹15,000", now: "₹10,500", save: "Save ₹4,500", badges: [["Trending","trending"],["5% Off","off"]], img: "/hotels/lp5ba52.jpg", code: "lp5ba52" },
+  ],
+  
+  "Tokyo": [
+    { name: "Hilton Tokyo Bay", loc: "Tokyo Bay, Tokyo", city: "Tokyo", stars: 4, rating: "4.4 (9.1k)", tags: ["Tokyo Bay","Disney area","Pool"], was: "₹17,000", now: "₹11,900", save: "Save ₹5,100", badges: [["Trending","trending"],["5% Off","off"]], img: "/hotels/lp2207f.jpg", code: "lp2207f" },
+    { name: "Millennium Mitsui Garden Hotel Tokyo - Ginza", loc: "Ginza, Tokyo", city: "Tokyo", stars: 4, rating: "4.5 (3.2k)", tags: ["Ginza","Shopping","City view"], was: "₹16,000", now: "₹11,200", save: "Save ₹4,800", badges: [["AI Watching","watching"],["4% Off","off"]], img: "/hotels/lp70c26.jpg", code: "lp70c26" },
+    { name: "Park Hotel Tokyo", loc: "Shiodome, Tokyo", city: "Tokyo", stars: 4, rating: "4.5 (2.6k)", tags: ["Shiodome","City view","Art"], was: "₹17,000", now: "₹11,900", save: "Save ₹5,100", badges: [["Best Value","best"],["4% Off","off"]], img: "/hotels/lp32d36.jpg", code: "lp32d36" },
+    { name: "Mitsui Garden Hotel Kyobashi - Tokyo Station", loc: "Kyobashi, Tokyo", city: "Tokyo", stars: 4, rating: "4.4 (1.9k)", tags: ["Tokyo Station","Business","Central"], was: "₹14,000", now: "₹9,800", save: "Save ₹4,200", badges: [["Best Value","best"],["3% Off","off"]], img: "/hotels/lp90c74.jpg", code: "lp90c74" },
+    { name: "Citadines Central Shinjuku Tokyo", loc: "Shinjuku, Tokyo", city: "Tokyo", stars: 4, rating: "4.3 (2.4k)", tags: ["Shinjuku","Apartment-style","Central"], was: "₹15,000", now: "₹10,500", save: "Save ₹4,500", badges: [["Trending","trending"],["4% Off","off"]], img: "/hotels/lp4170e.jpg", code: "lp4170e" },
+    { name: "Hyatt Regency Tokyo Bay", loc: "Tokyo Bay, Tokyo", city: "Tokyo", stars: 5, rating: "4.5 (3.7k)", tags: ["Tokyo Bay","Disney area","Family"], was: "₹16,000", now: "₹11,200", save: "Save ₹4,800", badges: [["Luxury","luxury"],["AI Watching","watching"]], img: "/hotels/lp1e3a4c.jpg", code: "lp1e3a4c" },
+  ],
+};
+
+const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
+  luxury: { bg: "#1e293b", color: "#fff" }, best: { bg: "#16a34a", color: "#fff" },
+  watching: { bg: "rgba(20,71,184,0.92)", color: "#fff" }, trending: { bg: "#f59e0b", color: "#1a1a1a" }, off: { bg: "#ef4444", color: "#fff" },
+};
+
+const CITY_FILTERS = ["Top Sellers", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai", "Bangalore", "Tokyo"];
+
+const STATS = [
+  { id: 0, target: 4200, prefix: "", suffix: "+", label: "Member deals live right now" },
+  { id: 1, target: 18, prefix: "₹", suffix: "Cr", label: "Saved for members" },
+  { id: 2, target: 28, prefix: "", suffix: "%", label: "Avg below OTA price" },
+  { id: 3, target: 500000, prefix: "", suffix: "+", label: "Hotels in our network" },
+];
+
+interface GuestState { rooms: number; adults: number; children: number; childAges: number[]; }
+
+interface Selection {
+  label: string;
+  type: 'city' | 'hotel' | 'area' | 'landmark' | 'airport';
+  placeId?: string;
+  hotelId?: string;
+  lat?: number;
+  lng?: number;
+  radius?: number;
+  placeTypes?: string[];
+}
+
+// SVG icons
+const IconCity = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="9" width="5" height="12"/><rect x="9" y="5" width="6" height="16"/><rect x="16" y="11" width="5" height="10"/><line x1="1" y1="21" x2="23" y2="21"/></svg>;
+const IconPin = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>;
+const IconStar = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+const IconPlane = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>;
+const IconHotel = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v11"/><path d="M3 11h18"/><path d="M21 7v11"/><rect x="7" y="7" width="10" height="4" rx="2"/><path d="M7 18v2"/><path d="M17 18v2"/></svg>;
+
+export default function SearchHotelsPage() {
+  const router = useRouter();
+  const isMobile = useIsMobile();
+  const today = new Date();
+  const defaults = getDefaultDates();
+
+  const [user, setUser] = useState<{ name: string } | null>(null);
+  const [inputText, setInputText] = useState("");
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [checkIn, setCheckIn] = useState(defaults.checkIn);
+  const [checkOut, setCheckOut] = useState(defaults.checkOut);
+  const [guests, setGuests] = useState<GuestState>({ rooms: 1, adults: 2, children: 0, childAges: [] });
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<any>({ cities: [], hotels: [], areas: [], landmarks: [], airport: null });
+  const [activeCity, setActiveCity] = useState("Top Sellers");
+  const [destCarouselPos, setDestCarouselPos] = useState(0);
+  const [hotelCarouselPos, setHotelCarouselPos] = useState(0);
+  useEffect(() => { setHotelCarouselPos(0); }, [activeCity]);
+  const [tickerIdx, setTickerIdx] = useState(0);
+  const [tickerVisible, setTickerVisible] = useState(true);
+  const [statVals, setStatVals] = useState(STATS.map(s => `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [calOpen, setCalOpen] = useState(false);
+  const [calMode, setCalMode] = useState<"checkin"|"checkout">("checkin");
+  const [calMonthOffset, setCalMonthOffset] = useState(0);
+  const [guestOpen, setGuestOpen] = useState(false);
+
+  const calRef = useRef<HTMLDivElement>(null);
+  const guestRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
+  const statsAnimated = useRef(false);
+
+  const defaultSuggestions = {
+    cities: DESTINATIONS.map(d => ({ type: 'city', name: d.city, countryName: d.country, flag: d.flag, placeId: null, placeTypes: ['place'] })),
+    hotels: [], areas: [], landmarks: [], airport: null
+  };
+
+  useEffect(() => {
+    if (!inputText || inputText.length === 0) { setSuggestions({ cities: [], hotels: [], areas: [], landmarks: [], airport: null }); return; }
+    if (inputText.length < 2) return;
+    const timer = setTimeout(async () => {
+      try {
+        const wantsAreas = inputText.length >= 3;
+        const wantsHotels = inputText.length >= 5;
+        const [mapboxResult, backendRes] = await Promise.all([
+          fetchMapboxPlaces(inputText),
+          wantsHotels
+            ? fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(inputText)}`).then(r => r.json()).catch(() => ({ hotels: [] }))
+            : Promise.resolve({ hotels: [] }),
+        ]);
+        const cities = mapboxResult.cities;
+        const areas = wantsAreas ? mapboxResult.areas : [];
+        const hotels = backendRes.hotels || [];
+        if (cities.length === 0 && areas.length === 0 && hotels.length === 0) {
+          const q = inputText.toLowerCase();
+          const matched = defaultSuggestions.cities.filter((c: any) =>
+            c.name.toLowerCase().includes(q)
+          );
+          setSuggestions({ cities: matched, hotels: [], areas: [], landmarks: [], airport: null });
+        } else {
+          setSuggestions({ cities, hotels, areas, landmarks: [], airport: null });
+        }
+      } catch {
+        const q = inputText.toLowerCase();
+        const matched = defaultSuggestions.cities.filter((c: any) =>
+          c.name.toLowerCase().includes(q)
+        );
+        setSuggestions({ cities: matched, hotels: [], areas: [], landmarks: [], airport: null });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [inputText]);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        const meta = data.user.user_metadata;
+        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member" });
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (calRef.current && !calRef.current.contains(e.target as Node)) setCalOpen(false);
+      if (guestRef.current && !guestRef.current.contains(e.target as Node)) setGuestOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setTickerVisible(false);
+      setTimeout(() => { setTickerIdx(p => (p + 1) % TICKER_ITEMS.length); setTickerVisible(true); }, 400);
+    }, 4000);
+    return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && !statsAnimated.current) {
+        statsAnimated.current = true;
+        STATS.forEach((s, i) => {
+          let start: number | null = null;
+          const step = (ts: number) => {
+            if (!start) start = ts;
+            const p = Math.min((ts - start) / 1200, 1);
+            setStatVals(prev => { const n = [...prev]; n[i] = `${s.prefix}${Math.floor(p * s.target).toLocaleString("en-IN")}${s.suffix}`; return n; });
+            if (p < 1) requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+        });
+        obs.disconnect();
+      }
+    }, { threshold: 0.4 });
+    if (statsRef.current) obs.observe(statsRef.current);
+    return () => obs.disconnect();
+  }, []);
+
+  const handleDayClick = (ds: string) => {
+    setSearchError("");
+    if (calMode === "checkin") { setCheckIn(ds); setCheckOut(""); setCalMode("checkout"); }
+    else { if (ds <= checkIn) return; setCheckOut(ds); setCalOpen(false); }
+  };
+
+  const updateGuests = (key: keyof GuestState, val: number) => {
+    setGuests(prev => {
+      const next = { ...prev, [key]: val };
+      if (key === "children") {
+        next.childAges = val > prev.childAges.length
+          ? [...prev.childAges, ...Array(val - prev.childAges.length).fill(2)]
+          : prev.childAges.slice(0, val);
+      }
+      return next;
+    });
+  };
+
+  const guestSummary = () => {
+    const p = [`${guests.rooms} Room${guests.rooms > 1 ? "s" : ""}`, `${guests.adults} Adult${guests.adults > 1 ? "s" : ""}`];
+    if (guests.children > 0) p.push(`${guests.children} Child${guests.children > 1 ? "ren" : ""}`);
+    return p.join(" · ");
+  };
+
+  const requireAuth = async (action: () => void) => {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) action(); else router.push(`/signin?redirect=/search-hotels`);
+  };
+
+  const doSearch = (sel: Selection, ci: string, co: string) => {
+    requireAuth(async () => {
+      const params = new URLSearchParams({
+        checkIn: ci, checkOut: co,
+        adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children),
+        ...(guests.childAges.length > 0 ? { childAges: guests.childAges.join(",") } : {}),
+      });
+      params.set('sessionId', genSessionId());
+      params.set('destination', sel.label);
+
+      const isLandmark = !!sel.placeTypes?.some(t => ['poi', 'neighborhood', 'locality', 'address'].includes(t));
+      const isCityLevel = !!sel.placeTypes?.some(t => ['place', 'region', 'country'].includes(t));
+
+      if (sel.type === 'hotel' && sel.hotelId) {
+        router.push(`/hotel/${sel.hotelId}?${params.toString()}`);
+      } else if (isLandmark && sel.lat != null && sel.lng != null) {
+        // A specific landmark/area — this is the case liteAPI's placeId search
+        // doesn't reliably resolve, so we go straight to coordinates instead.
+        params.set('refLat', String(sel.lat));
+        params.set('refLng', String(sel.lng));
+        params.set('radius', String(sel.radius || 5000));
+        params.set('refLabel', sel.label);
+        router.push(`/search?${params.toString()}`);
+      } else if (sel.placeId && !isCityLevel) {
+        params.set('placeId', sel.placeId);
+        router.push(`/search?${params.toString()}`);
+      } else {
+        // City/region/country-level pick, or a fallback-list pick with no
+        // coordinates at all — resolve via the proven suggest-API placeId path
+        // rather than lat/long, since whole-city radius search has shown gaps.
+        try {
+          const res = await fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(sel.label)}`);
+          const data = await res.json();
+          const match = (data.cities || []).find((c: any) =>
+            c.name?.toLowerCase() === sel.label.toLowerCase()
+          ) || (data.cities || [])[0];
+          if (match?.placeId) {
+            params.set('placeId', match.placeId);
+          }
+        } catch {}
+        router.push(`/search?${params.toString()}`);
+      }
+    });
+  };
+
+  const handleSearch = () => {
+    setSearchError("");
+    if (!selection) { setSearchError("Please select a destination from the dropdown"); return; }
+    if (!checkIn) { setSearchError("Please select a check-in date"); return; }
+    if (!checkOut) { setSearchError("Please select a check-out date"); return; }
+    doSearch(selection, checkIn, checkOut);
+  };
+
+  const handleSelect = (item: any, type: string) => {
+    const sel: Selection = {
+      label: item.name,
+      type: type as any,
+      placeId: item.placeId || undefined,
+      hotelId: item.hotelId || undefined,
+      lat: item.lat || undefined,
+      lng: item.lng || undefined,
+      radius: item.radius || undefined,
+      placeTypes: item.placeTypes || undefined,
+    };
+    setSelection(sel);
+    setInputText(item.name);
+    setShowSuggestions(false);
+    setTimeout(() => { setCalMode("checkin"); setCalOpen(true); }, 100);
+  };
+
+  const handleHotelCardClick = async (hotelName: string, city: string, hotelCode?: string) => {
+    requireAuth(async () => {
+      const ci = checkIn || defaults.checkIn;
+      const co = checkOut || defaults.checkOut;
+      if (hotelCode) {
+        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children) }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(',')); params.set('sessionId', genSessionId());
+        const url = `/hotel/${hotelCode}?${params.toString()}`;
+        isMobile ? router.push(url) : window.open(url, '_blank');
+        return;
+      }
+      try {
+        const res = await fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(hotelName)}`);
+        const data = await res.json();
+        const match = (data.hotels || []).find((h: any) => h.name.toLowerCase().includes(hotelName.toLowerCase().slice(0, 15)));
+        if (match?.hotelId) {
+          const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children) }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(',')); params.set('sessionId', genSessionId());
+          const url = `/hotel/${match.hotelId}?${params.toString()}`;
+          isMobile ? router.push(url) : window.open(url, '_blank');
+        } else {
+          const cityMatch = (data.cities || []).find((c: any) => c.name?.toLowerCase().includes(city.toLowerCase()));
+          const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: city }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(',')); params.set('sessionId', genSessionId());
+          if (cityMatch?.placeId) params.set('placeId', cityMatch.placeId);
+          const url = `/search?${params.toString()}`;
+          isMobile ? router.push(url) : window.open(url, '_blank');
+        }
+      } catch {
+        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: city }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(',')); params.set('sessionId', genSessionId());
+        const url = `/search?${params.toString()}`;
+        isMobile ? router.push(url) : window.open(url, '_blank');
+      }
+    });
+  };
+
+  const handleDestCardClick = async (cityName: string) => {
+    requireAuth(async () => {
+      const ci = checkIn || defaults.checkIn;
+      const co = checkOut || defaults.checkOut;
+      try {
+        const res = await fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(cityName)}`);
+        const data = await res.json();
+        const match = (data.cities || []).find((c: any) => c.name?.toLowerCase() === cityName.toLowerCase());
+        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: cityName }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(',')); params.set('sessionId', genSessionId());
+        if (match?.placeId) params.set('placeId', match.placeId);
+        router.push(`/search?${params.toString()}`);
+      } catch {
+        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: cityName }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(',')); params.set('sessionId', genSessionId());
+        router.push(`/search?${params.toString()}`);
+      }
+    });
+  };
+
+  const renderMonth = (year: number, month: number) => {
+    const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
+    const days = getDaysInMonth(year, month);
+    const firstDow = getFirstDow(year, month);
+    return (
+      <div key={`${year}-${month}`} style={{ marginBottom: 32 }}>
+        <div style={{ fontWeight: 700, fontSize: 16, color: NAVY, textAlign: "center", marginBottom: 16, fontFamily: "'Sora',sans-serif" }}>{MONTHS[month]} {year}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
+          {DOWS.map(d => <div key={d} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, color: "#94a3b8", paddingBottom: 10 }}>{d}</div>)}
+          {Array.from({ length: firstDow }).map((_, i) => <div key={`e${i}`} />)}
+          {Array.from({ length: days }).map((_, i) => {
+            const day = i + 1; const ds = toDateStr(year, month, day); const isDisabled = ds < todayStr;
+            const isStart = ds === checkIn && !!checkOut; const isEnd = ds === checkOut;
+            const isOnly = ds === checkIn && !checkOut; const isInRange = !!(checkIn && checkOut && ds > checkIn && ds < checkOut);
+            const isToday = ds === todayStr;
+            let bg = "transparent", clr = isDisabled ? "#cbd5e1" : NAVY, br = "50%", fw = isToday ? 700 : 400;
+            if (isStart) { bg = B; clr = "#fff"; br = "50% 0 0 50%"; fw = 700; }
+            else if (isEnd) { bg = B; clr = "#fff"; br = "0 50% 50% 0"; fw = 700; }
+            else if (isOnly) { bg = B; clr = "#fff"; br = "50%"; fw = 700; }
+            else if (isInRange) { bg = "#dbeafe"; clr = B; br = "0"; }
+            else if (isToday) { clr = B; }
+            return (
+              <div key={day} onClick={() => !isDisabled && handleDayClick(ds)}
+                style={{ height: 40, display: "flex", alignItems: "center", justifyContent: "center", background: bg, color: clr, borderRadius: br, fontWeight: fw, fontSize: 14, cursor: isDisabled ? "not-allowed" : "pointer", opacity: isDisabled ? 0.35 : 1 }}>
+                {day}
+              </div>
+            );
+          })}
+        </div>
       </div>
+    );
+  };
 
-      {refLabel&&<div style={{marginBottom:16}}>
-        <div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>Distance from {refLabel}</div>
-        {[{label:"Less than 1 km",max:1},{label:"Less than 3 km",max:3},{label:"Less than 5 km",max:5}].map(({label,max})=><Row key={label} onClick={()=>setFilterMaxDistance(filterMaxDistance===max?null:max)}>
-          <CB active={filterMaxDistance===max} onClick={()=>setFilterMaxDistance(filterMaxDistance===max?null:max)}/>
-          <span style={{fontSize:13,color:"#1e293b"}}>{label}</span>
-        </Row>)}
-      </div>}
+  const ticker = TICKER_ITEMS[tickerIdx];
+  const hotels = HOTELS_BY_CITY[activeCity] || HOTELS_BY_CITY["Top Sellers"];
+  const HOTEL_CARD_WIDTH = isMobile ? 300 : 340;
+  const HOTEL_VISIBLE = isMobile ? 1 : 3;
+  const HOTEL_MAX_POS = Math.max(0, hotels.length - HOTEL_VISIBLE);
+  const scrollHotelCarousel = (dir: number) => setHotelCarouselPos(prev => Math.max(0, Math.min(HOTEL_MAX_POS, prev + dir)));
+  const d1 = new Date(today.getFullYear(), today.getMonth() + calMonthOffset);
+  const d2 = new Date(today.getFullYear(), today.getMonth() + calMonthOffset + 1);
 
-      {areaOptions.length>0&&<div style={{marginBottom:16}}>
-        <div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>Location</div>
-        {areaOptions.map(a=><Row key={a} onClick={()=>setFilterLocation(filterLocation===a?"":a)}>
-          <CB active={filterLocation===a} onClick={()=>setFilterLocation(filterLocation===a?"":a)}/>
-          <span style={{fontSize:13,color:"#1e293b"}}>{a}</span>
-        </Row>)}
-        {filterLocation&&<button onClick={()=>setFilterLocation("")} style={{background:"none",border:"none",fontSize:12,color:B,cursor:"pointer",fontFamily:"inherit",padding:"4px 0",fontWeight:600}}>Clear</button>}
-      </div>}
-      <div style={{marginBottom:16}}><div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>Price per night</div>{([{label:"Under ₹5,000",min:null,max:5000},{label:"₹5,000 – ₹10,000",min:5000,max:10000},{label:"₹10,000 – ₹20,000",min:10000,max:20000},{label:"₹20,000 – ₹40,000",min:20000,max:40000},{label:"₹40,000+",min:40000,max:null}] as {label:string;min:number|null;max:number|null}[]).map(({label,min,max})=>{const a=filterPriceMin===min&&filterPriceMax===max;return<Row key={label} onClick={()=>a?setPriceRange(null,null):setPriceRange(min,max)}><CB active={a} onClick={()=>a?setPriceRange(null,null):setPriceRange(min,max)}/><span style={{fontSize:13,color:"#1e293b"}}>{label}</span></Row>;})}</div>
-      <div style={{marginBottom:16}}><div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>Suggested</div>{[{label:"Free Cancellation",active:filterRefundable,toggle:()=>setFilterRefundable(!filterRefundable)},{label:"Free Breakfast",active:filterBreakfast,toggle:()=>setFilterBreakfast(!filterBreakfast)},{label:"Rating 9+",active:filterRating===9,toggle:()=>setFilterRating(filterRating===9?null:9)}].map(({label,active,toggle})=><Row key={label} onClick={toggle}><CB active={active} onClick={toggle}/><span style={{fontSize:13,color:"#1e293b"}}>{label}</span></Row>)}</div>
-      <div style={{marginBottom:16}}><div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>Star category</div>{[5,4,3,2,1].map(s=>{const a=filterStars.includes(s);return<Row key={s} onClick={()=>setFilterStars(a?filterStars.filter(x=>x!==s):[...filterStars,s])}><CB active={a} onClick={()=>setFilterStars(a?filterStars.filter(x=>x!==s):[...filterStars,s])}/><span style={{color:"#f59e0b",fontSize:13}}>{"★".repeat(s)}</span><span style={{fontSize:13,color:"#1e293b"}}>{s} Star</span></Row>;})}</div>
-      <div style={{marginBottom:16}}><div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>User rating</div>{[{label:"Exceptional 9+",min:9},{label:"Excellent 8+",min:8},{label:"Very Good 7+",min:7}].map(({label,min})=><Row key={label} onClick={()=>setFilterRating(filterRating===min?null:min)}><RB active={filterRating===min} onClick={()=>setFilterRating(filterRating===min?null:min)}/><span style={{fontSize:13,color:"#1e293b"}}>{label}</span></Row>)}</div>
-      <div style={{marginBottom:16}}><div style={{fontSize:13,fontWeight:700,color:NAVY,marginBottom:10}}>Facilities</div>{(showMore?TOP_FACILITIES:TOP_FACILITIES.slice(0,6)).map(label=>{const a=filterFacilities.includes(label);return<Row key={label} onClick={()=>setFilterFacilities(a?filterFacilities.filter(f=>f!==label):[...filterFacilities,label])}><CB active={a} onClick={()=>setFilterFacilities(a?filterFacilities.filter(f=>f!==label):[...filterFacilities,label])}/><span style={{fontSize:13,color:"#1e293b"}}>{label}</span></Row>;})}
-        <button onClick={()=>setShowMore(!showMore)} style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:B,fontWeight:600,fontFamily:"inherit",padding:"4px 0"}}>{showMore?"Show less":"View more"}</button>
+  const hasSuggestions = suggestions.cities.length > 0 || suggestions.hotels.length > 0 || suggestions.areas.length > 0 || suggestions.landmarks.length > 0 || suggestions.airport;
+
+  // ── Dropdown rows ──────────────────────────────────────────────────────────
+  const SectionLabel = ({ label }: { label: string }) => (
+    <div style={{ padding: "6px 14px 3px", fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", borderTop: "0.5px solid #f1f5f9" }}>{label}</div>
+  );
+
+  const Row = ({ icon, name, subtext, onClick, isCity }: { icon: React.ReactNode; name: string; subtext?: string; onClick: () => void; isCity?: boolean }) => (
+    <div onMouseDown={onClick}
+      style={{ display: "flex", alignItems: "center", gap: 12, padding: isCity ? "12px 14px" : "9px 14px", cursor: "pointer", borderBottom: "0.5px solid #f8fafc", transition: "background 0.1s" }}
+      onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+      <div style={{ color: "#64748b", flexShrink: 0, display: "flex", alignItems: "center", width: isCity ? 20 : 18 }}>{icon}</div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: isCity ? 15 : 14, fontWeight: isCity ? 600 : 500, color: NAVY, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+        {subtext && <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 1 }}>{subtext}</div>}
       </div>
-      {hasActiveFilters&&<button onClick={clearAllFilters} style={{width:"100%",background:"#fef3c7",color:"#92400e",border:"none",borderRadius:8,padding:10,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Clear all filters</button>}
     </div>
   );
-}
 
-function CalendarScreen({checkIn,checkOut,onSelect,onClose}:{checkIn:string;checkOut:string;onSelect:(ci:string,co:string)=>void;onClose:()=>void;}){
-  const today=new Date();const[mode,setMode]=useState<"checkin"|"checkout">(checkIn?"checkout":"checkin");const[ci,setCi]=useState(checkIn);const[co,setCo]=useState(checkOut);
-  const todayStr=toDateStr(today.getFullYear(),today.getMonth(),today.getDate());
-  const handleDay=(ds:string)=>{if(mode==="checkin"){setCi(ds);setCo("");setMode("checkout");}else{if(ds<=ci)return;setCo(ds);}};
-  const renderMonth=(year:number,month:number)=>{const days=getDaysInMonth(year,month);const firstDow=getFirstDow(year,month);return(<div key={`${year}-${month}`} style={{marginBottom:32}}><div style={{fontWeight:700,fontSize:16,color:NAVY,textAlign:"center",marginBottom:16}}>{MONTHS[month]} {year}</div><div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>{DOWS.map(d=><div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"#94a3b8",paddingBottom:8}}>{d}</div>)}{Array.from({length:firstDow}).map((_,i)=><div key={`e${i}`}/>)}{Array.from({length:days}).map((_,i)=>{const day=i+1;const ds=toDateStr(year,month,day);const isDisabled=ds<todayStr;let bg="transparent",clr=isDisabled?"#cbd5e1":NAVY,br="50%",fw=400;if(ds===ci&&!!co){bg=B;clr="#fff";br="50% 0 0 50%";fw=700;}else if(ds===co){bg=B;clr="#fff";br="0 50% 50% 0";fw=700;}else if(ds===ci&&!co){bg=B;clr="#fff";br="50%";fw=700;}else if(ci&&co&&ds>ci&&ds<co){bg="#dbeafe";clr=B;br="0";}else if(ds===todayStr)clr=B;return<div key={day} onClick={()=>!isDisabled&&handleDay(ds)} style={{height:38,display:"flex",alignItems:"center",justifyContent:"center",background:bg,color:clr,borderRadius:br,fontWeight:fw,fontSize:14,cursor:isDisabled?"not-allowed":"pointer",opacity:isDisabled?0.35:1}}>{day}</div>;})}</div></div>);};
-  return(<div style={{position:"fixed",inset:0,background:"#fff",zIndex:9999,display:"flex",flexDirection:"column"}}>
-    <div style={{display:"flex",alignItems:"center",gap:16,padding:"16px 20px",borderBottom:"1px solid #f1f5f9",flexShrink:0}}><button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:24,color:NAVY}}>←</button><div style={{fontWeight:700,fontSize:17,color:NAVY}}>{mode==="checkin"?"Select Check-in":"Select Check-out"}</div></div>
-    <div style={{flex:1,overflowY:"auto",padding:"20px 20px 0"}}>{Array.from({length:12}).map((_,i)=>{const dm=new Date(today.getFullYear(),today.getMonth()+i);return renderMonth(dm.getFullYear(),dm.getMonth());})}</div>
-    <div style={{borderTop:"1px solid #e2e8f0",padding:"14px 20px 32px",background:"#fff",flexShrink:0}}>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-        <div style={{border:`2px solid ${mode==="checkin"?B:"#e2e8f0"}`,borderRadius:10,padding:"10px 14px"}}><div style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Check-in</div><div style={{fontSize:14,fontWeight:600,color:ci?NAVY:"#94a3b8"}}>{ci?formatDate(ci):"Select"}</div></div>
-        <div style={{border:`2px solid ${mode==="checkout"?B:"#e2e8f0"}`,borderRadius:10,padding:"10px 14px"}}><div style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Check-out</div><div style={{fontSize:14,fontWeight:600,color:co?NAVY:"#94a3b8"}}>{co?formatDate(co):"Select"}</div></div>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10}}>
-        <button onClick={()=>{setCi("");setCo("");setMode("checkin");}} style={{background:"#fef3c7",color:"#92400e",border:"none",borderRadius:12,padding:14,fontSize:15,fontWeight:600,cursor:"pointer"}}>Clear</button>
-        <button onClick={()=>{if(ci&&co){onSelect(ci,co);onClose();}}} style={{background:ci&&co?YELLOW:"#e2e8f0",color:ci&&co?"#1a1a1a":"#94a3b8",border:"none",borderRadius:12,padding:14,fontSize:15,fontWeight:700,cursor:ci&&co?"pointer":"default"}}>Select</button>
-      </div>
-    </div>
-  </div>);
-}
+  // Client-side flag+country lookup — never relies on backend sending countryCode
+  const CITY_INFO: Record<string, { flag: string; country: string }> = {
+    'dubai': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'abu dhabi': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'sharjah': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'dubai mall': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'dubai marina': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'downtown dubai': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'palm jumeirah': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'deira': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'dubai international airport': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'dubai hills': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'dubai silicon oasis': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'jumeirah': { flag: '🇦🇪', country: 'United Arab Emirates' },
+    'mumbai': { flag: '🇮🇳', country: 'India' },
+    'new delhi': { flag: '🇮🇳', country: 'India' },
+    'delhi': { flag: '🇮🇳', country: 'India' },
+    'goa': { flag: '🇮🇳', country: 'India' },
+    'bangalore': { flag: '🇮🇳', country: 'India' },
+    'bengaluru': { flag: '🇮🇳', country: 'India' },
+    'jaipur': { flag: '🇮🇳', country: 'India' },
+    'hyderabad': { flag: '🇮🇳', country: 'India' },
+    'chennai': { flag: '🇮🇳', country: 'India' },
+    'kolkata': { flag: '🇮🇳', country: 'India' },
+    'agra': { flag: '🇮🇳', country: 'India' },
+    'kochi': { flag: '🇮🇳', country: 'India' },
+    'pune': { flag: '🇮🇳', country: 'India' },
+    'ahmedabad': { flag: '🇮🇳', country: 'India' },
+    'udaipur': { flag: '🇮🇳', country: 'India' },
+    'varanasi': { flag: '🇮🇳', country: 'India' },
+    'amritsar': { flag: '🇮🇳', country: 'India' },
+    'connaught place': { flag: '🇮🇳', country: 'India' },
+    'singapore': { flag: '🇸🇬', country: 'Singapore' },
+    'bangkok': { flag: '🇹🇭', country: 'Thailand' },
+    'phuket': { flag: '🇹🇭', country: 'Thailand' },
+    'chiang mai': { flag: '🇹🇭', country: 'Thailand' },
+    'bali': { flag: '🇮🇩', country: 'Indonesia' },
+    'jakarta': { flag: '🇮🇩', country: 'Indonesia' },
+    'kuala lumpur': { flag: '🇲🇾', country: 'Malaysia' },
+    'london': { flag: '🇬🇧', country: 'United Kingdom' },
+    'manchester': { flag: '🇬🇧', country: 'United Kingdom' },
+    'edinburgh': { flag: '🇬🇧', country: 'United Kingdom' },
+    'paris': { flag: '🇫🇷', country: 'France' },
+    'nice': { flag: '🇫🇷', country: 'France' },
+    'rome': { flag: '🇮🇹', country: 'Italy' },
+    'milan': { flag: '🇮🇹', country: 'Italy' },
+    'venice': { flag: '🇮🇹', country: 'Italy' },
+    'florence': { flag: '🇮🇹', country: 'Italy' },
+    'barcelona': { flag: '🇪🇸', country: 'Spain' },
+    'madrid': { flag: '🇪🇸', country: 'Spain' },
+    'amsterdam': { flag: '🇳🇱', country: 'Netherlands' },
+    'istanbul': { flag: '🇹🇷', country: 'Turkey' },
+    'tokyo': { flag: '🇯🇵', country: 'Japan' },
+    'osaka': { flag: '🇯🇵', country: 'Japan' },
+    'kyoto': { flag: '🇯🇵', country: 'Japan' },
+    'hong kong': { flag: '🇭🇰', country: 'Hong Kong' },
+    'seoul': { flag: '🇰🇷', country: 'South Korea' },
+    'sydney': { flag: '🇦🇺', country: 'Australia' },
+    'melbourne': { flag: '🇦🇺', country: 'Australia' },
+    'doha': { flag: '🇶🇦', country: 'Qatar' },
+    'muscat': { flag: '🇴🇲', country: 'Oman' },
+    'riyadh': { flag: '🇸🇦', country: 'Saudi Arabia' },
+    'jeddah': { flag: '🇸🇦', country: 'Saudi Arabia' },
+    'maldives': { flag: '🇲🇻', country: 'Maldives' },
+    'male': { flag: '🇲🇻', country: 'Maldives' },
+    'cairo': { flag: '🇪🇬', country: 'Egypt' },
+    'new york': { flag: '🇺🇸', country: 'United States' },
+    'los angeles': { flag: '🇺🇸', country: 'United States' },
+    'miami': { flag: '🇺🇸', country: 'United States' },
+    'las vegas': { flag: '🇺🇸', country: 'United States' },
+    'berlin': { flag: '🇩🇪', country: 'Germany' },
+    'munich': { flag: '🇩🇪', country: 'Germany' },
+    'vienna': { flag: '🇦🇹', country: 'Austria' },
+    'zurich': { flag: '🇨🇭', country: 'Switzerland' },
+    'lisbon': { flag: '🇵🇹', country: 'Portugal' },
+    'athens': { flag: '🇬🇷', country: 'Greece' },
+    'santorini': { flag: '🇬🇷', country: 'Greece' },
+    'prague': { flag: '🇨🇿', country: 'Czech Republic' },
+    'stockholm': { flag: '🇸🇪', country: 'Sweden' },
+    'oslo': { flag: '🇳🇴', country: 'Norway' },
+    'copenhagen': { flag: '🇩🇰', country: 'Denmark' },
+    'helsinki': { flag: '🇫🇮', country: 'Finland' },
+    'brussels': { flag: '🇧🇪', country: 'Belgium' },
+    'toronto': { flag: '🇨🇦', country: 'Canada' },
+    'vancouver': { flag: '🇨🇦', country: 'Canada' },
+    'colombo': { flag: '🇱🇰', country: 'Sri Lanka' },
+    'kathmandu': { flag: '🇳🇵', country: 'Nepal' },
+    'nairobi': { flag: '🇰🇪', country: 'Kenya' },
+    'manama': { flag: '🇧🇭', country: 'Bahrain' },
+    'kuwait city': { flag: '🇰🇼', country: 'Kuwait' },
+    'amman': { flag: '🇯🇴', country: 'Jordan' },
+    'hanoi': { flag: '🇻🇳', country: 'Vietnam' },
+    'ho chi minh': { flag: '🇻🇳', country: 'Vietnam' },
+    'manila': { flag: '🇵🇭', country: 'Philippines' },
+    'beijing': { flag: '🇨🇳', country: 'China' },
+    'shanghai': { flag: '🇨🇳', country: 'China' },
+    'marrakech': { flag: '🇲🇦', country: 'Morocco' },
+  };
 
-function GuestsScreen({guests,onSelect,onClose}:{guests:GuestState;onSelect:(g:GuestState)=>void;onClose:()=>void;}){
-  const[g,setG]=useState(guests);
-  const upd=(key:"rooms"|"adults"|"children",val:number)=>setG(prev=>{const n={...prev,[key]:val};if(key==="children"){const ages=[...prev.childAges];if(val>ages.length){while(ages.length<val)ages.push(5);}else ages.splice(val);n.childAges=ages;}return n;});
-  return(<div style={{position:"fixed",inset:0,background:"#fff",zIndex:9999,display:"flex",flexDirection:"column"}}>
-    <div style={{display:"flex",alignItems:"center",gap:16,padding:"16px 20px",borderBottom:"1px solid #f1f5f9",flexShrink:0}}><button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:24,color:NAVY}}>←</button><div style={{fontWeight:700,fontSize:17,color:NAVY}}>Rooms & Guests</div></div>
-    <div style={{flex:1,padding:"0 20px",overflowY:"auto"}}>
-      {([["Rooms","Min 1","rooms",1,4],["Adults","13+ years","adults",1,16],["Children","0–12 years","children",0,8]] as [string,string,"rooms"|"adults"|"children",number,number][]).map(([label,sub,key,min,max])=>(
-        <div key={key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"20px 0",borderBottom:"1px solid #f1f5f9"}}>
-          <div><div style={{fontSize:17,fontWeight:600,color:NAVY}}>{label}</div><div style={{fontSize:13,color:"#94a3b8"}}>{sub}</div></div>
-          <div style={{display:"flex",alignItems:"center",gap:18}}>
-            <button disabled={g[key]<=min} onClick={()=>upd(key,Math.max(min,g[key]-1))} style={{width:40,height:40,borderRadius:8,border:"1.5px solid #cbd5e1",background:"#fff",fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:g[key]<=min?0.3:1}}>−</button>
-            <span style={{fontSize:18,fontWeight:700,color:NAVY,minWidth:28,textAlign:"center"}}>{g[key]}</span>
-            <button disabled={g[key]>=max} onClick={()=>upd(key,Math.min(max,g[key]+1))} style={{width:40,height:40,borderRadius:8,border:"1.5px solid #cbd5e1",background:"#fff",fontSize:20,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:g[key]>=max?0.3:1}}>+</button>
-          </div>
+  function getCityInfo(name: string): { flag: string; country: string } | null {
+    if (!name) return null;
+    const lower = name.toLowerCase().trim();
+    if (CITY_INFO[lower]) return CITY_INFO[lower];
+    const keys = Object.keys(CITY_INFO).sort((a, b) => b.length - a.length);
+    for (const key of keys) {
+      if (lower.includes(key)) return CITY_INFO[key];
+    }
+    return null;
+  }
+
+  const SuggestionDropdown = ({ style }: { style?: React.CSSProperties }) => {
+    if (!showSuggestions || (!suggestions.cities.length && !suggestions.areas.length && !suggestions.hotels.length)) return null;
+    const Row = ({ flag, name, tag, onPick }: { flag: string; name: string; tag: string; onPick: () => void }) => (
+      <div onMouseDown={onPick}
+        style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", cursor: "pointer", borderBottom: "0.5px solid #f1f5f9" }}
+        onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+        <span style={{ fontSize: 20, flexShrink: 0, lineHeight: 1 }}>{flag || "🌍"}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+          <div style={{ fontSize: 12, color: "#94a3b8" }}>{tag}</div>
         </div>
-      ))}
-      {g.children>0&&<div style={{padding:"16px 0"}}><div style={{fontSize:14,fontWeight:600,color:NAVY,marginBottom:12}}>Age of children at check-in</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{Array.from({length:g.children}).map((_,idx)=><div key={idx}><div style={{fontSize:12,color:"#94a3b8",marginBottom:4}}>Child {idx+1}</div><select value={g.childAges[idx]??5} onChange={e=>setG(prev=>{const ages=[...prev.childAges];ages[idx]=parseInt(e.target.value);return{...prev,childAges:ages};})} style={{width:"100%",border:"1.5px solid #e2e8f0",borderRadius:8,padding:"10px 12px",fontSize:14,fontFamily:"inherit",color:NAVY,background:"#fff"}}>{Array.from({length:13},(_,a)=><option key={a} value={a}>{a===0?"Under 1":`${a} year${a>1?"s":""}`}</option>)}</select></div>)}</div></div>}
-    </div>
-    <div style={{borderTop:"1px solid #e2e8f0",padding:"16px 20px 32px",background:"#fff",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-      <div><div style={{fontSize:15,fontWeight:700,color:NAVY}}>{g.rooms} Room{g.rooms>1?"s":""}</div><div style={{fontSize:13,color:"#64748b"}}>{g.adults} Adult{g.adults>1?"s":""}{g.children>0?`, ${g.children} Child${g.children>1?"ren":""}`:""}</div></div>
-      <button onClick={()=>{onSelect(g);onClose();}} style={{background:YELLOW,color:"#1a1a1a",border:"none",borderRadius:12,padding:"14px 28px",fontSize:16,fontWeight:700,cursor:"pointer"}}>Select</button>
-    </div>
-  </div>);
-}
-
-function AuthModal({onClose}:{onClose:()=>void}){
-  const[loading,setLoading]=useState(false);
-  const handleGoogle=async()=>{setLoading(true);const{error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.href}});if(error){setLoading(false);alert("Sign in failed.");}};
-  return(<><div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:8888}}/><div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"#fff",borderRadius:20,zIndex:9999,width:"min(480px,92vw)",padding:"40px 36px"}}>
-    <div style={{textAlign:"center",marginBottom:28}}><div style={{fontFamily:"'Sora',sans-serif",fontWeight:800,fontSize:22,color:NAVY,marginBottom:8}}>rebuq<span style={{color:B}}>.</span></div><div style={{fontSize:20,fontWeight:700,color:NAVY,marginBottom:8}}>Sign in to see member rates</div><div style={{fontSize:14,color:"#64748b",lineHeight:1.6}}>Members get exclusive hotel rates up to 40% below OTA prices.</div></div>
-    <button onClick={handleGoogle} disabled={loading} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:12,background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,padding:"14px 20px",fontSize:15,fontWeight:600,cursor:"pointer",fontFamily:"inherit",color:NAVY,marginBottom:12}}>
-      {loading?<div style={{width:20,height:20,border:"2px solid #e2e8f0",borderTop:`2px solid ${B}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>:<svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>}
-      {loading?"Signing in...":"Continue with Google"}
-    </button>
-    <div style={{textAlign:"center",fontSize:12,color:"#94a3b8"}}>Free forever · No credit card required</div>
-  </div></>);
-}
-
-function BottomSheet({title,onClose,children,onClear}:{title:string;onClose:()=>void;children:React.ReactNode;onClear?:()=>void;}){
-  return(<><div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:8888}}/><div style={{position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderRadius:"20px 20px 0 0",zIndex:9999,maxHeight:"85vh",display:"flex",flexDirection:"column"}}>
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"18px 20px 14px",borderBottom:"1px solid #f1f5f9",flexShrink:0}}><button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:"#94a3b8"}}>×</button><div style={{fontWeight:700,fontSize:17,color:NAVY}}>{title}</div><div style={{width:20}}/></div>
-    <div style={{flex:1,overflowY:"auto",padding:"16px 20px"}}>{children}</div>
-    <div style={{padding:"14px 20px 32px",borderTop:"1px solid #f1f5f9",display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,flexShrink:0}}>
-      <button onClick={onClear||onClose} style={{background:"#fef3c7",color:"#92400e",border:"none",borderRadius:12,padding:14,fontSize:15,fontWeight:600,cursor:"pointer"}}>Clear</button>
-      <button onClick={onClose} style={{background:B,color:"#fff",border:"none",borderRadius:12,padding:14,fontSize:15,fontWeight:700,cursor:"pointer"}}>Show results</button>
-    </div>
-  </div></>);
-}
-
-function ChipDropdown({id,label,openChip,setOpenChip,children}:{id:string;label:string;openChip:string|null;setOpenChip:(v:string|null)=>void;children:React.ReactNode}){
-  const isOpen=openChip===id;
-  return(<div style={{position:"relative"}}><button onClick={()=>setOpenChip(isOpen?null:id)} style={{display:"flex",alignItems:"center",gap:6,background:isOpen?"#eff6ff":"#fff",border:`1.5px solid ${isOpen?B:"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:isOpen?B:NAVY,whiteSpace:"nowrap"}}>{label} <span style={{fontSize:10}}>▼</span></button>
-    {isOpen&&<div style={{position:"absolute",top:"calc(100% + 6px)",left:0,minWidth:220,background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.16)",zIndex:99999,padding:14,maxHeight:320,overflowY:"auto"}}>{children}</div>}
-  </div>);
-}
-
-function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMobile}:{hotels:Hotel[];checkIn:string;checkOut:string;filterProps:FiltersPanelProps;onClose:()=>void;onHotelClick:(h:Hotel)=>void;isMobile:boolean;}){
-  const mapRef=useRef<HTMLDivElement>(null);const mapInstanceRef=useRef<any>(null);const markersRef=useRef<{el:HTMLElement;hotel:Hotel;pinDiv:HTMLElement}[]>([]);const listRef=useRef<HTMLDivElement>(null);
-  const[selectedHotel,setSelectedHotel]=useState<Hotel|null>(null);const[openChip,setOpenChip]=useState<string|null>(null);const chipRef=useRef<HTMLDivElement>(null);
-  const NIGHTS=checkIn&&checkOut?Math.max(1,Math.round((new Date(checkOut).getTime()-new Date(checkIn).getTime())/86400000)):1;
-  const hotelsWithCoords=hotels.filter(h=>h.latitude&&h.longitude);
-  useEffect(()=>{const handler=(e:MouseEvent)=>{if(openChip&&chipRef.current&&!chipRef.current.contains(e.target as Node)){setOpenChip(null);}};document.addEventListener("mousedown",handler);return()=>document.removeEventListener("mousedown",handler);},[openChip]);
-  const selectHotel=(hotel:Hotel)=>{setSelectedHotel(hotel);markersRef.current.forEach(({pinDiv})=>{pinDiv.style.background="#fff";pinDiv.style.color=NAVY;pinDiv.style.transform="scale(1)";});const found=markersRef.current.find(m=>String(m.hotel.code)===String(hotel.code));if(found){found.pinDiv.style.background=YELLOW;found.pinDiv.style.color=NAVY;found.pinDiv.style.transform="scale(1.15)";}if(hotel.latitude&&hotel.longitude&&mapInstanceRef.current)mapInstanceRef.current.flyTo({center:[hotel.longitude,hotel.latitude],zoom:14,speed:1.5});if(listRef.current){const card=listRef.current.querySelector(`[data-hotel="${hotel.code}"]`) as HTMLElement;if(card)card.scrollIntoView({behavior:"smooth",block:"nearest"});}};
-  useEffect(()=>{if(!mapRef.current)return;const initMap=()=>{const mapboxgl=(window as any).mapboxgl;if(!mapboxgl)return;mapboxgl.accessToken=MAPBOX_TOKEN;const cLng=hotelsWithCoords.length>0?hotelsWithCoords.reduce((s,h)=>s+(h.longitude||0),0)/hotelsWithCoords.length:55.2708;const cLat=hotelsWithCoords.length>0?hotelsWithCoords.reduce((s,h)=>s+(h.latitude||0),0)/hotelsWithCoords.length:25.2048;const map=new mapboxgl.Map({container:mapRef.current,style:"mapbox://styles/mapbox/streets-v12",center:[cLng,cLat],zoom:11});mapInstanceRef.current=map;const addMarkers=()=>{hotelsWithCoords.forEach(hotel=>{const price=Math.round((hotel.lowestPriceINR||hotel.minRate||0)/NIGHTS);if(!price)return;const el=document.createElement("div");const pinDiv=document.createElement("div");pinDiv.style.cssText=`background:#fff;color:${NAVY};padding:5px 10px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.18);border:1.5px solid #e2e8f0;cursor:pointer;transition:all 0.15s;`;pinDiv.textContent=`₹${price.toLocaleString("en-IN")}`;el.appendChild(pinDiv);el.addEventListener("click",()=>selectHotel(hotel));new mapboxgl.Marker({element:el,anchor:"bottom"}).setLngLat([hotel.longitude!,hotel.latitude!]).addTo(map);markersRef.current.push({el,hotel,pinDiv});});};if(map.loaded())addMarkers();else map.on("load",addMarkers);};if(!document.querySelector('link[href*="mapbox-gl"]')){const l=document.createElement("link");l.rel="stylesheet";l.href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css";document.head.appendChild(l);}if((window as any).mapboxgl){initMap();return()=>{if(mapInstanceRef.current)mapInstanceRef.current.remove();};}const s=document.createElement("script");s.src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js";s.onload=initMap;document.head.appendChild(s);return()=>{if(mapInstanceRef.current)mapInstanceRef.current.remove();};},[]);
-  const handleMapSearch=(q:string)=>{markersRef.current.forEach(({el,hotel})=>{el.style.display=!q||hotel.name.toLowerCase().includes(q.toLowerCase())?"block":"none";});if(q&&mapInstanceRef.current){const h=hotelsWithCoords.find(h=>h.name.toLowerCase().includes(q.toLowerCase()));if(h)mapInstanceRef.current.flyTo({center:[h.longitude!,h.latitude!],zoom:14,speed:1.5});}};
-  const CB=({active,onClick,label}:{active:boolean;onClick:()=>void;label:string})=>(<div onClick={onClick} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",cursor:"pointer"}}><div style={{width:15,height:15,border:`1.5px solid ${active?B:"#e2e8f0"}`,borderRadius:3,background:active?B:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{active&&<svg width="9" height="9" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round"/></svg>}</div><span style={{fontSize:13,color:"#1e293b"}}>{label}</span></div>);
-  if(isMobile)return(<div style={{position:"fixed",inset:0,zIndex:8000,display:"flex",flexDirection:"column"}}><div style={{position:"absolute",top:12,right:12,zIndex:10}}><button onClick={onClose} style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:NAVY,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>✕ Close map</button></div><div ref={mapRef} style={{width:"100%",height:"100%"}}/>{selectedHotel&&<div style={{position:"absolute",bottom:20,left:16,right:16,background:"#fff",borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.2)",overflow:"hidden",zIndex:10,display:"flex"}}><img src={selectedHotel.imageUrl||FALLBACK_IMGS[0]} alt={selectedHotel.name} style={{width:90,height:90,objectFit:"cover",flexShrink:0}}/><div style={{padding:"10px 12px",flex:1}}><div style={{fontWeight:700,fontSize:13,color:NAVY,marginBottom:2}}>{selectedHotel.name}</div><div style={{fontSize:18,fontWeight:800,color:NAVY}}>{formatINR(Math.round((selectedHotel.lowestPriceINR||selectedHotel.minRate||0)/NIGHTS))}</div><div style={{fontSize:11,color:"#64748b"}}>per night</div></div><button onClick={()=>onHotelClick(selectedHotel)} style={{background:B,color:"#fff",border:"none",padding:"0 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>View</button></div>}</div>);
-  return(<div style={{position:"fixed",inset:0,zIndex:8000,display:"flex",flexDirection:"column"}}>
-    <div ref={chipRef} style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 20px",display:"flex",alignItems:"center",gap:10,flexShrink:0,flexWrap:"nowrap",overflowX:"visible",position:"relative",zIndex:99999}}>
-      <div style={{fontSize:14,fontWeight:700,color:NAVY,whiteSpace:"nowrap",marginRight:4}}>{hotelsWithCoords.length} hotels</div>
-      {filterProps.areaOptions.length>0&&<ChipDropdown id="loc" label={filterProps.filterLocation||"Location"} openChip={openChip} setOpenChip={setOpenChip}>{filterProps.areaOptions.map(a=><CB key={a} active={filterProps.filterLocation===a} onClick={()=>{filterProps.setFilterLocation(filterProps.filterLocation===a?"":a);setOpenChip(null);}} label={a}/>)}</ChipDropdown>}
-      {filterProps.refLabel&&<ChipDropdown id="dist" label={filterProps.filterMaxDistance?`< ${filterProps.filterMaxDistance} km`:"Distance"} openChip={openChip} setOpenChip={setOpenChip}>{[{label:"Less than 1 km",max:1},{label:"Less than 3 km",max:3},{label:"Less than 5 km",max:5}].map(({label,max})=><CB key={max} active={filterProps.filterMaxDistance===max} onClick={()=>{filterProps.setFilterMaxDistance(filterProps.filterMaxDistance===max?null:max);setOpenChip(null);}} label={label}/>)}</ChipDropdown>}
-      <ChipDropdown id="price" label={filterProps.filterPriceMax||filterProps.filterPriceMin?"Price ✓":"Price"} openChip={openChip} setOpenChip={setOpenChip}>{([{label:"Under ₹5,000",min:null,max:5000},{label:"₹5,000–₹10,000",min:5000,max:10000},{label:"₹10,000–₹20,000",min:10000,max:20000},{label:"₹20,000–₹40,000",min:20000,max:40000},{label:"₹40,000+",min:40000,max:null}] as {label:string;min:number|null;max:number|null}[]).map(({label,min,max})=>{const a=filterProps.filterPriceMin===min&&filterProps.filterPriceMax===max;return<CB key={label} active={a} onClick={()=>{a?filterProps.setPriceRange(null,null):filterProps.setPriceRange(min,max);setOpenChip(null);}} label={label}/>;})}</ChipDropdown>
-      <ChipDropdown id="stars" label={filterProps.filterStars.length>0?`Stars ✓`:"Stars"} openChip={openChip} setOpenChip={setOpenChip}>{[5,4,3,2,1].map(s=>{const a=filterProps.filterStars.includes(s);return<CB key={s} active={a} onClick={()=>filterProps.setFilterStars(a?filterProps.filterStars.filter(x=>x!==s):[...filterProps.filterStars,s])} label={`${"★".repeat(s)} ${s} Star`}/>;})}</ChipDropdown>
-      <ChipDropdown id="rating" label={filterProps.filterRating?`Rating ${filterProps.filterRating}+`:"Rating"} openChip={openChip} setOpenChip={setOpenChip}>{[{label:"Exceptional 9+",min:9},{label:"Excellent 8+",min:8},{label:"Very Good 7+",min:7}].map(({label,min})=><CB key={min} active={filterProps.filterRating===min} onClick={()=>{filterProps.setFilterRating(filterProps.filterRating===min?null:min);setOpenChip(null);}} label={label}/>)}</ChipDropdown>
-      <button onClick={()=>filterProps.setFilterRefundable(!filterProps.filterRefundable)} style={{display:"flex",alignItems:"center",gap:6,background:filterProps.filterRefundable?"#dcfce7":"#fff",border:`1.5px solid ${filterProps.filterRefundable?"#16a34a":"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:filterProps.filterRefundable?"#16a34a":NAVY,whiteSpace:"nowrap"}}>{filterProps.filterRefundable&&"✓ "}Free Cancellation</button>
-      <button onClick={()=>filterProps.setFilterBreakfast(!filterProps.filterBreakfast)} style={{display:"flex",alignItems:"center",gap:6,background:filterProps.filterBreakfast?YELLOW:"#fff",border:`1.5px solid ${filterProps.filterBreakfast?"#d97706":"#e2e8f0"}`,borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",color:filterProps.filterBreakfast?"#92400e":NAVY,whiteSpace:"nowrap"}}>{filterProps.filterBreakfast&&"✓ "}Free Breakfast</button>
-      <div style={{flex:1}}/>
-      <button onClick={onClose} style={{background:NAVY,color:"#fff",border:"none",borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>✕ Close map</button>
-    </div>
-    <div style={{flex:1,display:"flex",overflow:"hidden"}}>
-      <div style={{width:360,flexShrink:0,display:"flex",flexDirection:"column",background:"#f8fafc",borderRight:"1px solid #e2e8f0"}}>
-        <div style={{padding:"10px 12px",borderBottom:"1px solid #e2e8f0",background:"#fff",flexShrink:0}}><div style={{display:"flex",alignItems:"center",gap:8,background:"#f8fafc",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"8px 12px"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search hotel on map..." onChange={e=>handleMapSearch(e.target.value)} style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:13,color:NAVY,background:"transparent",width:"100%"}}/></div></div>
-        <div ref={listRef} style={{flex:1,overflowY:"auto",padding:10}}>{hotels.map((hotel,idx)=>{const price=Math.round((hotel.lowestPriceINR||hotel.minRate||0)/NIGHTS);const rating=hotel.rating||[9.1,8.9,9.4,9.3,8.7,9.0,8.8,9.2][codeToNum(hotel.code)%8];const isSelected=selectedHotel?.code===hotel.code;return(<div key={String(hotel.code)} data-hotel={hotel.code} onClick={()=>selectHotel(hotel)} style={{background:"#fff",borderRadius:12,border:`1.5px solid ${isSelected?B:"#e2e8f0"}`,marginBottom:8,overflow:"hidden",cursor:"pointer",display:"flex",minHeight:96,transition:"border-color 0.15s"}}><img src={hotel.imageUrl||FALLBACK_IMGS[idx%FALLBACK_IMGS.length]} alt={hotel.name} style={{width:96,height:96,objectFit:"cover",flexShrink:0}} onError={e=>{(e.target as HTMLImageElement).src=FALLBACK_IMGS[idx%FALLBACK_IMGS.length];}}/><div style={{padding:"10px 12px",flex:1,minWidth:0,display:"flex",flexDirection:"column",justifyContent:"space-between"}}><div style={{fontSize:13,fontWeight:700,color:NAVY,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{hotel.name}</div><div style={{fontSize:12,color:"#f59e0b"}}>{hotel.stars?"★".repeat(hotel.stars):""}</div><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:11,fontWeight:700,padding:"1px 7px",borderRadius:4}}>{rating.toFixed(1)}</span>{hotel.isRefundable&&<span style={{fontSize:10,color:"#16a34a",background:"#dcfce7",padding:"1px 6px",borderRadius:3}}>✓ Free cancel</span>}</div><div style={{fontSize:15,fontWeight:800,color:NAVY}}>{price>0?formatINR(price):"—"}</div></div></div>);})}</div>
       </div>
-      <div style={{flex:1,position:"relative"}}>
-        <div ref={mapRef} style={{width:"100%",height:"100%"}}/>
-        {selectedHotel&&(<div style={{position:"absolute",bottom:20,left:"50%",transform:"translateX(-50%)",width:"min(320px,90%)",background:"#fff",borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.2)",overflow:"hidden",zIndex:10}}><button onClick={()=>{setSelectedHotel(null);markersRef.current.forEach(({pinDiv})=>{pinDiv.style.background="#fff";pinDiv.style.color=NAVY;pinDiv.style.transform="scale(1)";});}} style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,0.5)",color:"#fff",border:"none",borderRadius:"50%",width:26,height:26,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1}}>×</button><img src={selectedHotel.imageUrl||FALLBACK_IMGS[0]} alt={selectedHotel.name} style={{width:"100%",height:130,objectFit:"cover",display:"block"}}/><div style={{padding:"12px 14px"}}><div style={{fontWeight:700,fontSize:14,color:NAVY,marginBottom:6}}>{selectedHotel.name}</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}><div><div style={{fontSize:18,fontWeight:800,color:NAVY}}>{formatINR(Math.round((selectedHotel.lowestPriceINR||selectedHotel.minRate||0)/NIGHTS))}</div><div style={{fontSize:11,color:"#64748b"}}>per night</div></div><button onClick={()=>onHotelClick(selectedHotel)} style={{background:B,color:"#fff",border:"none",borderRadius:8,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>View Hotel</button></div></div></div>)}
+    );
+    return (
+      <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.13)", zIndex: 9999, maxHeight: 380, overflowY: "auto", marginTop: 4, ...style }}>
+        {suggestions.cities.map((c: any, i: number) => {
+          const info = getCityInfo(c.name);
+          const country = c.countryName || info?.country || "";
+          const flag = c.flag || info?.flag || "";
+          return <Row key={`c${i}`} flag={flag} name={c.name} tag={country ? `City in ${country}` : "City"} onPick={() => handleSelect(c, 'city')} />;
+        })}
+        {suggestions.areas.map((a: any, i: number) => {
+          const tagParts = [a.parentCity, a.countryName].filter(Boolean).join(", ");
+          return <Row key={`a${i}`} flag={a.flag} name={a.name} tag={tagParts ? `Area in ${tagParts}` : "Area"} onPick={() => handleSelect(a, 'area')} />;
+        })}
+        {suggestions.hotels.map((h: any, i: number) => {
+          const hInfo = getCityInfo(h.city || h.name);
+          const hCountry = h.countryName || hInfo?.country || "";
+          const hFlag = h.flag || hInfo?.flag || "";
+          const tagParts = [h.city, hCountry].filter(Boolean).join(", ");
+          return <Row key={`h${i}`} flag={hFlag} name={h.name} tag={tagParts ? `Hotel in ${tagParts}` : "Hotel"} onPick={() => handleSelect(h, 'hotel')} />;
+        })}
       </div>
-    </div>
-  </div>);
-}
-
-export default function SearchPage(){
-  return(<Suspense fallback={<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#64748b"}}>Loading…</div>}><SearchResults/></Suspense>);
-}
-
-function SearchResults(){
-  const searchParams=useSearchParams();const router=useRouter();const isMobile=useIsMobile();const today=new Date();
-  const[destination,setDestination]=useState((searchParams.get("destination")||"Dubai").split(",")[0].trim());
-  const[sessionId,setSessionId]=useState(()=>searchParams.get("sessionId")||genSessionId());
-  const[checkIn,setCheckIn]=useState(searchParams.get("checkIn")||"");
-  const[checkOut,setCheckOut]=useState(searchParams.get("checkOut")||"");
-  const[guests,setGuests]=useState<GuestState>({rooms:parseInt(searchParams.get("rooms")||"1"),adults:parseInt(searchParams.get("adults")||"2"),children:parseInt(searchParams.get("children")||"0"),childAges:(searchParams.get("childAges")||"").split(",").map(s=>parseInt(s)).filter(n=>!isNaN(n))});
-  const[hotels,setHotels]=useState<Hotel[]>([]);
-  const[loading,setLoading]=useState(true);const[error,setError]=useState<string|null>(null);
-  const[user,setUser]=useState<{name:string}|null>(null);const[showAuthModal,setShowAuthModal]=useState(false);
-  const[showMap,setShowMap]=useState(false);const[favorites,setFavorites]=useState<Set<string|number>>(new Set());
-  const[sortBy,setSortBy]=useState("popularity");const[page,setPage]=useState(1);
-  const[showCal,setShowCal]=useState(false);const[showGuests,setShowGuests]=useState(false);
-  const[mobileSheet,setMobileSheet]=useState<"filter"|"sort"|null>(null);
-  const[desktopCalOpen,setDesktopCalOpen]=useState(false);const[desktopCalMode,setDesktopCalMode]=useState<"checkin"|"checkout">("checkin");
-  const[desktopCalOffset,setDesktopCalOffset]=useState(0);const[desktopGuestOpen,setDesktopGuestOpen]=useState(false);
-  const[destInput,setDestInput]=useState(destination);const[selectedPlaceId,setSelectedPlaceId]=useState(searchParams.get('placeId')||'');const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);
-  const destRef=useRef<HTMLDivElement>(null);const desktopCalRef=useRef<HTMLDivElement>(null);const desktopGuestRef=useRef<HTMLDivElement>(null);
-  const[chatOpen,setChatOpen]=useState(false);
-  const[chatMessages,setChatMessages]=useState<{role:string;content:string}[]>([
-    {role:"assistant",content:`Hi! I'm your rebuq AI assistant. Ask me anything about ${""} — best areas, local food, weather, what to pack, or just filter your hotel search. How can I help?`}
-  ]);
-  const[chatInput,setChatInput]=useState("");
-  const[chatLoading,setChatLoading]=useState(false);
-  const chatEndRef=useRef<HTMLDivElement>(null);
-  const[filterStars,setFilterStars]=useState<number[]>([]);const[filterBreakfast,setFilterBreakfast]=useState(false);const[filterRefundable,setFilterRefundable]=useState(false);const[filterRating,setFilterRating]=useState<number|null>(null);const[filterPriceMin,setFilterPriceMin]=useState<number|null>(null);const[filterPriceMax,setFilterPriceMax]=useState<number|null>(null);const[filterFacilities,setFilterFacilities]=useState<string[]>([]);const[filterLocation,setFilterLocation]=useState("");const[filterMaxDistance,setFilterMaxDistance]=useState<number|null>(null);const[hotelSearch,setHotelSearch]=useState("");
-
-  // ── Distance reference point from URL ────────────────────────────────────
-  const refLat = searchParams.get("refLat") ? parseFloat(searchParams.get("refLat")!) : null;
-  const refLng = searchParams.get("refLng") ? parseFloat(searchParams.get("refLng")!) : null;
-  const refLabel = searchParams.get("refLabel") || null;
-
-  useEffect(()=>{supabase.auth.getUser().then(({data})=>{if(data.user){const m=data.user.user_metadata;setUser({name:m?.full_name||m?.name||data.user.email?.split("@")[0]||"Member"});}});supabase.auth.onAuthStateChange((_,session)=>{if(session?.user){const m=session.user.user_metadata;setUser({name:m?.full_name||m?.name||session.user.email?.split("@")[0]||"Member"});setShowAuthModal(false);}});},[]);
-  useEffect(()=>{const handler=(e:MouseEvent)=>{if(desktopCalRef.current&&!desktopCalRef.current.contains(e.target as Node))setDesktopCalOpen(false);if(desktopGuestRef.current&&!desktopGuestRef.current.contains(e.target as Node))setDesktopGuestOpen(false);if(destRef.current&&!destRef.current.contains(e.target as Node))setShowDestDrop(false);};document.addEventListener("mousedown",handler);return()=>document.removeEventListener("mousedown",handler);},[]);
-  const handleDestInput=(val:string)=>{setDestInput(val);if(val.length>=1){const q=val.toLowerCase();setDestSuggestions(DESTINATIONS.filter(d=>d.label.toLowerCase().includes(q)||d.key.includes(q)));setShowDestDrop(true);}else{setDestSuggestions([]);setShowDestDrop(false);}};
-  const selectDest=(d:typeof DESTINATIONS[0])=>{setDestInput(d.label);setDestination(d.label);setSelectedPlaceId((d as any).placeId||'');setShowDestDrop(false);};
-
-  const fetchHotels=useCallback(async(dest?:string,ci?:string,co?:string,g?:GuestState,pid?:string,sid?:string)=>{
-    const d=dest||destination,c1=ci||checkIn,c2=co||checkOut,gs=g||guests;
-    const placeId=pid!==undefined?pid:(searchParams.get("placeId")||"");
-    const refLat=searchParams.get("refLat")||"";
-    const refLng=searchParams.get("refLng")||"";
-    const radius=searchParams.get("radius")||"";
-    const hasCoords=!!(refLat&&refLng);
-    const sessId=sid||sessionId;
-    if(!c1||!c2){setLoading(false);setError("Please select check-in and check-out dates.");return;}
-    setLoading(true);setError(null);setPage(1);setHotels([]);
-
-    const childAgesParam=gs.childAges&&gs.childAges.length>0?`&childAges=${gs.childAges.join(",")}`:"";
-    const sessionParam=sessId?`&sessionId=${encodeURIComponent(sessId)}`:"";
-    const baseUrl=placeId
-      ?`${API}/search?placeId=${encodeURIComponent(placeId)}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}${sessionParam}`
-      :`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}${sessionParam}`;
-
-    try{
-      if(hasCoords){
-        // True incremental search via Mapbox-resolved coordinates (landmarks/areas) —
-        // liteAPI pushes each hotel's rate down an open connection the moment it's
-        // ready; cards appear as they arrive instead of everyone waiting for a batch.
-        const locationParam=`refLat=${encodeURIComponent(refLat)}&refLng=${encodeURIComponent(refLng)}&radius=${encodeURIComponent(radius||"20000")}`;
-        const streamUrl=`${API}/search-stream?${locationParam}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}${sessionParam}`;
-        const resp=await fetch(streamUrl,{cache:"no-store"});
-        if(!resp.ok){
-          let msg="Could not connect to server.";
-          try{const j=await resp.json();msg=j.error||msg;}catch{}
-          setError(msg);setLoading(false);return;
-        }
-        if(!resp.body){setError("Could not connect to server.");setLoading(false);return;}
-
-        const reader=resp.body.pipeThrough(new TextDecoderStream()).getReader();
-        let buffer="";
-        let gotAny=false;
-        let streamError="";
-        while(true){
-          const{value,done}=await reader.read();
-          if(done)break;
-          buffer+=value;
-          const parts=buffer.split("\n\n");
-          buffer=parts.pop()||"";
-          for(const part of parts){
-            const line=part.trim();
-            if(!line.startsWith("data:"))continue;
-            const payload=line.slice(5).trim();
-            if(!payload||payload==="[DONE]")continue;
-            let msg:any;
-            try{msg=JSON.parse(payload);}catch{continue;}
-            if(msg.error){streamError=msg.error;continue;}
-            if(Array.isArray(msg.hotels)&&msg.hotels.length){
-              gotAny=true;
-              setLoading(false);
-              setHotels(prev=>{
-                const seen=new Set(prev.map(h=>String(h.code)));
-                const fresh=(msg.hotels as Hotel[]).filter(h=>!seen.has(String(h.code)));
-                return [...prev,...fresh];
-              });
-            }
-          }
-        }
-        setLoading(false);
-        if(!gotAny)setError(streamError||"No hotels found.");
-        return;
-      }
-
-      if(placeId){
-        // Whole-city search — kept on the proven page-based /search route rather
-        // than /search-stream, since liteAPI's stream mode combined with a
-        // placeId (as opposed to coordinates) has been coming back with 0 raw
-        // rates for city-wide searches. Page 0 is small/fast for an instant
-        // first paint; pages 1-4 follow in parallel and append as they land.
-        const page0Resp=await fetch(`${baseUrl}&page=0`,{cache:"no-store"});
-        const page0Data=await page0Resp.json();
-        if(!page0Data.hotels?.hotels){setError(page0Data.error||"No hotels found.");setLoading(false);return;}
-        setHotels(page0Data.hotels.hotels);
-        setLoading(false);
-
-        const morePages=await Promise.all([1,2,3,4].map(p=>
-          fetch(`${baseUrl}&page=${p}`,{cache:"no-store"}).then(r=>r.json()).catch(()=>null)
-        ));
-        setHotels(prev=>{
-          const seen=new Set(prev.map(h=>String(h.code)));
-          let merged=[...prev];
-          for(const data of morePages){
-            const fresh=((data?.hotels?.hotels||[]) as Hotel[]).filter(h=>!seen.has(String(h.code)));
-            fresh.forEach(h=>seen.add(String(h.code)));
-            merged=[...merged,...fresh];
-          }
-          return merged;
-        });
-        return;
-      }
-
-      // No placeId resolved and no coords (rare) — single request, no streaming
-      const res=await fetch(`${baseUrl}&page=0`,{cache:"no-store"});const data=await res.json();
-      if(!data.hotels?.hotels){setError(data.error||"No hotels found.");setLoading(false);return;}
-      setHotels(data.hotels.hotels);
-      setLoading(false);
-    }catch(e:any){console.error("search fetch failed:",e);setError("Could not connect to server.");setLoading(false);}
-  },[destination,checkIn,checkOut,guests,searchParams,sessionId]);
-
-  useEffect(()=>{
-    const pid = searchParams.get("placeId") || "";
-    const dest = searchParams.get("destination") || "";
-    const ci = searchParams.get("checkIn") || "";
-    const co = searchParams.get("checkOut") || "";
-    const adults = parseInt(searchParams.get("adults") || "2");
-    const children = parseInt(searchParams.get("children") || "0");
-    const childAges = (searchParams.get("childAges")||"").split(",").map(s=>parseInt(s)).filter(n=>!isNaN(n));
-    const rooms = parseInt(searchParams.get("rooms") || "1");
-    if (pid && dest) {
-      setSelectedPlaceId(pid);
-      setDestInput(dest);
-      setDestination(dest);
-      fetchHotels(dest, ci, co, { adults, children, rooms, childAges }, pid);
-    } else {
-      fetchHotels();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[searchParams.get("placeId"), searchParams.get("destination"), searchParams.get("checkIn"), searchParams.get("checkOut")]);
-
-  const NIGHTS=checkIn&&checkOut?Math.max(1,Math.round((new Date(checkOut).getTime()-new Date(checkIn).getTime())/86400000)):1;
-  const priceINR=(h:Hotel)=>Math.round(parseFloat(String(h.lowestPriceINR||h.minRate||0))/NIGHTS);
-  const getRating=(code:string|number)=>[9.1,8.9,9.4,9.3,8.7,9.0,8.8,9.2][codeToNum(code)%8];
-  const getRatingLabel=(r:number)=>r>=9?"Exceptional":r>=8.5?"Excellent":"Very Good";
-  const getDiscount=(code:string|number)=>[15,12,10,8,20,18,14,22][codeToNum(code)%8];
-  const getImg=(hotel:Hotel,idx:number)=>hotel.imageUrl||FALLBACK_IMGS[idx%FALLBACK_IMGS.length];
-  const guestSummary=(g:GuestState)=>`${g.rooms} Room${g.rooms>1?"s":""} · ${g.adults} Adult${g.adults>1?"s":""}${g.children>0?` · ${g.children} Child${g.children>1?"ren":""}` :""}`;
-  const getCardAmenities=(hotel:Hotel)=>PRIORITY_AMENITIES.filter(p=>(hotel.amenities||[]).some(a=>a.toLowerCase().includes(p.toLowerCase())));
-
-  // ── Distance helper ───────────────────────────────────────────────────────
-  const getDistanceLabel = (hotel: Hotel): string | null => {
-    if (!refLat || !refLng || !hotel.latitude || !hotel.longitude) return null;
-    return formatDistance(haversineKm(refLat, refLng, hotel.latitude, hotel.longitude));
-  };
-  const activeRefLabel=refLabel;
-
-  const areaOptions=useMemo(()=>getAreasForCity(destination),[destination]);
-  const sendChat=async(msg:string)=>{
-    if(!msg.trim()||chatLoading)return;
-    const userMsg={role:"user",content:msg};
-    const newMsgs=[...chatMessages,userMsg];
-    setChatMessages(newMsgs);
-    setChatInput("");
-    setChatLoading(true);
-    try{
-      const res=await fetch("https://hoteldrops-production-7e5a.up.railway.app/api/hotels/chat",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          messages:newMsgs,
-          destination,checkIn,checkOut,
-          hotelCount:hotels.length,
-          hotelList:sortedHotels.map(h=>({
-            name:h.name,
-            stars:h.stars,
-            area:h.address||h.city||"",
-            price:priceINR(h),
-            rating:h.rating||null,
-            isRefundable:h.isRefundable||false,
-            hasBreakfast:h.hasBreakfast||false,
-            amenities:(h.amenities||[]).slice(0,5),
-          }))
-        })
-      });
-      const data=await res.json();
-      const reply=data.reply||"Sorry, I could not process that.";
-      // Check if reply is a filter action
-      try{
-        const cleaned=reply.replace(/```json|```/g,"").trim();
-        const parsed=JSON.parse(cleaned);
-        if(parsed.action==="filter"){
-          // Clear all previous filters first
-          setFilterStars([]);setFilterPriceMax(null);setFilterPriceMin(null);
-          setFilterRefundable(false);setFilterBreakfast(false);setFilterRating(null);
-          setHotelSearch("");setFilterLocation("");setFilterFacilities([]);
-          if(parsed.clearAll){setChatMessages(m=>[...m,{role:"assistant",content:parsed.message||"Showing all hotels!"}]);return;}
-          // Apply new filters
-          if(parsed.stars)setFilterStars([parsed.stars]);
-          if(parsed.priceMax)setFilterPriceMax(parsed.priceMax);
-          if(parsed.priceMin)setFilterPriceMin(parsed.priceMin);
-          if(parsed.isRefundable)setFilterRefundable(true);
-          if(parsed.hasBreakfast)setFilterBreakfast(true);
-          if(parsed.minRating)setFilterRating(parsed.minRating);
-          if(parsed.hotelName)setHotelSearch(parsed.hotelName);
-          if(parsed.area)setFilterLocation(parsed.area);
-          if(parsed.amenity){
-            const amenityMap:Record<string,string>={pool:"Swimming Pool",spa:"Spa & Wellness",gym:"Fitness Centre",restaurant:"Restaurant",wifi:"Free WiFi",breakfast:"Breakfast",parking:"Parking",bar:"Bar"};
-            const key=parsed.amenity.toLowerCase();
-            const mapped=Object.keys(amenityMap).find(k=>key.includes(k));
-            if(mapped)setFilterFacilities([amenityMap[mapped]]);
-          }
-          setChatMessages(m=>[...m,{role:"assistant",content:parsed.message||"Done! Filters applied — check the results list."}]);
-        } else {
-          setChatMessages(m=>[...m,{role:"assistant",content:reply}]);
-        }
-      }catch{
-        setChatMessages(m=>[...m,{role:"assistant",content:reply}]);
-      }
-    }catch{
-      setChatMessages(m=>[...m,{role:"assistant",content:"Sorry, I'm having trouble connecting. Please try again."}]);
-    }
-    setChatLoading(false);
-    setTimeout(()=>chatEndRef.current?.scrollIntoView({behavior:"smooth"}),100);
+    );
   };
 
-  const clearAllFilters=()=>{setFilterStars([]);setFilterBreakfast(false);setFilterRefundable(false);setFilterRating(null);setFilterPriceMax(null);setFilterPriceMin(null);setFilterFacilities([]);setFilterLocation("");setFilterMaxDistance(null);setHotelSearch("");};
-  const hasActiveFilters=filterStars.length>0||filterBreakfast||filterRefundable||filterRating!==null||filterPriceMax!==null||filterPriceMin!==null||filterFacilities.length>0||!!filterLocation||filterMaxDistance!==null||!!hotelSearch;
+  const CSS = `
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .sora { font-family: 'Sora', sans-serif; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes slideInRight { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+    .ticker-visible { animation: fadeIn 0.4s ease forwards; }
+    .ticker-hidden { opacity: 0; }
+    .hotel-card { transition: transform .2s, box-shadow .2s; cursor: pointer; }
+    .hotel-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+    .dest-card { transition: transform .25s; cursor: pointer; }
+    .dest-card:hover { transform: translateY(-4px); }
+    .gbtn { width: 36px; height: 36px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; transition: all .15s; color: #475569; }
+    .gbtn:hover:not(:disabled) { border-color: ${B}; color: ${B}; background: #eff6ff; }
+    .gbtn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .sfield { cursor: pointer; transition: background 0.15s; }
+    .sfield:hover { background: rgba(0,0,0,0.02); }
+    .fs { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; flex-direction: column; animation: slideInRight 0.22s ease; }
+    .ybtn:hover { background: #e6b800 !important; }
+    .scroll-x { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .scroll-x::-webkit-scrollbar { display: none; }
+  `;
 
-  const filteredHotels=useMemo(()=>hotels.filter(h=>{const price=priceINR(h);if(hotelSearch&&!h.name.toLowerCase().includes(hotelSearch.toLowerCase()))return false;if(filterStars.length>0&&!filterStars.includes(h.stars||0))return false;if(filterBreakfast&&!h.hasBreakfast)return false;if(filterRefundable&&h.isRefundable!==true)return false;if(filterRating!==null){const r=h.rating||getRating(h.code);if(r<filterRating)return false;}if(filterPriceMin!==null&&price<filterPriceMin)return false;if(filterPriceMax!==null&&price>filterPriceMax)return false;if(filterFacilities.length>0){const am=(h.amenities||[]).map(a=>a.toLowerCase());if(!filterFacilities.every(f=>am.some(a=>a.includes(f.toLowerCase()))))return false;}if(filterLocation){const addr=(h.address||h.city||"").toLowerCase();if(!addr.includes(filterLocation.toLowerCase()))return false;}if(filterMaxDistance!==null&&refLat&&refLng){if(!h.latitude||!h.longitude)return false;if(haversineKm(refLat,refLng,h.latitude,h.longitude)>filterMaxDistance)return false;}return true;}),[hotels,hotelSearch,filterStars,filterBreakfast,filterRefundable,filterRating,filterPriceMin,filterPriceMax,filterFacilities,filterLocation,filterMaxDistance,refLat,refLng]);
+  const DEST_CARDS = DESTINATIONS.slice(0, 6);
+  const DEST_CARD_WIDTH = isMobile ? 200 : 256;
+  const DEST_VISIBLE = isMobile ? 2 : 4;
+  const DEST_MAX_POS = DEST_CARDS.length - DEST_VISIBLE;
+  const scrollDestCarousel = (dir: number) => setDestCarouselPos(prev => Math.max(0, Math.min(DEST_MAX_POS, prev + dir)));
 
-  const sortedHotels=useMemo(()=>[...filteredHotels].sort((a,b)=>{
-    if(sortBy==="price-low")return priceINR(a)-priceINR(b);
-    if(sortBy==="price-high")return priceINR(b)-priceINR(a);
-    if(sortBy==="rating")return(b.rating||getRating(b.code))-(a.rating||getRating(a.code));
-    if(sortBy==="stars")return(b.stars||0)-(a.stars||0);
-    // Distance sort — when landmark active OR sortBy=distance
-    const rlat=refLat;const rlng=refLng;
-    if((sortBy==="distance"||(rlat&&rlng))&&rlat&&rlng){
-      const da=a.latitude&&a.longitude?haversineKm(rlat,rlng,a.latitude,a.longitude):9999;
-      const db=b.latitude&&b.longitude?haversineKm(rlat,rlng,b.latitude,b.longitude):9999;
-      return da-db;
-    }
-    return 0;
-  }),[filteredHotels,sortBy,refLat,refLng]);
+  return (
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, overflowX: "hidden" }}>
+      <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
-  const perPage=10;const paginatedHotels=sortedHotels.slice((page-1)*perPage,page*perPage);const totalPages=Math.ceil(sortedHotels.length/perPage);
-  const filterProps:FiltersPanelProps={destination,areaOptions,filterLocation,setFilterLocation,filterPriceMin,filterPriceMax,setPriceRange:(min,max)=>{setFilterPriceMin(min);setFilterPriceMax(max);},filterRefundable,setFilterRefundable,filterBreakfast,setFilterBreakfast,filterRating,setFilterRating,filterStars,setFilterStars,filterFacilities,setFilterFacilities,hasActiveFilters,clearAllFilters,onHotelSearch:setHotelSearch,refLabel:activeRefLabel,filterMaxDistance,setFilterMaxDistance};
-
-  const handleSearch=async()=>{
-    if(!user){setShowAuthModal(true);return;}
-    const d=destInput.trim()||destination;
-    const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
-    if(guests.childAges&&guests.childAges.length>0)p.set("childAges",guests.childAges.join(","));
-    p.set("sessionId",genSessionId());
-    // Always resolve placeId fresh for the destination text being searched —
-    // never reuse a placeId that may belong to a previously-searched city.
-    // /search requires a placeId (or hotelId), so we must always end up with one.
-    const known=CITY_PLACE_IDS[d.toLowerCase().trim()];
-    if(known){
-      p.set("placeId",known);
-    }else{
-      try{
-        const res=await fetch(`${API}/suggest?q=${encodeURIComponent(d)}`);
-        const data=await res.json();
-        const cities=data.cities||[];
-        const match=cities.find((c:any)=>c.name?.toLowerCase()===d.toLowerCase())||cities[0];
-        if(match?.placeId)p.set("placeId",match.placeId);
-      }catch{}
-    }
-    // Hard navigation forces full remount so new city loads fresh
-    window.location.href=`/search?${p.toString()}`;
-  };
-
-  const handleHotelClick=(hotel:Hotel)=>{
-    if(!user){setShowAuthModal(true);return;}
-    const childAgesParam=guests.childAges&&guests.childAges.length>0?`&childAges=${guests.childAges.join(",")}`:"";
-    const url=`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}${childAgesParam}&sessionId=${encodeURIComponent(sessionId)}`;
-    isMobile?router.push(url):window.open(url,'_blank');
-  };
-  const desktopDayClick=(ds:string)=>{if(desktopCalMode==="checkin"){setCheckIn(ds);setCheckOut("");setDesktopCalMode("checkout");}else{if(ds<=checkIn)return;setCheckOut(ds);setDesktopCalOpen(false);}};
-
-  const renderDesktopMonth=(year:number,month:number)=>{
-    const todayStr=toDateStr(today.getFullYear(),today.getMonth(),today.getDate());
-    const days=getDaysInMonth(year,month);const firstDow=getFirstDow(year,month);
-    return(<div key={`${year}-${month}`} style={{flex:1}}><div style={{fontWeight:700,fontSize:15,color:NAVY,textAlign:"center",marginBottom:12}}>{MONTHS[month]} {year}</div><div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>{DOWS.map(d=><div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"#94a3b8",paddingBottom:6}}>{d}</div>)}{Array.from({length:firstDow}).map((_,i)=><div key={`e${i}`}/>)}{Array.from({length:days}).map((_,i)=>{const day=i+1;const ds=toDateStr(year,month,day);const isDisabled=ds<todayStr;let bg="transparent",clr=isDisabled?"#cbd5e1":NAVY,br="50%",fw=400;if(ds===checkIn&&!!checkOut){bg=B;clr="#fff";br="50% 0 0 50%";fw=700;}else if(ds===checkOut){bg=B;clr="#fff";br="0 50% 50% 0";fw=700;}else if(ds===checkIn&&!checkOut){bg=B;clr="#fff";br="50%";fw=700;}else if(checkIn&&checkOut&&ds>checkIn&&ds<checkOut){bg="#dbeafe";clr=B;br="0";}else if(ds===todayStr)clr=B;return<div key={day} onClick={()=>!isDisabled&&desktopDayClick(ds)} style={{height:34,display:"flex",alignItems:"center",justifyContent:"center",background:bg,color:clr,borderRadius:br,fontWeight:fw,fontSize:13,cursor:isDisabled?"not-allowed":"pointer",opacity:isDisabled?0.35:1}}>{day}</div>;})}</div></div>);
-  };
-
-  const d1=new Date(today.getFullYear(),today.getMonth()+desktopCalOffset);
-  const d2=new Date(today.getFullYear(),today.getMonth()+desktopCalOffset+1);
-
-  return(
-    <div style={{fontFamily:"'Inter',sans-serif",background:"#f8fafc",color:"#1e293b",minHeight:"100vh"}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap');*{box-sizing:border-box;margin:0;padding:0;}.sora{font-family:'Sora',sans-serif;}@keyframes spin{to{transform:rotate(360deg)}}@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}.hcard{background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;margin-bottom:16px;display:grid;grid-template-columns:260px 1fr;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.07);transition:box-shadow .2s,transform .2s;cursor:pointer;min-height:210px;animation:fadeIn 0.3s ease;}.hcard:hover{box-shadow:0 8px 32px rgba(0,0,0,0.12);transform:translateY(-2px);}.hcard-img{position:relative;width:260px;min-height:210px;overflow:hidden;flex-shrink:0;}.hcard-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}.hcard-m{background:#fff;border-radius:16px;overflow:hidden;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,0.07);cursor:pointer;animation:fadeIn 0.3s ease;}.sfd{cursor:pointer;transition:background 0.15s;}.sfd:hover{background:rgba(0,0,0,0.02);}.pgb{width:38px;height:38px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:${NAVY};font-size:14px;cursor:pointer;font-family:inherit;transition:all .2s;display:flex;align-items:center;justify-content:center;}.pgb:hover{border-color:${B};color:${B};}.pgb.on{background:${B};color:#fff;border-color:${B};}.btb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:none;border:none;cursor:pointer;font-family:inherit;font-size:12px;color:${NAVY};font-weight:500;padding:8px 0;}@keyframes shimmer{0%{background-position:-800px 0}100%{background-position:800px 0}}.skeleton{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:800px 100%;animation:shimmer 1.5s infinite;border-radius:6px;}`}</style>
-
-      {showAuthModal&&<AuthModal onClose={()=>setShowAuthModal(false)}/>}
-      {showMap&&<MapView hotels={filteredHotels.length>0?filteredHotels:hotels} checkIn={checkIn} checkOut={checkOut} filterProps={filterProps} onClose={()=>setShowMap(false)} onHotelClick={h=>{setShowMap(false);handleHotelClick(h);}} isMobile={isMobile}/>}
-      {isMobile&&showCal&&<CalendarScreen checkIn={checkIn} checkOut={checkOut} onSelect={(ci,co)=>{setCheckIn(ci);setCheckOut(co);}} onClose={()=>setShowCal(false)}/>}
-      {isMobile&&showGuests&&<GuestsScreen guests={guests} onSelect={setGuests} onClose={()=>setShowGuests(false)}/>}
-      {isMobile&&mobileSheet==="filter"&&<BottomSheet title="Filters" onClose={()=>setMobileSheet(null)} onClear={clearAllFilters}><FiltersPanel {...filterProps}/></BottomSheet>}
-      {isMobile&&mobileSheet==="sort"&&<BottomSheet title="Sort by" onClose={()=>setMobileSheet(null)}>{[{val:"popularity",label:"Popularity"},{val:"price-low",label:"Price: Low to High"},{val:"price-high",label:"Price: High to Low"},{val:"rating",label:"User Rating"},{val:"stars",label:"Star Rating"}].map(opt=><div key={opt.val} onClick={()=>{setSortBy(opt.val);setMobileSheet(null);}} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 0",borderBottom:"1px solid #f8fafc",cursor:"pointer"}}><span style={{fontSize:16,fontWeight:500,color:NAVY}}>{opt.label}</span><div style={{width:22,height:22,borderRadius:"50%",border:`2px solid ${sortBy===opt.val?B:"#e2e8f0"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{sortBy===opt.val&&<div style={{width:10,height:10,borderRadius:"50%",background:B}}/>}</div></div>)}</BottomSheet>}
-
-      <nav style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:isMobile?"0 20px":"0 32px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:300}}>
-        <a href="/" style={{fontFamily:"'Sora',sans-serif",fontWeight:800,fontSize:20,color:NAVY,textDecoration:"none"}}>rebuq<span style={{color:B}}>.</span></a>
-        {!isMobile&&<div style={{display:"flex",gap:24,alignItems:"center"}}><a href="/search-hotels" style={{fontSize:14,color:B,textDecoration:"none",fontWeight:600}}>Exclusive Member Deals</a>{user?<div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>window.location.href="/dashboard"}><div style={{width:32,height:32,borderRadius:"50%",background:B,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700}}>{user.name[0].toUpperCase()}</div><span style={{fontSize:14,fontWeight:600,color:NAVY}}>{user.name.split(" ")[0]}</span></div>:<button onClick={()=>setShowAuthModal(true)} style={{background:B,color:"#fff",border:"none",borderRadius:8,padding:"8px 18px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Sign in</button>}</div>}
-      </nav>
-
-      {isMobile&&<div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 16px",position:"sticky",top:60,zIndex:200,display:"flex",alignItems:"center",gap:10}}><button onClick={()=>router.back()} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:"#64748b",flexShrink:0}}>←</button><div style={{flex:1,background:"#f8fafc",border:"1.5px solid #e2e8f0",borderRadius:100,padding:"10px 16px",display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setShowCal(true)}><div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:700,color:NAVY,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{destination}</div><div style={{fontSize:12,color:"#64748b",whiteSpace:"nowrap"}}>{checkIn&&checkOut?`${formatDateShort(checkIn)} – ${formatDateShort(checkOut)}`:"Select dates"} · {guestSummary(guests)}</div></div></div></div>}
-
-      {!isMobile&&<div style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 32px",position:"sticky",top:60,zIndex:200}}>
-        <div style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:14,display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1.3fr auto",alignItems:"stretch",height:64,overflow:"visible",position:"relative",boxShadow:"0 2px 12px rgba(0,0,0,0.06)"}}>
-          <div ref={destRef} className="sfd" style={{padding:"0 20px",borderRight:"1px solid #e2e8f0",display:"flex",flexDirection:"column",justifyContent:"center",borderRadius:"12px 0 0 12px",position:"relative"}}>
-            <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Destination</div>
-            <div style={{display:"flex",alignItems:"center",gap:4}}><input value={destInput} onChange={e=>handleDestInput(e.target.value)} onFocus={()=>{setDestFocused(true);if(destInput.length>=1)setShowDestDrop(true);}} onBlur={()=>{setTimeout(()=>{setDestFocused(false);if(!destInput.trim())setDestInput(destination);setShowDestDrop(false);},200);}} onKeyDown={e=>{if(e.key==="Enter"){setShowDestDrop(false);handleSearch();}if(e.key==="Escape"){setDestInput(destination);setShowDestDrop(false);}}} placeholder="City or destination" style={{border:"none",outline:"none",fontFamily:"inherit",fontSize:15,fontWeight:600,color:NAVY,background:"transparent",padding:0,flex:1}}/>{destInput&&destFocused&&<button onClick={()=>{setDestInput("");setDestSuggestions([]);setShowDestDrop(false);}} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:18,padding:"0 2px",flexShrink:0,lineHeight:1}}>×</button>}</div>
-            {showDestDrop&&destSuggestions.length>0&&<div style={{position:"absolute",top:"calc(100% + 10px)",left:0,width:"100%",background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,0.14)",zIndex:9999,maxHeight:280,overflowY:"auto"}}>{destSuggestions.map(d=><div key={d.key} onClick={()=>selectDest(d)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer",borderBottom:"1px solid #f8fafc",transition:"background 0.1s"}} onMouseEnter={e=>(e.currentTarget.style.background="#f8fafc")} onMouseLeave={e=>(e.currentTarget.style.background="#fff")}><span style={{fontSize:20}}>{d.flag}</span><div><div style={{fontSize:14,fontWeight:600,color:NAVY}}>{d.label}</div><div style={{fontSize:12,color:"#94a3b8"}}>{d.country}</div></div></div>)}</div>}
+      {/* MOBILE CALENDAR */}
+      {isMobile && calOpen && (
+        <div className="fs">
+          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderBottom: "1px solid #f1f5f9", flexShrink: 0 }}>
+            <button onClick={() => setCalOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, color: NAVY }}>&#8592;</button>
+            <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 17, color: NAVY }}>{calMode === "checkin" ? "Select Check-in Date" : "Select Check-out Date"}</div>
           </div>
-          <div className="sfd" style={{padding:"0 18px",borderRight:"1px solid #e2e8f0",display:"flex",flexDirection:"column",justifyContent:"center",background:desktopCalOpen&&desktopCalMode==="checkin"?"#f0f7ff":"transparent"}} onClick={()=>{setDesktopCalMode("checkin");setDesktopCalOpen(true);setDesktopCalOffset(0);}}>
-            <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Check-in</div>
-            <div style={{fontSize:14,fontWeight:checkIn?600:400,color:checkIn?NAVY:"#94a3b8"}}>{checkIn?formatDate(checkIn):"Add date"}</div>
+          <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 0" }}>
+            {Array.from({ length: 12 }).map((_, i) => { const dm = new Date(today.getFullYear(), today.getMonth() + i); return renderMonth(dm.getFullYear(), dm.getMonth()); })}
           </div>
-          <div className="sfd" style={{padding:"0 18px",borderRight:"1px solid #e2e8f0",display:"flex",flexDirection:"column",justifyContent:"center",background:desktopCalOpen&&desktopCalMode==="checkout"?"#f0f7ff":"transparent"}} onClick={()=>{setDesktopCalMode("checkout");setDesktopCalOpen(true);setDesktopCalOffset(0);}}>
-            <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Check-out</div>
-            <div style={{fontSize:14,fontWeight:checkOut?600:400,color:checkOut?NAVY:"#94a3b8"}}>{checkOut?formatDate(checkOut):"Add date"}</div>
-          </div>
-          <div ref={desktopGuestRef} className="sfd" style={{padding:"0 18px",display:"flex",flexDirection:"column",justifyContent:"center",position:"relative"}} onClick={()=>setDesktopGuestOpen(!desktopGuestOpen)}>
-            <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Rooms & Guests</div>
-            <div style={{fontSize:14,fontWeight:600,color:NAVY}}>{guestSummary(guests)} <span style={{fontSize:9,color:"#94a3b8"}}>▼</span></div>
-            {desktopGuestOpen&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"calc(100% + 10px)",right:0,width:340,background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.14)",zIndex:9999,padding:18}}>
-              {([["Rooms","1+","rooms",1,4],["Adults","13+","adults",1,16],["Children","0–12","children",0,8]] as [string,string,"rooms"|"adults"|"children",number,number][]).map(([label,sub,key,mn,mx])=><div key={key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f1f5f9"}}><div><div style={{fontSize:14,fontWeight:600,color:NAVY}}>{label}</div><div style={{fontSize:12,color:"#94a3b8"}}>Age {sub}</div></div><div style={{display:"flex",alignItems:"center",gap:12}}><button disabled={guests[key]<=mn} onClick={e=>{e.stopPropagation();setGuests(prev=>{const n={...prev,[key]:Math.max(mn,prev[key]-1)};if(key==="children")n.childAges=n.childAges.slice(0,n.children);return n;});}} style={{width:32,height:32,borderRadius:6,border:"1.5px solid #cbd5e1",background:"#fff",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:guests[key]<=mn?0.3:1}}>−</button><span style={{fontSize:15,fontWeight:700,color:NAVY,minWidth:20,textAlign:"center"}}>{guests[key]}</span><button disabled={guests[key]>=mx} onClick={e=>{e.stopPropagation();setGuests(prev=>{const n={...prev,[key]:Math.min(mx,prev[key]+1)};if(key==="children"){n.childAges=[...n.childAges];while(n.childAges.length<n.children)n.childAges.push(5);}return n;});}} style={{width:32,height:32,borderRadius:6,border:"1.5px solid #cbd5e1",background:"#fff",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:guests[key]>=mx?0.3:1}}>+</button></div></div>)}
-              {guests.children>0&&<div style={{padding:"12px 0",borderBottom:"1px solid #f1f5f9"}}><div style={{fontSize:13,color:"#64748b",marginBottom:8}}>Age of children</div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{Array.from({length:guests.children}).map((_,idx)=><div key={idx}><div style={{fontSize:11,color:"#94a3b8",marginBottom:3}}>Child {idx+1}</div><select value={guests.childAges[idx]??5} onChange={e=>{e.stopPropagation();setGuests(prev=>{const ages=[...prev.childAges];ages[idx]=parseInt(e.target.value);return{...prev,childAges:ages};});}} style={{width:"100%",border:"1.5px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:13,fontFamily:"inherit",color:NAVY,background:"#fff"}}>{Array.from({length:13},(_,a)=><option key={a} value={a}>{a===0?"Under 1":`${a} yr`}</option>)}</select></div>)}</div></div>}
-              <button onClick={()=>setDesktopGuestOpen(false)} style={{width:"100%",background:B,color:"#fff",border:"none",borderRadius:10,padding:10,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginTop:12}}>Done</button>
-            </div>}
-          </div>
-          <button onClick={handleSearch} style={{background:YELLOW,color:"#1a1a1a",border:"none",padding:"0 28px",fontSize:16,fontWeight:800,cursor:"pointer",fontFamily:"inherit",borderRadius:"0 12px 12px 0",display:"flex",alignItems:"center",gap:8,whiteSpace:"nowrap"}}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search
-          </button>
-          {desktopCalOpen&&<div ref={desktopCalRef} onClick={e=>e.stopPropagation()} style={{position:"absolute",top:"calc(100% + 10px)",left:"28%",width:620,background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:14,boxShadow:"0 8px 40px rgba(0,0,0,0.16)",zIndex:9999,padding:22}}>
-            <div style={{display:"flex",alignItems:"flex-start",gap:8}}><button onClick={()=>setDesktopCalOffset(p=>Math.max(0,p-1))} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:16,color:"#64748b",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>‹</button><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,flex:1}}>{renderDesktopMonth(d1.getFullYear(),d1.getMonth())}{renderDesktopMonth(d2.getFullYear(),d2.getMonth())}</div><button onClick={()=>setDesktopCalOffset(p=>p+1)} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:8,width:30,height:30,cursor:"pointer",fontSize:16,color:"#64748b",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>›</button></div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderTop:"1px solid #f1f5f9",paddingTop:12,marginTop:8}}><div style={{fontSize:13,color:"#64748b"}}>{checkIn&&checkOut&&<span style={{color:"#16a34a",fontWeight:600}}>✓ {formatDate(checkIn)} → {formatDate(checkOut)}</span>}</div><button onClick={()=>{setCheckIn("");setCheckOut("");}} style={{background:"none",border:"none",fontSize:13,color:"#94a3b8",cursor:"pointer",fontFamily:"inherit"}}>Clear</button></div>
-          </div>}
-        </div>
-      </div>}
-
-      <div style={{padding:isMobile?"16px 16px 100px":"20px 32px 60px"}}>
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"268px 1fr",gap:22}}>
-          {!isMobile&&<div style={{minWidth:0}}>
-            <div style={{borderRadius:12,overflow:"hidden",marginBottom:16,border:"1.5px solid #e2e8f0",cursor:"pointer",position:"relative"}} onClick={()=>setShowMap(true)}>
-              <img src={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${hotels.find(h=>h.longitude&&h.latitude)?`${hotels.find(h=>h.longitude&&h.latitude)!.longitude},${hotels.find(h=>h.longitude&&h.latitude)!.latitude},11`:"55.2708,25.2048,11"}/268x140?access_token=${MAPBOX_TOKEN}`} alt="Map" style={{width:"100%",height:140,objectFit:"cover",display:"block"}} onError={e=>{(e.target as HTMLImageElement).style.display="none";}}/>
-              <div style={{position:"absolute",top:0,left:0,right:0,bottom:28,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}><div style={{background:"rgba(255,255,255,0.92)",borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:700,color:NAVY,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>🗺️ {loading?"Loading hotels…":`${hotels.filter(h=>h.latitude&&h.longitude).length} hotels on map`}</div></div>
-              <div style={{padding:"9px 14px",background:"#fff",textAlign:"center",color:B,fontSize:13,fontWeight:700,borderTop:"1px solid #e2e8f0"}}>📍 Explore on Map</div>
-            </div>
-            <div style={{background:"#fff",borderRadius:12,border:"1.5px solid #e2e8f0",padding:18}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}><div className="sora" style={{fontSize:16,fontWeight:700,color:NAVY}}>Filters</div>{hasActiveFilters&&<button onClick={clearAllFilters} style={{background:"none",border:"none",fontSize:12,color:B,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>Clear all</button>}</div>
-              <FiltersPanel {...filterProps}/>
-            </div>
-          </div>}
-
-          <div style={{minWidth:0}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
-              <div>
-                <span className="sora" style={{fontSize:isMobile?18:22,fontWeight:800,color:NAVY}}>
-                  {activeRefLabel ? `Hotels near ${activeRefLabel}` : `Hotels in ${destination}`}
-                </span>
-                {!loading&&<span style={{fontSize:13,color:"#64748b",marginLeft:8}}>{sortedHotels.length} properties found</span>}
+          <div style={{ borderTop: "1px solid #e2e8f0", padding: "14px 20px 32px", background: "#fff", flexShrink: 0 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+              <div style={{ border: `2px solid ${calMode === "checkin" ? B : "#e2e8f0"}`, borderRadius: 10, padding: "10px 14px" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>Check-in</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: checkIn ? NAVY : "#94a3b8" }}>{checkIn ? formatDate(checkIn) : "Select"}</div>
               </div>
-              {!isMobile&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"7px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,background:"#fff",cursor:"pointer",outline:"none"}}>
-                {(activeRefLabel)&&<option value="distance">Nearest first</option>}
-                <option value="popularity">Sort by: Popularity</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="rating">User Rating</option>
-                <option value="stars">Star Rating</option>
-              </select>}
+              <div style={{ border: `2px solid ${calMode === "checkout" ? B : "#e2e8f0"}`, borderRadius: 10, padding: "10px 14px" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>Check-out</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: checkOut ? NAVY : "#94a3b8" }}>{checkOut ? formatDate(checkOut) : "Select"}</div>
+              </div>
             </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 10 }}>
+              <button onClick={() => { setCheckIn(""); setCheckOut(""); setCalMode("checkin"); }} style={{ background: "#fef3c7", color: "#92400e", border: "none", borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Clear</button>
+              <button onClick={() => { if (checkIn && checkOut) setCalOpen(false); }} style={{ background: checkIn && checkOut ? YELLOW : "#e2e8f0", color: checkIn && checkOut ? "#1a1a1a" : "#94a3b8", border: "none", borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 700, cursor: checkIn && checkOut ? "pointer" : "default", fontFamily: "inherit" }}>Select</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-            {loading&&<div>{Array.from({length:5}).map((_,i)=><div key={i} className="hcard" style={{marginBottom:16}}><div style={{width:260,minHeight:210,background:"#f0f0f0",flexShrink:0}}/><div style={{padding:"18px 22px",flex:1,display:"flex",flexDirection:"column",gap:12}}><div className="skeleton" style={{height:20,width:"70%"}}/><div className="skeleton" style={{height:14,width:"40%"}}/><div style={{display:"flex",gap:8}}><div className="skeleton" style={{height:28,width:50,borderRadius:6}}/><div className="skeleton" style={{height:28,width:100}}/></div><div style={{display:"flex",gap:16}}><div className="skeleton" style={{height:14,width:80}}/><div className="skeleton" style={{height:14,width:80}}/><div className="skeleton" style={{height:14,width:80}}/></div><div style={{marginTop:"auto",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div className="skeleton" style={{height:36,width:120}}/><div className="skeleton" style={{height:44,width:100,borderRadius:10}}/></div></div></div>)}</div>}
-            {error&&!loading&&<div style={{textAlign:"center",padding:"60px 0"}}><div style={{fontSize:40,marginBottom:12}}>🏨</div><div style={{fontSize:15,fontWeight:600,color:NAVY,marginBottom:6}}>{error}</div><button onClick={()=>router.push("/search-hotels")} style={{background:B,color:"#fff",border:"none",padding:"10px 24px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:600,marginTop:16}}>← Back to search</button></div>}
-
-            {!user&&!loading&&hotels.length>0&&<div style={{position:"relative"}}>
-              <div style={{filter:"blur(4px)",pointerEvents:"none",userSelect:"none"}}>{paginatedHotels.slice(0,2).map((hotel,idx)=><div key={String(hotel.code)} className="hcard"><div className="hcard-img"><img src={getImg(hotel,idx)} alt={hotel.name}/></div><div style={{padding:"18px 22px"}}><div className="sora" style={{fontSize:17,fontWeight:700,color:NAVY}}>{hotel.name}</div><div style={{fontSize:24,fontWeight:800,color:NAVY,marginTop:8}}>{priceINR(hotel)>0?formatINR(priceINR(hotel)):"Price on request"}</div></div></div>)}</div>
-              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(248,250,252,0.7)",backdropFilter:"blur(2px)",borderRadius:12}}>
-                <div onClick={()=>setShowAuthModal(true)} style={{background:"#fff",borderRadius:20,padding:"32px 36px",textAlign:"center",boxShadow:"0 16px 48px rgba(0,0,0,0.15)",cursor:"pointer",maxWidth:380,width:"90%"}}>
-                  <div style={{fontSize:36,marginBottom:12}}>🔒</div><div className="sora" style={{fontSize:20,fontWeight:800,color:NAVY,marginBottom:8}}>Sign in to see member rates</div>
-                  <div style={{fontSize:14,color:"#64748b",marginBottom:20,lineHeight:1.6}}>{hotels.length} hotels found in {destination}. Sign in free to unlock exclusive rates.</div>
-                  <button style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:12,padding:"13px 20px",fontSize:15,fontWeight:600,cursor:"pointer",fontFamily:"inherit",color:NAVY}}>
-                    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                    Continue with Google — it&apos;s free
-                  </button>
+      {/* MOBILE GUESTS */}
+      {isMobile && guestOpen && (
+        <div className="fs">
+          <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderBottom: "1px solid #f1f5f9", flexShrink: 0 }}>
+            <button onClick={() => setGuestOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, color: NAVY }}>&#8592;</button>
+            <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 17, color: NAVY }}>Select Rooms &amp; Guests</div>
+          </div>
+          <div style={{ flex: 1, padding: "0 20px", overflowY: "auto" }}>
+            {([{ label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 }, { label: "Adults", sub: "13 years & above", key: "adults" as keyof GuestState, min: 1, max: 16 }, { label: "Children", sub: "0–12 years", key: "children" as keyof GuestState, min: 0, max: 8 }]).map(item => (
+              <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 0", borderBottom: "1px solid #f1f5f9" }}>
+                <div><div style={{ fontSize: 17, fontWeight: 600, color: NAVY }}>{item.label}</div><div style={{ fontSize: 13, color: "#94a3b8" }}>{item.sub}</div></div>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <button className="gbtn" style={{ width: 40, height: 40 }} disabled={(guests[item.key] as number) <= item.min} onClick={() => updateGuests(item.key, Math.max(item.min, (guests[item.key] as number) - 1))}>−</button>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: NAVY, minWidth: 28, textAlign: "center" as const }}>{guests[item.key]}</span>
+                  <button className="gbtn" style={{ width: 40, height: 40 }} disabled={(guests[item.key] as number) >= item.max} onClick={() => updateGuests(item.key, Math.min(item.max, (guests[item.key] as number) + 1))}>+</button>
                 </div>
               </div>
-            </div>}
-
-            {!loading&&!error&&user&&paginatedHotels.map((hotel,idx)=>{
-              const rating=hotel.rating||getRating(hotel.code);const discount=getDiscount(hotel.code);const price=priceINR(hotel);const globalIdx=(page-1)*perPage+idx;const cardAmenities=getCardAmenities(hotel);
-              const area=hotel.city||null;
-              const distLabel=getDistanceLabel(hotel);
-              // Prefer a specific area/neighbourhood (first segment of the address) over the
-              // generic city name, which is identical for every hotel and not useful as a label.
-              const shortAddress=hotel.address?hotel.address.split(",")[0].trim():null;
-              // Location line: distance from ref if available, else neighbourhood, else city
-              const locationLine = distLabel
-                ? `${distLabel} from ${activeRefLabel}`
-                : (shortAddress&&shortAddress.toLowerCase()!==String(area||"").toLowerCase()?shortAddress:null) || area || hotel.address || destination;
-
-              return isMobile?(
-                <div key={String(hotel.code)} className="hcard-m" onClick={()=>handleHotelClick(hotel)}>
-                  <div style={{position:"relative",height:200}}>
-                    <img src={getImg(hotel,globalIdx)} alt={hotel.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} onError={e=>{(e.target as HTMLImageElement).src=FALLBACK_IMGS[globalIdx%FALLBACK_IMGS.length];}}/>
-                    <div style={{position:"absolute",top:12,left:12,background:"rgba(255,255,255,0.95)",color:NAVY,fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:6}}>↗ Trending</div>
-                  </div>
-                  <div style={{padding:"14px 16px 16px"}}>
-                    <div className="sora" style={{fontSize:16,fontWeight:700,color:NAVY,marginBottom:3}}>{hotel.name}</div>
-                    <div style={{fontSize:12,color:"#64748b",marginBottom:6,display:"flex",alignItems:"center",gap:4}}>
-                      {hotel.stars?<span style={{color:"#f59e0b"}}>{"★".repeat(hotel.stars)}</span>:null}
-                      <span>· <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style={{display:"inline-block",verticalAlign:"-1px",flexShrink:0}}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg> {locationLine}</span>
+            ))}
+            {guests.children > 0 && (
+              <div style={{ marginTop: 16, paddingBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 12 }}>Age of children at check-in</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {guests.childAges.map((age, idx) => (
+                    <div key={idx}>
+                      <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>Child {idx + 1}</div>
+                      <select value={age} onChange={e => { const a = [...guests.childAges]; a[idx] = parseInt(e.target.value); setGuests(p => ({ ...p, childAges: a })); }}
+                        style={{ width: "100%", padding: "10px 12px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontFamily: "inherit", fontSize: 14, color: NAVY, background: "#f8fafc", outline: "none" }}>
+                        {Array.from({ length: 13 }, (_, i) => <option key={i} value={i}>{i === 0 ? "Under 1" : `${i} year${i > 1 ? "s" : ""}`}</option>)}
+                      </select>
                     </div>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-                      <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:12,fontWeight:700,padding:"3px 8px",borderRadius:6}}>{rating.toFixed(1)}</span>
-                      <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
-                      {hotel.isRefundable!=null&&<span style={{fontSize:11,fontWeight:600,color:hotel.isRefundable?"#16a34a":"#dc2626",background:hotel.isRefundable?"#dcfce7":"#fee2e2",padding:"2px 7px",borderRadius:5}}>{hotel.isRefundable?"✓ Refundable":"Non-refundable"}</span>}
-                    </div>
-                    <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between"}}>
-                      <div>{price>0?(<>{hotel.otaPriceINR&&hotel.otaPriceINR>price?<div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>Members save {formatINR(hotel.otaPriceINR-price)}</div>:<div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>{discount}% off</div>}<div style={{fontSize:12,color:"#94a3b8",textDecoration:"line-through"}}>{formatINR(hotel.otaPriceINR&&hotel.otaPriceINR>price?hotel.otaPriceINR:Math.round(price*(1+discount/100)))}</div><div className="sora" style={{fontSize:22,fontWeight:800,color:NAVY}}>{formatINR(price)}</div><div style={{fontSize:11,color:"#64748b"}}>Taxes included · per night</div></>):<div style={{fontSize:13,color:"#64748b"}}>Price on request</div>}</div>
-                      <button style={{background:B,color:"#fff",border:"none",borderRadius:10,padding:"11px 20px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Book Now</button>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ):(
-                <div key={String(hotel.code)} className="hcard" onClick={()=>handleHotelClick(hotel)}>
-                  <div className="hcard-img">
-                    <img src={getImg(hotel,globalIdx)} alt={hotel.name} onError={e=>{(e.target as HTMLImageElement).src=FALLBACK_IMGS[globalIdx%FALLBACK_IMGS.length];}}/>
-                    <div style={{position:"absolute",top:10,left:10,background:"rgba(255,255,255,0.95)",color:NAVY,fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:6}}>↗ Trending</div>
-                  </div>
-                  <div style={{padding:"18px 20px 18px 22px",display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
-                    <div>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
-                        <div style={{flex:1}}>
-                          <div className="sora" style={{fontSize:17,fontWeight:700,color:NAVY,marginBottom:4}}>{hotel.name}{hotel.stars?<span style={{color:"#f59e0b",fontSize:12,marginLeft:6}}>{"★".repeat(hotel.stars)}</span>:null}</div>
-                          <div style={{fontSize:12.5,color:"#64748b",marginBottom:8,display:"flex",alignItems:"center",gap:4}}>
-                            <span><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style={{display:"inline-block",verticalAlign:"-1px",flexShrink:0}}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg></span>
-                            <span>{locationLine}</span>
-                            {distLabel&&<span style={{background:"#eff6ff",color:B,fontSize:11,fontWeight:600,padding:"1px 7px",borderRadius:10,marginLeft:4}}>{distLabel} away</span>}
-                          </div>
-                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-                            <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:12.5,fontWeight:700,padding:"3px 8px",borderRadius:6}}>{rating.toFixed(1)}</span>
-                            <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
-                            {hotel.isRefundable!=null&&<span style={{fontSize:11,fontWeight:600,color:hotel.isRefundable?"#16a34a":"#dc2626",background:hotel.isRefundable?"#dcfce7":"#fee2e2",padding:"2px 7px",borderRadius:5}}>{hotel.isRefundable?"Free Cancellation":"Non-refundable"}</span>}
-                          </div>
-                          {cardAmenities.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:"4px 14px",marginBottom:8}}>{cardAmenities.map((a,i)=><span key={i} style={{fontSize:12.5,color:"#475569"}}>• {a}</span>)}</div>}
-                        </div>
-                        <div style={{textAlign:"right",flexShrink:0}}>
-                          {price>0?(<>{hotel.otaPriceINR&&hotel.otaPriceINR>price?<div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>Members save {formatINR(hotel.otaPriceINR-price)}</div>:<div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>{discount}% off</div>}<div style={{fontSize:12,color:"#64748b",textDecoration:"line-through"}}>{formatINR(hotel.otaPriceINR&&hotel.otaPriceINR>price?hotel.otaPriceINR:Math.round(price*(1+discount/100)))}</div><div className="sora" style={{fontSize:24,fontWeight:800,color:NAVY}}>{formatINR(price)}</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>Taxes included · per night</div></>):<div style={{fontSize:13,color:"#64748b"}}>Price on request</div>}
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12}}>{hotel.hasBreakfast?<div style={{display:"inline-flex",alignItems:"center",gap:6,background:YELLOW,color:"#92400e",borderRadius:8,padding:"8px 14px",fontSize:12.5,fontWeight:600}}><IconBreakfast/> Free Breakfast</div>:<div/>}<button style={{background:B,color:"#fff",border:"none",borderRadius:10,padding:"11px 24px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Book Now</button></div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {!loading&&!error&&totalPages>1&&<div style={{display:"flex",justifyContent:"center",gap:6,marginTop:24}}>{page>1&&<button className="pgb" onClick={()=>{setPage(p=>p-1);window.scrollTo({top:0,behavior:"smooth"});}}>‹</button>}{Array.from({length:Math.min(totalPages,5)},(_,i)=>{const p=Math.max(1,page-2)+i;if(p>totalPages)return null;return<button key={p} className={`pgb${page===p?" on":""}`} onClick={()=>{setPage(p);window.scrollTo({top:0,behavior:"smooth"});}}>{p}</button>;})} {page<totalPages&&<button className="pgb" onClick={()=>{setPage(p=>Math.min(p+1,totalPages));window.scrollTo({top:0,behavior:"smooth"});}}>›</button>}</div>}
+              </div>
+            )}
+          </div>
+          <div style={{ borderTop: "1px solid #e2e8f0", padding: "16px 20px 32px", background: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: NAVY }}>{guests.rooms} Room{guests.rooms > 1 ? "s" : ""}</div>
+              <div style={{ fontSize: 13, color: "#64748b" }}>{guests.adults} Adult{guests.adults > 1 ? "s" : ""}{guests.children > 0 ? `, ${guests.children} Child${guests.children > 1 ? "ren" : ""}` : ""}</div>
+            </div>
+            <button onClick={() => setGuestOpen(false)} style={{ background: YELLOW, color: "#1a1a1a", border: "none", borderRadius: 12, padding: "14px 28px", fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Select</button>
           </div>
         </div>
-      </div>
+      )}
 
-      {isMobile&&<div style={{position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderTop:"1px solid #e2e8f0",display:"flex",zIndex:400,paddingBottom:"env(safe-area-inset-bottom)"}}>
-        <button className="btb" onClick={()=>setMobileSheet("filter")}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={mobileSheet==="filter"?B:"#64748b"} strokeWidth="2"><path d="M3 4h18M7 8h10M11 12h2M13 16h-2"/></svg><span style={{color:mobileSheet==="filter"?B:"#64748b"}}>Filter</span></button>
-        <button className="btb" onClick={()=>setShowMap(true)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span style={{color:"#64748b"}}>Map</span></button>
-        <button className="btb" onClick={()=>setMobileSheet("sort")}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={mobileSheet==="sort"?B:"#64748b"} strokeWidth="2"><path d="M3 6h18M7 12h10M11 18h2"/></svg><span style={{color:mobileSheet==="sort"?B:"#64748b"}}>Sort</span></button>
-        {!user&&<button className="btb" onClick={()=>setShowAuthModal(true)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span style={{color:B,fontWeight:700}}>Sign in</span></button>}
-      </div>}
-
-      {/* FLOATING AI CHAT WIDGET */}
-      <div style={{position:"fixed",bottom:28,right:28,zIndex:9999,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:12}}>
-        {chatOpen&&(
-          <div style={{width:360,height:520,background:"#fff",borderRadius:20,boxShadow:"0 20px 60px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",overflow:"hidden",border:"1.5px solid #e2e8f0"}}>
-            <div style={{background:`linear-gradient(135deg,${NAVY},${B})`,padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{background:"rgba(255,255,255,0.18)",borderRadius:8,padding:"4px 8px",display:"flex",alignItems:"center",gap:4}}>
-                  <span style={{fontFamily:"'Sora',sans-serif",fontWeight:800,fontSize:14,color:"#fff"}}>r.</span>
-                  <span style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.8)"}}>AI</span>
+      {/* NAV + HERO */}
+      <div style={{ background: "linear-gradient(160deg,#0c1f5c 0%,#1a3a8f 40%,#1e4fc2 100%)" }}>
+        <nav style={{ position: "sticky", top: 0, zIndex: 200, background: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
+          <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none" }}>rebuq<span style={{ color: YELLOW }}>.</span></a>
+          {!isMobile && (
+            <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+              <a href="/search-hotels" style={{ fontSize: 14, color: YELLOW, textDecoration: "none", fontWeight: 600 }}>Exclusive Member Deals</a>
+              {user ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user.name[0].toUpperCase()}</div>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user.name.split(" ")[0]}</span>
                 </div>
+              ) : (
+                <button onClick={() => window.location.href = "/signin"} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", background: "none", border: "none", cursor: "pointer", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Log in / Sign up</button>
+              )}
+            </div>
+          )}
+          {isMobile && (
+            <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", padding: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+              <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px,5px)" : "none" }} />
+              <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : "rgba(255,255,255,0.8)", transition: "all 0.2s" }} />
+              <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: menuOpen ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
+            </button>
+          )}
+        </nav>
+
+        {isMobile && menuOpen && (
+          <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 199, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+            <button onClick={() => { router.push("/search-hotels"); setMenuOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
+            <button onClick={() => window.location.href = "/signin"} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Log in / Sign up</button>
+          </div>
+        )}
+
+        <section style={{ background: "transparent", padding: isMobile ? "48px 0 0" : "72px 0 0", textAlign: "center", position: "relative", overflow: "visible", zIndex: 1 }}>
+          <div style={{ padding: isMobile ? "0 20px" : "0 40px" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>✦ Exclusive Member Deals</div>
+            <h1 className="sora" style={{ fontSize: isMobile ? 34 : 60, fontWeight: 800, color: "#fff", lineHeight: 1.08, maxWidth: 760, margin: "0 auto 18px" }}>Find your <span style={{ color: YELLOW }}>perfect stay</span></h1>
+            <p style={{ fontSize: isMobile ? 15 : 16.5, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.7 }}>500,000+ exclusive deals across the globe for members only.</p>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: isMobile ? 12 : 13, padding: "8px 18px", borderRadius: 100, marginBottom: 36 }}>
+              <span style={{ width: 8, height: 8, background: "#4ade80", borderRadius: "50%", flexShrink: 0, animation: "pulse 1.5s infinite" }} />
+              <span className={tickerVisible ? "ticker-visible" : "ticker-hidden"} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const, justifyContent: "center" }}>
+                <span style={{ fontWeight: 600, color: YELLOW }}>{ticker.name}</span>
+                <span style={{ color: "rgba(255,255,255,0.7)" }}>saved on</span>
+                <span style={{ fontWeight: 600 }}>{ticker.hotel}</span>
+                <span style={{ color: "#4ade80", fontWeight: 700 }}>— {ticker.saved}</span>
+                <span style={{ background: "rgba(255,255,255,0.15)", fontSize: 11, padding: "2px 8px", borderRadius: 6, color: "rgba(255,255,255,0.7)" }}>{ticker.time}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* SEARCH BAR */}
+          <div style={{ width: "100%", padding: isMobile ? "0 12px" : "0 40px" }}>
+            <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.22)", overflow: "visible", position: "relative", marginBottom: isMobile ? -32 : -36 }}>
+              {isMobile ? (
                 <div>
-                  <div style={{fontSize:13,fontWeight:700,color:"#fff"}}>rebuq Assistant</div>
-                  <div style={{fontSize:10,color:"rgba(255,255,255,0.65)",display:"flex",alignItems:"center",gap:4}}>
-                    <div style={{width:6,height:6,borderRadius:"50%",background:"#4ade80"}}/>
-                    Powered by Claude AI
+                  <div style={{ padding: "13px 16px", borderBottom: "1px solid #f1f5f9", borderRadius: "16px 16px 0 0", position: "relative" }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination</div>
+                    <input type="text" placeholder="Where to? e.g. Dubai" value={inputText}
+                      onChange={e => { setInputText(e.target.value); setSelection(null); setShowSuggestions(true); setSearchError(""); }}
+                      onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 300)}
+                      style={{ width: "100%", border: "none", outline: "none", fontFamily: "inherit", fontSize: 16, fontWeight: 500, color: NAVY, background: "transparent", padding: 0 }} />
+                    <SuggestionDropdown />
                   </div>
-                </div>
-              </div>
-              <button onClick={()=>setChatOpen(false)} style={{background:"none",border:"none",color:"rgba(255,255,255,0.7)",fontSize:22,cursor:"pointer",padding:0,lineHeight:1}}>×</button>
-            </div>
-            <div style={{flex:1,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:10}}>
-              {chatMessages.map((m,i)=>(
-                <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
-                  <div style={{maxWidth:"82%",padding:"10px 14px",borderRadius:m.role==="user"?"16px 16px 4px 16px":"16px 16px 16px 4px",background:m.role==="user"?B:"#f1f5f9",color:m.role==="user"?"#fff":NAVY,fontSize:13,lineHeight:1.6}}>
-                    {m.content}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: "1px solid #f1f5f9" }}>
+                    <div className="sfield" style={{ padding: "12px 16px", borderRight: "1px solid #f1f5f9" }} onClick={() => { setCalMode("checkin"); setCalOpen(true); }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
+                      <div style={{ fontSize: 14, fontWeight: checkIn ? 600 : 400, color: checkIn ? NAVY : "#94a3b8" }}>{checkIn ? formatDate(checkIn) : "Add date"}</div>
+                    </div>
+                    <div className="sfield" style={{ padding: "12px 16px" }} onClick={() => { setCalMode("checkout"); setCalOpen(true); }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-out</div>
+                      <div style={{ fontSize: 14, fontWeight: checkOut ? 600 : 400, color: checkOut ? NAVY : "#94a3b8" }}>{checkOut ? formatDate(checkOut) : "Add date"}</div>
+                    </div>
                   </div>
+                  <div className="sfield" style={{ padding: "12px 16px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }} onClick={() => setGuestOpen(true)}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Rooms &amp; Guests</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{guestSummary()}</div>
+                    </div>
+                    <span style={{ fontSize: 18, color: "#94a3b8" }}>&#8250;</span>
+                  </div>
+                  <button className="ybtn" onClick={handleSearch} style={{ background: YELLOW, color: "#1a1a1a", border: "none", width: "100%", padding: "18px", fontSize: 17, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", borderRadius: "0 0 16px 16px" }}>Search Hotels</button>
                 </div>
-              ))}
-              {chatLoading&&(
-                <div style={{display:"flex",justifyContent:"flex-start"}}>
-                  <div style={{background:"#f1f5f9",borderRadius:"16px 16px 16px 4px",padding:"10px 14px",display:"flex",gap:4,alignItems:"center"}}>
-                    <div style={{width:6,height:6,borderRadius:"50%",background:"#94a3b8",animation:"pulse 1s ease-in-out 0s infinite"}}/>
-                    <div style={{width:6,height:6,borderRadius:"50%",background:"#94a3b8",animation:"pulse 1s ease-in-out 0.2s infinite"}}/>
-                    <div style={{width:6,height:6,borderRadius:"50%",background:"#94a3b8",animation:"pulse 1s ease-in-out 0.4s infinite"}}/>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "2.5fr 1fr 1fr 1.4fr auto", alignItems: "stretch", minHeight: 72 }}>
+                  <div className="sfield" style={{ padding: "0 24px", borderRight: "1px solid #e2e8f0", borderRadius: "16px 0 0 16px", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Destination</div>
+                    <input type="text" placeholder="Enter City name" value={inputText}
+                      onChange={e => { setInputText(e.target.value); setSelection(null); setShowSuggestions(true); setSearchError(""); }}
+                      onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 300)}
+                      style={{ border: "none", outline: "none", fontFamily: "inherit", fontSize: 15, fontWeight: 500, color: NAVY, background: "transparent", padding: 0, width: "100%" }} />
+                    <SuggestionDropdown style={{ width: 420 }} />
+                  </div>
+                  <div className="sfield" style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkin" ? "#f0f7ff" : "transparent" }} onClick={() => { setCalMode("checkin"); setCalOpen(true); setCalMonthOffset(0); }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-in</div>
+                    <div style={{ fontSize: checkIn ? 15 : 14, fontWeight: checkIn ? 700 : 400, color: checkIn ? NAVY : "#94a3b8" }}>{checkIn ? formatDate(checkIn) : "Add date"}</div>
+                  </div>
+                  <div className="sfield" style={{ padding: "0 20px", borderRight: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "center", background: calOpen && calMode === "checkout" ? "#f0f7ff" : "transparent" }} onClick={() => { setCalMode("checkout"); setCalOpen(true); setCalMonthOffset(0); }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Check-out</div>
+                    <div style={{ fontSize: checkOut ? 15 : 14, fontWeight: checkOut ? 700 : 400, color: checkOut ? NAVY : "#94a3b8" }}>{checkOut ? formatDate(checkOut) : "Add date"}</div>
+                  </div>
+                  <div ref={guestRef} className="sfield" style={{ padding: "0 20px", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative" }} onClick={() => setGuestOpen(!guestOpen)}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 3 }}>Rooms &amp; Guests</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: NAVY }}>{guestSummary()}</div>
+                    {guestOpen && (
+                      <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 340, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 20 }}>
+                        {([{ label: "Rooms", sub: "Minimum 1", key: "rooms" as keyof GuestState, min: 1, max: 4 }, { label: "Adults", sub: "Age 13+", key: "adults" as keyof GuestState, min: 1, max: 16 }, { label: "Children", sub: "Age 0–12", key: "children" as keyof GuestState, min: 0, max: 8 }]).map(item => (
+                          <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0", borderBottom: "1px solid #f1f5f9" }}>
+                            <div><div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{item.label}</div><div style={{ fontSize: 12, color: "#94a3b8" }}>{item.sub}</div></div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                              <button className="gbtn" disabled={(guests[item.key] as number) <= item.min} onClick={e => { e.stopPropagation(); updateGuests(item.key, Math.max(item.min, (guests[item.key] as number) - 1)); }}>−</button>
+                              <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" as const }}>{guests[item.key]}</span>
+                              <button className="gbtn" disabled={(guests[item.key] as number) >= item.max} onClick={e => { e.stopPropagation(); updateGuests(item.key, Math.min(item.max, (guests[item.key] as number) + 1)); }}>+</button>
+                            </div>
+                          </div>
+                        ))}
+                        {guests.children > 0 && (
+                          <div style={{ marginTop: 12 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>Age of children at check-in</div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                              {guests.childAges.map((age, idx) => (
+                                <div key={idx}>
+                                  <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>Child {idx + 1}</div>
+                                  <select value={age} onChange={e => { const a = [...guests.childAges]; a[idx] = parseInt(e.target.value); setGuests(p => ({ ...p, childAges: a })); }}
+                                    style={{ width: "100%", padding: "7px 10px", border: "1.5px solid #e2e8f0", borderRadius: 8, fontFamily: "inherit", fontSize: 13, color: NAVY, background: "#f8fafc", outline: "none" }}>
+                                    {Array.from({ length: 13 }, (_, i) => <option key={i} value={i}>{i === 0 ? "Under 1" : `${i} year${i > 1 ? "s" : ""}`}</option>)}
+                                  </select>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <button onClick={() => setGuestOpen(false)} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: "11px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 14 }}>Done</button>
+                      </div>
+                    )}
+                  </div>
+                  <button className="ybtn" onClick={handleSearch} style={{ background: YELLOW, color: "#1a1a1a", border: "none", padding: "0 36px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", borderRadius: "0 16px 16px 0", whiteSpace: "nowrap" as const, minWidth: 130 }}>Search</button>
+                </div>
+              )}
+
+              {!isMobile && calOpen && (
+                <div ref={calRef} onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 10px)", left: "34%", width: 680, background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.18)", zIndex: 9999, padding: 24 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                    <button onClick={() => setCalMonthOffset(p => Math.max(0, p - 1))} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>&#8249;</button>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, flex: 1 }}>
+                      {renderMonth(d1.getFullYear(), d1.getMonth())}
+                      {renderMonth(d2.getFullYear(), d2.getMonth())}
+                    </div>
+                    <button onClick={() => setCalMonthOffset(p => p + 1)} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>&#8250;</button>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: 12, marginTop: 8 }}>
+                    <div style={{ fontSize: 13, color: "#64748b" }}>
+                      {calMode === "checkin" ? "Select check-in date" : "Select check-out date"}
+                      {checkIn && checkOut && <span style={{ color: "#16a34a", marginLeft: 8, fontWeight: 600 }}>✓ {formatDate(checkIn)} → {formatDate(checkOut)}</span>}
+                    </div>
+                    <button onClick={() => { setCheckIn(""); setCheckOut(""); }} style={{ background: "none", border: "none", fontSize: 13, color: "#94a3b8", cursor: "pointer", fontFamily: "inherit" }}>Clear</button>
                   </div>
                 </div>
               )}
-              <div ref={chatEndRef}/>
-            </div>
-            {chatMessages.length<=1&&(
-              <div style={{padding:"0 12px 8px",display:"flex",gap:6,flexWrap:"wrap",flexShrink:0}}>
-                {[`Best areas in ${destination}`,`Local food near hotels`,`Weather in ${destination}`,`Is ₹8,000 good value?`].map(p=>(
-                  <button key={p} onClick={()=>sendChat(p)} style={{background:"#eff6ff",color:B,border:"none",borderRadius:20,padding:"5px 10px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{p}</button>
-                ))}
-              </div>
-            )}
-            <div style={{padding:"12px",borderTop:"1px solid #f1f5f9",display:"flex",gap:8,flexShrink:0}}>
-              <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")sendChat(chatInput);}} placeholder="Ask anything about your trip..." style={{flex:1,border:"1.5px solid #e2e8f0",borderRadius:10,padding:"9px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,outline:"none"}}/>
-              <button onClick={()=>sendChat(chatInput)} disabled={!chatInput.trim()||chatLoading} style={{background:B,color:"#fff",border:"none",borderRadius:10,width:38,height:38,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",opacity:!chatInput.trim()||chatLoading?0.5:1,flexShrink:0}}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              </button>
+
+              {searchError && (
+                <div style={{ padding: "10px 20px", background: "#fef2f2", borderTop: "1px solid #fecaca", borderRadius: "0 0 16px 16px", fontSize: 13, color: "#dc2626", display: "flex", alignItems: "center", gap: 6 }}>
+                  ⚠ {searchError}
+                </div>
+              )}
             </div>
           </div>
-        )}
-        <button onClick={()=>setChatOpen(p=>!p)} style={{width:56,height:56,borderRadius:"50%",background:`linear-gradient(135deg,${NAVY},${B})`,border:"none",cursor:"pointer",boxShadow:"0 8px 24px rgba(20,71,184,0.35)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:1}}>
-          {chatOpen?(
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          ):(
-            <>
-              <span style={{fontFamily:"'Sora',sans-serif",fontWeight:800,fontSize:15,color:"#fff",lineHeight:1}}>r.</span>
-              <span style={{fontSize:8,fontWeight:700,color:"rgba(255,255,255,0.8)",letterSpacing:"0.05em"}}>AI</span>
-            </>
-          )}
-        </button>
+          <div style={{ height: isMobile ? 48 : 56 }} />
+        </section>
       </div>
 
+      {/* STATS */}
+      <div style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", paddingTop: isMobile ? 48 : 56 }} ref={statsRef}>
+        <div style={{ padding: isMobile ? "20px" : "26px 40px", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)" }}>
+          {STATS.map((s, i) => (
+            <div key={i} style={{ textAlign: "center", borderRight: !isMobile && i < 3 ? "1px solid #e2e8f0" : "none", padding: "0 20px" }}>
+              <div className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY }}>{statVals[i]}</div>
+              <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* TOP DESTINATIONS */}
+      <div style={{ padding: isMobile ? "50px 20px" : "70px 40px" }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Explore by destination</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28, flexWrap: "wrap" as const, gap: 12 }}>
+          <div>
+            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Top Destinations</h2>
+            <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Handpicked destinations with rates unavailable anywhere else.</p>
+          </div>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "#16a34a" }}>
+            <span style={{ width: 7, height: 7, background: "#16a34a", borderRadius: "50%", display: "inline-block", animation: "pulse 1.5s infinite" }} /> Live rates
+          </span>
+        </div>
+        <div style={{ overflow: "hidden" }}
+          onTouchStart={e => { const t = e.touches[0]; (e.currentTarget as any)._touchStartX = t.clientX; }}
+          onTouchEnd={e => { const startX = (e.currentTarget as any)._touchStartX; const endX = e.changedTouches[0].clientX; const diff = startX - endX; if (Math.abs(diff) > 50) { scrollDestCarousel(diff > 0 ? 1 : -1); } }}>
+          <div style={{ display: "flex", gap: 14, transform: `translateX(-${destCarouselPos * (DEST_CARD_WIDTH + 14)}px)`, transition: "transform 0.4s cubic-bezier(.4,0,.2,1)" }}>
+            {DEST_CARDS.map((d, i) => (
+              <div key={i} className="dest-card" onClick={() => handleDestCardClick(d.city)}
+                style={{ flex: `0 0 ${DEST_CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", height: 190, cursor: "pointer" }}>
+                <img src={d.img} alt={d.city} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} onError={e => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80&fit=crop"; }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 55%)" }} />
+                {d.badge && <span style={{ position: "absolute", top: 10, left: 10, fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, padding: "3px 9px", borderRadius: 6, background: d.badgeColor, color: d.badgeText }}>{d.badge}</span>}
+                <div style={{ position: "absolute", bottom: 14, left: 14, color: "#fff" }}>
+                  <div className="sora" style={{ fontSize: 17, fontWeight: 700 }}>{d.flag} {d.city}</div>
+                  <div style={{ fontSize: 12, opacity: 0.8 }}>{d.country}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
+          <button onClick={() => scrollDestCarousel(-1)} disabled={destCarouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: destCarouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: destCarouselPos === 0 ? 0.4 : 1 }}>‹</button>
+          <div style={{ display: "flex", gap: 6 }}>{Array.from({ length: DEST_CARDS.length - DEST_VISIBLE + 1 }, (_, i) => (<div key={i} onClick={() => setDestCarouselPos(i)} style={{ width: i === destCarouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === destCarouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />))}</div>
+          <button onClick={() => scrollDestCarousel(1)} disabled={destCarouselPos >= DEST_MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: destCarouselPos >= DEST_MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: destCarouselPos >= DEST_MAX_POS ? 0.4 : 1 }}>›</button>
+        </div>
+      </div>
+
+      {/* HOTELS */}
+      <div id="hotels-section" style={{ background: "#f8fafc", padding: isMobile ? "50px 0" : "70px 0" }}>
+        <div style={{ padding: isMobile ? "0 20px" : "0 40px" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: B, marginBottom: 10 }}>Member exclusive rates</p>
+          <div style={{ marginBottom: 24 }}>
+            <h2 className="sora" style={{ fontSize: isMobile ? 22 : 34, fontWeight: 800, color: NAVY, lineHeight: 1.15 }}>Member Exclusive Hotels</h2>
+            <p style={{ fontSize: 14, color: "#64748b", marginTop: 6 }}>Members save an average of <strong>₹24,600</strong> on these properties.</p>
+          </div>
+          <div className="scroll-x" style={{ display: "flex", gap: 8, marginBottom: 28, overflowX: "auto", paddingBottom: 4 }}>
+            {CITY_FILTERS.map(f => {
+              const dest = DESTINATIONS.find(d => d.city === f);
+              return (
+                <button key={f} onClick={() => setActiveCity(f)} style={{ background: activeCity === f ? NAVY : "#fff", border: `1.5px solid ${activeCity === f ? NAVY : "#e2e8f0"}`, color: activeCity === f ? "#fff" : NAVY, fontSize: 13, fontWeight: 500, padding: "7px 18px", borderRadius: 100, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const, flexShrink: 0, transition: "all 0.2s" }}>
+                  {f === "Top Sellers" ? f : `${dest?.flag || ""} ${f}`}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ overflow: "hidden" }}
+            onTouchStart={e => { const t = e.touches[0]; (e.currentTarget as any)._touchStartX = t.clientX; }}
+            onTouchEnd={e => { const startX = (e.currentTarget as any)._touchStartX; const endX = e.changedTouches[0].clientX; const diff = startX - endX; if (Math.abs(diff) > 50) { scrollHotelCarousel(diff > 0 ? 1 : -1); } }}>
+            <div style={{ display: "flex", gap: 20, transform: `translateX(-${hotelCarouselPos * (HOTEL_CARD_WIDTH + 20)}px)`, transition: "transform 0.4s cubic-bezier(.4,0,.2,1)" }}>
+              {hotels.map((h, i) => (
+                <div key={i} className="hotel-card" onClick={() => handleHotelCardClick(h.name, h.city, h.code)}
+                  style={{ flex: `0 0 ${HOTEL_CARD_WIDTH}px`, background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 2px 16px rgba(0,0,0,0.07)", border: "1.5px solid #e2e8f0" }}>
+                  <div style={{ height: 190, position: "relative", overflow: "hidden" }}>
+                    <img src={h.img} alt={h.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                      {h.badges.map(([label, type]) => { const s = BADGE_STYLES[type] || BADGE_STYLES.luxury; return <span key={label} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6, letterSpacing: "0.04em", textTransform: "uppercase" as const, background: s.bg, color: s.color }}>{label}</span>; })}
+                    </div>
+                  </div>
+                  <div style={{ padding: "16px 18px 18px" }}>
+                    <div style={{ color: "#f59e0b", fontSize: 12, marginBottom: 4 }}>{"★".repeat(h.stars)}</div>
+                    <div className="sora" style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 4, minHeight: 42, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>{h.name}</div>
+                    <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{h.loc} · {h.rating}</div>
+                    <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5, marginBottom: 14 }}>
+                      {h.tags.map(t => <span key={t} style={{ background: "#f8fafc", color: "#64748b", fontSize: 11, padding: "3px 8px", borderRadius: 6, fontWeight: 500 }}>{t}</span>)}
+                    </div>
+                    <button style={{ background: B, color: "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const }}>Check Members Rate →</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
+            <button onClick={() => scrollHotelCarousel(-1)} disabled={hotelCarouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: hotelCarouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: hotelCarouselPos === 0 ? 0.4 : 1 }}>‹</button>
+            <div style={{ display: "flex", gap: 6 }}>{Array.from({ length: Math.max(0, hotels.length - HOTEL_VISIBLE + 1) }, (_, i) => (<div key={i} onClick={() => setHotelCarouselPos(i)} style={{ width: i === hotelCarouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === hotelCarouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />))}</div>
+            <button onClick={() => scrollHotelCarousel(1)} disabled={hotelCarouselPos >= HOTEL_MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: hotelCarouselPos >= HOTEL_MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: hotelCarouselPos >= HOTEL_MAX_POS ? 0.4 : 1 }}>›</button>
+          </div>
+          <div style={{ textAlign: "center", marginTop: 36 }}>
+            <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>↑ Search for more hotels</button>
+          </div>
+        </div>
+      </div>
+
+      {/* BOTTOM CTA */}
+      <div style={{ background: "linear-gradient(135deg,#0c1f5c 0%,#1e4fc2 100%)", padding: isMobile ? "50px 20px" : "64px 40px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 340px", gap: 56, alignItems: "center" }}>
+          <div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 100, marginBottom: 16, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>✦ Already booked elsewhere?</div>
+            <h2 className="sora" style={{ fontSize: isMobile ? 26 : 42, fontWeight: 800, color: "#fff", lineHeight: 1.1, marginBottom: 14 }}>Don&apos;t overpay. Let our AI <span style={{ color: YELLOW }}>watch the price.</span></h2>
+            <p style={{ fontSize: 14.5, color: "rgba(255,255,255,0.7)", lineHeight: 1.7, marginBottom: 28 }}>Upload your booking voucher. We&apos;ll monitor the rate 24/7 and WhatsApp you the moment it drops.</p>
+          </div>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 28, boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+            <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 5 }}>Already booked? Check for a drop</div>
+            <div style={{ fontSize: 12.5, color: "#64748b", marginBottom: 16 }}>Takes 30 seconds. We handle the rest.</div>
+            <button onClick={() => router.push("/")} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 13, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Upload My Booking Voucher</button>
+          </div>
+        </div>
+      </div>
       <footer style={{ background: NAVY, padding: isMobile ? "40px 20px 24px" : "48px 40px 32px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
