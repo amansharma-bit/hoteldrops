@@ -911,7 +911,17 @@ router.get('/search', async (req, res) => {
 // at server startup, instant, no extra network call) rather than waiting for
 // liteAPI's own hotel-metadata block, which only arrives at the END of a
 // streamed response. Returns null for hotels with no usable rate at all.
-function buildStreamHotelCard(h, destinationFallback) {
+// Straight-line distance in km between two lat/long points (haversine).
+function haversineKm(lat1, lng1, lat2, lng2) {
+  if ([lat1, lng1, lat2, lng2].some(v => v === null || v === undefined || isNaN(v))) return null
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function buildStreamHotelCard(h, destinationFallback, refLat, refLng) {
   const firstRT = h.roomTypes?.[0]
   const firstRate = firstRT?.rates?.[0]
   if (!firstRate) return null
@@ -928,6 +938,9 @@ function buildStreamHotelCard(h, destinationFallback) {
   const meta = HOTEL_CACHE_BY_ID[String(h.hotelId)] || {}
   const refTag = firstRate?.cancellationPolicies?.refundableTag || null
   const boardType = firstRate?.boardType || firstRate?.boardCode || 'RO'
+  const distanceKm = (refLat != null && refLng != null)
+    ? haversineKm(refLat, refLng, meta.latitude, meta.longitude)
+    : null
 
   return {
     code: h.hotelId,
@@ -942,6 +955,7 @@ function buildStreamHotelCard(h, destinationFallback) {
     imageUrl: meta.imageUrl || null,
     latitude: meta.latitude || null,
     longitude: meta.longitude || null,
+    distanceKm: distanceKm !== null ? Math.round(distanceKm * 10) / 10 : null,
     isRefundable: refTag === 'RFN' ? true : refTag === 'NRFN' ? false : null,
     hasBreakfast: !['RO', 'Room Only', '', null, undefined].includes(boardType),
     taxesIncluded: true,
@@ -961,14 +975,18 @@ router.get('/search-stream', async (req, res) => {
   const {
     destination, checkIn, checkOut,
     adults = '2', children = '0', childAges, rooms = '1',
-    placeId, sessionId,
+    placeId, sessionId, refLat, refLng, radius,
   } = req.query
 
-  if (!checkIn || !checkOut || !placeId) {
-    return res.status(400).json({ error: 'checkIn, checkOut and placeId are required' })
+  const lat = refLat !== undefined ? parseFloat(refLat) : null
+  const lng = refLng !== undefined ? parseFloat(refLng) : null
+  const hasCoords = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)
+
+  if (!checkIn || !checkOut || !(placeId || hasCoords)) {
+    return res.status(400).json({ error: 'checkIn, checkOut and either placeId or refLat/refLng are required' })
   }
 
-  console.log(`🔎 search-stream: dest="${destination}" placeId=${placeId} ${checkIn}→${checkOut} adults=${adults} rooms=${rooms}`)
+  console.log(`🔎 search-stream: dest="${destination}" ${hasCoords ? `lat=${lat},lng=${lng},radius=${radius||20000}` : `placeId=${placeId}`} ${checkIn}→${checkOut} adults=${adults} rooms=${rooms}`)
 
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
@@ -990,7 +1008,10 @@ router.get('/search-stream', async (req, res) => {
       occupancies: buildOccupancies(rooms, adults, children, childAges),
       maxRatesPerHotel: 1,
       includeHotelData: true,
-      placeId,
+      // Lat/long is the precise, fastest search method per liteAPI's own docs —
+      // used whenever Mapbox resolved a point (city or landmark) on the frontend.
+      // placeId stays as the path for legacy/curated city quick-picks only.
+      ...(hasCoords ? { latitude: lat, longitude: lng, radius: parseInt(radius, 10) || 20000 } : { placeId }),
       limit: 400,
       timeout: 10,
       stream: true,
@@ -1026,7 +1047,7 @@ router.get('/search-stream', async (req, res) => {
         if (isBackfillPass && !HOTEL_CACHE_BY_ID[String(r.hotelId)] && endMeta?.[r.hotelId]) {
           HOTEL_CACHE_BY_ID[String(r.hotelId)] = endMeta[r.hotelId]
         }
-        const card = buildStreamHotelCard(r, destination)
+        const card = buildStreamHotelCard(r, destination, hasCoords ? lat : null, hasCoords ? lng : null)
         if (!card) continue
         if (card.name === 'Hotel' && !isBackfillPass) { unresolved.push(r); continue }
         cards.push(card)
