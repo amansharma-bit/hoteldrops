@@ -770,7 +770,7 @@ function SearchResults(){
   const[destination,setDestination]=useState((searchParams.get("destination")||"Dubai").split(",")[0].trim());
   const[checkIn,setCheckIn]=useState(searchParams.get("checkIn")||"");
   const[checkOut,setCheckOut]=useState(searchParams.get("checkOut")||"");
-  const[guests,setGuests]=useState<GuestState>({rooms:parseInt(searchParams.get("rooms")||"1"),adults:parseInt(searchParams.get("adults")||"2"),children:parseInt(searchParams.get("children")||"0"),childAges:[]});
+  const[guests,setGuests]=useState<GuestState>({rooms:parseInt(searchParams.get("rooms")||"1"),adults:parseInt(searchParams.get("adults")||"2"),children:parseInt(searchParams.get("children")||"0"),childAges:(searchParams.get("childAges")||"").split(",").map(s=>parseInt(s)).filter(n=>!isNaN(n))});
   const[hotels,setHotels]=useState<Hotel[]>([]);
   const[loading,setLoading]=useState(true);const[error,setError]=useState<string|null>(null);
   const[user,setUser]=useState<{name:string}|null>(null);const[showAuthModal,setShowAuthModal]=useState(false);
@@ -807,9 +807,10 @@ function SearchResults(){
     if(!c1||!c2){setLoading(false);setError("Please select check-in and check-out dates.");return;}
     setLoading(true);setError(null);setPage(1);setHotels([]);
 
+    const childAgesParam=gs.childAges&&gs.childAges.length>0?`&childAges=${gs.childAges.join(",")}`:"";
     const baseUrl=placeId
-      ?`${API}/search?placeId=${encodeURIComponent(placeId)}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}&rooms=${gs.rooms}`
-      :`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}&rooms=${gs.rooms}`;
+      ?`${API}/search?placeId=${encodeURIComponent(placeId)}&destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}`
+      :`${API}/search?destination=${encodeURIComponent(d)}&checkIn=${c1}&checkOut=${c2}&adults=${gs.adults}&children=${gs.children}${childAgesParam}&rooms=${gs.rooms}`;
 
     try{
       // Page 0 first — fast first paint
@@ -847,12 +848,13 @@ function SearchResults(){
     const co = searchParams.get("checkOut") || "";
     const adults = parseInt(searchParams.get("adults") || "2");
     const children = parseInt(searchParams.get("children") || "0");
+    const childAges = (searchParams.get("childAges")||"").split(",").map(s=>parseInt(s)).filter(n=>!isNaN(n));
     const rooms = parseInt(searchParams.get("rooms") || "1");
     if (pid && dest) {
       setSelectedPlaceId(pid);
       setDestInput(dest);
       setDestination(dest);
-      fetchHotels(dest, ci, co, { adults, children, rooms, childAges: [] }, pid);
+      fetchHotels(dest, ci, co, { adults, children, rooms, childAges }, pid);
     } else {
       fetchHotels();
     }
@@ -970,6 +972,7 @@ function SearchResults(){
     if(!user){setShowAuthModal(true);return;}
     const d=destInput.trim()||destination;
     const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
+    if(guests.childAges&&guests.childAges.length>0)p.set("childAges",guests.childAges.join(","));
     // Always resolve placeId fresh for the destination text being searched —
     // never reuse a placeId that may belong to a previously-searched city.
     // /search requires a placeId (or hotelId), so we must always end up with one.
@@ -991,7 +994,8 @@ function SearchResults(){
 
   const handleHotelClick=(hotel:Hotel)=>{
     if(!user){setShowAuthModal(true);return;}
-    const url=`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}`;
+    const childAgesParam=guests.childAges&&guests.childAges.length>0?`&childAges=${guests.childAges.join(",")}`:"";
+    const url=`/hotel/${hotel.code}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${guests.adults}&rooms=${guests.rooms}&children=${guests.children}${childAgesParam}`;
     isMobile?router.push(url):window.open(url,'_blank');
   };
   const desktopDayClick=(ds:string)=>{if(desktopCalMode==="checkin"){setCheckIn(ds);setCheckOut("");setDesktopCalMode("checkout");}else{if(ds<=checkIn)return;setCheckOut(ds);setDesktopCalOpen(false);}};
