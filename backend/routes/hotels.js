@@ -701,7 +701,7 @@ router.get('/search', async (req, res) => {
     const {
       destination, checkIn, checkOut,
       adults = '2', children = '0', childAges, rooms = '1',
-      placeId, hotelId, page,
+      placeId, hotelId, page, sessionId,
     } = req.query
 
     if (!checkIn || !checkOut) {
@@ -714,6 +714,10 @@ router.get('/search', async (req, res) => {
     // request) comes back without hasMore and the frontend's progressive loop stops early.
     const pageNum = (page !== undefined) ? Math.max(0, Math.min(4, parseInt(page, 10) || 0)) : null
 
+    // sessionId is deliberately excluded from the cache key — it's a per-user search
+    // session, not part of what makes two searches "the same search" for caching
+    // purposes. A cache hit just won't carry liteAPI's price-consistency guarantee for
+    // that particular response (no live call was made), same as before this feature.
     const cacheKey = `s:${placeId || hotelId || destination}:${checkIn}:${checkOut}:${adults}:${children}:${childAges || ''}:${rooms}:${page ?? 'all'}`
     const hit = memGet(cacheKey)
     if (hit) {
@@ -730,6 +734,7 @@ router.get('/search', async (req, res) => {
       occupancies: buildOccupancies(rooms, adults, children, childAges),
       maxRatesPerHotel: 1,
       includeHotelData: true,
+      ...(sessionId ? { sessionId } : {}),
       timeout: 10,
     }
 
@@ -964,7 +969,7 @@ router.get('/cache-search', (req, res) => {
 router.get('/:code', async (req, res) => {
   try {
     const { code } = req.params
-    const { checkIn, checkOut, adults = '2', children = '0', childAges, rooms = '1' } = req.query
+    const { checkIn, checkOut, adults = '2', children = '0', childAges, rooms = '1', sessionId } = req.query
     if (!checkIn || !checkOut) return res.status(400).json({ error: 'checkIn and checkOut required' })
     const nights = Math.max(1, Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000))
 
@@ -974,6 +979,7 @@ router.get('/:code', async (req, res) => {
         checkin: checkIn, checkout: checkOut, currency: 'INR', guestNationality: 'IN',
         hotelIds: [code], occupancies: buildOccupancies(rooms, adults, children, childAges),
         includeHotelData: false, roomMapping: true,
+        ...(sessionId ? { sessionId } : {}),
       }, { headers: getHeaders(), timeout: 30000, validateStatus: () => true }),
       axios.get(`${BASE_URL}/data/reviews?hotelId=${code}&timeout=4&getSentiment=true`, { headers: getHeaders(), timeout: 6000, validateStatus: () => true }),
       axios.get(`${BASE_URL}/data/rooms?hotelId=${code}`, { headers: getHeaders(), timeout: 10000, validateStatus: () => true }),
