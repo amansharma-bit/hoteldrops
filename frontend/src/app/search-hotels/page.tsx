@@ -431,7 +431,7 @@ export default function SearchHotelsPage() {
       const ci = checkIn || defaults.checkIn;
       const co = checkOut || defaults.checkOut;
       if (hotelCode) {
-        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children) });
+        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children) }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(','));
         const url = `/hotel/${hotelCode}?${params.toString()}`;
         isMobile ? router.push(url) : window.open(url, '_blank');
         return;
@@ -441,18 +441,18 @@ export default function SearchHotelsPage() {
         const data = await res.json();
         const match = (data.hotels || []).find((h: any) => h.name.toLowerCase().includes(hotelName.toLowerCase().slice(0, 15)));
         if (match?.hotelId) {
-          const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children) });
+          const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children) }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(','));
           const url = `/hotel/${match.hotelId}?${params.toString()}`;
           isMobile ? router.push(url) : window.open(url, '_blank');
         } else {
           const cityMatch = (data.cities || []).find((c: any) => c.name?.toLowerCase().includes(city.toLowerCase()));
-          const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: city });
+          const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: city }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(','));
           if (cityMatch?.placeId) params.set('placeId', cityMatch.placeId);
           const url = `/search?${params.toString()}`;
           isMobile ? router.push(url) : window.open(url, '_blank');
         }
       } catch {
-        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: city });
+        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: city }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(','));
         const url = `/search?${params.toString()}`;
         isMobile ? router.push(url) : window.open(url, '_blank');
       }
@@ -467,11 +467,11 @@ export default function SearchHotelsPage() {
         const res = await fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(cityName)}`);
         const data = await res.json();
         const match = (data.cities || []).find((c: any) => c.name?.toLowerCase() === cityName.toLowerCase());
-        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: cityName });
+        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: cityName }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(','));
         if (match?.placeId) params.set('placeId', match.placeId);
         router.push(`/search?${params.toString()}`);
       } catch {
-        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: cityName });
+        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: cityName }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(','));
         router.push(`/search?${params.toString()}`);
       }
     });
