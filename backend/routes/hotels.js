@@ -968,6 +968,8 @@ router.get('/search-stream', async (req, res) => {
     return res.status(400).json({ error: 'checkIn, checkOut and placeId are required' })
   }
 
+  console.log(`🔎 search-stream: dest="${destination}" placeId=${placeId} ${checkIn}→${checkOut} adults=${adults} rooms=${rooms}`)
+
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
   res.setHeader('Connection', 'keep-alive')
@@ -1003,13 +1005,17 @@ router.get('/search-stream', async (req, res) => {
     })
 
     if (liteResp.status !== 200) {
+      console.error(`⚠️ search-stream: liteAPI connect status=${liteResp.status}`)
       safeWrite(`data: ${JSON.stringify({ error: `liteAPI returned ${liteResp.status}` })}\n\n`)
       return finish()
     }
+    console.log(`📡 search-stream: liteAPI connected (status 200), reading stream…`)
 
     let buffer = ''
     let endMeta = null
     const unresolved = []
+    let rawCount = 0
+    let cardCount = 0
 
     // Sends a chunk of hotel cards down OUR stream. On the first pass,
     // hotels we can't yet name (not in our local cache) are held back rather
@@ -1025,6 +1031,7 @@ router.get('/search-stream', async (req, res) => {
         if (card.name === 'Hotel' && !isBackfillPass) { unresolved.push(r); continue }
         cards.push(card)
       }
+      cardCount += cards.length
       if (cards.length) safeWrite(`data: ${JSON.stringify({ hotels: cards })}\n\n`)
     }
 
@@ -1041,6 +1048,7 @@ router.get('/search-stream', async (req, res) => {
         let msg
         try { msg = JSON.parse(payload) } catch { continue }
         if (Array.isArray(msg.rates)) {
+          rawCount += msg.rates.length
           flushCards(msg.rates, false)
         } else if (Array.isArray(msg.hotels)) {
           endMeta = {}
@@ -1053,6 +1061,7 @@ router.get('/search-stream', async (req, res) => {
 
     liteResp.data.on('end', () => {
       if (unresolved.length) flushCards(unresolved, true)
+      console.log(`✅ search-stream done: ${rawCount} raw rates from liteAPI → ${cardCount} cards sent`)
       finish()
     })
 
