@@ -47,6 +47,14 @@ function mapboxTier(placeTypes: string[]): "city" | "area" {
   return placeTypes.some(t => ["place", "region", "country"].includes(t)) ? "city" : "area";
 }
 
+// Country/region/place all share search logic (the "city" tier), but they are
+// NOT all "cities" — a country result must say "Country", not "City".
+function cityTierLabel(placeTypes: string[]): string {
+  if (placeTypes?.includes("country")) return "Country";
+  if (placeTypes?.includes("region")) return "Region";
+  return "City";
+}
+
 // Resolves whatever the user types to exact coordinates via Mapbox. City-tier
 // and area-tier types are fetched as two SEPARATE requests, each with its own
 // limit — if they shared one limit, a flood of fuzzy city-name lookalikes
@@ -122,7 +130,12 @@ async function fetchMapboxPlaces(query: string): Promise<{ cities: any[]; areas:
     // matches, e.g. typing "DU" → Dubai/Dublin/Durban with no clear winner).
     return a.name.localeCompare(b.name);
   });
-  const areas = areaFeatures.sort((a: any, b: any) => b.relevance - a.relevance);
+  const areas = areaFeatures.sort((a: any, b: any) => {
+    const aExact = a.name.toLowerCase() === q;
+    const bExact = b.name.toLowerCase() === q;
+    if (aExact !== bExact) return aExact ? -1 : 1;
+    return b.relevance - a.relevance;
+  });
 
   return { cities, areas };
 }
@@ -808,7 +821,8 @@ export default function SearchHotelsPage() {
           const info = getCityInfo(c.name);
           const country = c.countryName || info?.country || "";
           const flag = c.flag || info?.flag || "";
-          return <Row key={`c${i}`} flag={flag} name={c.name} tag={country ? `City in ${country}` : "City"} onPick={() => handleSelect(c, 'city')} />;
+          const label = cityTierLabel(c.placeTypes || []);
+          return <Row key={`c${i}`} flag={flag} name={c.name} tag={country ? `${label} in ${country}` : label} onPick={() => handleSelect(c, 'city')} />;
         })}
         {suggestions.areas.map((a: any, i: number) => {
           const tagParts = [a.parentCity, a.countryName].filter(Boolean).join(", ");
