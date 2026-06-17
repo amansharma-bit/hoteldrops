@@ -1201,13 +1201,19 @@ function SearchResults(){
               const rating=hotel.rating||getRating(hotel.code);const discount=getDiscount(hotel.code);const price=priceINR(hotel);const globalIdx=(page-1)*perPage+idx;const cardAmenities=getCardAmenities(hotel);
               const area=hotel.city||null;
               const distLabel=getDistanceLabel(hotel);
-              // Prefer a specific area/neighbourhood (first segment of the address) over the
-              // generic city name, which is identical for every hotel and not useful as a label.
+              // Prefer the curated, coordinate-matched area (same data the sidebar
+              // Location filter uses) over a raw address fragment — "Dubai Marina"
+              // instead of "Dubai Marina Promenade", consistent with the filter list.
+              const coordArea=getAreaFromCoords(hotel.latitude,hotel.longitude,destination);
+              // Fallback only when no curated area matches: first segment of the
+              // raw address, over the generic city name which is identical for
+              // every hotel and not useful as a label.
               const shortAddress=hotel.address?hotel.address.split(",")[0].trim():null;
-              // Location line: distance from ref if available, else neighbourhood, else city
+              // Location line: distance from ref if available, else curated area,
+              // else neighbourhood fragment, else city
               const locationLine = distLabel
                 ? `${distLabel} from ${activeRefLabel}`
-                : (shortAddress&&shortAddress.toLowerCase()!==String(area||"").toLowerCase()?shortAddress:null) || area || hotel.address || destination;
+                : coordArea || (shortAddress&&shortAddress.toLowerCase()!==String(area||"").toLowerCase()?shortAddress:null) || area || hotel.address || destination;
 
               return isMobile?(
                 <div key={String(hotel.code)} className="hcard-m" onClick={()=>handleHotelClick(hotel)}>
@@ -1224,7 +1230,6 @@ function SearchResults(){
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
                       <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:12,fontWeight:700,padding:"3px 8px",borderRadius:6}}>{rating.toFixed(1)}</span>
                       <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
-                      {hotel.isRefundable!=null&&<span style={{fontSize:11,fontWeight:600,color:hotel.isRefundable?"#16a34a":"#dc2626",background:hotel.isRefundable?"#dcfce7":"#fee2e2",padding:"2px 7px",borderRadius:5}}>{hotel.isRefundable?"✓ Refundable":"Non-refundable"}</span>}
                     </div>
                     <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between"}}>
                       <div>{price>0?(<>{hotel.otaPriceINR&&hotel.otaPriceINR>price?<div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>Members save {formatINR(hotel.otaPriceINR-price)}</div>:<div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>{discount}% off</div>}<div style={{fontSize:12,color:"#94a3b8",textDecoration:"line-through"}}>{formatINR(hotel.otaPriceINR&&hotel.otaPriceINR>price?hotel.otaPriceINR:Math.round(price*(1+discount/100)))}</div><div className="sora" style={{fontSize:22,fontWeight:800,color:NAVY}}>{formatINR(price)}</div><div style={{fontSize:11,color:"#64748b"}}>Taxes included · per night</div></>):<div style={{fontSize:13,color:"#64748b"}}>Price on request</div>}</div>
@@ -1251,7 +1256,6 @@ function SearchResults(){
                           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
                             <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:12.5,fontWeight:700,padding:"3px 8px",borderRadius:6}}>{rating.toFixed(1)}</span>
                             <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
-                            {hotel.isRefundable!=null&&<span style={{fontSize:11,fontWeight:600,color:hotel.isRefundable?"#16a34a":"#dc2626",background:hotel.isRefundable?"#dcfce7":"#fee2e2",padding:"2px 7px",borderRadius:5}}>{hotel.isRefundable?"Free Cancellation":"Non-refundable"}</span>}
                           </div>
                           {cardAmenities.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:"4px 14px",marginBottom:8}}>{cardAmenities.map((a,i)=><span key={i} style={{fontSize:12.5,color:"#475569"}}>• {a}</span>)}</div>}
                         </div>
