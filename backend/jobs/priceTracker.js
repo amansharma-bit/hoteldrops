@@ -25,13 +25,8 @@ const CITY_COUNTRY = {
   'vienna':'AT','zurich':'CH','prague':'CZ','budapest':'HU','lisbon':'PT',
   'athens':'GR','yerevan':'AM',
 }
-async function resolveHotelId(hotelName, hotelCity) {
-  const cityLower = (hotelCity || '').toLowerCase()
-  let countryCode = 'IN'
-  for (const [city, cc] of Object.entries(CITY_COUNTRY)) {
-    if (cityLower.includes(city)) { countryCode = cc; break; }
-  }
-  const url = `${LITEAPI_BASE}/data/hotels?countryCode=${countryCode}&cityName=${encodeURIComponent(hotelCity)}&hotelName=${encodeURIComponent(hotelName)}&limit=5`
+async function tryResolve(queryName, hotelCity, countryCode) {
+  const url = `${LITEAPI_BASE}/data/hotels?countryCode=${countryCode}&cityName=${encodeURIComponent(hotelCity)}&hotelName=${encodeURIComponent(queryName)}&limit=5`
 
   // Up to 3 attempts with short backoff — a single timeout or transient
   // liteAPI blip used to fail resolution outright and push the booking to a
@@ -42,23 +37,50 @@ async function resolveHotelId(hotelName, hotelCity) {
     try {
       const resp = await axios.get(url, { headers: liteHeaders, timeout: 8000, validateStatus: () => true })
       if (resp.status === 429 || resp.status >= 500) {
-        console.warn(`  ⚠️  resolveHotelId got ${resp.status}, attempt ${attempt + 1}/${delays.length}`)
+        console.warn(`  ⚠️  resolveHotelId got ${resp.status} for "${queryName}", attempt ${attempt + 1}/${delays.length}`)
         continue
       }
       const hotels = resp.data?.data || []
-      if (!hotels.length) return null
-      const nameLower = hotelName.toLowerCase()
-      const best = hotels.find(h => {
-        const hn = (h.name || '').toLowerCase()
-        return nameLower.split(' ').filter(w => w.length > 3).some(w => hn.includes(w))
-      }) || hotels[0]
-      console.log(`  ✅ Resolved "${hotelName}" → ${best.id} (${best.name})`)
-      return best.id
+      return { hotels, succeeded: true }
     } catch (e) {
-      console.warn(`  ⚠️  resolveHotelId attempt ${attempt + 1}/${delays.length} failed:`, e.message)
+      console.warn(`  ⚠️  resolveHotelId attempt ${attempt + 1}/${delays.length} failed for "${queryName}":`, e.message)
     }
   }
-  return null
+  return { hotels: [], succeeded: false }
+}
+
+async function resolveHotelId(hotelName, hotelCity) {
+  const cityLower = (hotelCity || '').toLowerCase()
+  let countryCode = 'IN'
+  for (const [city, cc] of Object.entries(CITY_COUNTRY)) {
+    if (cityLower.includes(city)) { countryCode = cc; break; }
+  }
+
+  const pickBest = (hotels, nameLower) =>
+    hotels.find(h => {
+      const hn = (h.name || '').toLowerCase()
+      return nameLower.split(' ').filter(w => w.length > 3).some(w => hn.includes(w))
+    }) || hotels[0]
+
+  // Attempt 1: the full stored name, exactly as we have it.
+  let { hotels } = await tryResolve(hotelName, hotelCity, countryCode)
+
+  // Attempt 2: many hotel names carry a wing/branch qualifier after a dash
+  // or pipe (e.g. "Al Bandar Rotana - Dubai Creek") that liteAPI's own
+  // search can be too strict to match. If the full name found nothing,
+  // retry with just the core name before that qualifier.
+  if (!hotels.length) {
+    const core = hotelName.split(/\s+[-–|]\s+/)[0].trim()
+    if (core && core.toLowerCase() !== hotelName.toLowerCase()) {
+      console.log(`  ↪️  No match for full name, retrying with core name "${core}"`)
+      ;({ hotels } = await tryResolve(core, hotelCity, countryCode))
+    }
+  }
+
+  if (!hotels.length) return null
+  const best = pickBest(hotels, hotelName.toLowerCase())
+  console.log(`  ✅ Resolved "${hotelName}" → ${best.id} (${best.name})`)
+  return best.id
 }
 
 const supabase = createClient(
