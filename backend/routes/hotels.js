@@ -929,6 +929,15 @@ router.get('/search', async (req, res) => {
       const otaPriceINR = Math.round(priceINR)
       const memberSaving = 0
 
+      // taxesAndFees is a pass-through cost, not marked up — added on top of
+      // the already-marked-up room price so displayPriceINR is the real,
+      // final amount the guest pays, matching what checkout independently
+      // computes. lowestPriceINR/minRate below stay exactly as they were —
+      // untouched on purpose, since checkout is already correct against them.
+      const taxTotalINR = Array.isArray(taxes) ? taxes.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) : 0
+      const displayPriceINR = Math.round(rebuqPriceINR + taxTotalINR)
+      const displayOtaPriceINR = Math.round(otaPriceINR + taxTotalINR)
+
       const refTag = firstRate?.cancellationPolicies?.refundableTag || null
       const boardType = firstRate?.boardType || firstRate?.boardCode || 'RO'
 
@@ -939,7 +948,9 @@ router.get('/search', async (req, res) => {
         stars: meta.stars || (meta.starRating ? Math.round(parseFloat(meta.starRating)) : null),
         minRate: rebuqPriceINR,
         lowestPriceINR: rebuqPriceINR,
+        displayPriceINR,
         otaPriceINR,
+        displayOtaPriceINR,
         memberSaving,
         currency: 'INR',
         address: meta.address || null,
@@ -1003,6 +1014,12 @@ function buildStreamHotelCard(h, destinationFallback, refLat, refLng) {
   const rebuqPriceINR = Math.round(priceINR * MARKUP)
   const otaPriceINR = Math.round(priceINR)
 
+  // Same pass-through tax addition as the /search route — see the comment
+  // there for why lowestPriceINR/minRate stay untouched.
+  const taxTotalINR = Array.isArray(taxes) ? taxes.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) : 0
+  const displayPriceINR = Math.round(rebuqPriceINR + taxTotalINR)
+  const displayOtaPriceINR = Math.round(otaPriceINR + taxTotalINR)
+
   const meta = HOTEL_CACHE_BY_ID[String(h.hotelId)] || {}
   const refTag = firstRate?.cancellationPolicies?.refundableTag || null
   const boardType = firstRate?.boardType || firstRate?.boardCode || 'RO'
@@ -1017,7 +1034,9 @@ function buildStreamHotelCard(h, destinationFallback, refLat, refLng) {
     stars: meta.stars || null,
     minRate: rebuqPriceINR,
     lowestPriceINR: rebuqPriceINR,
+    displayPriceINR,
     otaPriceINR,
+    displayOtaPriceINR,
     memberSaving: 0,
     currency: 'INR',
     imageUrl: meta.imageUrl || null,
@@ -1351,6 +1370,12 @@ router.get('/:code', async (req, res) => {
         const totalINR = Math.round(priceINR * MARKUP)
         const perNightINR = Math.round(totalINR / nights)
         const otaTotalINR = Math.round(priceINR)
+        // Same pass-through tax addition as /search — see that route's
+        // comment for why totalPrice/pricePerNight stay untouched.
+        const taxTotalINR = Array.isArray(taxes) ? taxes.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0) : 0
+        const displayTotalINR = Math.round(totalINR + taxTotalINR)
+        const displayPerNightINR = Math.round(displayTotalINR / nights)
+        const displayOtaTotalINR = Math.round(otaTotalINR + taxTotalINR)
         const memberSaving = 0
         const boardType = rate?.boardType || rate?.boardCode || 'RO'
         const refTag = rate?.cancellationPolicies?.refundableTag
@@ -1375,7 +1400,8 @@ router.get('/:code', async (req, res) => {
           bedTypes: staticRoom.bedTypes?.length ? staticRoom.bedTypes : [],
           amenities: staticRoom.amenities?.length ? staticRoom.amenities : parsed.parsedAmenities,
           photos: roomPhotos, pricePerNight: perNightINR, totalPrice: totalINR,
-          otaTotalINR, memberSaving, taxesIncluded: true,
+          displayPerNightINR, displayTotalINR,
+          otaTotalINR, displayOtaTotalINR, memberSaving, taxesIncluded: true,
           isRefundable: refTag === 'RFN', refundableTag: refTag || null,
           cancelPolicies: rate?.cancellationPolicies?.cancelPolicyInfos || [],
           freeCancelUntil: (() => {
@@ -1416,6 +1442,8 @@ router.get('/:code', async (req, res) => {
         images, rooms: roomList, facilityGroups, allFacilities, popularFacilities,
         lowestPriceINR: cheapest?.pricePerNight || null,
         lowestTotalINR: cheapest?.totalPrice || null,
+        displayPriceINR: cheapest?.displayPerNightINR || null,
+        displayTotalINR: cheapest?.displayTotalINR || null,
         cheapestRoom: cheapest || null, nights, checkIn, checkOut,
         adults: parseInt(adults), reviews, sentimentAnalysis,
       }
