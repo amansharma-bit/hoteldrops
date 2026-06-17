@@ -300,11 +300,19 @@ let CITY_CACHE = []
 async function buildCityIndex() {
   console.log('🌍 Building city index from liteAPI...')
   try {
-    const countriesResp = await axios.get(`${BASE_URL}/data/countries`, {
-      headers: getHeaders(), timeout: 10000, validateStatus: () => true,
-    })
-    if (countriesResp.status !== 200 || !countriesResp.data?.data) {
-      console.log(`⚠️ City index: countries fetch failed (status ${countriesResp.status})`)
+    let countriesResp = null
+    const countryDelays = [0, 1500, 4000]
+    for (let attempt = 0; attempt < countryDelays.length; attempt++) {
+      if (countryDelays[attempt] > 0) await sleep(countryDelays[attempt])
+      const resp = await axios.get(`${BASE_URL}/data/countries`, {
+        headers: getHeaders(), timeout: 10000, validateStatus: () => true,
+      })
+      if (resp.status === 200 && resp.data?.data) { countriesResp = resp; break }
+      console.log(`⚠️ City index: countries fetch got status ${resp.status}, attempt ${attempt + 1}/${countryDelays.length}`)
+      countriesResp = resp
+    }
+    if (!countriesResp || countriesResp.status !== 200 || !countriesResp.data?.data) {
+      console.log(`⚠️ City index: countries fetch failed after all retries (status ${countriesResp?.status}) — cache stays empty until next restart`)
       return
     }
     const countries = countriesResp.data.data
@@ -1299,6 +1307,30 @@ router.get('/cache-search', (req, res) => {
     .slice(0, 10)
     .map(h => ({ hotelId: h.hotelId, name: h.name, city: h.city, country: h.country }));
   return res.json({ results, total: HOTEL_CACHE.length });
+});
+
+// ── POST /api/hotels/admin/rebuild-index ─────────────────────────────────────
+// Manually re-trigger the city and/or hotel index build without needing a
+// full server restart. Useful when a boot-time build failed because liteAPI
+// was rate-limiting at that exact moment (e.g. right after a redeploy) —
+// restarting again just risks hitting the same problem; this retries in place.
+// Usage: POST /api/hotels/admin/rebuild-index?which=city|hotel|both (default: both)
+router.post('/admin/rebuild-index', async (req, res) => {
+  const which = req.query.which || 'both';
+  const results = {};
+  try {
+    if (which === 'city' || which === 'both') {
+      await buildCityIndex();
+      results.cities = CITY_CACHE.length;
+    }
+    if (which === 'hotel' || which === 'both') {
+      await buildHotelIndex();
+      results.hotels = HOTEL_CACHE.length;
+    }
+    return res.json({ success: true, ...results });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // ── GET /api/hotels/cities-search ───────────────────────────────────────────
