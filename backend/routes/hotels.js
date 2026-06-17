@@ -267,6 +267,53 @@ function isoToFlag(cc) {
 // ── City cache, sourced from liteAPI's own city/country data (not Mapbox,
 // not the Google-Places wrapper) — only real, bookable cities, no rivers,
 // embassies, polytechnics, or administrative councils mixed in.
+// ── Known sub-city areas — neighborhoods that liteAPI's city list includes
+// alongside real cities, but that its hotel inventory doesn't recognize as a
+// cityName (Deira, Business Bay, etc. are tagged under "Dubai", not their own
+// name). Ported from the same bounding boxes already used for the search
+// results page's Location filter, with center points pre-computed so
+// /cities-search can attach lat/lng directly and route through the existing
+// coordinate-search path instead of a cityName search that returns nothing.
+const DUBAI_AREAS_RAW = [
+  ["Palm Jumeirah",25.095,25.135,55.117,55.168],
+  ["Dubai Marina",25.062,25.092,55.128,55.162],
+  ["JBR – Jumeirah Beach Residence",25.070,25.090,55.118,55.142],
+  ["Downtown Dubai",25.182,25.205,55.268,55.298],
+  ["Business Bay",25.170,25.195,55.275,55.315],
+  ["DIFC",25.204,25.222,55.268,55.288],
+  ["Deira",25.252,25.295,55.290,55.345],
+  ["Bur Dubai",25.225,25.262,55.275,55.322],
+  ["Sheikh Zayed Road",25.198,25.232,55.258,55.288],
+  ["Al Barsha",25.090,25.135,55.162,55.215],
+  ["Jumeirah",25.152,25.208,55.212,55.268],
+  ["Dubai Creek Harbour",25.192,25.228,55.325,55.368],
+  ["City Walk",25.192,25.218,55.242,55.272],
+  ["Dubai Hills Estate",25.112,25.158,55.218,55.272],
+  ["Festival City",25.218,25.252,55.348,55.388],
+  ["Jebel Ali",24.965,25.042,55.035,55.125],
+  ["Al Quoz",25.138,25.175,55.218,55.258],
+  ["Mirdif",25.215,25.248,55.395,55.438],
+  ["Al Nahda",25.270,25.302,55.362,55.398],
+  ["International City",25.158,25.192,55.398,55.438],
+  ["Al Rashidiya",25.228,25.262,55.378,55.415],
+  ["Oud Metha",25.228,25.248,55.308,55.332],
+  ["Al Karama",25.238,25.258,55.295,55.322],
+]
+
+const KNOWN_AREAS = {}
+for (const [name, minLat, maxLat, minLng, maxLng] of DUBAI_AREAS_RAW) {
+  const lat = (minLat + maxLat) / 2
+  const lng = (minLng + maxLng) / 2
+  // Rough radius covering the bounding box diagonal, in meters, capped sensibly.
+  const dLat = (maxLat - minLat) * 111000
+  const dLng = (maxLng - minLng) * 111000 * Math.cos(lat * Math.PI / 180)
+  const radius = Math.min(15000, Math.max(2000, Math.round(Math.sqrt(dLat * dLat + dLng * dLng) / 2)))
+  KNOWN_AREAS[name.toLowerCase()] = { lat, lng, radius, parentCity: 'Dubai' }
+}
+function getKnownArea(cityName) {
+  return KNOWN_AREAS[(cityName || '').toLowerCase().trim()] || null
+}
+
 // ── City popularity ranking — a tie-breaker, not a filter. Lower number =
 // shown first when multiple cities match the same query. Anything not in
 // this list just falls back to alphabetical, exactly as before.
@@ -827,13 +874,18 @@ router.get('/search', async (req, res) => {
       destination, checkIn, checkOut,
       adults = '2', children = '0', childAges, rooms = '1',
       placeId, hotelId, page, sessionId, cityName, countryCode,
+      refLat, refLng, radius,
     } = req.query
+
+    const lat = refLat !== undefined ? parseFloat(refLat) : null
+    const lng = refLng !== undefined ? parseFloat(refLng) : null
+    const hasCoords = lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)
 
     if (!checkIn || !checkOut) {
       return res.status(400).json({ error: 'checkIn and checkOut are required' })
     }
 
-    console.log(`🔎 search: dest="${destination}" ${placeId ? `placeId=${placeId}` : hotelId ? `hotelId=${hotelId}` : (cityName && countryCode) ? `cityName=${cityName},countryCode=${countryCode}` : 'no-location'} ${checkIn}→${checkOut} page=${page ?? 'all'}`)
+    console.log(`🔎 search: dest="${destination}" ${placeId ? `placeId=${placeId}` : hotelId ? `hotelId=${hotelId}` : hasCoords ? `lat=${lat},lng=${lng},radius=${radius||20000}` : (cityName && countryCode) ? `cityName=${cityName},countryCode=${countryCode}` : 'no-location'} ${checkIn}→${checkOut} page=${page ?? 'all'}`)
 
     // pageNum is null for "all-pages" callers (no ?page=), or 0-4 for progressive mode.
     // hasMore is purely a function of pageNum, so it must be attached on EVERY response
@@ -845,7 +897,7 @@ router.get('/search', async (req, res) => {
     // session, not part of what makes two searches "the same search" for caching
     // purposes. A cache hit just won't carry liteAPI's price-consistency guarantee for
     // that particular response (no live call was made), same as before this feature.
-    const locationKey = placeId || hotelId || (cityName && countryCode ? `${cityName}|${countryCode}` : destination)
+    const locationKey = placeId || hotelId || (hasCoords ? `geo:${lat.toFixed(3)},${lng.toFixed(3)},${radius||20000}` : (cityName && countryCode ? `${cityName}|${countryCode}` : destination))
     const cacheKey = `s:${locationKey}:${checkIn}:${checkOut}:${adults}:${children}:${childAges || ''}:${rooms}:${page ?? 'all'}`
     const hit = memGet(cacheKey)
     if (hit) {
@@ -880,13 +932,19 @@ router.get('/search', async (req, res) => {
       ratesList = resp.data.data || []
       hotelsMetaList = resp.data.hotels || []
 
-    } else if (placeId || (cityName && countryCode)) {
-      // Two ways to identify "which city": a Google-Places placeId (legacy
-      // path), or liteAPI's own cityName+countryCode straight from our city
-      // cache — no placeId round-trip, no dependency on Google Places
-      // recognizing the name at all. Both get passed through identically
-      // below via locationParams.
-      const locationParams = placeId ? { placeId } : { cityName, countryCode }
+    } else if (placeId || hasCoords || (cityName && countryCode)) {
+      // Three ways to identify "which place": a Google-Places placeId
+      // (legacy path), raw lat/lng + radius (for areas/neighborhoods that
+      // liteAPI's own hotel inventory doesn't recognize as a cityName, e.g.
+      // Deira or Business Bay within Dubai — per liteAPI's own docs,
+      // coordinates are the most reliable method anyway), or liteAPI's own
+      // cityName+countryCode straight from our city cache. All three get
+      // passed through identically below via locationParams.
+      const locationParams = placeId
+        ? { placeId }
+        : hasCoords
+          ? { latitude: lat, longitude: lng, radius: parseInt(radius, 10) || 20000 }
+          : { cityName, countryCode }
       const PAGE_SIZE = 200
 
       if (pageNum !== null) {
@@ -913,7 +971,7 @@ router.get('/search', async (req, res) => {
 
         ratesList = resp.data.data || []
         hotelsMetaList = resp.data.hotels || []
-        console.log(`✅ search: page=${pageNum} ${placeId ? `placeId=${placeId}` : `cityName=${cityName},countryCode=${countryCode}`} → ${ratesList.length} raw rates from liteAPI`)
+        console.log(`✅ search: page=${pageNum} ${placeId ? `placeId=${placeId}` : hasCoords ? `lat=${lat},lng=${lng}` : `cityName=${cityName},countryCode=${countryCode}`} → ${ratesList.length} raw rates from liteAPI`)
 
         var _pageInfo = {
           page: pageNum,
@@ -1356,14 +1414,18 @@ router.get('/cities-search', (req, res) => {
       return a.city.localeCompare(b.city);
     })
     .slice(0, 8)
-    .map(c => ({
-      type: 'city',
-      name: c.city,
-      countryName: c.countryName,
-      countryCode: c.countryCode,
-      flag: isoToFlag(c.countryCode),
-      placeId: null,
-    }));
+    .map(c => {
+      const area = getKnownArea(c.city)
+      return {
+        type: area ? 'area' : 'city',
+        name: c.city,
+        countryName: c.countryName,
+        countryCode: c.countryCode,
+        flag: isoToFlag(c.countryCode),
+        placeId: null,
+        ...(area ? { lat: area.lat, lng: area.lng, radius: area.radius, parentCity: area.parentCity, placeTypes: ['neighborhood'] } : { placeTypes: ['place'] }),
+      }
+    });
   return res.json({ cities, total: CITY_CACHE.length });
 });
 
