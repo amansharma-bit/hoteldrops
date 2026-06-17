@@ -441,12 +441,28 @@ router.post('/submit', async (req, res) => {
       console.warn('⚠️ WhatsApp failed (booking still saved):', waErr.message);
     }
 
+    // Generate a passwordless sign-in link for the optional account invite.
+    // Failure here must never block the confirmation email itself.
+    let claimUrl = null;
+    try {
+      const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+        options: { redirectTo: `${process.env.FRONTEND_URL}/dashboard` },
+      });
+      if (linkErr) throw linkErr;
+      claimUrl = linkData?.properties?.action_link || null;
+    } catch (linkErr) {
+      console.warn('⚠️ Could not generate claim link (email will skip it):', linkErr.message);
+    }
+
     // Send email confirmation via Resend
     try {
       const resendKey = process.env.RESEND_API_KEY;
       if (resendKey) {
         await emailService.bookingReceived(email, {
           name: email.split('@')[0],
+          claimUrl,
           booking: {
             hotelName: hotel_name,
             city: hotel_city,
@@ -477,4 +493,3 @@ router.post('/submit', async (req, res) => {
 });
 
 module.exports = router;
-
