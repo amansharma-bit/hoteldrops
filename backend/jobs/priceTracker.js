@@ -355,6 +355,19 @@ _Offer valid 24 hours._`
 
   // ── Email ─────────────────────────────────────────────────────────────────
   if (booking.email) {
+    let claimUrl = null;
+    try {
+      const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: booking.email,
+        options: { redirectTo: hotelPageUrl },
+      });
+      if (linkErr) throw linkErr;
+      claimUrl = linkData?.properties?.action_link || null;
+    } catch (linkErr) {
+      console.warn(`  ⚠️  Could not generate claim link (CTA will fall back to plain link):`, linkErr.message);
+    }
+
     email.priceDropAlert(booking.email, {
       name: booking.email.split('@')[0],
       booking: {
@@ -370,6 +383,7 @@ _Offer valid 24 hours._`
       newRate:      offerData.offerPrice,
       saving:       offerData.customerSaving,
       hotelPageUrl,
+      claimUrl,
     }).catch(e => console.error(`  ❌ Price drop email failed:`, e.message, e.stack))
   }
 }
