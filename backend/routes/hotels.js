@@ -214,6 +214,10 @@ const HOTEL_CITIES = [
   { city: 'Kuala Lumpur', country: 'MY' }, { city: 'Tokyo', country: 'JP' },
   { city: 'Sydney', country: 'AU' }, { city: 'Maldives', country: 'MV' },
   { city: 'Barcelona', country: 'ES' },
+  { city: 'New York', country: 'US' }, { city: 'Los Angeles', country: 'US' },
+  { city: 'Las Vegas', country: 'US' }, { city: 'Miami', country: 'US' },
+  { city: 'Orlando', country: 'US' }, { city: 'San Francisco', country: 'US' },
+  { city: 'Chicago', country: 'US' }, { city: 'Cancun', country: 'MX' },
 ]
 
 let HOTEL_CACHE = []
@@ -263,6 +267,34 @@ function isoToFlag(cc) {
 // ── City cache, sourced from liteAPI's own city/country data (not Mapbox,
 // not the Google-Places wrapper) — only real, bookable cities, no rivers,
 // embassies, polytechnics, or administrative councils mixed in.
+// ── City popularity ranking — a tie-breaker, not a filter. Lower number =
+// shown first when multiple cities match the same query. Anything not in
+// this list just falls back to alphabetical, exactly as before.
+const POPULAR_CITIES = {
+  'dubai':1,'london':2,'new york':3,'paris':4,'singapore':5,'bangkok':6,
+  'istanbul':7,'tokyo':8,'rome':9,'los angeles':10,'barcelona':11,
+  'las vegas':12,'miami':13,'orlando':14,'san francisco':15,'chicago':16,
+  'mumbai':17,'new delhi':18,'delhi':19,'bangalore':20,'bengaluru':20,
+  'goa':21,'jaipur':22,'abu dhabi':23,'doha':24,'kuala lumpur':25,
+  'bali':26,'phuket':27,'sydney':28,'maldives':29,'cancun':30,
+  'hong kong':31,'seoul':32,'amsterdam':33,'madrid':34,'lisbon':35,
+  'venice':36,'milan':37,'vienna':38,'prague':39,'budapest':40,
+  'zurich':41,'munich':42,'berlin':43,'athens':44,'santorini':45,
+  'cape town':46,'marrakech':47,'cairo':48,'jakarta':49,'manila':50,
+  'ho chi minh city':51,'hanoi':52,'siem reap':53,'colombo':54,
+  'kathmandu':55,'kochi':56,'udaipur':57,'agra':58,'amritsar':59,
+  'pune':60,'hyderabad':61,'chennai':62,'kolkata':63,'shimla':64,
+  'manali':65,'rishikesh':66,'varanasi':67,'srinagar':68,'leh':69,
+  'boston':70,'washington dc':71,'seattle':72,'toronto':73,'vancouver':74,
+  'mexico city':75,'rio de janeiro':76,'buenos aires':77,'auckland':78,
+  'melbourne':79,'brisbane':80,'queenstown':81,'reykjavik':82,'dublin':83,
+  'edinburgh':84,'nice':85,'florence':86,'mykonos':87,'ibiza':88,
+}
+function cityPopularityRank(name) {
+  const r = POPULAR_CITIES[(name || '').toLowerCase().trim()]
+  return r === undefined ? 9999 : r
+}
+
 let CITY_CACHE = []
 
 async function buildCityIndex() {
@@ -283,16 +315,31 @@ async function buildCityIndex() {
       .filter(c => c.code)
 
     const allCities = []
-    const CONCURRENCY = 15
+    const CONCURRENCY = 5
+    const fetchCityBatch = async (code, name) => {
+      const delays = [0, 1000, 2500]
+      for (let attempt = 0; attempt < delays.length; attempt++) {
+        if (delays[attempt] > 0) await sleep(delays[attempt])
+        try {
+          const resp = await axios.get(`${BASE_URL}/data/cities?countryCode=${code}`, {
+            headers: getHeaders(), timeout: 8000, validateStatus: () => true,
+          })
+          if (resp.status === 429 || resp.status >= 500) {
+            console.log(`⚠️ Cities ${code}: status ${resp.status}, attempt ${attempt + 1}/${delays.length}`)
+            continue
+          }
+          return { code, name, resp }
+        } catch (e) {
+          console.log(`⚠️ Cities ${code}: ${e.message}, attempt ${attempt + 1}/${delays.length}`)
+        }
+      }
+      return { code, name, error: 'all retries exhausted' }
+    }
     for (let i = 0; i < countries.length; i += CONCURRENCY) {
       const batch = countries.slice(i, i + CONCURRENCY)
-      const results = await Promise.all(batch.map(({ code, name }) =>
-        axios.get(`${BASE_URL}/data/cities?countryCode=${code}`, {
-          headers: getHeaders(), timeout: 8000, validateStatus: () => true,
-        }).then(resp => ({ code, name, resp })).catch(e => ({ code, name, error: e.message }))
-      ))
+      const results = await Promise.all(batch.map(({ code, name }) => fetchCityBatch(code, name)))
       for (const { code, name, resp, error } of results) {
-        if (error) { console.log(`⚠️ Cities ${code}: ${error}`); continue }
+        if (error) { console.log(`⚠️ Cities ${code}: gave up — ${error}`); continue }
         if (resp.status === 200 && Array.isArray(resp.data?.data)) {
           for (const item of resp.data.data) {
             const city = item.city || item.name
@@ -703,7 +750,6 @@ router.get('/suggest', async (req, res) => {
           if (types && !/locality|administrative|political|country|sublocality/.test(types)) return false
           return true
         })
-        .slice(0, 6)
         .map(place => {
           const countryCode = place.countryCode || place.country_code || ''
           const placeName = place.name || place.displayName || q
@@ -722,6 +768,16 @@ router.get('/suggest', async (req, res) => {
         .filter(c => c.placeId && c.flag) // only show if we have a flag
         .filter((c, index, self) => index === self.findIndex(x => x.name.toLowerCase() === c.name.toLowerCase())) // remove duplicates
         .filter(c => c.name.toLowerCase().includes(query) || query.includes(c.name.toLowerCase().split(' ')[0])) // only show relevant matches
+        .sort((a, b) => {
+          const aExact = a.name.toLowerCase() === query
+          const bExact = b.name.toLowerCase() === query
+          if (aExact !== bExact) return aExact ? -1 : 1
+          const aStart = a.name.toLowerCase().startsWith(query)
+          const bStart = b.name.toLowerCase().startsWith(query)
+          if (aStart !== bStart) return aStart ? -1 : 1
+          return cityPopularityRank(a.name) - cityPopularityRank(b.name)
+        })
+        .slice(0, 6)
     }
   } catch (e) {
     console.warn(`⚠️ /data/places error: ${e.message}`)
@@ -737,6 +793,8 @@ router.get('/suggest', async (req, res) => {
         const bStart = b.name.toLowerCase().startsWith(query)
         if (aStart && !bStart) return -1
         if (!aStart && bStart) return 1
+        const starDiff = (b.stars || 0) - (a.stars || 0)
+        if (starDiff !== 0) return starDiff
         return a.name.localeCompare(b.name)
       })
       .slice(0, 5)
@@ -1261,6 +1319,8 @@ router.get('/cities-search', (req, res) => {
       const aStart = a.city.toLowerCase().startsWith(query);
       const bStart = b.city.toLowerCase().startsWith(query);
       if (aStart !== bStart) return aStart ? -1 : 1;
+      const popDiff = cityPopularityRank(a.city) - cityPopularityRank(b.city);
+      if (popDiff !== 0) return popDiff;
       return a.city.localeCompare(b.city);
     })
     .slice(0, 8)
