@@ -212,7 +212,7 @@ const emailTemplates = {
     }
   },
 
-  bookingReceived({ name, booking }) {
+  bookingReceived({ name, booking, claimUrl }) {
     // Accept both camelCase and snake_case field names
     const hotelName   = booking.hotelName   || booking.hotel_name   || '—'
     const city        = booking.city        || booking.hotel_city   || '—'
@@ -251,18 +251,20 @@ const emailTemplates = {
             ['Cancellation',      cancelLine],
           ])}
           ${para('The moment we find a lower rate for the same hotel, room and dates — we\'ll send you a WhatsApp with a direct rebooking link.', GREY, '13px')}
+          ${claimUrl ? para(`Want to see all your tracked bookings in one place? <a href="${claimUrl}" style="color:${BLUE};">Create your free account</a> — no password needed.`, GREY, '12px') : ''}
         `)}
       `)
     }
   },
 
-  priceDropAlert({ name, booking, oldRate, newRate, saving, hotelPageUrl }) {
+  priceDropAlert({ name, booking, oldRate, newRate, saving, hotelPageUrl, claimUrl }) {
     const hotelName  = booking.hotelName  || booking.hotel_name  || '—'
     const city       = booking.city       || booking.hotel_city  || '—'
     const checkIn    = booking.checkinDate  || booking.checkIn   || booking.check_in  || null
     const checkOut   = booking.checkoutDate || booking.checkOut  || booking.check_out || null
     const bookingRef = booking.bookingRef   || booking.booking_reference || '—'
     const otaName    = booking.otaName      || booking.ota_name  || 'your OTA'
+    const ctaUrl     = claimUrl || hotelPageUrl || 'https://rebuq.com'
 
     return {
       subject: `💰 Price drop on ${hotelName} — save ${fmtPrice(saving)}`,
@@ -281,7 +283,8 @@ const emailTemplates = {
             <li>Cancel your existing booking on ${otaName}</li>
             <li>Keep the difference — it\'s yours</li>
           </ol>
-          ${ctaBtn('View deal & rebook', hotelPageUrl || 'https://rebuq.com')}
+          ${ctaBtn('View deal & rebook', ctaUrl)}
+          ${claimUrl ? para('This link also saves this booking to your free rebuq account, so you can track future savings in one place.', GREY, '12px') : ''}
           ${infoGrid([
             ['Hotel',      hotelName],
             ['Location',   city],
