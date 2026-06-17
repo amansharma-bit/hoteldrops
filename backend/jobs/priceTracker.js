@@ -26,29 +26,39 @@ const CITY_COUNTRY = {
   'athens':'GR','yerevan':'AM',
 }
 async function resolveHotelId(hotelName, hotelCity) {
-  try {
-    const cityLower = (hotelCity || '').toLowerCase()
-    let countryCode = 'IN'
-    for (const [city, cc] of Object.entries(CITY_COUNTRY)) {
-      if (cityLower.includes(city)) { countryCode = cc; break; }
-    }
-    const resp = await axios.get(
-      `${LITEAPI_BASE}/data/hotels?countryCode=${countryCode}&cityName=${encodeURIComponent(hotelCity)}&hotelName=${encodeURIComponent(hotelName)}&limit=5`,
-      { headers: liteHeaders, timeout: 8000, validateStatus: () => true }
-    )
-    const hotels = resp.data?.data || []
-    if (!hotels.length) return null
-    const nameLower = hotelName.toLowerCase()
-    const best = hotels.find(h => {
-      const hn = (h.name || '').toLowerCase()
-      return nameLower.split(' ').filter(w => w.length > 3).some(w => hn.includes(w))
-    }) || hotels[0]
-    console.log(`  ✅ Resolved "${hotelName}" → ${best.id} (${best.name})`)
-    return best.id
-  } catch(e) {
-    console.warn('  ⚠️  resolveHotelId failed:', e.message)
-    return null
+  const cityLower = (hotelCity || '').toLowerCase()
+  let countryCode = 'IN'
+  for (const [city, cc] of Object.entries(CITY_COUNTRY)) {
+    if (cityLower.includes(city)) { countryCode = cc; break; }
   }
+  const url = `${LITEAPI_BASE}/data/hotels?countryCode=${countryCode}&cityName=${encodeURIComponent(hotelCity)}&hotelName=${encodeURIComponent(hotelName)}&limit=5`
+
+  // Up to 3 attempts with short backoff — a single timeout or transient
+  // liteAPI blip used to fail resolution outright and push the booking to a
+  // 5-minute retry; most of those are recoverable within a second or two.
+  const delays = [0, 800, 2000]
+  for (let attempt = 0; attempt < delays.length; attempt++) {
+    if (delays[attempt] > 0) await sleep(delays[attempt])
+    try {
+      const resp = await axios.get(url, { headers: liteHeaders, timeout: 8000, validateStatus: () => true })
+      if (resp.status === 429 || resp.status >= 500) {
+        console.warn(`  ⚠️  resolveHotelId got ${resp.status}, attempt ${attempt + 1}/${delays.length}`)
+        continue
+      }
+      const hotels = resp.data?.data || []
+      if (!hotels.length) return null
+      const nameLower = hotelName.toLowerCase()
+      const best = hotels.find(h => {
+        const hn = (h.name || '').toLowerCase()
+        return nameLower.split(' ').filter(w => w.length > 3).some(w => hn.includes(w))
+      }) || hotels[0]
+      console.log(`  ✅ Resolved "${hotelName}" → ${best.id} (${best.name})`)
+      return best.id
+    } catch (e) {
+      console.warn(`  ⚠️  resolveHotelId attempt ${attempt + 1}/${delays.length} failed:`, e.message)
+    }
+  }
+  return null
 }
 
 const supabase = createClient(
@@ -149,8 +159,8 @@ async function processBooking(booking) {
       booking.liteapi_hotel_id = hotelId
       didMap = true
     } else {
-      console.log(`  ⚠️  Could not resolve hotelId — retry in 12hrs`)
-      await updateNextCheck(booking.id, 12)
+      console.log(`  ⚠️  Could not resolve hotelId — retry in 5min`)
+      await updateNextCheck(booking.id, 5 / 60)
       return {}
     }
   }
