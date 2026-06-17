@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -36,13 +36,16 @@ async function fetchCitySuggestions(query: string): Promise<any[]> {
     const res = await fetch(`${API}/api/hotels/cities-search?q=${encodeURIComponent(query)}`);
     const data = await res.json();
     return (data.cities || []).map((c: any) => ({
-      type: "city",
+      type: c.type || "city",
       name: c.name,
       countryName: c.countryName || "",
       countryCode: c.countryCode || "",
       flag: c.flag || "",
       placeId: null,
-      placeTypes: ["place"],
+      lat: c.lat ?? null,
+      lng: c.lng ?? null,
+      radius: c.radius ?? null,
+      placeTypes: c.placeTypes || ["place"],
     }));
   } catch {
     return [];
@@ -52,7 +55,7 @@ async function fetchCitySuggestions(query: string): Promise<any[]> {
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(true);
-  useLayoutEffect(() => {
+  useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 900);
     check(); window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
