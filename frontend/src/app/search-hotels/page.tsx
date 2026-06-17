@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -52,7 +52,7 @@ async function fetchCitySuggestions(query: string): Promise<any[]> {
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(true);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 900);
     check(); window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
