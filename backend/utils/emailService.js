@@ -37,11 +37,11 @@ const email = {
   welcome: (to, { name }) =>
     sendEmail(to, emailTemplates.welcome({ name })),
 
-  bookingReceived: (to, { name, booking }) =>
-    sendEmail(to, emailTemplates.bookingReceived({ name, booking })),
+  bookingReceived: (to, { name, booking, claimUrl }) =>
+    sendEmail(to, emailTemplates.bookingReceived({ name, booking, claimUrl })),
 
-  priceDropAlert: (to, { name, booking, oldRate, newRate, saving, hotelPageUrl }) =>
-    sendEmail(to, emailTemplates.priceDropAlert({ name, booking, oldRate, newRate, saving, hotelPageUrl })),
+  priceDropAlert: (to, { name, booking, oldRate, newRate, saving, hotelPageUrl, claimUrl }) =>
+    sendEmail(to, emailTemplates.priceDropAlert({ name, booking, oldRate, newRate, saving, hotelPageUrl, claimUrl })),
 
   monitoringUpdate: (to, { name, booking, checksRun, daysMonitored }) =>
     sendEmail(to, emailTemplates.monitoringUpdate({ name, booking, checksRun, daysMonitored })),
