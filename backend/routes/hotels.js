@@ -314,32 +314,44 @@ function getKnownArea(cityName) {
   return KNOWN_AREAS[(cityName || '').toLowerCase().trim()] || null
 }
 
-// ── City popularity ranking — a tie-breaker, not a filter. Lower number =
-// shown first when multiple cities match the same query. Anything not in
-// this list just falls back to alphabetical, exactly as before.
-const POPULAR_CITIES = {
-  'dubai':1,'london':2,'new york':3,'paris':4,'singapore':5,'bangkok':6,
-  'istanbul':7,'tokyo':8,'rome':9,'los angeles':10,'barcelona':11,
-  'las vegas':12,'miami':13,'orlando':14,'san francisco':15,'chicago':16,
-  'mumbai':17,'new delhi':18,'delhi':19,'bangalore':20,'bengaluru':20,
-  'goa':21,'jaipur':22,'abu dhabi':23,'doha':24,'kuala lumpur':25,
-  'bali':26,'phuket':27,'sydney':28,'maldives':29,'cancun':30,
-  'hong kong':31,'seoul':32,'amsterdam':33,'madrid':34,'lisbon':35,
-  'venice':36,'milan':37,'vienna':38,'prague':39,'budapest':40,
-  'zurich':41,'munich':42,'berlin':43,'athens':44,'santorini':45,
-  'cape town':46,'marrakech':47,'cairo':48,'jakarta':49,'manila':50,
-  'ho chi minh city':51,'hanoi':52,'siem reap':53,'colombo':54,
-  'kathmandu':55,'kochi':56,'udaipur':57,'agra':58,'amritsar':59,
-  'pune':60,'hyderabad':61,'chennai':62,'kolkata':63,'shimla':64,
-  'manali':65,'rishikesh':66,'varanasi':67,'srinagar':68,'leh':69,
-  'boston':70,'washington dc':71,'seattle':72,'toronto':73,'vancouver':74,
-  'mexico city':75,'rio de janeiro':76,'buenos aires':77,'auckland':78,
-  'melbourne':79,'brisbane':80,'queenstown':81,'reykjavik':82,'dublin':83,
-  'edinburgh':84,'nice':85,'florence':86,'mykonos':87,'ibiza':88,
-}
+// ── City popularity tiers — a tie-breaker, not a filter. P1 beats P2 beats
+// P3 beats unlisted, only when multiple cities already match the same typed
+// query; nothing here ever hides a city, it just decides display order.
+// Built around an Indian outbound + domestic travel audience: Gulf and
+// Southeast Asia (highest volume, visa-friendly, short-haul, honeymoon/family
+// staples), core domestic circuits, and the Schengen highlights Indian
+// multi-country Europe trips usually anchor on, all sit in P1. P2 is the
+// next ring out — strong but lower-volume Gulf/Asia, secondary Schengen,
+// and well-known long-haul (US/Australia) anchor cities. P3 is everything
+// else real but genuinely niche or far-flung for this audience. This is a
+// judgment call, not a measurement — happy to rework any of it.
+const CITY_TIER_P1 = new Set([
+  'dubai','abu dhabi','singapore','bangkok','phuket','bali','kuala lumpur',
+  'maldives','istanbul','london','paris','rome','barcelona','amsterdam',
+  'mumbai','new delhi','delhi','bangalore','bengaluru','goa','jaipur',
+])
+const CITY_TIER_P2 = new Set([
+  'doha','muscat','riyadh','hong kong','seoul','tokyo','sydney',
+  'new york','los angeles','vienna','prague','zurich','venice','milan',
+  'athens','lisbon','budapest','santorini','mykonos','kochi','chennai',
+  'hyderabad','kolkata','udaipur','agra','amritsar','cairo','marrakech',
+  'colombo','kathmandu','hanoi','ho chi minh city',
+])
+const CITY_TIER_P3 = new Set([
+  'las vegas','miami','orlando','san francisco','chicago','boston',
+  'washington dc','seattle','toronto','vancouver','cape town',
+  'mexico city','rio de janeiro','buenos aires','reykjavik','dublin',
+  'edinburgh','nice','florence','ibiza','auckland','melbourne',
+  'brisbane','queenstown','jakarta','manila','siem reap','cancun',
+  'shimla','manali','rishikesh','varanasi','srinagar','leh','pune',
+  'madrid','munich','berlin',
+])
 function cityPopularityRank(name) {
-  const r = POPULAR_CITIES[(name || '').toLowerCase().trim()]
-  return r === undefined ? 9999 : r
+  const n = (name || '').toLowerCase().trim()
+  if (CITY_TIER_P1.has(n)) return 1
+  if (CITY_TIER_P2.has(n)) return 2
+  if (CITY_TIER_P3.has(n)) return 3
+  return 9
 }
 
 let CITY_CACHE = []
@@ -1367,13 +1379,17 @@ router.get('/cache-search', (req, res) => {
   return res.json({ results, total: HOTEL_CACHE.length });
 });
 
-// ── POST /api/hotels/admin/rebuild-index ─────────────────────────────────────
+// ── /api/hotels/admin/rebuild-index (GET and POST) ──────────────────────────
 // Manually re-trigger the city and/or hotel index build without needing a
 // full server restart. Useful when a boot-time build failed because liteAPI
 // was rate-limiting at that exact moment (e.g. right after a redeploy) —
 // restarting again just risks hitting the same problem; this retries in place.
-// Usage: POST /api/hotels/admin/rebuild-index?which=city|hotel|both (default: both)
-router.post('/admin/rebuild-index', async (req, res) => {
+// Registered as GET too (not just POST) specifically so this can be
+// triggered by just visiting the URL in any browser — no console, no
+// Postman, works from a phone — for exactly this kind of "fix it now"
+// moment where the simplest possible trigger matters more than REST purity.
+// Usage: /api/hotels/admin/rebuild-index?which=city|hotel|both (default: both)
+async function rebuildIndexHandler(req, res) {
   const which = req.query.which || 'both';
   const results = {};
   try {
@@ -1389,19 +1405,27 @@ router.post('/admin/rebuild-index', async (req, res) => {
   } catch (e) {
     return res.status(500).json({ success: false, error: e.message });
   }
-});
+}
+router.get('/admin/rebuild-index', rebuildIndexHandler);
+router.post('/admin/rebuild-index', rebuildIndexHandler);
 
 // ── GET /api/hotels/cities-search ───────────────────────────────────────────
 // Clean city-only autocomplete, sourced from liteAPI's own /data/cities +
 // /data/countries — not Mapbox, not the Google-Places wrapper. No landmarks,
 // embassies, or administrative councils can show up here, since liteAPI's
-// own city list never contained them in the first place.
+// own city list never contained them in the first place. Known sub-city
+// areas (Deira, Business Bay, etc.) are filtered out on purpose — the
+// product leads with cities, and those areas aren't real cityNames as far
+// as liteAPI's hotel inventory is concerned, so offering them as a
+// destination just produced a dead-end search. They're still available for
+// narrowing results after a city search, via the results page's area filter.
 router.get('/cities-search', (req, res) => {
   const { q } = req.query;
   if (!q || q.length < 2) return res.json({ cities: [] });
   const query = q.toLowerCase().trim();
   const cities = CITY_CACHE
     .filter(c => c.city.toLowerCase().includes(query))
+    .filter(c => !getKnownArea(c.city))
     .sort((a, b) => {
       const aExact = a.city.toLowerCase() === query;
       const bExact = b.city.toLowerCase() === query;
@@ -1414,18 +1438,14 @@ router.get('/cities-search', (req, res) => {
       return a.city.localeCompare(b.city);
     })
     .slice(0, 8)
-    .map(c => {
-      const area = getKnownArea(c.city)
-      return {
-        type: area ? 'area' : 'city',
-        name: c.city,
-        countryName: c.countryName,
-        countryCode: c.countryCode,
-        flag: isoToFlag(c.countryCode),
-        placeId: null,
-        ...(area ? { lat: area.lat, lng: area.lng, radius: area.radius, parentCity: area.parentCity, placeTypes: ['neighborhood'] } : { placeTypes: ['place'] }),
-      }
-    });
+    .map(c => ({
+      type: 'city',
+      name: c.city,
+      countryName: c.countryName,
+      countryCode: c.countryCode,
+      flag: isoToFlag(c.countryCode),
+      placeId: null,
+    }));
   return res.json({ cities, total: CITY_CACHE.length });
 });
 
