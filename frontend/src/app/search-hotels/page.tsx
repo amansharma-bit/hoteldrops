@@ -486,7 +486,7 @@ export default function SearchHotelsPage() {
       countryCode: item.countryCode || undefined,
     };
     setSelection(sel);
-    setInputText(item.name);
+    setInputText(type === 'city' && item.countryName ? `${item.name}, ${item.countryName}` : item.name);
     setShowSuggestions(false);
     setTimeout(() => { setCalMode("checkin"); setCalOpen(true); }, 100);
   };
