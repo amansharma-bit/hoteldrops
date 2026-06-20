@@ -62,131 +62,22 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="antialiased">
 
         {/*
-          PWA Splash Screen
-          Pure HTML + inline-script approach — no React state, no hydration gap.
-          Shows once per session via sessionStorage so it never repeats on
-          page navigation, only on a fresh app open.
+          Splash screen — entirely CSS-driven via globals.css.
+          No JavaScript needed to show or animate it.
+          The tiny inline script below ONLY hides it if already seen
+          this session (one synchronous DOM call, runs before first paint).
         */}
-        <div
-          id="rq-splash"
-          style={{
-            display: "none",
-            position: "fixed",
-            inset: 0,
-            zIndex: 99999,
-            background: "linear-gradient(160deg, #0a1628 0%, #0f2451 40%, #1447b8 100%)",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "18px",
-          }}
-        >
+        <div id="rq-splash">
           <div style={{ display: "flex", alignItems: "baseline" }}>
-            <span
-              id="rq-w"
-              style={{
-                display: "inline-block",
-                fontFamily: "'Sora', sans-serif",
-                fontWeight: 800,
-                fontSize: "clamp(52px, 16vw, 72px)",
-                color: "#ffffff",
-                letterSpacing: "-2.5px",
-                lineHeight: 1,
-                opacity: 0,
-                transform: "translateY(14px) scale(0.9)",
-              }}
-            >
-              rebuq
-            </span>
-            <span
-              id="rq-d"
-              style={{
-                display: "inline-block",
-                fontFamily: "'Sora', sans-serif",
-                fontWeight: 800,
-                fontSize: "clamp(52px, 16vw, 72px)",
-                color: "#FCD34D",
-                lineHeight: 1,
-                opacity: 0,
-                transform: "scale(0)",
-              }}
-            >
-              .
-            </span>
+            <span id="rq-w">rebuq</span>
+            <span id="rq-d">.</span>
           </div>
-          <p
-            id="rq-t"
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              fontWeight: 400,
-              fontSize: "clamp(14px, 4vw, 17px)",
-              color: "rgba(255,255,255,0.5)",
-              letterSpacing: "0.01em",
-              textAlign: "center",
-              padding: "0 32px",
-              margin: 0,
-              opacity: 0,
-              transform: "translateY(8px)",
-            }}
-          >
-            Your hotel booking just got cheaper.
-          </p>
+          <p id="rq-t">Your hotel booking just got cheaper.</p>
         </div>
 
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-(function() {
-  try {
-    // Show once per session — not on every page navigation
-    if (sessionStorage.getItem('rq-splashed')) return;
-    sessionStorage.setItem('rq-splashed', '1');
-
-    var splash = document.getElementById('rq-splash');
-    var w = document.getElementById('rq-w');
-    var d = document.getElementById('rq-d');
-    var t = document.getElementById('rq-t');
-    if (!splash || !w || !d || !t) return;
-
-    splash.style.display = 'flex';
-
-    function animate() {
-      setTimeout(function() {
-        w.style.transition = 'opacity 0.7s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1)';
-        w.style.opacity = '1';
-        w.style.transform = 'translateY(0) scale(1)';
-      }, 300);
-
-      setTimeout(function() {
-        d.style.transition = 'opacity 0.3s ease, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)';
-        d.style.opacity = '1';
-        d.style.transform = 'scale(1)';
-      }, 960);
-
-      setTimeout(function() {
-        t.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-        t.style.opacity = '1';
-        t.style.transform = 'translateY(0)';
-      }, 1450);
-
-      setTimeout(function() {
-        splash.style.transition = 'opacity 0.8s ease';
-        splash.style.opacity = '0';
-        splash.style.pointerEvents = 'none';
-      }, 3200);
-
-      setTimeout(function() {
-        splash.style.display = 'none';
-      }, 4100);
-    }
-
-    // Two rAF frames ensure the flex display is painted before transitions start
-    requestAnimationFrame(function() {
-      requestAnimationFrame(animate);
-    });
-  } catch(e) {}
-})();
-            `,
+            __html: `(function(){try{if(sessionStorage.getItem('rq-s')){var e=document.getElementById('rq-splash');if(e)e.style.display='none';}else{sessionStorage.setItem('rq-s','1');}}catch(e){}})();`,
           }}
         />
 
@@ -194,16 +85,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/sw.js').then(
-      function(reg) { console.log('SW registered:', reg.scope); },
-      function(err) { console.log('SW registration failed:', err); }
-    );
-  });
-}
-            `,
+            __html: `if('serviceWorker'in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js');});}`,
           }}
         />
       </body>
