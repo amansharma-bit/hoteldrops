@@ -50,7 +50,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&family=Clash+Display:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -58,128 +58,154 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <meta name="msapplication-TileColor" content="#1447b8" />
         <meta name="msapplication-tap-highlight" content="no" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="apple-touch-startup-image" href="/apple-touch-icon.png" />
-        <style dangerouslySetInnerHTML={{ __html: `
-          #rq-splash {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 99999;
-            background: linear-gradient(160deg, #0a1628 0%, #0f2451 40%, #1447b8 100%);
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 18px;
-          }
-          #rq-word {
-            display: inline-block;
-            font-family: 'Sora', sans-serif;
-            font-weight: 800;
-            font-size: clamp(52px, 16vw, 72px);
-            color: #fff;
-            letter-spacing: -2.5px;
-            line-height: 1;
-            opacity: 0;
-            transform: translateY(14px) scale(0.9);
-          }
-          #rq-dot {
-            display: inline-block;
-            font-family: 'Sora', sans-serif;
-            font-weight: 800;
-            font-size: clamp(52px, 16vw, 72px);
-            color: #FCD34D;
-            line-height: 1;
-            opacity: 0;
-            transform: scale(0);
-          }
-          #rq-tag {
-            font-family: 'Inter', sans-serif;
-            font-weight: 400;
-            font-size: clamp(14px, 4vw, 17px);
-            color: rgba(255,255,255,0.5);
-            letter-spacing: 0.01em;
-            text-align: center;
-            padding: 0 32px;
-            margin: 0;
-            opacity: 0;
-            transform: translateY(8px);
-          }
-        `}} />
       </head>
       <body className="antialiased">
 
-        {/* ── PWA Splash — pure HTML/JS, runs before React touches anything ── */}
-        <div id="rq-splash">
+        {/*
+          PWA Splash Screen
+          Pure HTML + inline-script approach — no React state, no hydration gap.
+          Shows once per session via sessionStorage so it never repeats on
+          page navigation, only on a fresh app open.
+        */}
+        <div
+          id="rq-splash"
+          style={{
+            display: "none",
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "linear-gradient(160deg, #0a1628 0%, #0f2451 40%, #1447b8 100%)",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "18px",
+          }}
+        >
           <div style={{ display: "flex", alignItems: "baseline" }}>
-            <span id="rq-word">rebuq</span>
-            <span id="rq-dot">.</span>
+            <span
+              id="rq-w"
+              style={{
+                display: "inline-block",
+                fontFamily: "'Sora', sans-serif",
+                fontWeight: 800,
+                fontSize: "clamp(52px, 16vw, 72px)",
+                color: "#ffffff",
+                letterSpacing: "-2.5px",
+                lineHeight: 1,
+                opacity: 0,
+                transform: "translateY(14px) scale(0.9)",
+              }}
+            >
+              rebuq
+            </span>
+            <span
+              id="rq-d"
+              style={{
+                display: "inline-block",
+                fontFamily: "'Sora', sans-serif",
+                fontWeight: 800,
+                fontSize: "clamp(52px, 16vw, 72px)",
+                color: "#FCD34D",
+                lineHeight: 1,
+                opacity: 0,
+                transform: "scale(0)",
+              }}
+            >
+              .
+            </span>
           </div>
-          <p id="rq-tag">Your hotel booking just got cheaper.</p>
+          <p
+            id="rq-t"
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              fontWeight: 400,
+              fontSize: "clamp(14px, 4vw, 17px)",
+              color: "rgba(255,255,255,0.5)",
+              letterSpacing: "0.01em",
+              textAlign: "center",
+              padding: "0 32px",
+              margin: 0,
+              opacity: 0,
+              transform: "translateY(8px)",
+            }}
+          >
+            Your hotel booking just got cheaper.
+          </p>
         </div>
 
-        {/* Inline script — executes synchronously before React hydrates */}
-        <script dangerouslySetInnerHTML={{ __html: `
-          (function() {
-            var isPwa = window.matchMedia('(display-mode: standalone)').matches ||
-                        window.navigator.standalone === true;
-            if (!isPwa) return;
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(function() {
+  try {
+    // Show once per session — not on every page navigation
+    if (sessionStorage.getItem('rq-splashed')) return;
+    sessionStorage.setItem('rq-splashed', '1');
 
-            var splash = document.getElementById('rq-splash');
-            var word   = document.getElementById('rq-word');
-            var dot    = document.getElementById('rq-dot');
-            var tag    = document.getElementById('rq-tag');
+    var splash = document.getElementById('rq-splash');
+    var w = document.getElementById('rq-w');
+    var d = document.getElementById('rq-d');
+    var t = document.getElementById('rq-t');
+    if (!splash || !w || !d || !t) return;
 
-            // Show immediately — covers page before any React renders
-            splash.style.display = 'flex';
+    splash.style.display = 'flex';
 
-            // Animate in — two rAF frames to ensure display:flex is painted first
-            requestAnimationFrame(function() {
-              requestAnimationFrame(function() {
+    function animate() {
+      setTimeout(function() {
+        w.style.transition = 'opacity 0.7s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1)';
+        w.style.opacity = '1';
+        w.style.transform = 'translateY(0) scale(1)';
+      }, 300);
 
-                setTimeout(function() {
-                  word.style.transition = 'opacity 0.7s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1)';
-                  word.style.opacity = '1';
-                  word.style.transform = 'translateY(0) scale(1)';
-                }, 300);
+      setTimeout(function() {
+        d.style.transition = 'opacity 0.3s ease, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)';
+        d.style.opacity = '1';
+        d.style.transform = 'scale(1)';
+      }, 960);
 
-                setTimeout(function() {
-                  dot.style.transition = 'opacity 0.3s ease, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)';
-                  dot.style.opacity = '1';
-                  dot.style.transform = 'scale(1)';
-                }, 960);
+      setTimeout(function() {
+        t.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        t.style.opacity = '1';
+        t.style.transform = 'translateY(0)';
+      }, 1450);
 
-                setTimeout(function() {
-                  tag.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-                  tag.style.opacity = '1';
-                  tag.style.transform = 'translateY(0)';
-                }, 1450);
+      setTimeout(function() {
+        splash.style.transition = 'opacity 0.8s ease';
+        splash.style.opacity = '0';
+        splash.style.pointerEvents = 'none';
+      }, 3200);
 
-                setTimeout(function() {
-                  splash.style.transition = 'opacity 0.8s ease';
-                  splash.style.opacity = '0';
-                  splash.style.pointerEvents = 'none';
-                }, 3200);
+      setTimeout(function() {
+        splash.style.display = 'none';
+      }, 4100);
+    }
 
-                setTimeout(function() {
-                  splash.style.display = 'none';
-                }, 4100);
-              });
-            });
-          })();
-        `}} />
+    // Two rAF frames ensure the flex display is painted before transitions start
+    requestAnimationFrame(function() {
+      requestAnimationFrame(animate);
+    });
+  } catch(e) {}
+})();
+            `,
+          }}
+        />
 
         {children}
 
-        <script dangerouslySetInnerHTML={{ __html: `
-          if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-              navigator.serviceWorker.register('/sw.js').then(
-                function(reg) { console.log('SW registered:', reg.scope); },
-                function(err) { console.log('SW registration failed:', err); }
-              );
-            });
-          }
-        `}} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js').then(
+      function(reg) { console.log('SW registered:', reg.scope); },
+      function(err) { console.log('SW registration failed:', err); }
+    );
+  });
+}
+            `,
+          }}
+        />
       </body>
     </html>
   );
