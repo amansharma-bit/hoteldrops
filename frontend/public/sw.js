@@ -1,5 +1,4 @@
-// rebuq Service Worker
-const CACHE_NAME = "rebuq-v3";
+const CACHE_NAME = "rebuq-v4";
 const STATIC_ASSETS = [
   "/",
   "/search-hotels",
@@ -32,7 +31,6 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = event.request.url;
 
-  // Always fetch fresh from network for API calls — never cache
   if (
     url.includes("railway.app") ||
     url.includes("/api/") ||
@@ -40,11 +38,10 @@ self.addEventListener("fetch", (event) => {
     url.includes("liteapi") ||
     url.includes("supabase")
   ) {
-    event.respondWith(fetch(event.request));  // ← THE FIX: was just "return"
+    event.respondWith(fetch(event.request));
     return;
   }
 
-  // For everything else: network first, fall back to cache
   event.respondWith(
     fetch(event.request)
       .then((response) => {
