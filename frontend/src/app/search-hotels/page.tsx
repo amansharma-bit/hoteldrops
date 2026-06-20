@@ -771,7 +771,7 @@ export default function SearchHotelsPage() {
   const scrollDestCarousel = (dir: number) => setDestCarouselPos(prev => Math.max(0, Math.min(DEST_MAX_POS, prev + dir)));
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, overflowX: "hidden" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, overflowX: "hidden", paddingBottom: isMobile ? 72 : 0 }}>
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
@@ -873,20 +873,12 @@ export default function SearchHotelsPage() {
               <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: menuOpen ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
             </button>
           )}
-        </nav>
-
-        {isMobile && menuOpen && (
-          <div style={{ position: "fixed", top: 60, left: 0, right: 0, bottom: 0, zIndex: 199, background: "#fff", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-            <button onClick={() => { router.push("/search-hotels"); setMenuOpen(false); }} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 600, color: B, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Exclusive Member Deals</button>
-            <button onClick={() => window.location.href = "/signin"} style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 500, color: NAVY, textAlign: "left", padding: "14px 0", borderBottom: "1px solid #f1f5f9" }}>Log in / Sign up</button>
-          </div>
-        )}
 
         <section style={{ background: "transparent", padding: isMobile ? "48px 0 0" : "72px 0 0", textAlign: "center", position: "relative", overflow: "visible", zIndex: 1 }}>
           <div style={{ padding: isMobile ? "0 20px" : "0 40px" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>✦ Exclusive Member Deals</div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11.5, fontWeight: 700, padding: "6px 18px", borderRadius: 100, marginBottom: 28, border: "1px solid rgba(255,255,255,0.2)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>Exclusive Member Deals</div>
             <h1 className="sora" style={{ fontSize: isMobile ? 34 : 60, fontWeight: 800, color: "#fff", lineHeight: 1.08, maxWidth: 760, margin: "0 auto 18px" }}>Find your <span style={{ color: YELLOW }}>perfect stay</span></h1>
-            <p style={{ fontSize: isMobile ? 15 : 16.5, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.7 }}>500,000+ exclusive deals across the globe for members only.</p>
+            <p style={{ fontSize: isMobile ? 15 : 16.5, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.7 }}>2,70,000+ exclusive deals across the globe. Members save 28% on average.</p>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: isMobile ? 12 : 13, padding: "8px 18px", borderRadius: 100, marginBottom: 36 }}>
               <span style={{ width: 8, height: 8, background: "#4ade80", borderRadius: "50%", flexShrink: 0, animation: "pulse 1.5s infinite" }} />
               <span className={tickerVisible ? "ticker-visible" : "ticker-hidden"} style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const, justifyContent: "center" }}>
@@ -1019,17 +1011,19 @@ export default function SearchHotelsPage() {
         </section>
       </div>
 
-      {/* STATS */}
-      <div style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", paddingTop: isMobile ? 48 : 56 }} ref={statsRef}>
-        <div style={{ padding: isMobile ? "20px" : "26px 40px", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)" }}>
-          {STATS.map((s, i) => (
-            <div key={i} style={{ textAlign: "center", borderRight: !isMobile && i < 3 ? "1px solid #e2e8f0" : "none", padding: "0 20px" }}>
-              <div className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY }}>{statVals[i]}</div>
-              <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{s.label}</div>
-            </div>
-          ))}
+      {/* STATS — desktop only */}
+      {!isMobile && (
+        <div style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", paddingTop: 56 }} ref={statsRef}>
+          <div style={{ padding: "26px 40px", display: "grid", gridTemplateColumns: "repeat(4,1fr)" }}>
+            {STATS.map((s, i) => (
+              <div key={i} style={{ textAlign: "center", borderRight: i < 3 ? "1px solid #e2e8f0" : "none", padding: "0 20px" }}>
+                <div className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY }}>{statVals[i]}</div>
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* TOP DESTINATIONS */}
       <div style={{ padding: isMobile ? "50px 20px" : "70px 40px" }}>
@@ -1061,10 +1055,10 @@ export default function SearchHotelsPage() {
             ))}
           </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
-          <button onClick={() => scrollDestCarousel(-1)} disabled={destCarouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: destCarouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: destCarouselPos === 0 ? 0.4 : 1 }}>‹</button>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 20 }}>
+          {!isMobile && <button onClick={() => scrollDestCarousel(-1)} disabled={destCarouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: destCarouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: destCarouselPos === 0 ? 0.4 : 1 }}>‹</button>}
           <div style={{ display: "flex", gap: 6 }}>{Array.from({ length: DEST_CARDS.length - DEST_VISIBLE + 1 }, (_, i) => (<div key={i} onClick={() => setDestCarouselPos(i)} style={{ width: i === destCarouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === destCarouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />))}</div>
-          <button onClick={() => scrollDestCarousel(1)} disabled={destCarouselPos >= DEST_MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: destCarouselPos >= DEST_MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: destCarouselPos >= DEST_MAX_POS ? 0.4 : 1 }}>›</button>
+          {!isMobile && <button onClick={() => scrollDestCarousel(1)} disabled={destCarouselPos >= DEST_MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: destCarouselPos >= DEST_MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: destCarouselPos >= DEST_MAX_POS ? 0.4 : 1 }}>›</button>}
         </div>
       </div>
 
@@ -1112,10 +1106,10 @@ export default function SearchHotelsPage() {
               ))}
             </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
-            <button onClick={() => scrollHotelCarousel(-1)} disabled={hotelCarouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: hotelCarouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: hotelCarouselPos === 0 ? 0.4 : 1 }}>‹</button>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 20 }}>
+            {!isMobile && <button onClick={() => scrollHotelCarousel(-1)} disabled={hotelCarouselPos === 0} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: hotelCarouselPos === 0 ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: hotelCarouselPos === 0 ? 0.4 : 1 }}>‹</button>}
             <div style={{ display: "flex", gap: 6 }}>{Array.from({ length: Math.max(0, hotels.length - HOTEL_VISIBLE + 1) }, (_, i) => (<div key={i} onClick={() => setHotelCarouselPos(i)} style={{ width: i === hotelCarouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === hotelCarouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />))}</div>
-            <button onClick={() => scrollHotelCarousel(1)} disabled={hotelCarouselPos >= HOTEL_MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: hotelCarouselPos >= HOTEL_MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: hotelCarouselPos >= HOTEL_MAX_POS ? 0.4 : 1 }}>›</button>
+            {!isMobile && <button onClick={() => scrollHotelCarousel(1)} disabled={hotelCarouselPos >= HOTEL_MAX_POS} style={{ background: "#e2e8f0", border: "none", borderRadius: "50%", width: 40, height: 40, cursor: hotelCarouselPos >= HOTEL_MAX_POS ? "default" : "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", opacity: hotelCarouselPos >= HOTEL_MAX_POS ? 0.4 : 1 }}>›</button>}
           </div>
           <div style={{ textAlign: "center", marginTop: 36 }}>
             <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>↑ Search for more hotels</button>
@@ -1123,32 +1117,70 @@ export default function SearchHotelsPage() {
         </div>
       </div>
 
-      {/* BOTTOM CTA */}
-      <div style={{ background: "linear-gradient(135deg,#0c1f5c 0%,#1e4fc2 100%)", padding: isMobile ? "50px 20px" : "64px 40px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 340px", gap: 56, alignItems: "center" }}>
-          <div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 100, marginBottom: 16, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>✦ Already booked elsewhere?</div>
-            <h2 className="sora" style={{ fontSize: isMobile ? 26 : 42, fontWeight: 800, color: "#fff", lineHeight: 1.1, marginBottom: 14 }}>Don&apos;t overpay. Let our AI <span style={{ color: YELLOW }}>watch the price.</span></h2>
-            <p style={{ fontSize: 14.5, color: "rgba(255,255,255,0.7)", lineHeight: 1.7, marginBottom: 28 }}>Upload your booking voucher. We&apos;ll monitor the rate 24/7 and WhatsApp you the moment it drops.</p>
-          </div>
-          <div style={{ background: "#fff", borderRadius: 16, padding: 28, boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
-            <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 5 }}>Already booked? Check for a drop</div>
-            <div style={{ fontSize: 12.5, color: "#64748b", marginBottom: 16 }}>Takes 30 seconds. We handle the rest.</div>
-            <button onClick={() => router.push("/")} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 13, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Upload My Booking Voucher</button>
-          </div>
-        </div>
-      </div>
-      <footer style={{ background: NAVY, padding: isMobile ? "40px 20px 24px" : "48px 40px 32px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
-            <div><div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 10 }}>rebuq<span style={{ color: B }}>.</span></div><p style={{ fontSize: 13.5, color: "#94a3b8", maxWidth: 260, lineHeight: 1.6 }}>AI-powered hotel price monitoring for Indian travelers. Never overpay for a hotel again.</p></div>
-            <div style={{ display: "flex", gap: isMobile ? 28 : 48, flexDirection: isMobile ? "column" : "row" }}>{[{ title: "Product", links: ["How it works", "Results", "Why rebuq", "Exclusive Member Deals"] }, { title: "Company", links: ["About", "Privacy", "Terms"] }].map(col => (<div key={col.title}><h4 style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b", marginBottom: 14 }}>{col.title}</h4>{col.links.map(l => <a key={l} href="#" style={{ display: "block", fontSize: 14, color: "#94a3b8", textDecoration: "none", marginBottom: 10 }}>{l}</a>)}</div>))}</div>
-          </div>
-          <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0 }}>
-            <span style={{ fontSize: 13, color: "#475569" }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
+      {/* BOTTOM CTA — desktop only */}
+      {!isMobile && (
+        <div style={{ background: "linear-gradient(135deg,#0c1f5c 0%,#1e4fc2 100%)", padding: "64px 40px" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 340px", gap: 56, alignItems: "center" }}>
+            <div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 100, marginBottom: 16, letterSpacing: "0.08em", textTransform: "uppercase" as const }}>✦ Already booked elsewhere?</div>
+              <h2 className="sora" style={{ fontSize: 42, fontWeight: 800, color: "#fff", lineHeight: 1.1, marginBottom: 14 }}>Don&apos;t overpay. Let our AI <span style={{ color: YELLOW }}>watch the price.</span></h2>
+              <p style={{ fontSize: 14.5, color: "rgba(255,255,255,0.7)", lineHeight: 1.7, marginBottom: 28 }}>Upload your booking voucher. We&apos;ll monitor the rate 24/7 and WhatsApp you the moment it drops.</p>
+            </div>
+            <div style={{ background: "#fff", borderRadius: 16, padding: 28, boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+              <div className="sora" style={{ fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 5 }}>Already booked? Check for a drop</div>
+              <div style={{ fontSize: 12.5, color: "#64748b", marginBottom: 16 }}>Takes 30 seconds. We handle the rest.</div>
+              <button onClick={() => router.push("/")} style={{ width: "100%", background: B, color: "#fff", border: "none", borderRadius: 10, padding: 13, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Upload My Booking Voucher</button>
+            </div>
           </div>
         </div>
-      </footer>
+      )}
+
+      {/* FOOTER */}
+      {isMobile ? (
+        <footer style={{ background: NAVY, padding: "20px 20px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>rebuq<span style={{ color: B }}>.</span></div>
+            <span style={{ fontSize: 11.5, color: "#475569" }}>© 2026 rebuq</span>
+          </div>
+          <div style={{ display: "flex", gap: 20 }}>
+            <a href="#" style={{ fontSize: 12, color: "#64748b", textDecoration: "none" }}>Privacy</a>
+            <a href="#" style={{ fontSize: 12, color: "#64748b", textDecoration: "none" }}>Terms</a>
+            <a href="#" style={{ fontSize: 12, color: "#64748b", textDecoration: "none" }}>About</a>
+          </div>
+        </footer>
+      ) : (
+        <footer style={{ background: NAVY, padding: "48px 40px 32px" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40, gap: 40, flexWrap: "wrap" }}>
+              <div><div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 20, color: "#fff", marginBottom: 10 }}>rebuq<span style={{ color: B }}>.</span></div><p style={{ fontSize: 13.5, color: "#94a3b8", maxWidth: 260, lineHeight: 1.6 }}>AI-powered hotel price monitoring for Indian travelers. Never overpay for a hotel again.</p></div>
+              <div style={{ display: "flex", gap: 48 }}>{[{ title: "Product", links: ["How it works", "Results", "Why rebuq", "Exclusive Member Deals"] }, { title: "Company", links: ["About", "Privacy", "Terms"] }].map(col => (<div key={col.title}><h4 style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b", marginBottom: 14 }}>{col.title}</h4>{col.links.map(l => <a key={l} href="#" style={{ display: "block", fontSize: 14, color: "#94a3b8", textDecoration: "none", marginBottom: 10 }}>{l}</a>)}</div>))}</div>
+            </div>
+            <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 13, color: "#475569" }}>© 2026 rebuq. All rights reserved. Powered by Claude AI · Anthropic</span>
+            </div>
+          </div>
+        </footer>
+      )}
+
+      {/* BOTTOM NAV — mobile only, Deals tab active */}
+      {isMobile && (
+        <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 68, background: "#fff", borderTop: "1px solid #f1f5f9", zIndex: 200, display: "flex", alignItems: "stretch" }}>
+          {([
+            { label: "Home",    color: "#94a3b8", action: () => router.push("/"),             paths: ["M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z", "M9 22V12h6v10"] },
+            { label: "Scan",    color: "#94a3b8", action: () => router.push("/"),             paths: ["M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z", "M12 17a4 4 0 100-8 4 4 0 000 8z"] },
+            { label: "Deals",   color: B,         action: () => router.push("/search-hotels"),paths: ["M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z", "M7 7h.01"] },
+            { label: "Profile", color: "#94a3b8", action: () => router.push(user ? "/dashboard" : "/signin"), paths: ["M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2", "M12 11a4 4 0 100-8 4 4 0 000 8z"] },
+          ] as const).map(tab => (
+            <button key={tab.label} onClick={tab.action}
+              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: "8px 0", color: tab.color }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={tab.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                {tab.paths.map((p, i) => <path key={i} d={p} />)}
+              </svg>
+              <span style={{ fontSize: 10.5, fontWeight: tab.label === "Deals" ? 600 : 400 }}>{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }
