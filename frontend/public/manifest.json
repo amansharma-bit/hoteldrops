@@ -1,47 +1,22 @@
 {
-  "name": "rebuq \u2014 Hotel Price Protection",
+  "name": "rebuq — Hotel Price Protection",
   "short_name": "rebuq.",
   "description": "AI-powered hotel price monitoring. Get WhatsApp alerts when your hotel price drops.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1447b8",
-  "theme_color": "#1447b8",
+  "background_color": "#0a1628",
+  "theme_color": "#0a1628",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en-IN",
-  "categories": [
-    "travel",
-    "finance",
-    "utilities"
-  ],
+  "categories": ["travel", "finance", "utilities"],
   "icons": [
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png",
-      "purpose": "any"
-    }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
   ],
   "screenshots": [
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "rebuq homepage on mobile"
-    }
+    { "src": "/screenshot-mobile.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow", "label": "rebuq homepage on mobile" }
   ],
   "shortcuts": [
     {
@@ -49,24 +24,14 @@
       "short_name": "Check",
       "description": "Upload your booking voucher for a free price check",
       "url": "/upload",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "My dashboard",
       "short_name": "Dashboard",
       "description": "View your tracked bookings",
       "url": "/dashboard",
-      "icons": [
-        {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ],
   "related_applications": [],
