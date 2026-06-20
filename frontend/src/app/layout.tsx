@@ -60,34 +60,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="antialiased">
-
-        {/*
-          Splash screen — entirely CSS-driven via globals.css.
-          No JavaScript needed to show or animate it.
-          The tiny inline script below ONLY hides it if already seen
-          this session (one synchronous DOM call, runs before first paint).
-        */}
-        <div id="rq-splash">
-          <div style={{ display: "flex", alignItems: "baseline" }}>
-            <span id="rq-w">rebuq</span>
-            <span id="rq-d">.</span>
-          </div>
-          <p id="rq-t">Your hotel booking just got cheaper.</p>
-        </div>
-
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(sessionStorage.getItem('rq-s')){var e=document.getElementById('rq-splash');if(e)e.style.display='none';}else{sessionStorage.setItem('rq-s','1');}}catch(e){}})();`,
-          }}
-        />
-
         {children}
-
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker'in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js');});}`,
-          }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker'in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js');});}` }} />
       </body>
     </html>
   );
