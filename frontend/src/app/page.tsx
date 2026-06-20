@@ -118,6 +118,33 @@ const ICONS = {
   shield:  ["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"],
 };
 
+// ── Social proof rotating ticker ──────────────────────────────────────────────
+const SOCIAL_PROOFS = [
+  "Priya S. saved ₹22,400 on Atlantis Dubai · just now",
+  "Rahul M. saved ₹18,600 on W Maldives · 4 min ago",
+  "Ananya K. saved ₹31,000 on Mandarin Oriental Bangkok · 9 min ago",
+  "Vikram S. saved ₹14,200 on Conrad Singapore · 12 min ago",
+  "Meera P. saved ₹27,800 on Four Seasons Mumbai · 18 min ago",
+];
+
+function SocialProofTicker() {
+  const [idx, setIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const t = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => { setIdx(i => (i + 1) % SOCIAL_PROOFS.length); setVisible(true); }, 400);
+    }, 3000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 100, padding: "6px 16px", marginBottom: 28, transition: "opacity 0.35s ease", opacity: visible ? 1 : 0 }}>
+      <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80", flexShrink: 0 }} />
+      <span style={{ fontSize: 12.5, color: "rgba(255,255,255,0.88)", fontWeight: 500, whiteSpace: "nowrap" }}>{SOCIAL_PROOFS[idx]}</span>
+    </div>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -626,7 +653,6 @@ export default function Home() {
           <a href="/" style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none" }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
           {!isMobile && (
             <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
-              <button onClick={() => scrollTo("how")} style={{ fontSize: 14, color: "rgba(255,255,255,0.8)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>How it works</button>
               <button onClick={() => window.location.href = "/search-hotels"} style={{ fontSize: 14, color: "#FCD34D", background: "none", border: "none", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>Member Deals</button>
               {user ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => window.location.href = "/dashboard"}>
@@ -643,31 +669,41 @@ export default function Home() {
         {/* ══════════════════════════════════════
             HERO
         ══════════════════════════════════════ */}
-        <section style={{ textAlign: "center", padding: isMobile ? "48px 20px 52px" : "90px 24px 80px" }}>
-          {/* Social proof ticker */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 100, padding: "6px 16px", marginBottom: 28 }}>
-            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80", animation: "pulse 1.5s infinite" }} />
-            <span style={{ fontSize: 12.5, color: "rgba(255,255,255,0.88)", fontWeight: 500 }}>Priya S. saved ₹22,400 on Atlantis Dubai · just now</span>
-          </div>
+        {isMobile ? (
+          /* ── MOBILE HERO ── */
+          <section style={{ textAlign: "center", padding: "48px 20px 52px" }}>
+            {/* Rotating social proof */}
+            <SocialProofTicker />
 
-          <h1 className="sora" style={{ fontSize: isMobile ? 34 : 62, fontWeight: 800, lineHeight: 1.1, color: "#fff", maxWidth: 720, margin: "0 auto 18px" }}>
-            Your hotel price<br />just dropped.<br /><span style={{ color: "#FCD34D" }}>Did you notice?</span>
-          </h1>
-          <p style={{ fontSize: isMobile ? 15 : 17, color: "rgba(255,255,255,0.7)", maxWidth: 480, margin: "0 auto 36px", lineHeight: 1.7 }}>
-            rebuq watches your hotel booking 24/7. We alert you instantly when the price drops — you rebook and pocket the difference. Free to check.
-          </p>
-
-          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 12, justifyContent: "center", alignItems: "center", maxWidth: 480, margin: "0 auto" }}>
-            <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: isMobile ? "15px 0" : "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: isMobile ? "100%" : "auto" }}>
-              Check my booking — it&apos;s free
-            </button>
-            <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "transparent", color: "rgba(255,255,255,0.85)", border: "1.5px solid rgba(255,255,255,0.3)", borderRadius: 12, padding: isMobile ? "13px 0" : "13px 24px", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", width: isMobile ? "100%" : "auto" }}>
-              Explore member deals
-            </button>
-          </div>
-
-          <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)", marginTop: 18 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
-        </section>
+            <h1 className="sora" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.1, color: "#fff", margin: "0 auto 18px" }}>
+              Your hotel price<br />just dropped.<br /><span style={{ color: "#FCD34D" }}>Did you notice?</span>
+            </h1>
+            <p style={{ fontSize: 15, color: "rgba(255,255,255,0.7)", margin: "0 auto 32px", lineHeight: 1.7 }}>
+              rebuq watches your hotel booking 24/7. We alert you instantly when the price drops — you rebook and pocket the difference. Free to check.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: "15px 0", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                Check my booking — it&apos;s free
+              </button>
+              <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "transparent", color: "rgba(255,255,255,0.85)", border: "1.5px solid rgba(255,255,255,0.3)", borderRadius: 12, padding: "13px 0", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                Explore member deals
+              </button>
+            </div>
+            <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)", marginTop: 18 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
+          </section>
+        ) : (
+          /* ── DESKTOP HERO — original design, untouched ── */
+          <section style={{ textAlign: "center", padding: "90px 24px 70px", background: "transparent" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 100, marginBottom: 28, letterSpacing: "0.04em", textTransform: "uppercase", border: "1px solid rgba(255,255,255,0.2)" }}>✦ AI-Powered · Watches 24×7</div>
+            <h1 className="sora" style={{ fontSize: 64, fontWeight: 800, lineHeight: 1.1, color: "#fff", maxWidth: 760, margin: "0 auto 20px" }}>Your hotel price just dropped. <span style={{ color: "#FCD34D" }}>Did you notice?</span></h1>
+            <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 36px", lineHeight: 1.7 }}>Booked a hotel? rebuq watches the price 24/7 after you pay. When it drops, we alert you instantly — you rebook and pocket the difference. Free to check.</p>
+            <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" as const }}>
+              <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
+              <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore exclusive member deals →</button>
+            </div>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
+          </section>
+        )}
       </div>
 
       {/* ══════════════════════════════════════
