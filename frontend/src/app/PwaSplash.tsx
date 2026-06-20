@@ -2,22 +2,28 @@
 import { useEffect, useState } from "react";
 
 export default function PwaSplash() {
-  const [show, setShow]     = useState(false);
-  const [hiding, setHiding] = useState(false);
+  // Start as "show" — covers the homepage during SSR/hydration so there's
+  // no flash of page content before the splash appears. useEffect then
+  // immediately removes it for non-PWA visitors (one imperceptible frame),
+  // or runs the full animation for PWA visitors.
+  const [phase, setPhase] = useState<"show" | "hiding" | "done">("show");
 
   useEffect(() => {
     const isPwa =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
-    if (!isPwa) return;
 
-    setShow(true);
-    const t1 = setTimeout(() => setHiding(true), 3200);
-    const t2 = setTimeout(() => setShow(false), 4000);
+    if (!isPwa) {
+      setPhase("done"); // hide instantly — browser visitors never see it
+      return;
+    }
+
+    const t1 = setTimeout(() => setPhase("hiding"), 3200);
+    const t2 = setTimeout(() => setPhase("done"),   4000);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
-  if (!show) return null;
+  if (phase === "done") return null;
 
   return (
     <>
@@ -27,9 +33,9 @@ export default function PwaSplash() {
           to   { opacity: 1; transform: scale(1)    translateY(0);    }
         }
         @keyframes rq-dot {
-          0%   { transform: scale(0);    }
-          65%  { transform: scale(1.3);  }
-          100% { transform: scale(1);    }
+          0%   { transform: scale(0);   }
+          65%  { transform: scale(1.3); }
+          100% { transform: scale(1);   }
         }
         @keyframes rq-tag {
           from { opacity: 0; transform: translateY(8px); }
@@ -86,7 +92,7 @@ export default function PwaSplash() {
         }
       `}</style>
 
-      <div className={`rq-root${hiding ? " rq-hiding" : ""}`}>
+      <div className={`rq-root${phase === "hiding" ? " rq-hiding" : ""}`}>
         <div style={{ display: "flex", alignItems: "baseline" }}>
           <span className="rq-word">rebuq</span>
           <span className="rq-dot">.</span>
