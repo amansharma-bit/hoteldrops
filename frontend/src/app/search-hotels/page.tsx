@@ -873,6 +873,7 @@ export default function SearchHotelsPage() {
               <span style={{ display: "block", width: 22, height: 2, background: "rgba(255,255,255,0.8)", transition: "all 0.2s", transform: menuOpen ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
             </button>
           )}
+        </nav>
 
         <section style={{ background: "transparent", padding: isMobile ? "48px 0 0" : "72px 0 0", textAlign: "center", position: "relative", overflow: "visible", zIndex: 1 }}>
           <div style={{ padding: isMobile ? "0 20px" : "0 40px" }}>
