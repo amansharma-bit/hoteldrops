@@ -738,15 +738,26 @@ export default function SearchHotelsPage() {
     requireAuth(async () => {
       const ci = checkIn || defaults.checkIn;
       const co = checkOut || defaults.checkOut;
+      const destInfo = DESTINATIONS.find(d => d.city.toLowerCase() === cityName.toLowerCase());
+      const countryName = destInfo?.country || '';
+      const countryCode = (destInfo as any)?.countryCode || '';
+      const fullDest = countryName ? `${cityName}, ${countryName}` : cityName;
       try {
         const res = await fetch(`${API}/api/hotels/suggest?q=${encodeURIComponent(cityName)}`);
         const data = await res.json();
         const match = (data.cities || []).find((c: any) => c.name?.toLowerCase() === cityName.toLowerCase());
-        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: cityName }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(',')); params.set('sessionId', genSessionId());
+        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: fullDest });
+        if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(','));
+        params.set('sessionId', genSessionId());
         if (match?.placeId) params.set('placeId', match.placeId);
+        if (match?.countryCode) { params.set('countryCode', match.countryCode); params.set('cityName', cityName); }
+        else if (countryCode) { params.set('countryCode', countryCode); params.set('cityName', cityName); }
         router.push(`/search?${params.toString()}`);
       } catch {
-        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: cityName }); if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(',')); params.set('sessionId', genSessionId());
+        const params = new URLSearchParams({ checkIn: ci, checkOut: co, adults: String(guests.adults), rooms: String(guests.rooms), children: String(guests.children), destination: fullDest });
+        if (guests.childAges.length > 0) params.set('childAges', guests.childAges.join(','));
+        params.set('sessionId', genSessionId());
+        if (countryCode) { params.set('countryCode', countryCode); params.set('cityName', cityName); }
         router.push(`/search?${params.toString()}`);
       }
     });
