@@ -832,7 +832,8 @@ function SearchResults(){
   const[checkOut,setCheckOut]=useState(searchParams.get("checkOut")||"");
   const[guests,setGuests]=useState<GuestState>({rooms:parseInt(searchParams.get("rooms")||"1"),adults:parseInt(searchParams.get("adults")||"2"),children:parseInt(searchParams.get("children")||"0"),childAges:(searchParams.get("childAges")||"").split(",").map(s=>parseInt(s)).filter(n=>!isNaN(n))});
   const[hotels,setHotels]=useState<Hotel[]>([]);
-  const[loading,setLoading]=useState(true);const[error,setError]=useState<string|null>(null);
+  const[loading,setLoading]=useState(true);
+  const[loadComplete,setLoadComplete]=useState(false);const[error,setError]=useState<string|null>(null);
   const[user,setUser]=useState<{name:string}|null>(null);const[showAuthModal,setShowAuthModal]=useState(false);
   const[showMap,setShowMap]=useState(false);const[favorites,setFavorites]=useState<Set<string|number>>(new Set());
   const[sortBy,setSortBy]=useState("popularity");const[page,setPage]=useState(1);
@@ -840,7 +841,12 @@ function SearchResults(){
   const[mobileSheet,setMobileSheet]=useState<"filter"|"sort"|null>(null);
   const[desktopCalOpen,setDesktopCalOpen]=useState(false);const[desktopCalMode,setDesktopCalMode]=useState<"checkin"|"checkout">("checkin");
   const[desktopCalOffset,setDesktopCalOffset]=useState(0);const[desktopGuestOpen,setDesktopGuestOpen]=useState(false);
-  const[destInput,setDestInput]=useState(destination);const[selectedPlaceId,setSelectedPlaceId]=useState(searchParams.get('placeId')||'');const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);
+  const[destInput,setDestInput]=useState(()=>{
+    const cc=searchParams.get("countryCode")||"";
+    const cn=COUNTRY_NAMES[cc]||"";
+    const base=(searchParams.get("destination")||"Dubai").split(",")[0].trim();
+    return cn?`${base}, ${cn}`:base;
+  });const[selectedPlaceId,setSelectedPlaceId]=useState(searchParams.get('placeId')||'');const[destSuggestions,setDestSuggestions]=useState<typeof DESTINATIONS>([]);const[showDestDrop,setShowDestDrop]=useState(false);const[destFocused,setDestFocused]=useState(false);
   const destRef=useRef<HTMLDivElement>(null);const desktopCalRef=useRef<HTMLDivElement>(null);const desktopGuestRef=useRef<HTMLDivElement>(null);
   const[chatOpen,setChatOpen]=useState(false);
   const[chatMessages,setChatMessages]=useState<{role:string;content:string}[]>([
@@ -927,7 +933,7 @@ function SearchResults(){
             }
           }
         }
-        setLoading(false);
+        setLoading(false);setLoadComplete(true);
         if(!gotAny)setError(streamError||"No hotels found.");
         return;
       }
@@ -1211,7 +1217,7 @@ function SearchResults(){
                 <span className="sora" style={{fontSize:isMobile?18:22,fontWeight:800,color:NAVY}}>
                   {activeRefLabel ? `Hotels near ${activeRefLabel}` : `Hotels in ${destination}`}
                 </span>
-                {!loading&&hotels.length>0&&<span style={{fontSize:13,color:"#64748b",marginLeft:8}}>{sortedHotels.length} properties found</span>}
+                {loadComplete&&hotels.length>0&&<span style={{fontSize:13,color:"#64748b",marginLeft:8}}>{sortedHotels.length} properties found</span>}
               </div>
               {!isMobile&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"7px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,background:"#fff",cursor:"pointer",outline:"none"}}>
                 {(activeRefLabel)&&<option value="distance">Nearest first</option>}
