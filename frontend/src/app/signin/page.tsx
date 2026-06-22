@@ -99,9 +99,10 @@ export default function SignInPage() {
 
   /* ── FORM PANEL (shared between mobile and desktop right-side) ── */
   const FormPanel = (
-    <div style={{
+    <div className="form-scroll" style={{
       width: isMobile ? "100%" : "50%",
-      minHeight: isMobile ? "100vh" : "100vh",
+      height: "100vh",
+      overflowY: "auto",
       background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       padding: isMobile ? "40px 24px" : "48px 56px",
@@ -242,8 +243,8 @@ export default function SignInPage() {
   /* ── PHOTO PANEL (desktop left side) ── */
   const PhotoPanel = (
     <div style={{ width: "50%", position: "relative", overflow: "hidden" }}>
-      <img src="/maldives-signin.jpg" alt="Maldives" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", display: "block" }} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(10,22,40,0.3) 0%, rgba(10,22,40,0.65) 100%)" }} />
+      <img src="/signin-beach.jpg" alt="Beach" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(10,22,40,0.25) 0%, rgba(10,22,40,0.6) 100%)" }} />
       <div style={{ position: "absolute", bottom: 60, left: 48, right: 48 }}>
         <p style={{ fontFamily: "'Sora',sans-serif", fontSize: 28, fontWeight: 800, color: "#fff", lineHeight: 1.25, marginBottom: 16 }}>
           "{quote.text}"
@@ -258,12 +259,13 @@ export default function SignInPage() {
   );
 
   return (
-    <div style={{ fontFamily: "'Inter', sans-serif", minHeight: "100vh", display: "flex" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", height: "100vh", display: "flex", overflow: "hidden" }}>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         input::placeholder { color: rgba(255,255,255,0.3); }
         input:focus { border-color: rgba(255,255,255,0.5) !important; outline: none; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .form-scroll::-webkit-scrollbar { display: none; }
       `}</style>
 
       {/* Desktop: photo left, form right */}
