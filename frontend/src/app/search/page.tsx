@@ -879,7 +879,7 @@ function SearchResults(){
     const hasCityCountry=!!(cityName&&countryCode);
     const sessId=sid||sessionId;
     if(!c1||!c2){setLoading(false);setError("Please select check-in and check-out dates.");return;}
-    setLoading(true);setError(null);setPage(1);setHotels([]);
+    setLoading(true);setLoadComplete(false);setError(null);setPage(1);setHotels([]);
 
     const childAgesParam=gs.childAges&&gs.childAges.length>0?`&childAges=${gs.childAges.join(",")}`:"";
     const sessionParam=sessId?`&sessionId=${encodeURIComponent(sessId)}`:"";
@@ -972,7 +972,7 @@ function SearchResults(){
       const res=await fetch(`${baseUrl}&page=0`,{cache:"no-store"});const data=await res.json();
       if(!data.hotels?.hotels){setError(data.error||"No hotels found.");setLoading(false);return;}
       setHotels(data.hotels.hotels);
-      setLoading(false);
+      setLoading(false);setLoadComplete(true);
     }catch(e:any){console.error("search fetch failed:",e);setError("Could not connect to server.");setLoading(false);}
   },[destination,checkIn,checkOut,guests,searchParams,sessionId]);
 
