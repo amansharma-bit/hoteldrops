@@ -50,7 +50,7 @@ export default function SignInPage() {
     const redirect = params.get("redirect") || "/dashboard";
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}` },
+      options: { redirectTo: `https://www.rebuq.com/auth/callback?redirect=${encodeURIComponent(redirect)}` },
     });
     if (error) { setError(error.message); setLoading(false); }
   };
