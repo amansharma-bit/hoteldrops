@@ -337,10 +337,12 @@ export default function SearchHotelsPage() {
   }, [inputText]);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        const meta = data.user.user_metadata;
-        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member" });
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        const meta = data.session.user.user_metadata;
+        setUser({ name: meta?.full_name || meta?.name || data.session.user.email?.split("@")[0] || "Member" });
+      } else {
+        router.push("/signin?redirect=/search-hotels");
       }
     });
   }, []);
