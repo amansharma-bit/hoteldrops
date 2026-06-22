@@ -49,7 +49,7 @@ const US_CITY_STATE: Record<string, string> = {
   "New Orleans": "Louisiana", "Arlington": "Texas", "Honolulu": "Hawaii",
   "Miami": "Florida", "Orlando": "Florida", "Pittsburgh": "Pennsylvania",
   "Cincinnati": "Ohio", "St. Louis": "Missouri", "Cleveland": "Ohio",
-  "Richmond": "Virginia", "Detroit": "Michigan", "Charlotte": "North Carolina",
+  "Richmond": "Virginia", "Detroit": "Michigan",
 };
 async function fetchCitySuggestions(query: string): Promise<any[]> {
   try {
