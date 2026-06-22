@@ -342,7 +342,7 @@ export default function SearchHotelsPage() {
         const meta = data.session.user.user_metadata;
         setUser({ name: meta?.full_name || meta?.name || data.session.user.email?.split("@")[0] || "Member" });
       } else {
-        router.push("/signin?redirect=/search-hotels");
+        router.push("/?signup=1");
       }
     });
   }, []);
