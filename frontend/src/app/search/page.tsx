@@ -965,6 +965,7 @@ function SearchResults(){
           }
           return merged;
         });
+        setLoadComplete(true);
         return;
       }
 
