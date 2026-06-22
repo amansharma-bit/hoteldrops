@@ -600,7 +600,44 @@ function getAreaFromCoords(lat?: number|null, lng?: number|null, city?: string):
   return null;
 }
 
-const PRIORITY_AMENITIES = ["Swimming Pool","Fitness Centre","Restaurant","Free WiFi"];
+const COUNTRY_NAMES: Record<string,string> = {
+  AE:"United Arab Emirates",IN:"India",TH:"Thailand",ID:"Indonesia",
+  SG:"Singapore",MY:"Malaysia",JP:"Japan",AU:"Australia",GB:"United Kingdom",
+  FR:"France",IT:"Italy",ES:"Spain",DE:"Germany",US:"United States",
+  MV:"Maldives",NP:"Nepal",LK:"Sri Lanka",BH:"Bahrain",QA:"Qatar",
+  OM:"Oman",KW:"Kuwait",SA:"Saudi Arabia",ZA:"South Africa",KE:"Kenya",
+  TZ:"Tanzania",MU:"Mauritius",EG:"Egypt",MA:"Morocco",TR:"Turkey",
+  GR:"Greece",PT:"Portugal",NL:"Netherlands",CH:"Switzerland",AT:"Austria",
+  CZ:"Czech Republic",HU:"Hungary",PL:"Poland",SE:"Sweden",NO:"Norway",
+  DK:"Denmark",FI:"Finland",RU:"Russia",CN:"China",KR:"South Korea",
+  HK:"Hong Kong",TW:"Taiwan",PH:"Philippines",VN:"Vietnam",KH:"Cambodia",
+  MM:"Myanmar",BD:"Bangladesh",PK:"Pakistan",AF:"Afghanistan",IR:"Iran",
+  IQ:"Iraq",JO:"Jordan",LB:"Lebanon",IL:"Israel",CY:"Cyprus",MT:"Malta",
+  HR:"Croatia",RS:"Serbia",BA:"Bosnia",MK:"North Macedonia",AL:"Albania",
+  ME:"Montenegro",SI:"Slovenia",SK:"Slovakia",BG:"Bulgaria",RO:"Romania",
+  LT:"Lithuania",LV:"Latvia",EE:"Estonia",BY:"Belarus",UA:"Ukraine",
+  MD:"Moldova",GE:"Georgia",AM:"Armenia",AZ:"Azerbaijan",KZ:"Kazakhstan",
+  UZ:"Uzbekistan",TM:"Turkmenistan",TJ:"Tajikistan",KG:"Kyrgyzstan",
+  MX:"Mexico",CA:"Canada",BR:"Brazil",AR:"Argentina",CL:"Chile",CO:"Colombia",
+  PE:"Peru",VE:"Venezuela",EC:"Ecuador",BO:"Bolivia",PY:"Paraguay",UY:"Uruguay",
+  CR:"Costa Rica",PA:"Panama",GT:"Guatemala",HN:"Honduras",NI:"Nicaragua",
+  SV:"El Salvador",CU:"Cuba",DO:"Dominican Republic",JM:"Jamaica",TT:"Trinidad",
+  NZ:"New Zealand",FJ:"Fiji",PG:"Papua New Guinea",WS:"Samoa",TO:"Tonga",
+};
+const US_STATES: Record<string,string> = {
+  AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",
+  CO:"Colorado",CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",
+  HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",
+  KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",
+  MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",
+  NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",
+  NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",
+  OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",
+  SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",
+  VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming",
+  DC:"Washington D.C.",
+};
+const PRIORITY_AMENITIES = ["Free WiFi","Swimming Pool","Parking","Fitness Centre"];
 const TOP_FACILITIES = ["Swimming Pool","Room Service","Fitness Centre","On-site Dining","Spa","Parking","Free WiFi","Airport Shuttle","Business Centre","Kids Club"];
 
 function useIsMobile() {
@@ -1159,7 +1196,7 @@ function SearchResults(){
           {!isMobile&&<div style={{minWidth:0}}>
             <div style={{borderRadius:12,overflow:"hidden",marginBottom:16,border:"1.5px solid #e2e8f0",cursor:"pointer",position:"relative"}} onClick={()=>setShowMap(true)}>
               <img src={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${hotels.find(h=>h.longitude&&h.latitude)?`${hotels.find(h=>h.longitude&&h.latitude)!.longitude},${hotels.find(h=>h.longitude&&h.latitude)!.latitude},11`:"55.2708,25.2048,11"}/268x140?access_token=${MAPBOX_TOKEN}`} alt="Map" style={{width:"100%",height:140,objectFit:"cover",display:"block"}} onError={e=>{(e.target as HTMLImageElement).style.display="none";}}/>
-              <div style={{position:"absolute",top:0,left:0,right:0,bottom:28,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}><div style={{background:"rgba(255,255,255,0.92)",borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:700,color:NAVY,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>🗺️ {loading?"Loading hotels…":`${hotels.filter(h=>h.latitude&&h.longitude).length} hotels on map`}</div></div>
+              <div style={{position:"absolute",top:0,left:0,right:0,bottom:28,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}><div style={{background:"rgba(255,255,255,0.92)",borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:700,color:NAVY,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>🗺️ {loading?"Loading hotels…":"Map View"}</div></div>
               <div style={{padding:"9px 14px",background:"#fff",textAlign:"center",color:B,fontSize:13,fontWeight:700,borderTop:"1px solid #e2e8f0"}}>📍 Explore on Map</div>
             </div>
             <div style={{background:"#fff",borderRadius:12,border:"1.5px solid #e2e8f0",padding:18}}>
@@ -1174,7 +1211,7 @@ function SearchResults(){
                 <span className="sora" style={{fontSize:isMobile?18:22,fontWeight:800,color:NAVY}}>
                   {activeRefLabel ? `Hotels near ${activeRefLabel}` : `Hotels in ${destination}`}
                 </span>
-                {!loading&&<span style={{fontSize:13,color:"#64748b",marginLeft:8}}>{sortedHotels.length} properties found</span>}
+                {!loading&&hotels.length>0&&<span style={{fontSize:13,color:"#64748b",marginLeft:8}}>{sortedHotels.length} properties found</span>}
               </div>
               {!isMobile&&<select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"7px 12px",fontSize:13,fontFamily:"inherit",color:NAVY,background:"#fff",cursor:"pointer",outline:"none"}}>
                 {(activeRefLabel)&&<option value="distance">Nearest first</option>}
@@ -1217,9 +1254,17 @@ function SearchResults(){
               const shortAddress=hotel.address?hotel.address.split(",")[0].trim():null;
               // Location line: distance from ref if available, else curated area,
               // else neighbourhood fragment, else city
+              const countryName = COUNTRY_NAMES[countryCode] || countryCode || "";
+              const stateName = countryCode === "US" && hotel.address ? (() => {
+                const parts = hotel.address.split(",").map((s:string)=>s.trim());
+                const stateAbbr = parts.find((p:string)=>US_STATES[p]);
+                return stateAbbr ? US_STATES[stateAbbr] : "";
+              })() : "";
+              const cityPart = cityName || area || destination;
+              const fullLocation = [cityPart, stateName, countryName].filter(Boolean).join(", ");
               const locationLine = distLabel
                 ? `${distLabel} from ${activeRefLabel}`
-                : coordArea || (shortAddress&&shortAddress.toLowerCase()!==String(area||"").toLowerCase()?shortAddress:null) || area || hotel.address || destination;
+                : coordArea ? `${coordArea}, ${countryName}`.replace(/^, |, $/, "") : fullLocation || hotel.address || destination;
 
               return isMobile?(
                 <div key={String(hotel.code)} className="hcard-m" onClick={()=>handleHotelClick(hotel)}>
@@ -1263,7 +1308,10 @@ function SearchResults(){
                             <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:12.5,fontWeight:700,padding:"3px 8px",borderRadius:6}}>{rating.toFixed(1)}</span>
                             <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
                           </div>
-                          {cardAmenities.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:"4px 14px",marginBottom:8}}>{cardAmenities.map((a,i)=><span key={i} style={{fontSize:12.5,color:"#475569"}}>• {a}</span>)}</div>}
+                          {cardAmenities.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:"6px 12px",marginBottom:8}}>{cardAmenities.map((a,i)=>{
+                            const icon = a.toLowerCase().includes("wifi")?"📶":a.toLowerCase().includes("pool")?"🏊":a.toLowerCase().includes("parking")?"🅿️":a.toLowerCase().includes("fitness")?"💪":"✓";
+                            return <span key={i} style={{fontSize:12,color:"#475569",display:"flex",alignItems:"center",gap:3}}><span style={{fontSize:11}}>{icon}</span>{a}</span>;
+                          })}</div>}
                         </div>
                         <div style={{textAlign:"right",flexShrink:0}}>
                           {price>0?(<>{hotel.displayOtaPriceINR&&hotel.displayOtaPriceINR>price?<div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>Members save {formatINR(hotel.displayOtaPriceINR-price)}</div>:<div style={{background:"#dcfce7",color:"#16a34a",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:100,marginBottom:4,display:"inline-block"}}>{discount}% off</div>}<div style={{fontSize:12,color:"#64748b",textDecoration:"line-through"}}>{formatINR(hotel.displayOtaPriceINR&&hotel.displayOtaPriceINR>price?hotel.displayOtaPriceINR:Math.round(price*(1+discount/100)))}</div><div className="sora" style={{fontSize:24,fontWeight:800,color:NAVY}}>{formatINR(price)}</div><div style={{fontSize:11,color:"#64748b",marginTop:2}}>Taxes included · per night</div></>):<div style={{fontSize:13,color:"#64748b"}}>Price on request</div>}
