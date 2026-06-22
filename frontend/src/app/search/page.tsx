@@ -1310,9 +1310,10 @@ function SearchResults(){
                             <span style={{background:rating>=9?B:"#0369a1",color:"#fff",fontSize:12.5,fontWeight:700,padding:"3px 8px",borderRadius:6}}>{rating.toFixed(1)}</span>
                             <span style={{fontSize:13,fontWeight:600,color:NAVY}}>{getRatingLabel(rating)}</span>
                           </div>
-                          {cardAmenities.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:"6px 12px",marginBottom:8}}>{cardAmenities.map((a,i)=>{
-                            const icon = a.toLowerCase().includes("wifi")?"📶":a.toLowerCase().includes("pool")?"🏊":a.toLowerCase().includes("parking")?"🅿️":a.toLowerCase().includes("fitness")?"💪":"✓";
-                            return <span key={i} style={{fontSize:12,color:"#475569",display:"flex",alignItems:"center",gap:3}}><span style={{fontSize:11}}>{icon}</span>{a}</span>;
+                          {cardAmenities.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:"6px 16px",marginBottom:8}}>{cardAmenities.map((a,i)=>{
+                            const lower=a.toLowerCase();
+                            const icon = lower.includes("wifi")?<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#64748b"/></svg>:lower.includes("pool")?<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><path d="M2 12h20M2 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2"/><path d="M2 18h20M2 18c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2"/><circle cx="12" cy="5" r="2"/></svg>:lower.includes("parking")?<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>:lower.includes("fitness")?<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><path d="M6 4v16M18 4v16M4 12h16M4 6h2M4 18h2M18 6h2M18 18h2"/></svg>:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>;
+                            return <span key={i} style={{fontSize:12,color:"#475569",display:"flex",alignItems:"center",gap:4}}>{icon}{a}</span>;
                           })}</div>}
                         </div>
                         <div style={{textAlign:"right",flexShrink:0}}>
