@@ -247,12 +247,11 @@ export default function SignInPage() {
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(10,22,40,0.25) 0%, rgba(10,22,40,0.6) 100%)" }} />
       <div style={{ position: "absolute", bottom: 60, left: 48, right: 48 }}>
         <p style={{ fontFamily: "'Sora',sans-serif", fontSize: 28, fontWeight: 800, color: "#fff", lineHeight: 1.25, marginBottom: 16 }}>
-          "{quote.text}"
+          Your next hotel stay costs less than you think.
         </p>
-        {quote.author && <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", letterSpacing: "0.05em" }}>— {quote.author}</p>}
         <div style={{ width: 40, height: 3, background: "#FCD34D", borderRadius: 2, marginTop: 20 }} />
-        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 16, lineHeight: 1.6 }}>
-          Your hotel booking just got cheaper.<br />rebuq finds price drops after you book.
+        <p style={{ fontSize: 15, color: "rgba(255,255,255,0.75)", marginTop: 16, lineHeight: 1.6 }}>
+          Become a rebuq member and unlock 2,70,000 exclusive hotel deals.
         </p>
       </div>
     </div>
