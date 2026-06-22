@@ -46,47 +46,47 @@ function formatDistance(km: number): string {
   return km < 1 ? `${Math.round(km*1000)} m` : `${km.toFixed(1)} km`;
 }
 
-const DESTINATIONS: { label: string; key: string; flag: string; country: string; city: string }[] = [
-  { label:"Dubai", key:"dubai", flag:"🇦🇪", country:"AE", city:"Dubai" },
-  { label:"Abu Dhabi", key:"abu dhabi", flag:"🇦🇪", country:"AE", city:"Abu Dhabi" },
-  { label:"Sharjah", key:"sharjah", flag:"🇦🇪", country:"AE", city:"Sharjah" },
-  { label:"New Delhi", key:"new delhi", flag:"🇮🇳", country:"IN", city:"New Delhi" },
-  { label:"Mumbai", key:"mumbai", flag:"🇮🇳", country:"IN", city:"Mumbai" },
-  { label:"Goa", key:"goa", flag:"🇮🇳", country:"IN", city:"Goa" },
-  { label:"Bangalore", key:"bangalore", flag:"🇮🇳", country:"IN", city:"Bangalore" },
-  { label:"Chennai", key:"chennai", flag:"🇮🇳", country:"IN", city:"Chennai" },
-  { label:"Kolkata", key:"kolkata", flag:"🇮🇳", country:"IN", city:"Kolkata" },
-  { label:"Hyderabad", key:"hyderabad", flag:"🇮🇳", country:"IN", city:"Hyderabad" },
-  { label:"Jaipur", key:"jaipur", flag:"🇮🇳", country:"IN", city:"Jaipur" },
-  { label:"Kochi", key:"kochi", flag:"🇮🇳", country:"IN", city:"Kochi" },
-  { label:"Agra", key:"agra", flag:"🇮🇳", country:"IN", city:"Agra" },
-  { label:"Singapore", key:"singapore", flag:"🇸🇬", country:"SG", city:"Singapore" },
-  { label:"Bangkok", key:"bangkok", flag:"🇹🇭", country:"TH", city:"Bangkok" },
-  { label:"Phuket", key:"phuket", flag:"🇹🇭", country:"TH", city:"Phuket" },
-  { label:"Bali", key:"bali", flag:"🇮🇩", country:"ID", city:"Bali" },
-  { label:"Kuala Lumpur", key:"kuala lumpur", flag:"🇲🇾", country:"MY", city:"Kuala Lumpur" },
-  { label:"London", key:"london", flag:"🇬🇧", country:"GB", city:"London" },
-  { label:"Paris", key:"paris", flag:"🇫🇷", country:"FR", city:"Paris" },
-  { label:"Rome", key:"rome", flag:"🇮🇹", country:"IT", city:"Rome" },
-  { label:"Barcelona", key:"barcelona", flag:"🇪🇸", country:"ES", city:"Barcelona" },
-  { label:"Amsterdam", key:"amsterdam", flag:"🇳🇱", country:"NL", city:"Amsterdam" },
-  { label:"Istanbul", key:"istanbul", flag:"🇹🇷", country:"TR", city:"Istanbul" },
-  { label:"Tokyo", key:"tokyo", flag:"🇯🇵", country:"JP", city:"Tokyo" },
-  { label:"Hong Kong", key:"hong kong", flag:"🇭🇰", country:"HK", city:"Hong Kong" },
-  { label:"Seoul", key:"seoul", flag:"🇰🇷", country:"KR", city:"Seoul" },
-  { label:"Sydney", key:"sydney", flag:"🇦🇺", country:"AU", city:"Sydney" },
-  { label:"New York", key:"new york", flag:"🇺🇸", country:"US", city:"New York" },
-  { label:"Los Angeles", key:"los angeles", flag:"🇺🇸", country:"US", city:"Los Angeles" },
-  { label:"Las Vegas", key:"las vegas", flag:"🇺🇸", country:"US", city:"Las Vegas" },
-  { label:"Miami", key:"miami", flag:"🇺🇸", country:"US", city:"Miami" },
-  { label:"Orlando", key:"orlando", flag:"🇺🇸", country:"US", city:"Orlando" },
-  { label:"San Francisco", key:"san francisco", flag:"🇺🇸", country:"US", city:"San Francisco" },
-  { label:"Chicago", key:"chicago", flag:"🇺🇸", country:"US", city:"Chicago" },
-  { label:"Doha", key:"doha", flag:"🇶🇦", country:"QA", city:"Doha" },
-  { label:"Riyadh", key:"riyadh", flag:"🇸🇦", country:"SA", city:"Riyadh" },
-  { label:"Muscat", key:"muscat", flag:"🇴🇲", country:"OM", city:"Muscat" },
-  { label:"Maldives", key:"maldives", flag:"🇲🇻", country:"MV", city:"Male" },
-  { label:"Cairo", key:"cairo", flag:"🇪🇬", country:"EG", city:"Cairo" },
+const DESTINATIONS: { label: string; key: string; flag: string; country: string; countryName: string; city: string }[] = [
+  { label:"Dubai", key:"dubai", flag:"🇦🇪", country:"AE", countryName:"United Arab Emirates", city:"Dubai" },
+  { label:"Abu Dhabi", key:"abu dhabi", flag:"🇦🇪", country:"AE", countryName:"United Arab Emirates", city:"Abu Dhabi" },
+  { label:"Sharjah", key:"sharjah", flag:"🇦🇪", country:"AE", countryName:"United Arab Emirates", city:"Sharjah" },
+  { label:"New Delhi", key:"new delhi", flag:"🇮🇳", country:"IN", countryName:"India", city:"New Delhi" },
+  { label:"Mumbai", key:"mumbai", flag:"🇮🇳", country:"IN", countryName:"India", city:"Mumbai" },
+  { label:"Goa", key:"goa", flag:"🇮🇳", country:"IN", countryName:"India", city:"Goa" },
+  { label:"Bangalore", key:"bangalore", flag:"🇮🇳", country:"IN", countryName:"India", city:"Bangalore" },
+  { label:"Chennai", key:"chennai", flag:"🇮🇳", country:"IN", countryName:"India", city:"Chennai" },
+  { label:"Kolkata", key:"kolkata", flag:"🇮🇳", country:"IN", countryName:"India", city:"Kolkata" },
+  { label:"Hyderabad", key:"hyderabad", flag:"🇮🇳", country:"IN", countryName:"India", city:"Hyderabad" },
+  { label:"Jaipur", key:"jaipur", flag:"🇮🇳", country:"IN", countryName:"India", city:"Jaipur" },
+  { label:"Kochi", key:"kochi", flag:"🇮🇳", country:"IN", countryName:"India", city:"Kochi" },
+  { label:"Agra", key:"agra", flag:"🇮🇳", country:"IN", countryName:"India", city:"Agra" },
+  { label:"Singapore", key:"singapore", flag:"🇸🇬", country:"SG", countryName:"Singapore", city:"Singapore" },
+  { label:"Bangkok", key:"bangkok", flag:"🇹🇭", country:"TH", countryName:"Thailand", city:"Bangkok" },
+  { label:"Phuket", key:"phuket", flag:"🇹🇭", country:"TH", countryName:"Thailand", city:"Phuket" },
+  { label:"Bali", key:"bali", flag:"🇮🇩", country:"ID", countryName:"Indonesia", city:"Bali" },
+  { label:"Kuala Lumpur", key:"kuala lumpur", flag:"🇲🇾", country:"MY", countryName:"Malaysia", city:"Kuala Lumpur" },
+  { label:"London", key:"london", flag:"🇬🇧", country:"GB", countryName:"United Kingdom", city:"London" },
+  { label:"Paris", key:"paris", flag:"🇫🇷", country:"FR", countryName:"France", city:"Paris" },
+  { label:"Rome", key:"rome", flag:"🇮🇹", country:"IT", countryName:"Italy", city:"Rome" },
+  { label:"Barcelona", key:"barcelona", flag:"🇪🇸", country:"ES", countryName:"Spain", city:"Barcelona" },
+  { label:"Amsterdam", key:"amsterdam", flag:"🇳🇱", country:"NL", countryName:"Netherlands", city:"Amsterdam" },
+  { label:"Istanbul", key:"istanbul", flag:"🇹🇷", country:"TR", countryName:"Turkey", city:"Istanbul" },
+  { label:"Tokyo", key:"tokyo", flag:"🇯🇵", country:"JP", countryName:"Japan", city:"Tokyo" },
+  { label:"Hong Kong", key:"hong kong", flag:"🇭🇰", country:"HK", countryName:"Hong Kong", city:"Hong Kong" },
+  { label:"Seoul", key:"seoul", flag:"🇰🇷", country:"KR", countryName:"South Korea", city:"Seoul" },
+  { label:"Sydney", key:"sydney", flag:"🇦🇺", country:"AU", countryName:"Australia", city:"Sydney" },
+  { label:"New York", key:"new york", flag:"🇺🇸", country:"US", countryName:"United States", city:"New York" },
+  { label:"Los Angeles", key:"los angeles", flag:"🇺🇸", country:"US", countryName:"United States", city:"Los Angeles" },
+  { label:"Las Vegas", key:"las vegas", flag:"🇺🇸", country:"US", countryName:"United States", city:"Las Vegas" },
+  { label:"Miami", key:"miami", flag:"🇺🇸", country:"US", countryName:"United States", city:"Miami" },
+  { label:"Orlando", key:"orlando", flag:"🇺🇸", country:"US", countryName:"United States", city:"Orlando" },
+  { label:"San Francisco", key:"san francisco", flag:"🇺🇸", country:"US", countryName:"United States", city:"San Francisco" },
+  { label:"Chicago", key:"chicago", flag:"🇺🇸", country:"US", countryName:"United States", city:"Chicago" },
+  { label:"Doha", key:"doha", flag:"🇶🇦", country:"QA", countryName:"Qatar", city:"Doha" },
+  { label:"Riyadh", key:"riyadh", flag:"🇸🇦", country:"SA", countryName:"Saudi Arabia", city:"Riyadh" },
+  { label:"Muscat", key:"muscat", flag:"🇴🇲", country:"OM", countryName:"Oman", city:"Muscat" },
+  { label:"Maldives", key:"maldives", flag:"🇲🇻", country:"MV", countryName:"Maldives", city:"Male" },
+  { label:"Cairo", key:"cairo", flag:"🇪🇬", country:"EG", countryName:"Egypt", city:"Cairo" },
 ];
 
 // [name, minLat, maxLat, minLng, maxLng]
@@ -796,7 +796,7 @@ function MapView({hotels,checkIn,checkOut,filterProps,onClose,onHotelClick,isMob
   if(isMobile)return(<div style={{position:"fixed",inset:0,zIndex:8000,display:"flex",flexDirection:"column"}}><div style={{position:"absolute",top:12,right:12,zIndex:10}}><button onClick={onClose} style={{background:"#fff",border:"1.5px solid #e2e8f0",borderRadius:10,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:NAVY,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}}>✕ Close map</button></div><div ref={mapRef} style={{width:"100%",height:"100%"}}/>{selectedHotel&&<div style={{position:"absolute",bottom:20,left:16,right:16,background:"#fff",borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.2)",overflow:"hidden",zIndex:10,display:"flex"}}><img src={selectedHotel.imageUrl||FALLBACK_IMGS[0]} alt={selectedHotel.name} style={{width:90,height:90,objectFit:"cover",flexShrink:0}}/><div style={{padding:"10px 12px",flex:1}}><div style={{fontWeight:700,fontSize:13,color:NAVY,marginBottom:2}}>{selectedHotel.name}</div><div style={{fontSize:18,fontWeight:800,color:NAVY}}>{formatINR(Math.round((selectedHotel.lowestPriceINR||selectedHotel.minRate||0)/NIGHTS))}</div><div style={{fontSize:11,color:"#64748b"}}>per night</div></div><button onClick={()=>onHotelClick(selectedHotel)} style={{background:B,color:"#fff",border:"none",padding:"0 16px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>View</button></div>}</div>);
   return(<div style={{position:"fixed",inset:0,zIndex:8000,display:"flex",flexDirection:"column"}}>
     <div ref={chipRef} style={{background:"#fff",borderBottom:"1px solid #e2e8f0",padding:"10px 20px",display:"flex",alignItems:"center",gap:10,flexShrink:0,flexWrap:"nowrap",overflowX:"visible",position:"relative",zIndex:99999}}>
-      <div style={{fontSize:14,fontWeight:700,color:NAVY,whiteSpace:"nowrap",marginRight:4}}>{hotelsWithCoords.length} hotels</div>
+      <div style={{fontSize:14,fontWeight:700,color:NAVY,whiteSpace:"nowrap",marginRight:4}}>{loadComplete ? `${hotelsWithCoords.length} hotels` : "Loading..."}</div>
       {filterProps.areaOptions.length>0&&<ChipDropdown id="loc" label={filterProps.filterLocation||"Location"} openChip={openChip} setOpenChip={setOpenChip}>{filterProps.areaOptions.map(a=><CB key={a} active={filterProps.filterLocation===a} onClick={()=>{filterProps.setFilterLocation(filterProps.filterLocation===a?"":a);setOpenChip(null);}} label={a}/>)}</ChipDropdown>}
       {filterProps.refLabel&&<ChipDropdown id="dist" label={filterProps.filterMaxDistance?`< ${filterProps.filterMaxDistance} km`:"Distance"} openChip={openChip} setOpenChip={setOpenChip}>{[{label:"Less than 1 km",max:1},{label:"Less than 3 km",max:3},{label:"Less than 5 km",max:5}].map(({label,max})=><CB key={max} active={filterProps.filterMaxDistance===max} onClick={()=>{filterProps.setFilterMaxDistance(filterProps.filterMaxDistance===max?null:max);setOpenChip(null);}} label={label}/>)}</ChipDropdown>}
       <ChipDropdown id="price" label={filterProps.filterPriceMax||filterProps.filterPriceMin?"Price ✓":"Price"} openChip={openChip} setOpenChip={setOpenChip}>{([{label:"Under ₹5,000",min:null,max:5000},{label:"₹5,000–₹10,000",min:5000,max:10000},{label:"₹10,000–₹20,000",min:10000,max:20000},{label:"₹20,000–₹40,000",min:20000,max:40000},{label:"₹40,000+",min:40000,max:null}] as {label:string;min:number|null;max:number|null}[]).map(({label,min,max})=>{const a=filterProps.filterPriceMin===min&&filterProps.filterPriceMax===max;return<CB key={label} active={a} onClick={()=>{a?filterProps.setPriceRange(null,null):filterProps.setPriceRange(min,max);setOpenChip(null);}} label={label}/>;})}</ChipDropdown>
@@ -865,7 +865,7 @@ function SearchResults(){
   useEffect(()=>{supabase.auth.getUser().then(({data})=>{if(data.user){const m=data.user.user_metadata;setUser({name:m?.full_name||m?.name||data.user.email?.split("@")[0]||"Member"});}});supabase.auth.onAuthStateChange((_,session)=>{if(session?.user){const m=session.user.user_metadata;setUser({name:m?.full_name||m?.name||session.user.email?.split("@")[0]||"Member"});setShowAuthModal(false);}});},[]);
   useEffect(()=>{const handler=(e:MouseEvent)=>{if(desktopCalRef.current&&!desktopCalRef.current.contains(e.target as Node))setDesktopCalOpen(false);if(desktopGuestRef.current&&!desktopGuestRef.current.contains(e.target as Node))setDesktopGuestOpen(false);if(destRef.current&&!destRef.current.contains(e.target as Node))setShowDestDrop(false);};document.addEventListener("mousedown",handler);return()=>document.removeEventListener("mousedown",handler);},[]);
   const handleDestInput=(val:string)=>{setDestInput(val);if(val.length>=1){const q=val.toLowerCase();setDestSuggestions(DESTINATIONS.filter(d=>d.label.toLowerCase().includes(q)||d.key.includes(q)));setShowDestDrop(true);}else{setDestSuggestions([]);setShowDestDrop(false);}};
-  const selectDest=(d:typeof DESTINATIONS[0])=>{setDestInput(d.label);setDestination(d.label);setSelectedPlaceId((d as any).placeId||'');setShowDestDrop(false);};
+  const selectDest=(d:typeof DESTINATIONS[0])=>{const fullLabel=d.countryName?`${d.label}, ${d.countryName}`:d.label;setDestInput(fullLabel);setDestination(d.label);setSelectedPlaceId((d as any).placeId||'');setShowDestDrop(false);};
 
   const fetchHotels=useCallback(async(dest?:string,ci?:string,co?:string,g?:GuestState,pid?:string,sid?:string)=>{
     const d=dest||destination,c1=ci||checkIn,c2=co||checkOut,gs=g||guests;
