@@ -1107,7 +1107,12 @@ function SearchResults(){
   const handleSearch=async()=>{
     if(!user){setShowAuthModal(true);return;}
     const d=destInput.trim()||destination;
+    // Extract base city name (strip country if present e.g. "Bangkok, Thailand" -> "Bangkok")
+    const cityOnly=d.split(",")[0].trim();
+    // Look up countryCode from DESTINATIONS
+    const destMatch=DESTINATIONS.find(x=>x.label.toLowerCase()===cityOnly.toLowerCase()||x.city.toLowerCase()===cityOnly.toLowerCase());
     const p=new URLSearchParams({destination:d,checkIn,checkOut,adults:String(guests.adults),rooms:String(guests.rooms),children:String(guests.children)});
+    if(destMatch?.country){p.set("countryCode",destMatch.country);p.set("cityName",cityOnly);}
     if(guests.childAges&&guests.childAges.length>0)p.set("childAges",guests.childAges.join(","));
     p.set("sessionId",genSessionId());
     // Always resolve placeId fresh for the destination text being searched —
