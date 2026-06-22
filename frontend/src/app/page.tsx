@@ -384,6 +384,29 @@ export default function Home() {
     setLoading(false);
   }
 
+  const handlePopupGoogle = async () => {
+    setPopupLoading(true); setPopupErr("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback?redirect=/` },
+    });
+    if (error) { setPopupErr(error.message); setPopupLoading(false); }
+  };
+
+  const handlePopupSignup = async () => {
+    if (!popupEmail || !popupPw) { setPopupErr("Please enter email and password"); return; }
+    setPopupLoading(true); setPopupErr("");
+    const { error } = await supabase.auth.signUp({ email: popupEmail, password: popupPw });
+    if (error) { setPopupErr(error.message); setPopupLoading(false); return; }
+    setSignupPopup(false);
+    setPopupLoading(false);
+  };
+
+  const dismissPopup = () => {
+    sessionStorage.setItem("rebuq_popup_dismissed", "1");
+    setSignupPopup(false);
+  };
+
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 16, lineHeight: 1.6, WebkitFontSmoothing: "antialiased", overflowX: "hidden", maxWidth: "100vw", paddingBottom: isMobile ? 72 : 0 }}>
       <style>{`
