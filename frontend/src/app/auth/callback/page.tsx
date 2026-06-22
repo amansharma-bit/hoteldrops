@@ -13,18 +13,19 @@ export default function AuthCallback() {
   const router = useRouter();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const redirect = params.get("redirect") || "/dashboard";
-    const code = params.get("code");
-    const error = params.get("error");
+    // Get redirect destination from localStorage (set before OAuth redirect)
+    const redirect = localStorage.getItem("rebuq_auth_redirect") || "/dashboard";
+    localStorage.removeItem("rebuq_auth_redirect");
+
+    const code = new URLSearchParams(window.location.search).get("code");
+    const error = new URLSearchParams(window.location.search).get("error");
 
     if (error) {
-      router.push(`/?error=${error}`);
+      router.push("/?error=" + error);
       return;
     }
 
     if (code) {
-      // PKCE flow: exchange code using client-side supabase (has access to localStorage code verifier)
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
         if (error) {
           console.error("Auth exchange error:", error.message);
@@ -36,7 +37,7 @@ export default function AuthCallback() {
       return;
     }
 
-    // Fallback: wait for session via onAuthStateChange
+    // Fallback: wait for session
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
         subscription.unsubscribe();
@@ -44,7 +45,6 @@ export default function AuthCallback() {
       }
     });
 
-    // Also check if already signed in
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         subscription.unsubscribe();
@@ -58,7 +58,7 @@ export default function AuthCallback() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#1447b8" }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontFamily: "\'Sora\', sans-serif", fontWeight: 800, fontSize: 26, color: "#fff", marginBottom: 24 }}>
+        <div style={{ fontFamily: "Sora, sans-serif", fontWeight: 800, fontSize: 26, color: "#fff", marginBottom: 24 }}>
           rebuq<span style={{ color: "#FCD34D" }}>.</span>
         </div>
         <div style={{ width: 40, height: 40, border: "3px solid rgba(255,255,255,0.2)", borderTop: "3px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
