@@ -245,10 +245,10 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
 const CITY_FILTERS = ["Top Sellers", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai", "Bangalore", "Tokyo"];
 
 const STATS = [
-  { id: 0, target: 270000, prefix: "", suffix: "+", label: "Member deals live right now" },
-  { id: 1, target: 18, prefix: "₹", suffix: "Cr", label: "Saved for members" },
-  { id: 2, target: null, prefix: "", suffix: "", label: "Lowest Price Guaranteed" },
-  { id: 3, target: null, prefix: "", suffix: "", label: "Instant Confirmation" },
+  { id: 0, target: 270000, prefix: "", suffix: "+", label: "Member deals live right now", boldTop: false },
+  { id: 1, target: null, prefix: "", suffix: "", boldText: "Lowest Price", label: "Guaranteed", boldTop: true },
+  { id: 2, target: 18, prefix: "₹", suffix: "Cr", label: "Saved for members", boldTop: false },
+  { id: 3, target: null, prefix: "", suffix: "", boldText: "Price Drop Protection", label: "Auto-monitored, 24/7", boldTop: true },
 ];
 
 interface GuestState { rooms: number; adults: number; children: number; childAges: number[]; }
@@ -292,7 +292,7 @@ export default function SearchHotelsPage() {
   useEffect(() => { setHotelCarouselPos(0); }, [activeCity]);
   const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
-  const [statVals, setStatVals] = useState(STATS.map(s => s.target === null ? "✓" : `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
+  const [statVals, setStatVals] = useState(STATS.map(s => s.target === null ? "" : `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [calOpen, setCalOpen] = useState(false);
@@ -1018,8 +1018,17 @@ export default function SearchHotelsPage() {
           <div style={{ padding: "26px 40px", display: "grid", gridTemplateColumns: "repeat(4,1fr)" }}>
             {STATS.map((s, i) => (
               <div key={i} style={{ textAlign: "center", borderRight: i < 3 ? "1px solid #e2e8f0" : "none", padding: "0 20px" }}>
-                <div className="sora" style={{ fontSize: 26, fontWeight: 800, color: s.target === null ? "#16a34a" : NAVY }}>{statVals[i]}</div>
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{s.label}</div>
+                <div className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY }}>
+                  {s.boldTop ? (
+                    <>
+                      <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: NAVY, lineHeight: 1.2 }}>{(s as any).boldText}</span>
+                      <span style={{ display: "block", fontSize: 13, fontWeight: 400, color: "#64748b", marginTop: 4 }}>{s.label}</span>
+                    </>
+                  ) : (
+                    <>{statVals[i]}</>
+                  )}
+                </div>
+                {!s.boldTop && <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{s.label}</div>}
               </div>
             ))}
           </div>
