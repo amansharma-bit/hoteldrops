@@ -496,6 +496,9 @@ export default function SearchHotelsPage() {
         // rates search accepts this pair natively.
         params.set('cityName', sel.label);
         params.set('countryCode', sel.countryCode);
+        // Override destination with full display label: "Dubai, United Arab Emirates"
+        const countryDisplayName = (sel as any).countryName || sel.countryCode || '';
+        if (countryDisplayName) params.set('destination', `${sel.label}, ${countryDisplayName}`);
         router.push(`/search?${params.toString()}`);
       } else if (sel.placeId && !isCityLevel) {
         params.set('placeId', sel.placeId);
