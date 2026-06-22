@@ -190,10 +190,8 @@ export default function Home() {
         const meta = data.user.user_metadata;
         setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member", email: data.user.email || "" });
       } else {
-        const dismissed = sessionStorage.getItem("rebuq_popup_dismissed");
-        if (!dismissed) {
-          setTimeout(() => setSignupPopup(true), 3000);
-        }
+        // Show popup after 3s for all logged-out visitors
+        setTimeout(() => setSignupPopup(true), 3000);
       }
     });
   }, []);
@@ -403,7 +401,6 @@ export default function Home() {
   };
 
   const dismissPopup = () => {
-    sessionStorage.setItem("rebuq_popup_dismissed", "1");
     setSignupPopup(false);
   };
 
