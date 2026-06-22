@@ -147,7 +147,7 @@ const TICKER_ITEMS = [
   { name: "Arjun T.", hotel: "The Langham, London", saved: "₹26,200", time: "31 min ago" },
 ];
 
-const use client";
+"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
