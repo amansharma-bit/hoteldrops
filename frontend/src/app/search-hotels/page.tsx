@@ -81,8 +81,6 @@ const US_CITY_STATE: Record<string, string> = {
   "Hollywood": "Florida", "Macon": "Georgia", "Murfreesboro": "Tennessee",
 };
 
-async function fetchCitySuggestions
-
 async function fetchCitySuggestions(query: string): Promise<any[]> {
   try {
     const res = await fetch(`${API}/api/hotels/cities-search?q=${encodeURIComponent(query)}`);
