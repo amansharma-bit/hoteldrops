@@ -279,6 +279,7 @@ export default function SearchHotelsPage() {
   const defaults = getDefaultDates();
 
   const [user, setUser] = useState<{ name: string } | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [inputText, setInputText] = useState("");
   const [selection, setSelection] = useState<Selection | null>(null);
   const [checkIn, setCheckIn] = useState(defaults.checkIn);
@@ -341,6 +342,7 @@ export default function SearchHotelsPage() {
       if (data.session?.user) {
         const meta = data.session.user.user_metadata;
         setUser({ name: meta?.full_name || meta?.name || data.session.user.email?.split("@")[0] || "Member" });
+        setAuthChecked(true);
       } else {
         router.push("/?signup=1");
       }
@@ -771,6 +773,8 @@ export default function SearchHotelsPage() {
   const DEST_VISIBLE = isMobile ? 2 : 4;
   const DEST_MAX_POS = DEST_CARDS.length - DEST_VISIBLE;
   const scrollDestCarousel = (dir: number) => setDestCarouselPos(prev => Math.max(0, Math.min(DEST_MAX_POS, prev + dir)));
+
+  if (!authChecked) return null;
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, overflowX: "hidden", paddingBottom: isMobile ? 72 : 0 }}>
