@@ -190,8 +190,13 @@ export default function Home() {
         const meta = data.user.user_metadata;
         setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member", email: data.user.email || "" });
       } else {
-        // Show popup after 3s for all logged-out visitors
-        setTimeout(() => setSignupPopup(true), 3000);
+        // If redirected from a protected page, show popup immediately
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("signup") === "1") {
+          setSignupPopup(true);
+        } else {
+          setTimeout(() => setSignupPopup(true), 3000);
+        }
       }
     });
   }, []);
