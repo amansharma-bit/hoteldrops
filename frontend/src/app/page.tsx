@@ -14,7 +14,7 @@ const B = "#1447b8";
 const NAVY = "#0f172a";
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(true);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
