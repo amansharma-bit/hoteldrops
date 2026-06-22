@@ -392,10 +392,9 @@ export default function Home() {
 
   const handlePopupGoogle = async () => {
     setPopupLoading(true); setPopupErr("");
-    localStorage.setItem("rebuq_auth_redirect", "/");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: "https://www.rebuq.com/auth/callback" },
+      options: { redirectTo: `${window.location.origin}/auth/callback?redirect=/` },
     });
     if (error) { setPopupErr(error.message); setPopupLoading(false); }
   };
