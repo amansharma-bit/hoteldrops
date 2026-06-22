@@ -48,9 +48,10 @@ export default function SignInPage() {
     setLoading(true); setError("");
     const params   = new URLSearchParams(window.location.search);
     const redirect = params.get("redirect") || "/dashboard";
+    localStorage.setItem("rebuq_auth_redirect", redirect);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `https://www.rebuq.com/auth/callback?redirect=${encodeURIComponent(redirect)}` },
+      options: { redirectTo: "https://www.rebuq.com/auth/callback" },
     });
     if (error) { setError(error.message); setLoading(false); }
   };
