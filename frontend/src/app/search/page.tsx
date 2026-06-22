@@ -1254,13 +1254,15 @@ function SearchResults(){
               const shortAddress=hotel.address?hotel.address.split(",")[0].trim():null;
               // Location line: distance from ref if available, else curated area,
               // else neighbourhood fragment, else city
-              const countryName = COUNTRY_NAMES[countryCode] || countryCode || "";
-              const stateName = countryCode === "US" && hotel.address ? (() => {
+              const _cc = searchParams.get("countryCode") || "";
+              const _cn = searchParams.get("cityName") || "";
+              const countryName = COUNTRY_NAMES[_cc] || _cc || "";
+              const stateName = _cc === "US" && hotel.address ? (() => {
                 const parts = hotel.address.split(",").map((s:string)=>s.trim());
                 const stateAbbr = parts.find((p:string)=>US_STATES[p]);
                 return stateAbbr ? US_STATES[stateAbbr] : "";
               })() : "";
-              const cityPart = cityName || area || destination;
+              const cityPart = _cn || area || destination;
               const fullLocation = [cityPart, stateName, countryName].filter(Boolean).join(", ");
               const locationLine = distLabel
                 ? `${distLabel} from ${activeRefLabel}`
