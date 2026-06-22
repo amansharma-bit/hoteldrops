@@ -31,6 +31,59 @@ function countryCodeToFlag(cc?: string): string {
 
 // Clean city-only autocomplete, sourced from liteAPI's own city/country data
 // via the backend — no Mapbox, no landmarks, no embassies/councils/rivers.
+const US_CITY_STATE: Record<string, string> = {
+  "New York": "New York", "Los Angeles": "California", "Chicago": "Illinois",
+  "Houston": "Texas", "Phoenix": "Arizona", "Philadelphia": "Pennsylvania",
+  "San Antonio": "Texas", "San Diego": "California", "Dallas": "Texas",
+  "San Jose": "California", "Austin": "Texas", "Jacksonville": "Florida",
+  "Fort Worth": "Texas", "Columbus": "Ohio", "Charlotte": "North Carolina",
+  "Indianapolis": "Indiana", "San Francisco": "California", "Seattle": "Washington",
+  "Denver": "Colorado", "Washington": "D.C.", "Nashville": "Tennessee",
+  "Oklahoma City": "Oklahoma", "El Paso": "Texas", "Boston": "Massachusetts",
+  "Portland": "Oregon", "Las Vegas": "Nevada", "Memphis": "Tennessee",
+  "Louisville": "Kentucky", "Baltimore": "Maryland", "Milwaukee": "Wisconsin",
+  "Albuquerque": "New Mexico", "Tucson": "Arizona", "Fresno": "California",
+  "Mesa": "Arizona", "Sacramento": "California", "Atlanta": "Georgia",
+  "Kansas City": "Missouri", "Omaha": "Nebraska", "Colorado Springs": "Colorado",
+  "Raleigh": "North Carolina", "Long Beach": "California", "Virginia Beach": "Virginia",
+  "Minneapolis": "Minnesota", "Tampa": "Florida", "New Orleans": "Louisiana",
+  "Arlington": "Texas", "Bakersfield": "California", "Honolulu": "Hawaii",
+  "Anaheim": "California", "Aurora": "Colorado", "Santa Ana": "California",
+  "Corpus Christi": "Texas", "Riverside": "California", "Lexington": "Kentucky",
+  "Stockton": "California", "Pittsburgh": "Pennsylvania", "Anchorage": "Alaska",
+  "Greensboro": "North Carolina", "Orlando": "Florida", "Cincinnati": "Ohio",
+  "Newark": "New Jersey", "Toledo": "Ohio", "Irvine": "California",
+  "St. Louis": "Missouri", "Pittsburgh": "Pennsylvania", "Laredo": "Texas",
+  "Madison": "Wisconsin", "Durham": "North Carolina", "Lubbock": "Texas",
+  "Winston-Salem": "North Carolina", "Garland": "Texas", "Glendale": "Arizona",
+  "Hialeah": "Florida", "Reno": "Nevada", "Baton Rouge": "Louisiana",
+  "Irvine": "California", "Chesapeake": "Virginia", "Irving": "Texas",
+  "Scottsdale": "Arizona", "North Las Vegas": "Nevada", "Fremont": "California",
+  "Gilbert": "Arizona", "San Bernardino": "California", "Birmingham": "Alabama",
+  "Rochester": "New York", "Richmond": "Virginia", "Spokane": "Washington",
+  "Des Moines": "Iowa", "Montgomery": "Alabama", "Modesto": "California",
+  "Fayetteville": "North Carolina", "Tacoma": "Washington", "Shreveport": "Louisiana",
+  "Fontana": "California", "Moreno Valley": "California", "Glendale": "California",
+  "Akron": "Ohio", "Huntington Beach": "California", "Little Rock": "Arkansas",
+  "Columbus": "Georgia", "Augusta": "Georgia", "Grand Rapids": "Michigan",
+  "Overland Park": "Kansas", "Tallahassee": "Florida", "Worcester": "Massachusetts",
+  "Knoxville": "Tennessee", "Brownsville": "Texas", "Santa Clarita": "California",
+  "Providence": "Rhode Island", "Garden Grove": "California", "Oceanside": "California",
+  "Chattanooga": "Tennessee", "Fort Lauderdale": "Florida", "Rancho Cucamonga": "California",
+  "Santa Rosa": "California", "Port Arthur": "Texas", "Tempe": "Arizona",
+  "Cape Coral": "Florida", "Jackson": "Mississippi", "Fort Collins": "Colorado",
+  "Annapolis": "Maryland", "Miami": "Florida", "Jersey City": "New Jersey",
+  "Savannah": "Georgia", "Pasadena": "California", "Pasadena": "Texas",
+  "Syracuse": "New York", "Pomona": "California", "Escondido": "California",
+  "Sunnyvale": "California", "Alexandria": "Virginia", "Torrance": "California",
+  "Paterson": "New Jersey", "Bridgeport": "Connecticut", "McAllen": "Texas",
+  "Salinas": "California", "Hayward": "California", "Lakewood": "Colorado",
+  "Clarksville": "Tennessee", "Palmdale": "California", "Springfield": "Missouri",
+  "Lancaster": "California", "Elk Grove": "California", "Roseville": "California",
+  "Corona": "California", "Hollywood": "Florida", "Macon": "Georgia",
+  "Kansas City": "Kansas", "Sunnyvale": "California", "Murfreesboro": "Tennessee",
+};
+
 async function fetchCitySuggestions(query: string): Promise<any[]> {
   try {
     const res = await fetch(`${API}/api/hotels/cities-search?q=${encodeURIComponent(query)}`);
@@ -490,7 +543,11 @@ export default function SearchHotelsPage() {
       countryCode: item.countryCode || undefined,
     };
     setSelection(sel);
-    setInputText(type === 'city' && item.countryName ? `${item.name}, ${item.countryName}` : item.name);
+    setInputText(type === 'city' ? (() => {
+      const state = item.countryCode === 'US' ? (US_CITY_STATE[item.name] || '') : '';
+      const country = item.countryName || '';
+      return [item.name, state, country].filter(Boolean).join(', ');
+    })() : item.name);
     setShowSuggestions(false);
     setTimeout(() => { setCalMode("checkin"); setCalOpen(true); }, 100);
   };
