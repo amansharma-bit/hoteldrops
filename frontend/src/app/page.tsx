@@ -151,6 +151,11 @@ export default function Home() {
   const [openFaq, setOpenFaq] = useState(0);
   const [carouselPos, setCarouselPos] = useState(0);
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [signupPopup, setSignupPopup] = useState(false);
+  const [popupLoading, setPopupLoading] = useState(false);
+  const [popupEmail, setPopupEmail] = useState("");
+  const [popupPw, setPopupPw] = useState("");
+  const [popupErr, setPopupErr] = useState("");
   const [activeTab, setActiveTab] = useState<'home' | 'scan' | 'deals' | 'profile'>('home');
 
   const [modalOpen, setModalOpen]     = useState(false);
@@ -184,6 +189,11 @@ export default function Home() {
       if (data.user) {
         const meta = data.user.user_metadata;
         setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member", email: data.user.email || "" });
+      } else {
+        const dismissed = sessionStorage.getItem("rebuq_popup_dismissed");
+        if (!dismissed) {
+          setTimeout(() => setSignupPopup(true), 3000);
+        }
       }
     });
   }, []);
