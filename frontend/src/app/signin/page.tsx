@@ -243,7 +243,7 @@ export default function SignInPage() {
   /* ── PHOTO PANEL (desktop left side) ── */
   const PhotoPanel = (
     <div style={{ width: "50%", position: "relative", overflow: "hidden" }}>
-      <img src="/signin-beach.jpg" alt="Beach" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", display: "block" }} />
+      <img src="/signin-beach.jpg" alt="Beach" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 40%", display: "block" }} />
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(10,22,40,0.25) 0%, rgba(10,22,40,0.6) 100%)" }} />
       <div style={{ position: "absolute", bottom: 60, left: 48, right: 48 }}>
         <p style={{ fontFamily: "'Sora',sans-serif", fontSize: 28, fontWeight: 800, color: "#fff", lineHeight: 1.25, marginBottom: 16 }}>
