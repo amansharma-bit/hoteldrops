@@ -147,6 +147,155 @@ const TICKER_ITEMS = [
   { name: "Arjun T.", hotel: "The Langham, London", saved: "₹26,200", time: "31 min ago" },
 ];
 
+const use client";
+
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+const B = "#1447b8";
+const YELLOW = "#FCD34D";
+const NAVY = "#0f172a";
+const API = "https://hoteldrops-production-7e5a.up.railway.app";
+const MAPBOX_TOKEN = "pk.eyJ1Ijoib21zYWlyYW0wMSIsImEiOiJjbXB4bngxdWwwMWI2MnBzZ3p2dGM3bW5rIn0.8qCkSAodMjGVg6qhiCZHzw";
+
+// One fresh sessionId per real search (new destination/dates) — keeps rates
+// consistent listing→detail when liteAPI's price-consistency feature is on.
+function genSessionId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `s_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
+// Builds a flag emoji from a 2-letter ISO country code — no hardcoded lookup table needed.
+function countryCodeToFlag(cc?: string): string {
+  if (!cc || cc.length !== 2) return "";
+  const code = cc.toUpperCase();
+  return String.fromCodePoint(...code.split("").map(c => 0x1F1E6 + (c.charCodeAt(0) - 65)));
+}
+
+// Clean city-only autocomplete, sourced from liteAPI's own city/country data
+// via the backend — no Mapbox, no landmarks, no embassies/councils/rivers.
+const US_CITY_STATE: Record<string, string> = {
+  "New York": "New York", "Los Angeles": "California", "Chicago": "Illinois",
+  "Houston": "Texas", "Phoenix": "Arizona", "Philadelphia": "Pennsylvania",
+  "San Antonio": "Texas", "San Diego": "California", "Dallas": "Texas",
+  "San Jose": "California", "Austin": "Texas", "Jacksonville": "Florida",
+  "Fort Worth": "Texas", "Columbus": "Ohio", "Charlotte": "North Carolina",
+  "Indianapolis": "Indiana", "San Francisco": "California", "Seattle": "Washington",
+  "Denver": "Colorado", "Washington": "D.C.", "Nashville": "Tennessee",
+  "Oklahoma City": "Oklahoma", "El Paso": "Texas", "Boston": "Massachusetts",
+  "Portland": "Oregon", "Las Vegas": "Nevada", "Memphis": "Tennessee",
+  "Louisville": "Kentucky", "Baltimore": "Maryland", "Milwaukee": "Wisconsin",
+  "Albuquerque": "New Mexico", "Tucson": "Arizona", "Fresno": "California",
+  "Mesa": "Arizona", "Sacramento": "California", "Atlanta": "Georgia",
+  "Kansas City": "Missouri", "Omaha": "Nebraska", "Colorado Springs": "Colorado",
+  "Raleigh": "North Carolina", "Long Beach": "California", "Virginia Beach": "Virginia",
+  "Minneapolis": "Minnesota", "Tampa": "Florida", "New Orleans": "Louisiana",
+  "Arlington": "Texas", "Honolulu": "Hawaii", "Anaheim": "California",
+  "Aurora": "Colorado", "Santa Ana": "California", "Corpus Christi": "Texas",
+  "Riverside": "California", "Lexington": "Kentucky", "Stockton": "California",
+  "Pittsburgh": "Pennsylvania", "Anchorage": "Alaska", "Greensboro": "North Carolina",
+  "Orlando": "Florida", "Cincinnati": "Ohio", "Newark": "New Jersey",
+  "Toledo": "Ohio", "Irvine": "California", "St. Louis": "Missouri",
+  "Laredo": "Texas", "Madison": "Wisconsin", "Durham": "North Carolina",
+  "Lubbock": "Texas", "Winston-Salem": "North Carolina", "Garland": "Texas",
+  "Glendale": "Arizona", "Hialeah": "Florida", "Reno": "Nevada",
+  "Baton Rouge": "Louisiana", "Chesapeake": "Virginia", "Irving": "Texas",
+  "Scottsdale": "Arizona", "North Las Vegas": "Nevada", "Fremont": "California",
+  "Gilbert": "Arizona", "San Bernardino": "California", "Birmingham": "Alabama",
+  "Rochester": "New York", "Richmond": "Virginia", "Spokane": "Washington",
+  "Des Moines": "Iowa", "Montgomery": "Alabama", "Modesto": "California",
+  "Fayetteville": "North Carolina", "Tacoma": "Washington", "Shreveport": "Louisiana",
+  "Fontana": "California", "Moreno Valley": "California", "Akron": "Ohio",
+  "Huntington Beach": "California", "Little Rock": "Arkansas", "Augusta": "Georgia",
+  "Grand Rapids": "Michigan", "Overland Park": "Kansas", "Tallahassee": "Florida",
+  "Worcester": "Massachusetts", "Knoxville": "Tennessee", "Brownsville": "Texas",
+  "Santa Clarita": "California", "Providence": "Rhode Island", "Garden Grove": "California",
+  "Oceanside": "California", "Chattanooga": "Tennessee", "Fort Lauderdale": "Florida",
+  "Rancho Cucamonga": "California", "Santa Rosa": "California", "Tempe": "Arizona",
+  "Cape Coral": "Florida", "Jackson": "Mississippi", "Fort Collins": "Colorado",
+  "Annapolis": "Maryland", "Miami": "Florida", "Jersey City": "New Jersey",
+  "Savannah": "Georgia", "Pasadena": "California", "Syracuse": "New York",
+  "Pomona": "California", "Escondido": "California", "Sunnyvale": "California",
+  "Alexandria": "Virginia", "Torrance": "California", "Paterson": "New Jersey",
+  "Bridgeport": "Connecticut", "McAllen": "Texas", "Salinas": "California",
+  "Hayward": "California", "Lakewood": "Colorado", "Clarksville": "Tennessee",
+  "Palmdale": "California", "Springfield": "Missouri", "Lancaster": "California",
+  "Elk Grove": "California", "Roseville": "California", "Corona": "California",
+  "Hollywood": "Florida", "Macon": "Georgia", "Murfreesboro": "Tennessee",
+};
+
+async function fetchCitySuggestions(query: string): Promise<any[]> {
+  try {
+    const res = await fetch(`${API}/api/hotels/cities-search?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    return (data.cities || []).map((c: any) => ({
+      type: c.type || "city",
+      name: c.name,
+      countryName: c.countryName || "",
+      countryCode: c.countryCode || "",
+      flag: c.flag || "",
+      placeId: null,
+      lat: c.lat ?? null,
+      lng: c.lng ?? null,
+      radius: c.radius ?? null,
+      placeTypes: c.placeTypes || ["place"],
+    }));
+  } catch {
+    return [];
+  }
+}
+
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(true);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 900);
+    check(); window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+}
+
+function toDateStr(y: number, m: number, d: number): string {
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+function getDaysInMonth(y: number, m: number): number { return new Date(y, m + 1, 0).getDate(); }
+function getFirstDow(y: number, m: number): number { return new Date(y, m, 1).getDay(); }
+
+function getDefaultDates() {
+  const today = new Date();
+  const ci = new Date(today); ci.setDate(today.getDate() + 14);
+  const co = new Date(today); co.setDate(today.getDate() + 15);
+  return {
+    checkIn: toDateStr(ci.getFullYear(), ci.getMonth(), ci.getDate()),
+    checkOut: toDateStr(co.getFullYear(), co.getMonth(), co.getDate()),
+  };
+}
+
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DOWS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+const TICKER_ITEMS = [
+  { name: "Rahul M.", hotel: "Park Hyatt, Maldives", saved: "₹31,600", time: "Just now" },
+  { name: "Priya S.", hotel: "Atlantis The Palm, Dubai", saved: "₹22,400", time: "4 min ago" },
+  { name: "Vikram S.", hotel: "Burj Al Arab, Dubai", saved: "₹48,000", time: "11 min ago" },
+  { name: "Neha R.", hotel: "Four Seasons, Bali", saved: "₹18,200", time: "23 min ago" },
+  { name: "Arjun T.", hotel: "The Langham, London", saved: "₹26,200", time: "31 min ago" },
+];
+
 const DESTINATIONS = [
   { flag: "🇦🇪", city: "Dubai", country: "United Arab Emirates", img: "/dubai.jpg", badge: "🔥 Hot", badgeColor: "#ef4444", badgeText: "#fff" },
   { flag: "🇮🇳", city: "New Delhi", country: "India", img: "/newdelhi.jpg", badge: "Member Deal", badgeColor: "#1447b8", badgeText: "#fff" },
