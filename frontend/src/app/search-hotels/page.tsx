@@ -357,7 +357,7 @@ export default function SearchHotelsPage() {
   const statsAnimated = useRef(false);
 
   const defaultSuggestions = {
-    cities: DESTINATIONS.map(d => ({ type: 'city', name: d.city, subtext: d.country, flag: d.flag, placeId: null, placeType: 'city' })),
+    cities: DESTINATIONS.map(d => ({ type: 'city', name: d.city, subtext: d.country, countryName: d.country, countryCode: '', flag: d.flag, placeId: null, placeType: 'city' })),
     hotels: [], areas: [], landmarks: [], airport: null
   };
 
