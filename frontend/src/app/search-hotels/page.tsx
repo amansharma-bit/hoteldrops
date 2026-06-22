@@ -41,96 +41,16 @@ const US_CITY_STATE: Record<string, string> = {
   "Denver": "Colorado", "Washington": "D.C.", "Nashville": "Tennessee",
   "Oklahoma City": "Oklahoma", "El Paso": "Texas", "Boston": "Massachusetts",
   "Portland": "Oregon", "Las Vegas": "Nevada", "Memphis": "Tennessee",
-  "Louisville": "Kentucky", "Baltimore": "Maryland", "Milwaukee": "Wisconsin",
-  "Albuquerque": "New Mexico", "Tucson": "Arizona", "Fresno": "California",
-  "Mesa": "Arizona", "Sacramento": "California", "Atlanta": "Georgia",
+  "Louisville": "Kentucky", "Baltimore": "Maryland", "Annapolis": "Maryland",
+  "Milwaukee": "Wisconsin", "Albuquerque": "New Mexico", "Tucson": "Arizona",
+  "Fresno": "California", "Sacramento": "California", "Atlanta": "Georgia",
   "Kansas City": "Missouri", "Omaha": "Nebraska", "Colorado Springs": "Colorado",
-  "Raleigh": "North Carolina", "Long Beach": "California", "Virginia Beach": "Virginia",
-  "Minneapolis": "Minnesota", "Tampa": "Florida", "New Orleans": "Louisiana",
-  "Arlington": "Texas", "Honolulu": "Hawaii", "Anaheim": "California",
-  "Aurora": "Colorado", "Santa Ana": "California", "Corpus Christi": "Texas",
-  "Riverside": "California", "Lexington": "Kentucky", "Stockton": "California",
-  "Pittsburgh": "Pennsylvania", "Anchorage": "Alaska", "Greensboro": "North Carolina",
-  "Orlando": "Florida", "Cincinnati": "Ohio", "Newark": "New Jersey",
-  "Toledo": "Ohio", "Irvine": "California", "St. Louis": "Missouri",
-  "Laredo": "Texas", "Madison": "Wisconsin", "Durham": "North Carolina",
-  "Lubbock": "Texas", "Winston-Salem": "North Carolina", "Garland": "Texas",
-  "Glendale": "Arizona", "Hialeah": "Florida", "Reno": "Nevada",
-  "Baton Rouge": "Louisiana", "Chesapeake": "Virginia", "Irving": "Texas",
-  "Scottsdale": "Arizona", "North Las Vegas": "Nevada", "Fremont": "California",
-  "Gilbert": "Arizona", "San Bernardino": "California", "Birmingham": "Alabama",
-  "Rochester": "New York", "Richmond": "Virginia", "Spokane": "Washington",
-  "Des Moines": "Iowa", "Montgomery": "Alabama", "Modesto": "California",
-  "Fayetteville": "North Carolina", "Tacoma": "Washington", "Shreveport": "Louisiana",
-  "Fontana": "California", "Moreno Valley": "California", "Akron": "Ohio",
-  "Huntington Beach": "California", "Little Rock": "Arkansas", "Augusta": "Georgia",
-  "Grand Rapids": "Michigan", "Overland Park": "Kansas", "Tallahassee": "Florida",
-  "Worcester": "Massachusetts", "Knoxville": "Tennessee", "Brownsville": "Texas",
-  "Santa Clarita": "California", "Providence": "Rhode Island", "Garden Grove": "California",
-  "Oceanside": "California", "Chattanooga": "Tennessee", "Fort Lauderdale": "Florida",
-  "Rancho Cucamonga": "California", "Santa Rosa": "California", "Tempe": "Arizona",
-  "Cape Coral": "Florida", "Jackson": "Mississippi", "Fort Collins": "Colorado",
-  "Annapolis": "Maryland", "Miami": "Florida", "Jersey City": "New Jersey",
-  "Savannah": "Georgia", "Pasadena": "California", "Syracuse": "New York",
-  "Pomona": "California", "Escondido": "California", "Sunnyvale": "California",
-  "Alexandria": "Virginia", "Torrance": "California", "Paterson": "New Jersey",
-  "Bridgeport": "Connecticut", "McAllen": "Texas", "Salinas": "California",
-  "Hayward": "California", "Lakewood": "Colorado", "Clarksville": "Tennessee",
-  "Palmdale": "California", "Springfield": "Missouri", "Lancaster": "California",
-  "Elk Grove": "California", "Roseville": "California", "Corona": "California",
-  "Hollywood": "Florida", "Macon": "Georgia", "Murfreesboro": "Tennessee",
+  "Raleigh": "North Carolina", "Minneapolis": "Minnesota", "Tampa": "Florida",
+  "New Orleans": "Louisiana", "Arlington": "Texas", "Honolulu": "Hawaii",
+  "Miami": "Florida", "Orlando": "Florida", "Pittsburgh": "Pennsylvania",
+  "Cincinnati": "Ohio", "St. Louis": "Missouri", "Cleveland": "Ohio",
+  "Richmond": "Virginia", "Detroit": "Michigan", "Charlotte": "North Carolina",
 };
-
-const US_CITY_STATE: Record<string, string> = {
-  "New York": "New York", "Los Angeles": "California", "Chicago": "Illinois",
-  "Houston": "Texas", "Phoenix": "Arizona", "Philadelphia": "Pennsylvania",
-  "San Antonio": "Texas", "San Diego": "California", "Dallas": "Texas",
-  "San Jose": "California", "Austin": "Texas", "Jacksonville": "Florida",
-  "Fort Worth": "Texas", "Columbus": "Ohio", "Charlotte": "North Carolina",
-  "Indianapolis": "Indiana", "San Francisco": "California", "Seattle": "Washington",
-  "Denver": "Colorado", "Washington": "D.C.", "Nashville": "Tennessee",
-  "Oklahoma City": "Oklahoma", "El Paso": "Texas", "Boston": "Massachusetts",
-  "Portland": "Oregon", "Las Vegas": "Nevada", "Memphis": "Tennessee",
-  "Louisville": "Kentucky", "Baltimore": "Maryland", "Milwaukee": "Wisconsin",
-  "Albuquerque": "New Mexico", "Tucson": "Arizona", "Fresno": "California",
-  "Mesa": "Arizona", "Sacramento": "California", "Atlanta": "Georgia",
-  "Kansas City": "Missouri", "Omaha": "Nebraska", "Colorado Springs": "Colorado",
-  "Raleigh": "North Carolina", "Long Beach": "California", "Virginia Beach": "Virginia",
-  "Minneapolis": "Minnesota", "Tampa": "Florida", "New Orleans": "Louisiana",
-  "Arlington": "Texas", "Honolulu": "Hawaii", "Anaheim": "California",
-  "Aurora": "Colorado", "Santa Ana": "California", "Corpus Christi": "Texas",
-  "Riverside": "California", "Lexington": "Kentucky", "Stockton": "California",
-  "Pittsburgh": "Pennsylvania", "Anchorage": "Alaska", "Greensboro": "North Carolina",
-  "Orlando": "Florida", "Cincinnati": "Ohio", "Newark": "New Jersey",
-  "Toledo": "Ohio", "Irvine": "California", "St. Louis": "Missouri",
-  "Laredo": "Texas", "Madison": "Wisconsin", "Durham": "North Carolina",
-  "Lubbock": "Texas", "Winston-Salem": "North Carolina", "Garland": "Texas",
-  "Glendale": "Arizona", "Hialeah": "Florida", "Reno": "Nevada",
-  "Baton Rouge": "Louisiana", "Chesapeake": "Virginia", "Irving": "Texas",
-  "Scottsdale": "Arizona", "North Las Vegas": "Nevada", "Fremont": "California",
-  "Gilbert": "Arizona", "San Bernardino": "California", "Birmingham": "Alabama",
-  "Rochester": "New York", "Richmond": "Virginia", "Spokane": "Washington",
-  "Des Moines": "Iowa", "Montgomery": "Alabama", "Modesto": "California",
-  "Fayetteville": "North Carolina", "Tacoma": "Washington", "Shreveport": "Louisiana",
-  "Fontana": "California", "Moreno Valley": "California", "Akron": "Ohio",
-  "Huntington Beach": "California", "Little Rock": "Arkansas", "Augusta": "Georgia",
-  "Grand Rapids": "Michigan", "Overland Park": "Kansas", "Tallahassee": "Florida",
-  "Worcester": "Massachusetts", "Knoxville": "Tennessee", "Brownsville": "Texas",
-  "Santa Clarita": "California", "Providence": "Rhode Island", "Garden Grove": "California",
-  "Oceanside": "California", "Chattanooga": "Tennessee", "Fort Lauderdale": "Florida",
-  "Rancho Cucamonga": "California", "Santa Rosa": "California", "Tempe": "Arizona",
-  "Cape Coral": "Florida", "Jackson": "Mississippi", "Fort Collins": "Colorado",
-  "Annapolis": "Maryland", "Miami": "Florida", "Jersey City": "New Jersey",
-  "Savannah": "Georgia", "Pasadena": "California", "Syracuse": "New York",
-  "Pomona": "California", "Escondido": "California", "Sunnyvale": "California",
-  "Alexandria": "Virginia", "Torrance": "California", "Paterson": "New Jersey",
-  "Bridgeport": "Connecticut", "McAllen": "Texas", "Salinas": "California",
-  "Hayward": "California", "Lakewood": "Colorado", "Clarksville": "Tennessee",
-  "Palmdale": "California", "Springfield": "Missouri", "Lancaster": "California",
-  "Elk Grove": "California", "Roseville": "California", "Corona": "California",
-  "Hollywood": "Florida", "Macon": "Georgia", "Murfreesboro": "Tennessee",
-};
-
 async function fetchCitySuggestions(query: string): Promise<any[]> {
   try {
     const res = await fetch(`${API}/api/hotels/cities-search?q=${encodeURIComponent(query)}`);
@@ -345,10 +265,10 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
 const CITY_FILTERS = ["Top Sellers", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai", "Bangalore", "Tokyo"];
 
 const STATS = [
-  { id: 0, target: 270000, prefix: "", suffix: "+", label: "Member deals live right now", boldTop: false },
-  { id: 1, target: null, prefix: "", suffix: "", boldText: "Lowest Price", label: "Guaranteed", boldTop: true },
-  { id: 2, target: 18, prefix: "₹", suffix: "Cr", label: "Saved for members", boldTop: false },
-  { id: 3, target: null, prefix: "", suffix: "", boldText: "Price Drop Protection", label: "Auto-monitored, 24/7", boldTop: true },
+  { id: 0, target: 4200, prefix: "", suffix: "+", label: "Member deals live right now" },
+  { id: 1, target: 18, prefix: "₹", suffix: "Cr", label: "Saved for members" },
+  { id: 2, target: 28, prefix: "", suffix: "%", label: "Avg below OTA price" },
+  { id: 3, target: 500000, prefix: "", suffix: "+", label: "Hotels in our network" },
 ];
 
 interface GuestState { rooms: number; adults: number; children: number; childAges: number[]; }
@@ -379,7 +299,6 @@ export default function SearchHotelsPage() {
   const defaults = getDefaultDates();
 
   const [user, setUser] = useState<{ name: string } | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
   const [inputText, setInputText] = useState("");
   const [selection, setSelection] = useState<Selection | null>(null);
   const [checkIn, setCheckIn] = useState(defaults.checkIn);
@@ -393,7 +312,7 @@ export default function SearchHotelsPage() {
   useEffect(() => { setHotelCarouselPos(0); }, [activeCity]);
   const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
-  const [statVals, setStatVals] = useState(STATS.map(s => s.target === null ? "" : `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
+  const [statVals, setStatVals] = useState(STATS.map(s => `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [calOpen, setCalOpen] = useState(false);
@@ -407,7 +326,7 @@ export default function SearchHotelsPage() {
   const statsAnimated = useRef(false);
 
   const defaultSuggestions = {
-    cities: DESTINATIONS.map(d => ({ type: 'city', name: d.city, subtext: d.country, countryName: d.country, countryCode: '', flag: d.flag, placeId: null, placeType: 'city' })),
+    cities: DESTINATIONS.map(d => ({ type: 'city', name: d.city, subtext: d.country, flag: d.flag, placeId: null, placeType: 'city' })),
     hotels: [], areas: [], landmarks: [], airport: null
   };
 
@@ -438,13 +357,10 @@ export default function SearchHotelsPage() {
   }, [inputText]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) {
-        const meta = data.session.user.user_metadata;
-        setUser({ name: meta?.full_name || meta?.name || data.session.user.email?.split("@")[0] || "Member" });
-        setAuthChecked(true);
-      } else {
-        router.push("/?signup=1");
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        const meta = data.user.user_metadata;
+        setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member" });
       }
     });
   }, []);
@@ -546,9 +462,6 @@ export default function SearchHotelsPage() {
         // rates search accepts this pair natively.
         params.set('cityName', sel.label);
         params.set('countryCode', sel.countryCode);
-        // Override destination with full display label: "Dubai, United Arab Emirates"
-        const countryDisplayName = (sel as any).countryName || sel.countryCode || '';
-        if (countryDisplayName) params.set('destination', `${sel.label}, ${countryDisplayName}`);
         router.push(`/search?${params.toString()}`);
       } else if (sel.placeId && !isCityLevel) {
         params.set('placeId', sel.placeId);
@@ -892,8 +805,6 @@ export default function SearchHotelsPage() {
   const DEST_MAX_POS = DEST_CARDS.length - DEST_VISIBLE;
   const scrollDestCarousel = (dir: number) => setDestCarouselPos(prev => Math.max(0, Math.min(DEST_MAX_POS, prev + dir)));
 
-  if (!authChecked) return null;
-
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, overflowX: "hidden", paddingBottom: isMobile ? 72 : 0 }}>
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -1142,17 +1053,8 @@ export default function SearchHotelsPage() {
           <div style={{ padding: "26px 40px", display: "grid", gridTemplateColumns: "repeat(4,1fr)" }}>
             {STATS.map((s, i) => (
               <div key={i} style={{ textAlign: "center", borderRight: i < 3 ? "1px solid #e2e8f0" : "none", padding: "0 20px" }}>
-                <div className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY }}>
-                  {s.boldTop ? (
-                    <>
-                      <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: NAVY, lineHeight: 1.2 }}>{(s as any).boldText}</span>
-                      <span style={{ display: "block", fontSize: 13, fontWeight: 400, color: "#64748b", marginTop: 4 }}>{s.label}</span>
-                    </>
-                  ) : (
-                    <>{statVals[i]}</>
-                  )}
-                </div>
-                {!s.boldTop && <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{s.label}</div>}
+                <div className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY }}>{statVals[i]}</div>
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{s.label}</div>
               </div>
             ))}
           </div>
