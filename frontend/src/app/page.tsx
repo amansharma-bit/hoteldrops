@@ -91,7 +91,7 @@ async function compressImage(inputFile: File): Promise<File> {
     const url = URL.createObjectURL(inputFile);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      const MAX = 1600;
+      const MAX = 2000;
       let w = img.width, h = img.height;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -104,7 +104,7 @@ async function compressImage(inputFile: File): Promise<File> {
       canvas.toBlob((blob) => {
         if (blob) resolve(new File([blob], 'voucher.jpg', { type: 'image/jpeg' }));
         else resolve(inputFile);
-      }, 'image/jpeg', 0.85);
+      }, 'image/jpeg', 0.92);
     };
     img.onerror = () => { URL.revokeObjectURL(url); resolve(inputFile); };
     img.src = url;
