@@ -311,7 +311,7 @@ export default function Home() {
           setExtractResult(json);
           setUploadStep('hotel_pick');
         } else if (json.data?.hotels?.length === 1) {
-          setExtracted({ ...emptyExtracted(), ...json.data.hotels[0] });
+          setExtracted({ ...emptyExtracted(), check_in: json.data.check_in || '', check_out: json.data.check_out || '', total_nights: json.data.total_nights || 0, num_adults: json.data.num_adults || 2, num_children: json.data.num_children || 0, children_ages: json.data.children_ages || [], ota_name: json.data.ota_name || '', ...json.data.hotels[0] });
           setUploadStep(2);
         } else {
           setExtracted({ ...emptyExtracted(), ...json.data });
@@ -568,7 +568,7 @@ export default function Home() {
                 <div>
                   <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>We found multiple hotels in your screenshot. Pick the one you want to track:</p>
                   {extractResult.data.hotels.map((h: any, i: number) => (
-                    <button key={i} onClick={() => { setSelectedHotelIdx(i); setExtracted({ ...emptyExtracted(), ...h }); setWarnings(extractResult.warnings || {}); setUploadStep(2); }}
+                    <button key={i} onClick={() => { setSelectedHotelIdx(i); setExtracted({ ...emptyExtracted(), check_in: extractResult.data.check_in || '', check_out: extractResult.data.check_out || '', total_nights: extractResult.data.total_nights || 0, num_adults: extractResult.data.num_adults || 2, num_children: extractResult.data.num_children || 0, children_ages: extractResult.data.children_ages || [], ota_name: extractResult.data.ota_name || '', ...h }); setWarnings(extractResult.warnings || {}); setUploadStep(2); }}
                       style={{ width: '100%', background: selectedHotelIdx === i ? '#eff6ff' : '#f8fafc', border: `1.5px solid ${selectedHotelIdx === i ? B : '#e2e8f0'}`, borderRadius: 12, padding: '14px 16px', marginBottom: 10, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: NAVY, marginBottom: 4 }}>{h.hotel_name || 'Unknown hotel'}</div>
                       <div style={{ fontSize: 12, color: '#64748b' }}>{h.hotel_city} · {h.check_in} → {h.check_out}{h.total_price_paid ? ` · ₹${Math.round(h.total_price_paid).toLocaleString('en-IN')}` : ''}</div>
