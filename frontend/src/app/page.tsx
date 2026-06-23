@@ -311,7 +311,8 @@ export default function Home() {
           setExtractResult(json);
           setUploadStep('hotel_pick');
         } else if (json.data?.hotels?.length === 1) {
-          setExtracted({ ...emptyExtracted(), check_in: json.data.check_in || '', check_out: json.data.check_out || '', total_nights: json.data.total_nights || 0, num_adults: json.data.num_adults || 2, num_children: json.data.num_children || 0, children_ages: json.data.children_ages || [], ota_name: json.data.ota_name || '', ...json.data.hotels[0] });
+          const _h0 = json.data.hotels[0]; setExtracted({ ...emptyExtracted(), check_in: json.data.check_in || '', check_out: json.data.check_out || '', total_nights: json.data.total_nights || 0, num_adults: json.data.num_adults || 2, num_children: json.data.num_children || 0, children_ages: json.data.children_ages || [], ota_name: json.data.ota_name || '', ..._h0 });
+          if (!_h0?.total_price_paid && !_h0?.price_per_night_incl_tax) setEditMode(true);
           setUploadStep(2);
         } else {
           setExtracted({ ...emptyExtracted(), ...json.data });
@@ -342,6 +343,7 @@ export default function Home() {
           setExtracted({ ...emptyExtracted(), ...json.data });
           setWarnings(json.warnings || {});
           setDocType('hotel_detail_rooms');
+          if (!json.data?.total_price_paid) setEditMode(true);
           setUploadStep(2);
         }
         return;
@@ -616,7 +618,12 @@ export default function Home() {
                             <div><label style={lbl}>Rooms</label><input style={inp} type="number" min="1" max="9" value={extracted.num_rooms || 1} onChange={e => setExtracted({ ...extracted, num_rooms: Number(e.target.value) })} /></div>
                           </div>
                           <div style={{ marginBottom: 10 }}><label style={lbl}>Children (ages, comma separated e.g. 5,8)</label><input style={inp} placeholder="Leave blank if no children" value={(extracted.children_ages||[]).join(',')} onChange={e => { const ages = e.target.value.split(',').map((a:string)=>parseInt(a.trim())).filter((a:number)=>!isNaN(a)); setExtracted({ ...extracted, num_children: ages.length, children_ages: ages }); }} /></div>
-                          <div style={{ marginBottom: 10 }}><label style={lbl}>Total price paid (₹)</label><input style={inp} type="number" value={extracted.total_price_paid || ''} placeholder="Enter total price incl. taxes" onChange={e => setExtracted({ ...extracted, total_price_paid: Number(e.target.value) })} /></div>
+                          <div style={{ marginBottom: 10 }}>
+                            <label style={{...lbl, color: !extracted.total_price_paid ? '#dc2626' : undefined}}>
+                              Total price paid (₹){!extracted.total_price_paid ? ' ← Required' : ''}
+                            </label>
+                            <input style={{...inp, borderColor: !extracted.total_price_paid ? '#dc2626' : undefined, background: !extracted.total_price_paid ? '#fef2f2' : undefined}} type="number" value={extracted.total_price_paid || ''} placeholder="Enter total price incl. taxes" onChange={e => setExtracted({ ...extracted, total_price_paid: Number(e.target.value) })} />
+                          </div>
                         </div>
                       )}
                       <div style={{ background: NAVY, borderRadius: 14, padding: 20, marginBottom: 16 }}>
