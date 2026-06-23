@@ -343,7 +343,7 @@ export default function Home() {
           setExtracted({ ...emptyExtracted(), ...json.data });
           setWarnings(json.warnings || {});
           setDocType('hotel_detail_rooms');
-          if (!json.data?.total_price_paid) setEditMode(true);
+          setEditMode(true);
           setUploadStep(2);
         }
         return;
@@ -596,6 +596,14 @@ export default function Home() {
                 <div>
                   {(docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top' || docType === 'checkout_page') ? (
                     <div>
+                      {/* Not-booked-yet banner */}
+                      <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)', border: '1.5px solid #bfdbfe', borderRadius: 14, padding: '16px 18px', marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                        <div style={{ fontSize: 22, flexShrink: 0 }}>🔍</div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: '#1447b8', marginBottom: 3, fontFamily: "'Sora',sans-serif" }}>Looks like you haven't booked yet — that's perfect.</div>
+                          <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>Tell us the hotel and your travel dates below. We'll monitor the price and alert you the moment it drops — so you can book at the lowest rate.</div>
+                        </div>
+                      </div>
                       {warnings.partialExtraction && (<div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}><strong>Partial read</strong> — Please check and fill in missing details.</div>)}
                       <div style={{ marginBottom: 16 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
