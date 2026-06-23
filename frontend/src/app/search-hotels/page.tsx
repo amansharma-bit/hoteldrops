@@ -265,10 +265,10 @@ const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
 const CITY_FILTERS = ["Top Sellers", "Dubai", "New Delhi", "Singapore", "Goa", "Bali", "Mumbai", "Bangalore", "Tokyo"];
 
 const STATS = [
-  { id: 0, target: 4200, prefix: "", suffix: "+", label: "Member deals live right now" },
-  { id: 1, target: 18, prefix: "₹", suffix: "Cr", label: "Saved for members" },
-  { id: 2, target: 28, prefix: "", suffix: "%", label: "Avg below OTA price" },
-  { id: 3, target: 500000, prefix: "", suffix: "+", label: "Hotels in our network" },
+  { id: 0, target: 270000, prefix: "", suffix: "+", label: "Member deals live right now", boldTop: false },
+  { id: 1, target: null, prefix: "", suffix: "", boldText: "Lowest Price", label: "Guaranteed", boldTop: true },
+  { id: 2, target: 18, prefix: "₹", suffix: "Cr", label: "Saved for members", boldTop: false },
+  { id: 3, target: null, prefix: "", suffix: "", boldText: "Price Drop Protection", label: "Auto-monitored, 24/7", boldTop: true },
 ];
 
 interface GuestState { rooms: number; adults: number; children: number; childAges: number[]; }
@@ -299,6 +299,7 @@ export default function SearchHotelsPage() {
   const defaults = getDefaultDates();
 
   const [user, setUser] = useState<{ name: string } | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [inputText, setInputText] = useState("");
   const [selection, setSelection] = useState<Selection | null>(null);
   const [checkIn, setCheckIn] = useState(defaults.checkIn);
@@ -312,7 +313,7 @@ export default function SearchHotelsPage() {
   useEffect(() => { setHotelCarouselPos(0); }, [activeCity]);
   const [tickerIdx, setTickerIdx] = useState(0);
   const [tickerVisible, setTickerVisible] = useState(true);
-  const [statVals, setStatVals] = useState(STATS.map(s => `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
+  const [statVals, setStatVals] = useState(STATS.map(s => s.target === null ? "" : `${s.prefix}${s.target.toLocaleString("en-IN")}${s.suffix}`));
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [calOpen, setCalOpen] = useState(false);
@@ -805,6 +806,8 @@ export default function SearchHotelsPage() {
   const DEST_MAX_POS = DEST_CARDS.length - DEST_VISIBLE;
   const scrollDestCarousel = (dir: number) => setDestCarouselPos(prev => Math.max(0, Math.min(DEST_MAX_POS, prev + dir)));
 
+  if (!authChecked) return null;
+
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 15, lineHeight: 1.6, overflowX: "hidden", paddingBottom: isMobile ? 72 : 0 }}>
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -1053,8 +1056,17 @@ export default function SearchHotelsPage() {
           <div style={{ padding: "26px 40px", display: "grid", gridTemplateColumns: "repeat(4,1fr)" }}>
             {STATS.map((s, i) => (
               <div key={i} style={{ textAlign: "center", borderRight: i < 3 ? "1px solid #e2e8f0" : "none", padding: "0 20px" }}>
-                <div className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY }}>{statVals[i]}</div>
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{s.label}</div>
+                <div className="sora" style={{ fontSize: 26, fontWeight: 800, color: NAVY }}>
+                  {(s as any).boldTop ? (
+                    <>
+                      <span style={{ display: "block", fontSize: 22, fontWeight: 800, color: NAVY, lineHeight: 1.2 }}>{(s as any).boldText}</span>
+                      <span style={{ display: "block", fontSize: 13, fontWeight: 400, color: "#64748b", marginTop: 4 }}>{s.label}</span>
+                    </>
+                  ) : (
+                    <>{statVals[i]}</>
+                  )}
+                </div>
+                {!(s as any).boldTop && <div style={{ fontSize: 12, color: "#64748b", marginTop: 3 }}>{s.label}</div>}
               </div>
             ))}
           </div>
