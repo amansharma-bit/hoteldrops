@@ -394,7 +394,9 @@ export default function Home() {
     if (!extracted?.hotel_name)        { setSubmitError('Please enter the hotel name'); return; }
     if (!extracted?.check_in)         { setSubmitError('Please enter check-in date'); return; }
     if (!extracted?.check_out)        { setSubmitError('Please enter check-out date'); return; }
-    if (!extracted?.total_price_paid) { setSubmitError('Please enter the total price you paid'); return; }
+    const effectivePrice = extracted?.total_price_paid || extracted?.price_per_night || 0;
+    if (!effectivePrice) { setSubmitError('Please enter the total price you paid'); return; }
+    if (!extracted?.total_price_paid && extracted?.price_per_night) setExtracted(prev => ({ ...prev, total_price_paid: prev.price_per_night * (prev.total_nights || 1) }));
     if (extracted?.cancellation_policy === 'non-refundable') {
       setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return;
     }
@@ -570,7 +572,7 @@ export default function Home() {
                 <div>
                   <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>We found multiple hotels in your screenshot. Pick the one you want to track:</p>
                   {extractResult.data.hotels.map((h: any, i: number) => (
-                    <button key={i} onClick={() => { setSelectedHotelIdx(i); setExtracted({ ...emptyExtracted(), check_in: extractResult.data.check_in || '', check_out: extractResult.data.check_out || '', total_nights: extractResult.data.total_nights || 0, num_adults: extractResult.data.num_adults || 2, num_children: extractResult.data.num_children || 0, children_ages: extractResult.data.children_ages || [], ota_name: extractResult.data.ota_name || '', ...h }); setWarnings(extractResult.warnings || {}); setUploadStep(2); }}
+                    <button key={i} onClick={() => { setSelectedHotelIdx(i); const _merged = { ...emptyExtracted(), check_in: extractResult.data.check_in || '', check_out: extractResult.data.check_out || '', total_nights: extractResult.data.total_nights || 0, num_adults: extractResult.data.num_adults || 2, num_children: extractResult.data.num_children || 0, children_ages: extractResult.data.children_ages || [], ota_name: extractResult.data.ota_name || '', ...h }; setExtracted(_merged); setWarnings(extractResult.warnings || {}); if (!_merged.total_price_paid) setEditMode(true); setUploadStep(2); }}
                       style={{ width: '100%', background: selectedHotelIdx === i ? '#eff6ff' : '#f8fafc', border: `1.5px solid ${selectedHotelIdx === i ? B : '#e2e8f0'}`, borderRadius: 12, padding: '14px 16px', marginBottom: 10, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: NAVY, marginBottom: 4 }}>{h.hotel_name || 'Unknown hotel'}</div>
                       <div style={{ fontSize: 12, color: '#64748b' }}>{h.hotel_city} · {h.check_in} → {h.check_out}{h.total_price_paid ? ` · ₹${Math.round(h.total_price_paid).toLocaleString('en-IN')}` : ''}</div>
@@ -614,8 +616,8 @@ export default function Home() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                           <span style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{extracted.hotel_name || 'Hotel not detected'}</span>
                         </div>
-                        <div style={{ fontSize: 13, color: '#64748b' }}>{extracted.hotel_city} · {extracted.check_in && extracted.check_out ? `${new Date(extracted.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} → ${new Date(extracted.check_out + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Dates not detected'}</div>
-                        {extracted.total_price_paid > 0 && <div style={{ fontSize: 14, fontWeight: 700, color: B, marginTop: 4 }}>₹{Math.round(extracted.total_price_paid).toLocaleString('en-IN')}</div>}
+                        <div style={{ fontSize: 13, color: '#64748b' }}>{extracted.hotel_city && `${extracted.hotel_city} · `}{extracted.check_in && extracted.check_out ? `${new Date(extracted.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} → ${new Date(extracted.check_out + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Dates not detected'}{extracted.num_adults ? ` · ${extracted.num_adults} Adults` : ''}{extracted.num_children > 0 ? `, ${extracted.num_children} Child${extracted.num_children > 1 ? 'ren' : ''}` : ''}</div>
+                        {extracted.total_price_paid > 0 && <div style={{ fontSize: 14, fontWeight: 700, color: B, marginTop: 4 }}>₹{Math.round(extracted.total_price_paid).toLocaleString('en-IN')} total</div>}
                         <button onClick={() => setEditMode(!editMode)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: B, padding: 0, fontFamily: 'inherit', fontWeight: 600, marginTop: 8 }}>{editMode ? '✕ Close edit' : 'Something wrong? Edit details'}</button>
                       </div>
                       {editMode && (
