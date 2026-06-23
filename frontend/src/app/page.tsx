@@ -255,8 +255,10 @@ export default function Home() {
     const uploadedUrl = await uploadVoucherToStorage(file);
     setVoucherUrl(uploadedUrl);
     try {
+      // Compress image before upload (fixes camera photo failures)
+      const compressedFile = await compressImage(file);
       const formData = new FormData();
-      formData.append('voucher', file);
+      formData.append('voucher', compressedFile);
       const res = await fetch('https://hoteldrops-production-7e5a.up.railway.app/api/voucher/extract', {
         method: 'POST', body: formData,
       });
@@ -317,7 +319,7 @@ export default function Home() {
         }
         return;
       }
-      if (docType === 'checkout_page') {
+      if (docTypeResult === 'checkout_page') {
         const data = json.data;
         setExtracted({ ...emptyExtracted(), ...data });
         setWarnings(json.warnings || {});
