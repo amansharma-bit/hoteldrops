@@ -84,6 +84,33 @@ const FAQS = [
   { q: "What if I have a non-refundable booking?", a: "rebuq works best with refundable bookings. If your booking is non-refundable, we'll let you know when you upload — and suggest booking a flexible rate next time so you can benefit from price drops." },
 ];
 
+async function compressImage(inputFile: File): Promise<File> {
+  return new Promise((resolve) => {
+    if (inputFile.type === 'application/pdf') { resolve(inputFile); return; }
+    const img = new Image();
+    const url = URL.createObjectURL(inputFile);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const MAX = 1600;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob((blob) => {
+        if (blob) resolve(new File([blob], 'voucher.jpg', { type: 'image/jpeg' }));
+        else resolve(inputFile);
+      }, 'image/jpeg', 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(inputFile); };
+    img.src = url;
+  });
+}
+
 async function uploadVoucherToStorage(file: File): Promise<string | null> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
