@@ -601,7 +601,12 @@ export default function Home() {
                         <div style={{ fontSize: 22, flexShrink: 0 }}>🔍</div>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 14, color: '#1447b8', marginBottom: 3, fontFamily: "'Sora',sans-serif" }}>Looks like you haven't booked yet — that's perfect.</div>
-                          <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>Tell us the hotel and your travel dates below. We'll monitor the price and alert you the moment it drops — so you can book at the lowest rate.</div>
+                          <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>
+                            {extracted.hotel_name && extracted.check_in && extracted.check_out
+                              ? <>We've picked up <strong>{extracted.hotel_name}</strong> for <strong>{new Date(extracted.check_in+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'})} → {new Date(extracted.check_out+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</strong>. Confirm the details below and we'll alert you the moment this price drops.</>
+                              : <>We'll monitor this hotel's price and alert you the moment it drops — so you can book at the lowest rate. Please fill in the details below.</>
+                            }
+                          </div>
                         </div>
                       </div>
                       {warnings.partialExtraction && (<div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}><strong>Partial read</strong> — Please check and fill in missing details.</div>)}
