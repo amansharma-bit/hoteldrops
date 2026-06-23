@@ -611,7 +611,12 @@ export default function Home() {
                             <div><label style={lbl}>Check-in</label><input style={inp} type="date" value={extracted.check_in} onChange={e => setExtracted({ ...extracted, check_in: e.target.value })} /></div>
                             <div><label style={lbl}>Check-out</label><input style={inp} type="date" value={extracted.check_out} onChange={e => setExtracted({ ...extracted, check_out: e.target.value })} /></div>
                           </div>
-                          <div style={{ marginBottom: 10 }}><label style={lbl}>Total price paid (₹)</label><input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: Number(e.target.value) })} /></div>
+                          <div style={grid2}>
+                            <div><label style={lbl}>Adults</label><input style={inp} type="number" min="1" max="9" value={extracted.num_adults || 2} onChange={e => setExtracted({ ...extracted, num_adults: Number(e.target.value) })} /></div>
+                            <div><label style={lbl}>Rooms</label><input style={inp} type="number" min="1" max="9" value={extracted.num_rooms || 1} onChange={e => setExtracted({ ...extracted, num_rooms: Number(e.target.value) })} /></div>
+                          </div>
+                          <div style={{ marginBottom: 10 }}><label style={lbl}>Children (ages, comma separated e.g. 5,8)</label><input style={inp} placeholder="Leave blank if no children" value={(extracted.children_ages||[]).join(',')} onChange={e => { const ages = e.target.value.split(',').map((a:string)=>parseInt(a.trim())).filter((a:number)=>!isNaN(a)); setExtracted({ ...extracted, num_children: ages.length, children_ages: ages }); }} /></div>
+                          <div style={{ marginBottom: 10 }}><label style={lbl}>Total price paid (₹)</label><input style={inp} type="number" value={extracted.total_price_paid || ''} placeholder="Enter total price incl. taxes" onChange={e => setExtracted({ ...extracted, total_price_paid: Number(e.target.value) })} /></div>
                         </div>
                       )}
                       <div style={{ background: NAVY, borderRadius: 14, padding: 20, marginBottom: 16 }}>
