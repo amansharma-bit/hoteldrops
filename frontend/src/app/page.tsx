@@ -298,7 +298,7 @@ export default function Home() {
         setUploadStep('blocked');
         return;
       }
-      const docTypeResult = json.doc_type || 'confirmed_voucher';
+      const docTypeResult = json.documentType || json.doc_type || 'confirmed_voucher';
       setDocType(docTypeResult);
       if (docTypeResult === 'not_hotel') {
         setBlockInfo({ reason: 'not_hotel' });
