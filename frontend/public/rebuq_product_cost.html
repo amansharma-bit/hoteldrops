@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>rebuq — Product Build Cost</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --blue:#1447b8;--dark:#0D1A30;--white:#fff;--fg:#0D1117;
+  --muted:#6B7280;--border:#E5E7EB;--bg:#F9FAFB;
+  --gold:#FCD34D;--green:#16a34a;--green-l:#D1FAE5;--amber:#D97706;
+}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Inter',-apple-system,sans-serif}
+body{background:var(--dark)}
+.progress-bar{position:fixed;top:0;left:0;right:0;height:2px;background:rgba(255,255,255,0.08);z-index:200}
+.pf{height:100%;background:var(--blue);transition:width 0.4s cubic-bezier(0.4,0,0.2,1)}
+.deck{position:fixed;inset:0;display:flex;flex-direction:column}
+.vp{flex:1;position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;transition:opacity 0.35s ease,transform 0.35s ease;overflow:hidden}
+.dark-slide{background:linear-gradient(135deg,#0D1B6E 0%,#1447b8 45%,#2563EB 75%,#3B82F6 100%)}
+.light-slide{background:var(--white)}
+.hidden-next{opacity:0;transform:translateY(16px);pointer-events:none}
+.hidden-prev{opacity:0;transform:translateY(-16px);pointer-events:none}
+.active{opacity:1;transform:translateY(0);pointer-events:all}
+body.scroll-mode .deck{display:none}
+.scroll-doc{display:none}
+body.scroll-mode .scroll-doc{display:block;height:100%;overflow-y:auto;background:var(--bg)}
+body.scroll-mode .progress-bar{display:none}
+.top-nav{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 52px;height:52px;z-index:10}
+.nl{font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;display:flex;align-items:center;gap:10px;color:var(--muted)}
+.nl.dark{color:rgba(255,255,255,0.3)}
+.nd{width:20px;height:1px;background:var(--border)}
+.nd.dark{background:rgba(255,255,255,0.2)}
+.nlogo{font-family:'Sora',sans-serif;font-size:14px;font-weight:800;color:var(--fg)}
+.nlogo.dark{color:rgba(255,255,255,0.9)}
+.nlogo .dot{color:var(--gold)}
+.sb{flex:1;padding:60px 52px 44px;display:flex;flex-direction:column}
+.bb{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 52px;background:rgba(13,26,48,0.97);border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0;z-index:100}
+.nb{background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.6);font-size:12px;font-weight:600;padding:6px 16px;border-radius:20px;cursor:pointer;transition:all 0.2s}
+.nb:hover{background:rgba(255,255,255,0.08);color:#fff}
+.nb:disabled{opacity:0.2;cursor:default}
+.ctr{font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.06em}
+.vt{display:flex;gap:4px;background:rgba(255,255,255,0.06);border-radius:20px;padding:3px;border:1px solid rgba(255,255,255,0.1)}
+.tb{padding:5px 14px;border-radius:16px;font-size:11px;font-weight:600;background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;transition:all 0.2s}
+.tb.on{background:var(--blue);color:#fff}
+.ey{font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.h2{font-family:'Sora',sans-serif;font-weight:800;letter-spacing:-0.025em;line-height:1.1;color:var(--fg)}
+.sub{font-size:14px;color:var(--muted);line-height:1.6}
+.ac{color:var(--blue)}
+/* SCOPE */
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;flex:1}
+.sc{background:#fff;border:1px solid var(--border);border-radius:16px;padding:28px 24px;display:flex;flex-direction:column}
+.sci{width:48px;height:48px;border-radius:12px;background:rgba(20,71,184,0.08);display:flex;align-items:center;justify-content:center;margin-bottom:18px;flex-shrink:0}
+.sci.gr{background:#F3F4F6}
+.sc h3{font-family:'Sora',sans-serif;font-size:16px;font-weight:700;color:var(--fg);margin-bottom:8px}
+.sc p{font-size:13px;color:var(--muted);line-height:1.7;flex:1}
+.wb{background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:14px 20px;font-size:12px;color:#92400e;font-weight:600;margin-top:16px;flex-shrink:0}
+.wb span{font-weight:400;color:#B45309}
+/* COST */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1}
+.cs{background:#F9FAFB;border:1px solid var(--border);border-radius:14px;padding:20px 22px;display:flex;flex-direction:column}
+.cst{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;flex-shrink:0}
+.crow-wrap{flex:1;overflow:hidden}
+.cr{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.cr:last-child{border-bottom:none}
+.crl{font-size:12px;font-weight:600;color:var(--fg)}
+.crn{font-size:10px;color:var(--muted)}
+.crv{font-family:'Sora',sans-serif;font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;margin-left:8px;flex-shrink:0}
+.crv small{font-size:10px;font-weight:400;color:var(--muted)}
+.vs{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:16px;flex-shrink:0}
+.vsi{padding:16px 20px;border-right:1px solid var(--border);text-align:center}
+.vsi:last-child{border-right:none}
+.vsi .n{font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:var(--blue);display:block}
+.vsi.am .n{color:var(--amber)}
+.vsi.gd .n{color:var(--green)}
+.vsi .l{font-size:10px;color:var(--muted);margin-top:3px}
+.cb{background:rgba(20,71,184,0.05);border:1px solid rgba(20,71,184,0.15);border-radius:11px;padding:14px 16px;margin-top:14px;flex-shrink:0}
+.cbt{font-size:11px;font-weight:700;color:var(--blue);margin-bottom:9px}
+.ctags{display:flex;flex-wrap:wrap;gap:7px}
+.ctag{background:rgba(20,71,184,0.08);border:1px solid rgba(20,71,184,0.15);border-radius:7px;padding:5px 11px;font-size:11px;color:var(--fg);font-weight:600}
+.ctag small{color:var(--muted);font-weight:400;font-size:10px;display:block}
+/* CMP */
+.cmp{width:100%;border-collapse:collapse;border-radius:14px;overflow:hidden;border:1px solid var(--border)}
+.cmp th{padding:12px 18px;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase}
+.cmp th:first-child{background:#F3F4F6;color:var(--muted);text-align:left;width:28%}
+.cmp th:nth-child(2){background:#F9FAFB;color:var(--muted);text-align:center}
+.cmp th:nth-child(3){background:var(--blue);color:var(--gold);text-align:center}
+.cmp td{padding:11px 18px;font-size:12px;border-bottom:1px solid var(--border)}
+.cmp tr:last-child td{border-bottom:none}
+.cmp td:first-child{font-weight:600;color:var(--fg);background:#FAFAFA}
+.cmp td:nth-child(2){color:var(--muted);text-align:center;background:#FDFDFD}
+.cmp td:nth-child(3){font-weight:700;color:var(--green);text-align:center;background:rgba(22,163,74,0.05)}
+.cmp td.nt{color:var(--muted);font-weight:400;background:#FDFDFD}
+.tc{display:flex;align-items:center;justify-content:center;gap:6px}
+.sbar{background:var(--gold);border-radius:13px;padding:20px 28px;display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px;flex-wrap:wrap;flex-shrink:0}
+.sbar h3{font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:#0D1A30;margin:0}
+.sbar p{font-size:12px;color:rgba(13,26,48,0.6);margin-top:3px}
+.snums{display:flex;gap:28px}
+.snums .n{font-family:'Sora',sans-serif;font-size:22px;font-weight:800;color:#0D1A30;display:block}
+.snums .l{font-size:10px;font-weight:700;letter-spacing:0.08em;color:rgba(13,26,48,0.45)}
+/* PROOF — 4 cards 2x2 */
+.pg4{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr);gap:16px;flex:1}
+.pc{border-radius:16px;padding:32px 28px;border:1px solid var(--border);display:flex;flex-direction:column}
+.pc.bl{background:var(--blue);border-color:var(--blue)}
+.pc.wh{background:#fff}
+.pico{margin-bottom:14px;display:flex}
+.pn{font-family:'Sora',sans-serif;font-size:44px;font-weight:800;line-height:1;margin-bottom:8px}
+.pc.bl .pn{color:var(--gold)}
+.pc.wh .pn{color:var(--blue)}
+.plb{font-size:17px;font-weight:700;margin-bottom:6px}
+.pc.bl .plb{color:#fff}
+.pc.wh .plb{color:var(--fg)}
+.ps{font-size:13px;line-height:1.65;flex:1}
+.pc.bl .ps{color:rgba(255,255,255,0.6)}
+.pc.wh .ps{color:var(--muted)}
+.pbox{background:rgba(20,71,184,0.05);border:1px solid rgba(20,71,184,0.15);border-radius:11px;padding:16px 20px;font-size:13px;color:var(--fg);line-height:1.7;margin-top:16px;flex-shrink:0}
+/* BMARK */
+.bmark{background:#FEF3C7;border:1px solid #FDE68A;border-radius:10px;padding:13px 16px;margin-top:12px;flex-shrink:0}
+.bmark-title{font-size:10px;font-weight:700;color:#92400e;margin-bottom:4px;letter-spacing:0.06em}
+.bmark-val{font-family:'Sora',sans-serif;font-size:16px;font-weight:800;color:#0D1A30}
+.bmark-sub{font-size:11px;color:#B45309;margin-top:2px}
+/* MOAT LIGHT */
+.moat-header{margin-bottom:16px}
+.moat-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1}
+.moat-col-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.mc{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
+.mc:last-child{margin-bottom:0}
+.mc-ico{width:32px;height:32px;border-radius:8px;background:rgba(20,71,184,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.mc-title{font-size:13px;font-weight:700;color:var(--fg);margin-bottom:3px}
+.mc-sub{font-size:11px;color:var(--muted);line-height:1.55}
+.closing{background:var(--blue);border-radius:12px;padding:20px 28px;text-align:center;flex-shrink:0;margin-top:14px}
+.cl{font-family:'Sora',sans-serif;font-size:clamp(14px,1.5vw,18px);font-weight:800;color:#fff;line-height:1.4;letter-spacing:-0.01em}
+.cl span{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="progress-bar"><div class="pf" id="pf"></div></div>
+<div class="deck" id="deck">
+  <div class="vp" id="vp"></div>
+  <div class="bb">
+    <button class="nb" id="pb" onclick="nav(-1)">← Prev</button>
+    <div style="display:flex;align-items:center;gap:20px">
+      <span class="ctr" id="ctr">1 / 7</span>
+      <div class="vt">
+        <button class="tb on" onclick="setMode('slide')">Slides</button>
+        <button class="tb" onclick="setMode('scroll')">Scroll</button>
+      </div>
+    </div>
+    <button class="nb" id="nb" onclick="nav(1)">Next →</button>
+  </div>
+</div>
+<div class="scroll-doc" id="sd">
+  <div style="position:fixed;top:12px;right:20px;z-index:200">
+    <div class="vt" style="background:rgba(13,26,48,0.9);border-color:rgba(255,255,255,0.15)">
+      <button class="tb" onclick="setMode('slide')">Slides</button>
+      <button class="tb on" onclick="setMode('scroll')">Scroll</button>
+    </div>
+  </div>
+  <div id="sdc"></div>
+</div>
+<script>
+const S={
+  code:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1447b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`,
+  server:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1447b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="6" cy="6" r="1" fill="#1447b8"/><circle cx="6" cy="18" r="1" fill="#1447b8"/></svg>`,
+  cpu:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1447b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>`,
+  cloud:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>`,
+  credit:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`,
+  shield:`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  globe:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1447b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+  db:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1447b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`,
+  clock:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1447b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  phone:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1447b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`,
+  trend:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1447b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+  target:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1447b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+  lock:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1447b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+  zap:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1447b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  tool:`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1447b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
+  check:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+};
+const T=k=>S[k]||'';
+
+const SLIDES=[
+
+// 1 — COVER
+{id:'cover',html:`
+<div class="slide dark-slide" style="position:relative;overflow:hidden;display:flex;flex-direction:column;height:100%">
+  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0"></div>
+  <div style="position:absolute;top:80px;right:52px;display:grid;grid-template-columns:repeat(6,8px);gap:8px;opacity:0.1;pointer-events:none;z-index:1">${Array(30).fill('<div style="width:4px;height:4px;border-radius:50%;background:#fff"></div>').join('')}</div>
+  <div style="position:relative;z-index:10;padding:28px 60px 0">
+    <span style="display:inline-flex;align-items:center;gap:8px;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);border:1px solid rgba(255,255,255,0.12);padding:5px 14px;border-radius:20px">
+      <span style="width:5px;height:5px;border-radius:50%;background:var(--gold);display:inline-block"></span>
+      Product Build Cost · B2C Platform · Confidential
+    </span>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 60px;position:relative;z-index:10;gap:22px">
+    <div style="display:flex;align-items:flex-end;line-height:0.88">
+      <h1 style="font-family:'Sora',sans-serif;font-size:clamp(72px,10vw,130px);font-weight:800;letter-spacing:-0.04em;color:#fff;margin:0;line-height:0.88">rebuq</h1>
+      <span style="font-size:clamp(72px,10vw,130px);font-weight:800;color:var(--gold);line-height:0.88">.</span>
+    </div>
+    <p style="font-size:clamp(18px,2vw,24px);font-weight:700;color:#fff;max-width:680px;line-height:1.3;margin:0;font-family:'Sora',sans-serif;letter-spacing:-0.01em">The cost of building rebuq.<br><span style="color:rgba(255,255,255,0.45);font-weight:300">Two approaches. One already proven.</span></p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <span style="padding:10px 22px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);border-radius:24px;font-size:13px;font-weight:600">Version 1 — Legacy Build (Ground Zero)</span>
+      <span style="padding:10px 22px;background:var(--gold);color:#0D1A30;border-radius:24px;font-size:13px;font-weight:700">Version 2 — AI-Native · Already 70% Built ✓</span>
+    </div>
+  </div>
+  <div style="position:relative;z-index:10;padding:0 60px 48px">
+    <div style="border-top:1px solid rgba(255,255,255,0.07);padding-top:24px;display:grid;grid-template-columns:repeat(4,1fr)">
+      ${[['₹89.1L','Legacy Grand Total'],['₹26.5L','AI-Native Grand Total'],['4.8×','Cost Reduction'],['PWA Ready','iOS · Android · No App Store']].map((s,i)=>`
+      <div style="${i?'border-left:1px solid rgba(255,255,255,0.08);padding-left:32px':'padding-right:32px'}">
+        <div style="font-family:'Sora',sans-serif;font-size:clamp(18px,2vw,26px);font-weight:700;color:var(--gold)">${s[0]}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:4px">${s[1]}</div>
+      </div>`).join('')}
+    </div>
+  </div>
+  <div style="position:absolute;bottom:8px;left:0;right:0;z-index:10;text-align:center">
+    <p style="font-size:10px;color:rgba(255,255,255,0.1)">Confidential — For Authorized Investment Review Only</p>
+  </div>
+</div>`},
+
+// 2 — SCOPE
+{id:'scope',html:`
+<div class="slide light-slide" style="display:flex;flex-direction:column;height:100%">
+  <div class="top-nav"><div class="nl"><span>02</span><div class="nd"></div><span>PRODUCT SCOPE</span></div><div class="nlogo">rebuq<span class="dot">.</span></div></div>
+  <div class="sb" style="gap:14px">
+    <div>
+      <div class="ey">What's Being Costed</div>
+      <h2 class="h2" style="font-size:clamp(26px,3.2vw,40px);margin-bottom:6px">A Complete, Live B2C Platform</h2>
+      <p class="sub">Six core components. Two approaches. Pure product build cost — no marketing, no GTM.</p>
+    </div>
+    <div class="g3">
+      ${[['code','Full B2C Web App','Next.js 15 PWA · Mobile + Desktop · Hotel search, booking tracking, price alerts, PWA install',''],
+         ['server','Backend & APIs','Express/Node.js · Price tracker running 24/7 · WhatsApp alerts · Admin dashboard · Supabase',''],
+         ['cpu','AI Voucher Scanner','Claude-powered extraction · 9 OTAs supported · Camera + file upload · Live in production',''],
+         ['cloud','Cloud Infrastructure','Vercel + Railway + Supabase + liteAPI hotel data (2,70,000+ hotels) + Mapbox + monitoring','gr'],
+         ['credit','Payment Gateway','Razorpay integration + RBI compliance setup for direct booking and rebooking flow','gr'],
+         ['shield','Legal & Compliance','Company registration + GST setup + NDA templates + partner contract framework','gr'],
+      ].map(([ic,tt,dd,cl])=>`<div class="sc"><div class="sci ${cl}">${T(ic)}</div><h3>${tt}</h3><p>${dd}</p></div>`).join('')}
+    </div>
+    <div class="wb">⚠ NOT INCLUDED: <span>Marketing, GTM, customer acquisition costs, partner payouts — pure product build cost only</span></div>
+  </div>
+</div>`},
+
+// 3 — VERSION 1
+{id:'v1',html:`
+<div class="slide light-slide" style="display:flex;flex-direction:column;height:100%">
+  <div class="top-nav"><div class="nl"><span>03</span><div class="nd"></div><span>VERSION 1 — LEGACY</span></div><div class="nlogo">rebuq<span class="dot">.</span></div></div>
+  <div class="sb" style="gap:14px">
+    <div>
+      <div class="ey">Version 1</div>
+      <h2 class="h2" style="font-size:clamp(22px,2.6vw,32px);margin-bottom:4px">Legacy Build <span style="color:var(--muted);font-weight:300">+</span> AI Tools</h2>
+      <p class="sub">Traditional team. Building from ground zero. Industry-standard Gurugram market rates.</p>
+    </div>
+    <div class="g2">
+      <div class="cs">
+        <div class="cst">People & AI Tools — Monthly</div>
+        <div class="crow-wrap">
+          ${[['Founder / CEO','Strategy, PM, partnerships · 20yrs exp','₹4,00,000'],
+             ['CTO (separate hire)','Architecture, team management','₹4,00,000'],
+             ['Sr Full-Stack Dev #1','Frontend + Backend (Next.js, Node.js)','₹1,50,000'],
+             ['Sr Full-Stack Dev #2','APIs + Integrations','₹1,50,000'],
+             ['UI/UX Designer','Design system, flows, mobile-first','₹80,000'],
+             ['QA Engineer','Testing, reliability, regression','₹70,000'],
+             ['DevOps Engineer','CI/CD, infra, deployment','₹80,000'],
+             ['AI Tools (Copilot, Figma AI)','Speed accelerators only','₹15,000'],
+          ].map(([l,n,v])=>`<div class="cr"><div><div class="crl">${l}</div><div class="crn">${n}</div></div><div class="crv">${v}<small>/mo</small></div></div>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="cs" style="flex:1">
+          <div class="cst">One-Time + Infra + Legal</div>
+          <div class="crow-wrap">
+            ${[['Laptops × 3 (₹80K each)','₹2,40,000 once'],
+               ['Office — 7 seats × ₹8K × 5mo','₹2,80,000 total'],
+               ['Vercel + Railway + Supabase','₹18,000 /mo'],
+               ['liteAPI + Anthropic API','₹60,000 /mo'],
+               ['Interakt + Resend + Mapbox','₹15,000 /mo'],
+               ['Domain, SSL, dev tools','₹13,000 /mo'],
+               ['Company reg + legal','₹60,000 once'],
+               ['Ad hoc / contingency','₹10,000 /mo'],
+            ].map(([l,v])=>`<div class="cr"><div class="crl" style="font-size:11px">${l}</div><div class="crv" style="font-size:11px">${v}</div></div>`).join('')}
+          </div>
+        </div>
+        <div class="bmark">
+          <div class="bmark-title">INDUSTRY BENCHMARK</div>
+          <div class="bmark-val">₹15+ Lakhs/month</div>
+          <div class="bmark-sub">Market rate for 8-person product team in Gurugram</div>
+        </div>
+      </div>
+    </div>
+    <div class="vs">
+      <div class="vsi am"><span class="n">₹79.1L</span><span class="l">Build Cost</span></div>
+      <div class="vsi am"><span class="n">₹10L</span><span class="l">Working Capital</span></div>
+      <div class="vsi am"><span class="n">₹89.1L</span><span class="l">Grand Total (All-In)</span></div>
+      <div class="vsi am"><span class="n">5 Mo · 8 People</span><span class="l">Duration · Team Size</span></div>
+    </div>
+  </div>
+</div>`},
+
+// 4 — VERSION 2
+{id:'v2',html:`
+<div class="slide light-slide" style="display:flex;flex-direction:column;height:100%">
+  <div class="top-nav">
+    <div class="nl"><span>04</span><div class="nd"></div><span>VERSION 2 — AI-NATIVE</span></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="background:var(--blue);color:var(--gold);font-size:10px;font-weight:800;letter-spacing:0.1em;padding:4px 12px;border-radius:20px">✓ ALREADY 70% BUILT</span>
+      <div class="nlogo">rebuq<span class="dot">.</span></div>
+    </div>
+  </div>
+  <div class="sb" style="gap:14px">
+    <div>
+      <div class="ey">Version 2</div>
+      <h2 class="h2" style="font-size:clamp(22px,2.6vw,32px);margin-bottom:4px">AI-Native Build · The rebuq Model</h2>
+      <p class="sub">Claude as the core build engine. 3 people. Maximum velocity. Already demonstrated.</p>
+    </div>
+    <div class="g2">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="cs" style="flex:1">
+          <div class="cst">People & AI — Monthly</div>
+          <div class="crow-wrap">
+            ${[['Founder / CEO + CTO (you)','Strategy, build, product · 20yrs experience','₹3,00,000'],
+               ['CTO / Veteran Consultant','Architecture, code review, on-call retainer','₹1,25,000'],
+               ['Mid-level Developer','Stability, edge cases (Month 2)','₹80,000'],
+               ['Claude AI × 4 subscriptions','Replaces: designer + QA + DevOps + analyst','₹40,000'],
+            ].map(([l,n,v])=>`<div class="cr"><div><div class="crl">${l}</div><div class="crn">${n}</div></div><div class="crv">${v}<small>/mo</small></div></div>`).join('')}
+          </div>
+        </div>
+        <div class="cb">
+          <div class="cbt">Claude × 4 replaces these roles — saves ₹2.9L/month:</div>
+          <div class="ctags">
+            ${[['UI/UX Designer','₹80K/mo'],['QA Engineer','₹70K/mo'],['DevOps Engineer','₹80K/mo'],['Data Analyst','₹60K/mo']].map(([r,s])=>`<div class="ctag">${r}<small>saves ${s}</small></div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="cs" style="flex:1">
+          <div class="cst">One-Time + Infra + Legal</div>
+          <div class="crow-wrap">
+            ${[['Laptops × 3 (₹80K each)','₹2,40,000 once'],
+               ['Office — 2 seats × ₹8K × 2mo','₹32,000 total'],
+               ['Vercel + Railway + Supabase','₹12,000 /mo'],
+               ['liteAPI + Anthropic API','₹60,000 /mo'],
+               ['Interakt + Resend + Mapbox','₹15,000 /mo'],
+               ['Domain, SSL, dev tools','₹13,000 /mo'],
+               ['Company reg + legal','₹60,000 once'],
+               ['Ad hoc / contingency','₹10,000 /mo'],
+            ].map(([l,v])=>`<div class="cr"><div class="crl" style="font-size:11px">${l}</div><div class="crv" style="font-size:11px">${v}</div></div>`).join('')}
+          </div>
+        </div>
+        <div style="background:rgba(20,71,184,0.05);border:1px solid rgba(20,71,184,0.12);border-radius:10px;padding:14px 16px">
+          <div style="font-size:10px;font-weight:700;color:var(--blue);margin-bottom:5px;letter-spacing:0.06em">MONTHLY BURN BREAKDOWN</div>
+          <div style="font-size:12px;color:var(--muted)">Month 1: ₹5.0L (incl. laptops + legal setup)</div>
+          <div style="font-size:12px;color:var(--muted)">Month 2: ₹4.0L (mid dev + all infra)</div>
+          <div style="font-size:14px;font-weight:700;color:var(--blue);margin-top:6px;font-family:'Sora',sans-serif">Average: ₹4.5L/month</div>
+        </div>
+      </div>
+    </div>
+    <div class="vs">
+      <div class="vsi gd"><span class="n">₹16.5L</span><span class="l">Build Cost</span></div>
+      <div class="vsi gd"><span class="n">₹10L</span><span class="l">Working Capital</span></div>
+      <div class="vsi gd"><span class="n">₹26.5L</span><span class="l">Grand Total (All-In)</span></div>
+      <div class="vsi gd"><span class="n">2 Mo · 3 People</span><span class="l">Duration · Team Size</span></div>
+    </div>
+  </div>
+</div>`},
+
+// 5 — COMPARISON
+{id:'cmp',html:`
+<div class="slide light-slide" style="display:flex;flex-direction:column;height:100%">
+  <div class="top-nav"><div class="nl"><span>05</span><div class="nd"></div><span>HEAD TO HEAD</span></div><div class="nlogo">rebuq<span class="dot">.</span></div></div>
+  <div class="sb" style="gap:14px">
+    <div>
+      <div class="ey">Comparison</div>
+      <h2 class="h2" style="font-size:clamp(22px,2.6vw,32px);margin-bottom:4px">Legacy vs AI-Native: <span class="ac">The Numbers</span></h2>
+      <p class="sub">Same product. Same outcome. Grand totals include working capital (liteAPI deposit).</p>
+    </div>
+    <table class="cmp">
+      <thead><tr><th>Metric</th><th>Version 1 — Legacy</th><th>Version 2 — AI-Native</th></tr></thead>
+      <tbody>
+        ${[['Team Size','8 People','3 People',true],
+           ['Build Duration','5 Months','2 Months',true],
+           ['Build Cost','₹79.1 Lakhs','₹16.5 Lakhs',true],
+           ['Working Capital (liteAPI)','₹10 Lakhs','₹10 Lakhs',false],
+           ['Grand Total (All-In)','₹89.1 Lakhs','₹26.5 Lakhs',true],
+           ['Monthly Burn (avg)','₹15.8L/month','₹4.5L/month',true],
+           ['Design','Dedicated UI/UX designer ₹80K/mo','AI-Generated — Claude builds all UI',true],
+           ['QA & DevOps','₹1.5L/month (dedicated engineers)','Handled by Claude subscriptions',true],
+           ['Risk','High — 8 people, hiring, coordination','Low — proven model, already 70% built',true],
+           ['Status','Hypothetical — not started','Live — rebuq.com running today',true],
+        ].map(([m,v1,v2,w])=>`
+        <tr><td>${m}</td><td>${v1}</td>
+        <td class="${w?'':'nt'}">${w?`<div class="tc">${T('check')} ${v2}</div>`:v2}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="sbar">
+      <div><h3>AI-Native saves ₹62.6 Lakhs</h3><p>4.8× cheaper · 3 months faster · Already live at rebuq.com</p></div>
+      <div class="snums">
+        ${[['4.8×','CHEAPER'],['3 mo','FASTER'],['₹62.6L','SAVING']].map(([n,l])=>`<div><span class="n">${n}</span><span class="l">${l}</span></div>`).join('')}
+      </div>
+    </div>
+  </div>
+</div>`},
+
+// 6 — PROOF (4 cards 2x2)
+{id:'proof',html:`
+<div class="slide light-slide" style="display:flex;flex-direction:column;height:100%">
+  <div class="top-nav">
+    <div class="nl"><span>06</span><div class="nd"></div><span>THE PROOF</span></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="background:var(--blue);color:var(--gold);font-size:10px;font-weight:800;letter-spacing:0.1em;padding:4px 12px;border-radius:20px">LIVE IN PRODUCTION</span>
+      <div class="nlogo">rebuq<span class="dot">.</span></div>
+    </div>
+  </div>
+  <div class="sb" style="gap:14px">
+    <div>
+      <div class="ey">The Proof</div>
+      <h2 class="h2" style="font-size:clamp(22px,2.6vw,32px);margin-bottom:4px">Not a Pitch. <span class="ac">A Live Product.</span></h2>
+      <p class="sub">Every number below is from the live rebuq.com — built AI-native, in production today.</p>
+    </div>
+    <div class="pg4">
+      <div class="pc bl">
+        <div class="pico">${S.globe}</div>
+        <div class="pn">9</div>
+        <div class="plb">OTAs Supported</div>
+        <div class="ps">MMT, Booking.com, Agoda, GRN, Ixigo, Goibibo, Yatra, TBO, Hotels.com — all voucher formats handled in production</div>
+      </div>
+      <div class="pc wh">
+        <div class="pico">${S.db}</div>
+        <div class="pn">2,70,000+</div>
+        <div class="plb">Live Hotel Deals</div>
+        <div class="ps">Via liteAPI — real rates, live pricing, 10 Indian cities and all major outbound destinations updated daily</div>
+      </div>
+      <div class="pc wh">
+        <div class="pico">${S.clock}</div>
+        <div class="pn">8 Weeks</div>
+        <div class="plb">Time to Build</div>
+        <div class="ps">From zero to live production — camera scan, price tracker, WhatsApp alerts, admin dashboard, search, hotel detail pages</div>
+      </div>
+      <div class="pc bl">
+        <div class="pico">${S.phone}</div>
+        <div class="pn">PWA</div>
+        <div class="plb">iOS · Android · No App Store</div>
+        <div class="ps">Fully installable Progressive Web App — works on any device, any OS, without a single App Store submission or approval</div>
+      </div>
+    </div>
+    <div class="pbox">
+      Version 2 is not theoretical. <strong style="color:var(--blue)">It's a live product — built AI-native, in production, processing real bookings today.</strong> Investment capital completes and scales what already exists — it does not start from zero.
+    </div>
+  </div>
+</div>`},
+
+// 7 — WHY NOW (LIGHT)
+{id:'moat',html:`
+<div class="slide light-slide" style="display:flex;flex-direction:column;height:100%">
+  <div class="top-nav">
+    <div class="nl"><span>07</span><div class="nd"></div><span>WHY THIS. WHY NOW.</span></div>
+    <div class="nlogo">rebuq<span class="dot">.</span></div>
+  </div>
+  <div class="sb" style="gap:12px">
+    <div class="moat-header">
+      <div class="ey">First Mover Advantage</div>
+      <h2 class="h2" style="font-size:clamp(22px,2.6vw,32px);margin-bottom:4px">No Direct Competitor. <span class="ac">₹97 Crore Market.</span> Product Already 70% Built.</h2>
+      <p class="sub">The window is open. The product exists. The only question is speed of scale.</p>
+    </div>
+    <div class="moat-grid">
+      <div>
+        <div class="moat-col-label">What's Already Built</div>
+        ${[['tool','6 Months of Real Build Work','Product direction, Claude training, OTA integrations, edge cases. This is institutional knowledge competitors cannot quickly replicate.'],
+           ['cpu','9 OTAs · 6 Document Types · Camera Scan','Every Indian OTA format handled — MMT, Booking.com, Agoda, GRN and more. Months of iteration already complete.'],
+           ['db','Live Price Tracker — Running 24/7','Autonomous monitoring in production. WhatsApp alerts firing. Admin dashboard live. Not a demo.'],
+           ['target','Partnership Pipeline — Contracts in Progress','Visa2Fly (September 2026), ACKO (agreed). Relationships that took months to build.'],
+        ].map(([ic,tt,sb])=>`<div class="mc"><div class="mc-ico">${T(ic)}</div><div><div class="mc-title">${tt}</div><div class="mc-sub">${sb}</div></div></div>`).join('')}
+      </div>
+      <div>
+        <div class="moat-col-label">Why No One Can Catch Up Fast</div>
+        ${[['zap','0 Direct Competitors in India Today','No startup monitors hotel prices post-booking at scale for Indian travellers. The window is open — and closing.'],
+           ['trend','AI Models Improve → rebuq Improves Automatically','Every new Claude release makes rebuq smarter and cheaper. Competitors cannot shortcut 6 months of training.'],
+           ['lock','Data Moat Compounds With Every Booking','Every booking scanned, every price tracked — proprietary pricing intelligence that grows daily.'],
+           ['globe','5.7M Eligible Bookings/Year · ₹7,400 Avg Saving','Bottom-up validated SAM. Indian outbound 4/5-star refundable bookings. Clear, measurable value per booking.'],
+        ].map(([ic,tt,sb])=>`<div class="mc"><div class="mc-ico">${T(ic)}</div><div><div class="mc-title">${tt}</div><div class="mc-sub">${sb}</div></div></div>`).join('')}
+      </div>
+    </div>
+    <div class="closing">
+      <div class="cl">The product exists. The market exists. The team is proven.<br><span>The only question is speed of scale.</span></div>
+    </div>
+  </div>
+</div>`},
+
+];
+
+let cur=0,mode='slide';
+function render(){
+  const vp=document.getElementById('vp');vp.innerHTML='';
+  SLIDES.forEach((s,i)=>{
+    const d=document.createElement('div');d.innerHTML=s.html;
+    const el=d.firstElementChild;
+    el.classList.add('slide');
+    el.classList.add(i===cur?'active':i>cur?'hidden-next':'hidden-prev');
+    vp.appendChild(el);
+  });
+  document.getElementById('pf').style.width=((cur+1)/SLIDES.length*100)+'%';
+  document.getElementById('ctr').textContent=(cur+1)+' / '+SLIDES.length;
+  document.getElementById('pb').disabled=cur===0;
+  document.getElementById('nb').disabled=cur===SLIDES.length-1;
+}
+function nav(d){const n=cur+d;if(n<0||n>=SLIDES.length)return;cur=n;render();}
+function buildScroll(){
+  const sc=document.getElementById('sdc');sc.innerHTML='';
+  SLIDES.forEach(s=>{
+    const sec=document.createElement('div');
+    sec.style.cssText='min-height:100vh;display:flex;flex-direction:column;';
+    sec.innerHTML=s.html;
+    const el=sec.firstElementChild;
+    if(el){el.style.position='relative';el.style.minHeight='100vh';}
+    sc.appendChild(sec);
+  });
+}
+function setMode(m){
+  mode=m;
+  document.body.classList.toggle('scroll-mode',m==='scroll');
+  document.querySelectorAll('.tb').forEach(b=>{
+    b.classList.toggle('on',(m==='slide'&&b.textContent==='Slides')||(m==='scroll'&&b.textContent==='Scroll'));
+  });
+  if(m==='scroll')buildScroll();else render();
+}
+document.addEventListener('keydown',e=>{
+  if(mode!=='slide')return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')nav(1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp')nav(-1);
+});
+let tx=0;
+document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;});
+document.addEventListener('touchend',e=>{
+  if(mode!=='slide')return;
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)>50)nav(dx<0?1:-1);
+});
+render();
+</script>
+</body>
+</html>
