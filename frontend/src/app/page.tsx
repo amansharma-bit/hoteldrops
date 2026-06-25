@@ -220,7 +220,6 @@ export default function Home() {
         const meta = data.user.user_metadata;
         setUser({ name: meta?.full_name || meta?.name || data.user.email?.split("@")[0] || "Member", email: data.user.email || "" });
       } else {
-        // If redirected from a protected page, show popup immediately
         const params = new URLSearchParams(window.location.search);
         if (params.get("signup") === "1") {
           setSignupPopup(true);
@@ -282,7 +281,6 @@ export default function Home() {
     const uploadedUrl = await uploadVoucherToStorage(file);
     setVoucherUrl(uploadedUrl);
     try {
-      // Compress image before upload (fixes camera photo failures)
       const compressedFile = await compressImage(file);
       const formData = new FormData();
       formData.append('voucher', compressedFile);
@@ -598,7 +596,6 @@ export default function Home() {
                 <div>
                   {(docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top' || docType === 'checkout_page') ? (
                     <div>
-                      {/* Not-booked-yet banner */}
                       <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)', border: '1.5px solid #bfdbfe', borderRadius: 14, padding: '16px 18px', marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                         <div style={{ fontSize: 22, flexShrink: 0 }}>🔍</div>
                         <div>
@@ -772,41 +769,56 @@ export default function Home() {
         </nav>
 
         {/* ══════════════════════════════════════
-            HERO
+            HERO — UPDATED COPY
         ══════════════════════════════════════ */}
         {isMobile ? (
           /* ── MOBILE HERO ── */
           <section style={{ textAlign: "center", padding: "48px 20px 52px" }}>
-            {/* Rotating social proof */}
             <SocialProofTicker />
-
             <h1 className="sora" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.1, color: "#fff", margin: "0 auto 18px" }}>
-              Your hotel price<br />just dropped.<br /><span style={{ color: "#FCD34D" }}>Did you notice?</span>
+              Hotels drop their prices<br />after you book.<br /><span style={{ color: "#FCD34D" }}>We catch it. You save.</span>
             </h1>
             <p style={{ fontSize: 15, color: "rgba(255,255,255,0.7)", margin: "0 auto 32px", lineHeight: 1.7 }}>
-              rebuq watches your hotel booking 24/7. We alert you instantly when the price drops — you rebook and pocket the difference. Free to check.
+              rebuq monitors your hotel price 24/7. The moment it drops below what you paid, we alert you instantly. Rebook in minutes and keep the difference.
             </p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 24 }}>Free · No credit card needed</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: "15px 0", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
-                Check my booking — it&apos;s free
+              {/* Button 1 — Upload My Booking */}
+              <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: "15px 20px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%", textAlign: "left" as const, display: "flex", flexDirection: "column" as const, gap: 3 }}>
+                <span>📄 Upload My Booking</span>
+                <span style={{ fontSize: 11, fontWeight: 400, color: "#64748b" }}>PDF, JPG, PNG — we'll read it in seconds</span>
               </button>
-              <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "transparent", color: "rgba(255,255,255,0.85)", border: "1.5px solid rgba(255,255,255,0.3)", borderRadius: 12, padding: "13px 0", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
-                Explore member deals
+              {/* Button 2 — Find Me a Better Price */}
+              <button onClick={openModal} style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.3)", borderRadius: 12, padding: "15px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", width: "100%", textAlign: "left" as const, display: "flex", flexDirection: "column" as const, gap: 3 }}>
+                <span>🔍 Find Me a Better Price</span>
+                <span style={{ fontSize: 11, fontWeight: 400, color: "rgba(255,255,255,0.55)" }}>Upload a rate screenshot — we'll search for cheaper</span>
               </button>
             </div>
-            <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)", marginTop: 18 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
+            <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)", marginTop: 18 }}>Works on MakeMyTrip · Booking.com · Agoda · Expedia · Hotels.com & more</p>
           </section>
         ) : (
-          /* ── DESKTOP HERO — original design, untouched ── */
+          /* ── DESKTOP HERO ── */
           <section style={{ textAlign: "center", padding: "90px 24px 70px", background: "transparent" }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 100, marginBottom: 28, letterSpacing: "0.04em", textTransform: "uppercase", border: "1px solid rgba(255,255,255,0.2)" }}>✦ AI-Powered · Watches 24×7</div>
-            <h1 className="sora" style={{ fontSize: 64, fontWeight: 800, lineHeight: 1.1, color: "#fff", maxWidth: 760, margin: "0 auto 20px" }}>Your hotel price just dropped. <span style={{ color: "#FCD34D" }}>Did you notice?</span></h1>
-            <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", maxWidth: 520, margin: "0 auto 36px", lineHeight: 1.7 }}>Booked a hotel? rebuq watches the price 24/7 after you pay. When it drops, we alert you instantly — you rebook and pocket the difference. Free to check.</p>
+            <h1 className="sora" style={{ fontSize: 64, fontWeight: 800, lineHeight: 1.1, color: "#fff", maxWidth: 760, margin: "0 auto 20px" }}>
+              Hotels drop their prices after you book.<br /><span style={{ color: "#FCD34D" }}>We catch it. You save.</span>
+            </h1>
+            <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", maxWidth: 540, margin: "0 auto 12px", lineHeight: 1.7 }}>
+              rebuq monitors your hotel price 24/7. The moment it drops below what you paid, we alert you instantly. Rebook in minutes and keep the difference.
+            </p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 36 }}>Free · No credit card needed · Works on all major OTAs</p>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" as const }}>
-              <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
-              <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore exclusive member deals →</button>
+              {/* Button 1 — Upload My Booking */}
+              <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const, display: "flex", flexDirection: "column" as const, gap: 4, minWidth: 240 }}>
+                <span>📄 Upload My Booking</span>
+                <span style={{ fontSize: 12, fontWeight: 400, color: "#64748b" }}>Already confirmed? Drop your voucher here — we'll watch the price for you</span>
+              </button>
+              {/* Button 2 — Find Me a Better Price */}
+              <button onClick={openModal} style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.3)", borderRadius: 12, padding: "14px 28px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const, display: "flex", flexDirection: "column" as const, gap: 4, minWidth: 240 }}>
+                <span>🔍 Find Me a Better Price</span>
+                <span style={{ fontSize: 12, fontWeight: 400, color: "rgba(255,255,255,0.55)" }}>Seen a rate you like? Share it and we'll search for something cheaper</span>
+              </button>
             </div>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
           </section>
         )}
       </div>
@@ -842,7 +854,6 @@ export default function Home() {
             })}
           </div>
         </div>
-        {/* Dots — no arrow buttons */}
         <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 18 }}>
           {Array.from({ length: MAX_POS + 1 }, (_, i) => (
             <div key={i} onClick={() => setCarouselPos(i)} style={{ width: i === carouselPos ? 20 : 8, height: 8, borderRadius: 100, background: i === carouselPos ? B : "#e2e8f0", cursor: "pointer", transition: "all 0.3s" }} />
@@ -856,7 +867,7 @@ export default function Home() {
       </div>
 
       {/* ══════════════════════════════════════
-          HOW IT WORKS — 3 clean numbered cards
+          HOW IT WORKS
       ══════════════════════════════════════ */}
       <div id="how" style={{ background: "#f8fafc", padding: isMobile ? "56px 20px" : "80px 40px" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto" }}>
@@ -901,7 +912,7 @@ export default function Home() {
       </div>
 
       {/* ══════════════════════════════════════
-          WHY REBUQ — 2×2 grid
+          WHY REBUQ
       ══════════════════════════════════════ */}
       <div id="why" style={{ padding: isMobile ? "56px 20px" : "80px 40px" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto" }}>
@@ -909,35 +920,13 @@ export default function Home() {
           <h2 className="sora" style={{ fontSize: isMobile ? 26 : 40, fontWeight: 800, color: NAVY, textAlign: "center", lineHeight: 1.15, marginBottom: 48 }}>Built for travelers who hate leaving money on the table.</h2>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: isMobile ? 14 : 20 }}>
             {[
-              {
-                icon: ICONS.clock,
-                title: "AI never sleeps",
-                desc: "Checks your hotel price every 6 hours, through the night, through weekends.",
-                bg: "#eff6ff", ic: B,
-              },
-              {
-                icon: ICONS.bell,
-                title: "WhatsApp alerts",
-                desc: "Instant alert with a rebooking link the moment the price drops. No app to install.",
-                bg: "#f0fdf4", ic: "#16a34a",
-              },
-              {
-                icon: ICONS.globe,
-                title: "All major OTAs",
-                desc: "MakeMyTrip, Booking.com, Agoda, Goibibo, Hotels.com and more.",
-                bg: "#fefce8", ic: "#d97706",
-              },
-              {
-                icon: ICONS.shield,
-                title: "Zero risk",
-                desc: "Free to check. We take a small success fee only if we actually save you money.",
-                bg: "#fdf4ff", ic: "#7c3aed",
-              },
+              { icon: ICONS.clock, title: "AI never sleeps", desc: "Checks your hotel price every 6 hours, through the night, through weekends.", bg: "#eff6ff", ic: B },
+              { icon: ICONS.bell, title: "WhatsApp alerts", desc: "Instant alert with a rebooking link the moment the price drops. No app to install.", bg: "#f0fdf4", ic: "#16a34a" },
+              { icon: ICONS.globe, title: "All major OTAs", desc: "MakeMyTrip, Booking.com, Agoda, Goibibo, Cleartrip, Expedia, Hotels.com and more.", bg: "#fefce8", ic: "#d97706" },
+              { icon: ICONS.shield, title: "Zero risk", desc: "Free to check. We take a small success fee only if we actually save you money.", bg: "#fdf4ff", ic: "#7c3aed" },
             ].map((f, i) => (
               <div key={i} style={{ background: f.bg, borderRadius: 16, padding: isMobile ? 18 : 28 }}>
-                <div style={{ marginBottom: 14 }}>
-                  <Icon d={f.icon} size={24} color={f.ic} />
-                </div>
+                <div style={{ marginBottom: 14 }}><Icon d={f.icon} size={24} color={f.ic} /></div>
                 <div className="sora" style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>{f.title}</div>
                 <p style={{ fontSize: isMobile ? 12 : 13.5, color: "#64748b", lineHeight: 1.6 }}>{f.desc}</p>
               </div>
@@ -945,8 +934,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-
-      {/* FAQ removed */}
 
       {/* CTA BAND — desktop only */}
       {!isMobile && (
@@ -1004,9 +991,7 @@ export default function Home() {
         </footer>
       )}
 
-      {/* ══════════════════════════════════════
-          STICKY BOTTOM NAV — mobile only
-      ══════════════════════════════════════ */}
+      {/* ── STICKY BOTTOM NAV — mobile only ── */}
       {isMobile && (
         <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 68, background: "#fff", borderTop: "1px solid #f1f5f9", zIndex: 200, display: "flex", alignItems: "stretch" }}>
           {[
@@ -1028,38 +1013,13 @@ export default function Home() {
 
       {/* ── SIGNUP POPUP ── */}
       {signupPopup && (
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 9999,
-          background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "20px",
-        }}>
-          <div style={{
-            background: "linear-gradient(135deg, #1a237e 0%, #1447b8 60%, #1565c0 100%)",
-            borderRadius: 20, padding: isMobile ? "32px 24px" : "44px 48px",
-            width: "100%", maxWidth: 420, position: "relative",
-            boxShadow: "0 24px 80px rgba(0,0,0,0.4)",
-          }}>
-            {/* Close */}
-            <button onClick={dismissPopup} style={{
-              position: "absolute", top: 16, right: 16,
-              background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "50%",
-              width: 32, height: 32, cursor: "pointer", color: "#fff", fontSize: 18,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>×</button>
-
-            {/* Logo */}
-            <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", marginBottom: 16 }}>
-              rebuq<span style={{ color: "#FCD34D" }}>.</span>
-            </div>
-
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 60%, #1565c0 100%)", borderRadius: 20, padding: isMobile ? "32px 24px" : "44px 48px", width: "100%", maxWidth: 420, position: "relative", boxShadow: "0 24px 80px rgba(0,0,0,0.4)" }}>
+            <button onClick={dismissPopup} style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", color: "#fff", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", marginBottom: 16 }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></div>
             {popupMode === 'signup' ? (<>
-              <h2 style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: isMobile ? 22 : 26, color: "#fff", marginBottom: 8, lineHeight: 1.2 }}>
-                Your next hotel stay costs less than you think.
-              </h2>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 24, lineHeight: 1.6 }}>
-                Join rebuq and unlock 2,70,000 exclusive member deals.
-              </p>
+              <h2 style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: isMobile ? 22 : 26, color: "#fff", marginBottom: 8, lineHeight: 1.2 }}>Your next hotel stay costs less than you think.</h2>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 24, lineHeight: 1.6 }}>Join rebuq and unlock 2,70,000 exclusive member deals.</p>
               <button onClick={handlePopupGoogle} disabled={popupLoading} style={{ width: "100%", background: "#fff", border: "none", borderRadius: 10, padding: "13px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, color: "#0f172a", marginBottom: 16 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 Continue with Google
@@ -1096,7 +1056,6 @@ export default function Home() {
               </button>
               <button onClick={() => { setPopupMode('signup'); setPopupErr(''); }} style={{ width: "100%", background: "none", border: "none", color: "rgba(255,255,255,0.45)", fontSize: 13, cursor: "pointer", fontFamily: "inherit", padding: "8px" }}>Back to sign up</button>
             </>)}
-
             <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textAlign: "center" as const, marginTop: 12 }}>
               Already a member?{" "}
               <button onClick={() => { setPopupMode('signin'); setPopupErr(''); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Sign in</button>
