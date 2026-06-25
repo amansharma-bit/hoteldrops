@@ -781,20 +781,15 @@ export default function Home() {
             <p style={{ fontSize: 15, color: "rgba(255,255,255,0.7)", margin: "0 auto 32px", lineHeight: 1.7 }}>
               rebuq monitors your hotel price 24/7. The moment it drops below what you paid, we alert you instantly. Rebook in minutes and keep the difference.
             </p>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 24 }}>Free · No credit card needed</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {/* Button 1 — Upload My Booking */}
-              <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: "15px 20px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%", textAlign: "left" as const, display: "flex", flexDirection: "column" as const, gap: 3 }}>
-                <span>📄 Upload My Booking</span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: "#64748b" }}>PDF, JPG, PNG — we'll read it in seconds</span>
+              <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: "15px 0", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                Check my booking — it&apos;s free
               </button>
-              {/* Button 2 — Find Me a Better Price */}
-              <button onClick={openModal} style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.3)", borderRadius: 12, padding: "15px 20px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", width: "100%", textAlign: "left" as const, display: "flex", flexDirection: "column" as const, gap: 3 }}>
-                <span>🔍 Find Me a Better Price</span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: "rgba(255,255,255,0.55)" }}>Upload a rate screenshot — we'll search for cheaper</span>
+              <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "transparent", color: "rgba(255,255,255,0.85)", border: "1.5px solid rgba(255,255,255,0.3)", borderRadius: 12, padding: "13px 0", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+                Explore member deals
               </button>
             </div>
-            <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)", marginTop: 18 }}>Works on MakeMyTrip · Booking.com · Agoda · Expedia · Hotels.com & more</p>
+            <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)", marginTop: 18 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
           </section>
         ) : (
           /* ── DESKTOP HERO ── */
@@ -806,18 +801,10 @@ export default function Home() {
             <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", maxWidth: 540, margin: "0 auto 12px", lineHeight: 1.7 }}>
               rebuq monitors your hotel price 24/7. The moment it drops below what you paid, we alert you instantly. Rebook in minutes and keep the difference.
             </p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 36 }}>Free · No credit card needed · Works on all major OTAs</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" as const }}>
-              {/* Button 1 — Upload My Booking */}
-              <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const, display: "flex", flexDirection: "column" as const, gap: 4, minWidth: 240 }}>
-                <span>📄 Upload My Booking</span>
-                <span style={{ fontSize: 12, fontWeight: 400, color: "#64748b" }}>Already confirmed? Drop your voucher here — we'll watch the price for you</span>
-              </button>
-              {/* Button 2 — Find Me a Better Price */}
-              <button onClick={openModal} style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.3)", borderRadius: 12, padding: "14px 28px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", textAlign: "left" as const, display: "flex", flexDirection: "column" as const, gap: 4, minWidth: 240 }}>
-                <span>🔍 Find Me a Better Price</span>
-                <span style={{ fontSize: 12, fontWeight: 400, color: "rgba(255,255,255,0.55)" }}>Seen a rate you like? Share it and we'll search for something cheaper</span>
-              </button>
+              <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
+              <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore exclusive member deals →</button>
             </div>
           </section>
         )}
