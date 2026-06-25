@@ -25,7 +25,7 @@ function useIsMobile() {
 }
 
 interface ExtractedData {
-  hotel_name: string; hotel_city: string; check_in: string; check_out: string;
+  hotel_name: string; hotel_city: string; hotel_address: string; check_in: string; check_out: string;
   total_nights: number; room_type: string; num_adults: number; num_children: number;
   children_ages: (number | null)[]; num_rooms: number; board_basis: string;
   board_basis_label: string; rate_plan_name: string; original_price: number;
@@ -36,7 +36,7 @@ interface ExtractedData {
 }
 
 const emptyExtracted = (): ExtractedData => ({
-  hotel_name: '', hotel_city: '', check_in: '', check_out: '', total_nights: 0,
+  hotel_name: '', hotel_city: '', hotel_address: '', check_in: '', check_out: '', total_nights: 0,
   room_type: '', num_adults: 2, num_children: 0, children_ages: [], num_rooms: 1,
   board_basis: 'RO', board_basis_label: 'Room Only', rate_plan_name: '',
   original_price: 0, total_price_paid: 0, price_per_night: 0, currency_original: 'INR',
@@ -60,8 +60,22 @@ const CANCEL_OPTIONS = [
   { code: 'unknown', label: '❓ Not sure' },
 ]
 
+const OTA_OPTIONS = [
+  { code: '', label: 'Select platform' },
+  { code: 'MakeMyTrip', label: 'MakeMyTrip' },
+  { code: 'Agoda', label: 'Agoda' },
+  { code: 'Booking.com', label: 'Booking.com' },
+  { code: 'Cleartrip', label: 'Cleartrip' },
+  { code: 'Goibibo', label: 'Goibibo' },
+  { code: 'Yatra', label: 'Yatra' },
+  { code: 'Flipkart Travel', label: 'Flipkart Travel' },
+  { code: 'Expedia', label: 'Expedia' },
+  { code: 'Hotels.com', label: 'Hotels.com' },
+  { code: 'Others', label: 'Others' },
+]
+
 const inp: React.CSSProperties = { width: '100%', background: '#f9fafb', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '11px 14px', fontSize: 14, fontFamily: 'inherit', outline: 'none', color: NAVY }
-const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.07em', color: '#64748b', display: 'block', marginBottom: 6 }
+const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }
 const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }
 
 const CARDS = [
@@ -124,7 +138,6 @@ async function uploadVoucherToStorage(file: File): Promise<string | null> {
   } catch (e) { console.error('Storage error:', e); return null; }
 }
 
-// ── SVG icon helper ────────────────────────────────────────────────────────────
 function Icon({ d, size = 22, color = "currentColor", sw = 1.5 }: { d: string | string[]; size?: number; color?: string; sw?: number }) {
   const paths = Array.isArray(d) ? d : [d];
   return (
@@ -145,7 +158,6 @@ const ICONS = {
   shield:  ["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"],
 };
 
-// ── Social proof rotating ticker ──────────────────────────────────────────────
 const SOCIAL_PROOFS = [
   "Priya S. saved ₹22,400 on Atlantis Dubai · just now",
   "Rahul M. saved ₹18,600 on W Maldives · 4 min ago",
@@ -205,7 +217,6 @@ export default function Home() {
   const [submitError, setSubmitError] = useState('');
   const fileInputRef                  = useRef<HTMLInputElement>(null);
   const cameraInputRef                = useRef<HTMLInputElement>(null);
-  const childAgeRef                   = useRef<HTMLDivElement>(null);
   const [showChildAgePopup, setShowChildAgePopup] = useState(false);
   const [extractResult, setExtractResult] = useState<any>(null);
   const [editMode, setEditMode] = useState(false);
@@ -260,8 +271,6 @@ export default function Home() {
   };
 
   const closeModal = () => { setModalOpen(false); };
-
-  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   const scrollCarousel = (dir: number) => setCarouselPos(prev => Math.max(0, Math.min(MAX_POS, prev + dir)));
 
   function getFileLabel() {
@@ -309,7 +318,8 @@ export default function Home() {
           setExtractResult(json);
           setUploadStep('hotel_pick');
         } else if (json.data?.hotels?.length === 1) {
-          const _h0 = json.data.hotels[0]; setExtracted({ ...emptyExtracted(), check_in: json.data.check_in || '', check_out: json.data.check_out || '', total_nights: json.data.total_nights || 0, num_adults: json.data.num_adults || 2, num_children: json.data.num_children || 0, children_ages: json.data.children_ages || [], ota_name: json.data.ota_name || '', ..._h0 });
+          const _h0 = json.data.hotels[0];
+          setExtracted({ ...emptyExtracted(), check_in: json.data.check_in || '', check_out: json.data.check_out || '', total_nights: json.data.total_nights || 0, num_adults: json.data.num_adults || 2, num_children: json.data.num_children || 0, children_ages: json.data.children_ages || [], ota_name: json.data.ota_name || '', ..._h0 });
           if (!_h0?.total_price_paid && !_h0?.price_per_night_incl_tax) setEditMode(true);
           setUploadStep(2);
         } else {
@@ -324,16 +334,7 @@ export default function Home() {
           setUploadStep('room_pick');
         } else if (json.data?.room_options?.length === 1) {
           const room = json.data.room_options[0];
-          setExtracted({
-            ...emptyExtracted(), ...json.data,
-            room_type: room.room_type || '',
-            original_price: room.price_per_night || 0,
-            board_basis: room.board_basis || 'RO',
-            board_basis_label: room.board_basis_label || 'Room Only',
-            cancellation_policy: room.cancellation_policy || 'unknown',
-            cancellation_deadline: room.cancellation_deadline || '',
-            total_price_paid: room.total_price_incl_tax || 0,
-          });
+          setExtracted({ ...emptyExtracted(), ...json.data, room_type: room.room_type || '', original_price: room.price_per_night || 0, board_basis: room.board_basis || 'RO', board_basis_label: room.board_basis_label || 'Room Only', cancellation_policy: room.cancellation_policy || 'unknown', cancellation_deadline: room.cancellation_deadline || '', total_price_paid: room.total_price_incl_tax || 0 });
           setWarnings(json.warnings || {});
           setDocType('hotel_detail_rooms');
           setUploadStep(2);
@@ -347,8 +348,7 @@ export default function Home() {
         return;
       }
       if (docTypeResult === 'checkout_page') {
-        const data = json.data;
-        setExtracted({ ...emptyExtracted(), ...data });
+        setExtracted({ ...emptyExtracted(), ...json.data });
         setWarnings(json.warnings || {});
         setDocType('checkout_page');
         setUploadStep(2);
@@ -364,16 +364,8 @@ export default function Home() {
       setExtracted({ ...emptyExtracted(), ...data });
       setWarnings(json.warnings || {});
       setDocType('confirmed_voucher');
-      if (json.blocked && json.blockReason === 'non_refundable') {
-        setBlockInfo({ reason: 'non_refundable' });
-        setUploadStep('blocked');
-        return;
-      }
-      if (json.blockReason === 'checkin_passed') {
-        setBlockInfo({ reason: 'checkin_passed', message: json.message });
-        setUploadStep('blocked');
-        return;
-      }
+      if (json.blocked && json.blockReason === 'non_refundable') { setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return; }
+      if (json.blockReason === 'checkin_passed') { setBlockInfo({ reason: 'checkin_passed', message: json.message }); setUploadStep('blocked'); return; }
       setUploadStep(2);
     } catch {
       clearInterval(interval);
@@ -395,9 +387,7 @@ export default function Home() {
     const effectivePrice = extracted?.total_price_paid || extracted?.price_per_night || 0;
     if (!effectivePrice) { setSubmitError('Please enter the total price you paid'); return; }
     if (!extracted?.total_price_paid && extracted?.price_per_night) setExtracted(prev => ({ ...prev, total_price_paid: prev.price_per_night * (prev.total_nights || 1) }));
-    if (extracted?.cancellation_policy === 'non-refundable') {
-      setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return;
-    }
+    if (extracted?.cancellation_policy === 'non-refundable') { setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return; }
     setLoading(true);
     try {
       const res = await fetch('https://hoteldrops-production-7e5a.up.railway.app/api/voucher/submit', {
@@ -406,12 +396,8 @@ export default function Home() {
         body: JSON.stringify({ ...extracted, phone: phone.startsWith('+') ? phone : `+91${phone}`, email: emailVal, voucher_url: voucherUrl || null, doc_type: docType }),
       });
       const json = await res.json();
-      if (json.blocked && json.reason === 'non_refundable') {
-        setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return;
-      }
-      if (json.reason === 'duplicate') {
-        setBlockInfo({ reason: 'duplicate', message: json.message }); setUploadStep('blocked'); return;
-      }
+      if (json.blocked && json.reason === 'non_refundable') { setBlockInfo({ reason: 'non_refundable' }); setUploadStep('blocked'); return; }
+      if (json.reason === 'duplicate') { setBlockInfo({ reason: 'duplicate', message: json.message }); setUploadStep('blocked'); return; }
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to submit');
       sessionStorage.setItem('rebuq_booking', JSON.stringify({ extracted, bookingId: json.booking_id, liteapi_hotel_id: json.liteapi_hotel_id || null }));
       router.push('/tracking');
@@ -423,10 +409,7 @@ export default function Home() {
 
   const handlePopupGoogle = async () => {
     setPopupLoading(true); setPopupErr("");
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback?redirect=/` },
-    });
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback?redirect=/` } });
     if (error) { setPopupErr(error.message); setPopupLoading(false); }
   };
 
@@ -435,24 +418,182 @@ export default function Home() {
     setPopupLoading(true); setPopupErr("");
     const { error } = await supabase.auth.signUp({ email: popupEmail, password: popupPw });
     if (error) { setPopupErr(error.message); setPopupLoading(false); return; }
-    setSignupPopup(false);
-    setPopupLoading(false);
+    setSignupPopup(false); setPopupLoading(false);
   };
 
-  const dismissPopup = () => {
-    setSignupPopup(false);
-    setPopupMode('signup');
-  };
+  const dismissPopup = () => { setSignupPopup(false); setPopupMode('signup'); };
 
   const handlePopupSignin = async () => {
     if (!popupSigninEmail || !popupSigninPw) { setPopupErr('Please enter email and password'); return; }
     setPopupLoading(true); setPopupErr('');
     const { error } = await supabase.auth.signInWithPassword({ email: popupSigninEmail, password: popupSigninPw });
     if (error) { setPopupErr(error.message); setPopupLoading(false); return; }
-    setSignupPopup(false);
-    setPopupLoading(false);
-    router.refresh();
+    setSignupPopup(false); setPopupLoading(false); router.refresh();
   };
+
+  // ── CONFIRM FORM (used in both confirmed_voucher and browsing flows) ──────
+  function ConfirmForm({ isBrowsing }: { isBrowsing: boolean }) {
+    if (!extracted) return null;
+    return (
+      <div>
+        {/* Banner */}
+        {isBrowsing ? (
+          <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 12, padding: '14px 16px', marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>🔍</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: B, marginBottom: 3, fontFamily: "'Sora',sans-serif" }}>Looks like you haven't booked yet — that's perfect.</div>
+              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>
+                {extracted.hotel_name && extracted.check_in && extracted.check_out
+                  ? <>We've picked up <strong>{extracted.hotel_name}</strong> for <strong>{new Date(extracted.check_in+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'})} → {new Date(extracted.check_out+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</strong>. Confirm the details below and we'll alert you the moment this price drops.</>
+                  : <>We'll monitor this hotel's price and alert you the moment it drops. Please fill in the details below.</>
+                }
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 16 }}>✅</span>
+            <div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#166534' }}>Your booking is ready to track</span>
+              <span style={{ fontSize: 13, color: '#166534' }}> — Review the details below and we'll start watching the price.</span>
+            </div>
+          </div>
+        )}
+
+        {/* Warnings */}
+        {warnings.partialExtraction && <div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}><strong>Partial read</strong> — Please check and fill in any missing details.</div>}
+        {warnings.checkInSoon && <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#c2410c' }}><strong>Check-in very soon</strong> — Your check-in is {warnings.checkInSoonDays === 0 ? 'today' : 'tomorrow'}. We will scan immediately but the window to rebook is tight.</div>}
+        {warnings.payAtProperty && <div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#0369a1' }}><strong>Pay at property</strong> — You have not paid yet so amount shows ₹0. We will still track the rate.</div>}
+        {warnings.unknownPolicy && <div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}><strong>Cancellation policy unclear</strong> — Please select your policy below.</div>}
+        {warnings.currencyConverted && extracted?.total_price_paid > 0 && <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#166534' }}><strong>Currency converted</strong> — Original was in {warnings.originalCurrency}, converted to INR. Please verify.</div>}
+
+        {/* Hotel details form */}
+        <div style={{ background: '#f8fafc', borderRadius: 12, padding: 18, marginBottom: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Hotel details</div>
+
+          {/* Hotel name */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={lbl}>Hotel name *</label>
+            <input style={inp} value={extracted.hotel_name} onChange={e => setExtracted({ ...extracted, hotel_name: e.target.value })} placeholder="e.g. Sofitel Dubai Downtown" />
+          </div>
+
+          {/* City */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={lbl}>City</label>
+            <input style={inp} value={extracted.hotel_city} onChange={e => setExtracted({ ...extracted, hotel_city: e.target.value })} placeholder="e.g. Dubai" />
+          </div>
+
+          {/* Dates */}
+          <div style={grid2}>
+            <div><label style={lbl}>Check-in *</label><input style={inp} type="date" value={extracted.check_in} onChange={e => setExtracted({ ...extracted, check_in: e.target.value })} /></div>
+            <div><label style={lbl}>Check-out *</label><input style={inp} type="date" value={extracted.check_out} onChange={e => setExtracted({ ...extracted, check_out: e.target.value })} /></div>
+          </div>
+
+          {/* Adults + Rooms */}
+          <div style={grid2}>
+            <div><label style={lbl}>Adults *</label><input style={inp} type="number" min={1} max={10} value={extracted.num_adults} onChange={e => setExtracted({ ...extracted, num_adults: Number(e.target.value) })} /></div>
+            <div><label style={lbl}>Rooms</label><input style={inp} type="number" min={1} max={10} value={extracted.num_rooms} onChange={e => setExtracted({ ...extracted, num_rooms: Number(e.target.value) })} /></div>
+          </div>
+
+          {/* Children — only show if > 0, with age per child */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={lbl}>Children</label>
+            <input style={inp} type="number" min={0} max={9} value={extracted.num_children}
+              onChange={e => {
+                const n = Number(e.target.value);
+                const ages = Array.from({ length: n }, (_, i) => extracted.children_ages[i] ?? null);
+                setExtracted({ ...extracted, num_children: n, children_ages: ages });
+              }}
+              placeholder="0"
+            />
+          </div>
+          {extracted.num_children > 0 && (
+            <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '14px', marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', marginBottom: 10 }}>Age of each child (years)</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                {Array.from({ length: extracted.num_children }, (_, i) => (
+                  <div key={i}>
+                    <label style={{ ...lbl, fontSize: 11 }}>Child {i + 1}</label>
+                    <input style={{ ...inp, padding: '9px 10px', textAlign: 'center' as const }} type="number" min={0} max={17}
+                      value={extracted.children_ages[i] ?? ''}
+                      placeholder="Age"
+                      onChange={e => {
+                        const ages = [...(extracted.children_ages || [])];
+                        ages[i] = e.target.value ? Number(e.target.value) : null;
+                        setExtracted({ ...extracted, children_ages: ages });
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Total paid */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={lbl}>Total paid incl. taxes (₹) *</label>
+            <input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: Number(e.target.value) })} placeholder="e.g. 95000" />
+          </div>
+
+          {/* Booked on OTA */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={lbl}>Booked on</label>
+            <select style={inp} value={extracted.ota_name} onChange={e => setExtracted({ ...extracted, ota_name: e.target.value })}>
+              {OTA_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* Cancellation policy */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={lbl}>Cancellation policy</label>
+            <select style={inp} value={extracted.cancellation_policy} onChange={e => setExtracted({ ...extracted, cancellation_policy: e.target.value })}>
+              {CANCEL_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* Meal plan */}
+          <div style={{ marginBottom: 0 }}>
+            <label style={lbl}>Meal plan</label>
+            <select style={inp} value={extracted.board_basis} onChange={e => { const opt = BOARD_OPTIONS.find(o => o.code === e.target.value); setExtracted({ ...extracted, board_basis: e.target.value, board_basis_label: opt?.label || '' }); }}>
+              {BOARD_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Alert contact section — clean white card */}
+        <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: 18, marginBottom: 14 }}>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 4 }}>Where should we send your price drop alert?</div>
+            <div style={{ fontSize: 13, color: '#64748b' }}>We'll WhatsApp you the moment the price falls.</div>
+          </div>
+          <div style={{ display: 'flex', marginBottom: 12 }}>
+            <span style={{ ...inp, width: 52, borderRadius: '10px 0 0 10px', borderRight: 'none', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>+91</span>
+            <input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1, borderLeft: 'none' }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number" maxLength={10} />
+          </div>
+          <input style={{ ...inp, marginBottom: 14 }} type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} placeholder="Email address" />
+          <div style={{ fontSize: 11.5, color: '#94a3b8', marginBottom: 14 }}>Free · No app needed · No spam</div>
+          {submitError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#dc2626' }}>{submitError}</div>}
+          <button onClick={submitBooking} disabled={loading || extracted.cancellation_policy === 'non-refundable'}
+            style={{ width: '100%', background: extracted.cancellation_policy === 'non-refundable' ? '#e2e8f0' : '#FCD34D', color: extracted.cancellation_policy === 'non-refundable' ? '#94a3b8' : NAVY, border: 'none', borderRadius: 10, padding: '14px', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: extracted.cancellation_policy === 'non-refundable' ? 'not-allowed' : 'pointer' }}>
+            {loading ? 'Starting tracker…' : extracted.cancellation_policy === 'non-refundable' ? 'Cannot track non-refundable' : 'Start tracking my price →'}
+          </button>
+        </div>
+
+        {/* Back / re-upload */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <label style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '11px', borderRadius: 10, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, textAlign: 'center' as const, display: 'block' }}>
+            {fileSource === 'camera' ? (
+              <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('camera'); setExtracted(null); setUploadStep(1); } }} />
+            ) : (
+              <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('upload'); setExtracted(null); setUploadStep(1); } }} />
+            )}
+            {fileSource === 'camera' ? 'Retake photo' : 'Re-upload'}
+          </label>
+          <button onClick={() => setUploadStep(1)} style={{ flex: 1, background: 'none', border: 'none', color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: "#fff", color: "#1e293b", fontSize: 16, lineHeight: 1.6, WebkitFontSmoothing: "antialiased", overflowX: "hidden", maxWidth: "100vw", paddingBottom: isMobile ? 72 : 0 }}>
@@ -464,7 +605,6 @@ export default function Home() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
         @keyframes slideUp { from { opacity:0; transform: translateY(24px); } to { opacity:1; transform: translateY(0); } }
-        @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
         .hotel-card-img { transition: transform 0.3s ease; }
         .hotel-card:hover .hotel-card-img { transform: scale(1.04); }
         input:focus, select:focus { border-color: ${B} !important; box-shadow: 0 0 0 3px rgba(20,71,184,0.08); }
@@ -492,27 +632,34 @@ export default function Home() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', animation: 'fadeIn 0.2s ease' }}>
           <div onClick={closeModal} style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)' }} />
           <div style={{ position: 'relative', zIndex: 1, background: '#fff', borderRadius: isMobile ? '16px 16px 0 0' : 16, width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto', marginTop: isMobile ? 'auto' : 60, animation: 'slideUp 0.25s ease', boxShadow: '0 32px 80px rgba(0,0,0,0.3)', ...(isMobile ? { position: 'fixed' as const, bottom: 0, left: 0, right: 0, marginTop: 0, borderRadius: '20px 20px 0 0', maxHeight: '92vh' } : {}) }}>
+
+            {/* Modal header */}
             <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky' as const, top: 0, background: '#fff', zIndex: 10, borderRadius: isMobile ? '20px 20px 0 0' : '16px 16px 0 0' }}>
               <div>
                 <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 17, fontWeight: 700, color: NAVY }}>
-                  {uploadStep === 1 ? 'Upload your voucher' : uploadStep === 2 ? ((docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top' || docType === 'checkout_page') ? 'Set a price alert' : 'Confirm booking details') : uploadStep === 'hotel_pick' ? '🏨 Select a hotel' : uploadStep === 'room_pick' ? '🛏️ Select a room' :
-                    blockInfo?.reason === 'non_refundable' ? '🔒 Non-refundable booking' :
-                    blockInfo?.reason === 'not_hotel' ? '📄 Not a hotel booking' :
-                    blockInfo?.reason === 'poor_quality' || blockInfo?.reason === 'parse_error' ? '🔍 Could not read voucher' :
-                    blockInfo?.reason === 'checkin_passed' ? '📅 Check-in already passed' :
-                    blockInfo?.reason === 'duplicate' ? '✅ Already tracking' :
-                    blockInfo?.reason === 'network_error' ? '⚠️ Connection issue' :
-                    uploadStep === 'success' ? '✅ Booking tracked!' :
-                    '⚠️ We need your attention'}
+                  {uploadStep === 1 ? 'Upload your voucher'
+                    : uploadStep === 2 ? ((['search_results','hotel_detail_rooms','hotel_detail_top','checkout_page'].includes(docType)) ? 'Set a price alert' : 'Confirm booking details')
+                    : uploadStep === 'hotel_pick' ? '🏨 Select a hotel'
+                    : uploadStep === 'room_pick' ? '🛏️ Select a room'
+                    : blockInfo?.reason === 'non_refundable' ? '🔒 Non-refundable booking'
+                    : blockInfo?.reason === 'not_hotel' ? '📄 Not a hotel booking'
+                    : blockInfo?.reason === 'poor_quality' || blockInfo?.reason === 'parse_error' ? '🔍 Could not read voucher'
+                    : blockInfo?.reason === 'checkin_passed' ? '📅 Check-in already passed'
+                    : blockInfo?.reason === 'duplicate' ? '✅ Already tracking'
+                    : blockInfo?.reason === 'network_error' ? '⚠️ Connection issue'
+                    : uploadStep === 'success' ? '✅ Booking tracked!'
+                    : '⚠️ We need your attention'}
                 </div>
                 {uploadStep !== 'blocked' && uploadStep !== 'hotel_pick' && uploadStep !== 'room_pick' && (
                   <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
-                    {uploadStep === 2 ? ((docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top' || docType === 'checkout_page') ? "We'll notify you the moment this price drops" : 'Review and correct anything that looks wrong') : ''}
+                    {uploadStep === 2 ? ((['search_results','hotel_detail_rooms','hotel_detail_top','checkout_page'].includes(docType)) ? "We'll notify you the moment this price drops" : 'Review and correct anything that looks wrong') : ''}
                   </div>
                 )}
               </div>
               <button onClick={closeModal} style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
             </div>
+
+            {/* Step indicator */}
             {uploadStep !== 'blocked' && uploadStep !== 'hotel_pick' && uploadStep !== 'room_pick' && (
               <div style={{ padding: '12px 24px', background: '#f8fafc', display: 'flex', gap: 0, borderBottom: '1px solid #f1f5f9' }}>
                 {[{ n: uploadStep === 2 ? '✓' : '1', label: 'Upload', done: uploadStep === 2 }, { n: '2', label: 'Confirm', active: uploadStep === 2 }].map((s, i) => (
@@ -524,18 +671,21 @@ export default function Home() {
                 ))}
               </div>
             )}
+
             <div style={{ padding: '20px 24px 32px' }}>
+
+              {/* ── STEP 1: Upload ── */}
               {uploadStep === 1 && (
                 <div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                     <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: (file && fileSource === 'upload') ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${(file && fileSource === 'upload') ? '#86efac' : '#e2e8f0'}`, borderRadius: 14, padding: '24px 12px', cursor: 'pointer', minHeight: 110 }}>
                       <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('upload'); } }} />
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={(file && fileSource === 'upload') ? '#16a34a' : '#94a3b8'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Upload file</div><div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>PDF or image</div></div>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={(file && fileSource === 'upload') ? '#16a34a' : '#94a3b8'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                      <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Upload file</div><div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>PDF, JPG, PNG</div></div>
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: (file && fileSource === 'camera') ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${(file && fileSource === 'camera') ? '#86efac' : '#e2e8f0'}`, borderRadius: 14, padding: '24px 12px', cursor: 'pointer', minHeight: 110 }}>
                       <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} ref={cameraInputRef} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('camera'); } }} />
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={(file && fileSource === 'camera') ? '#16a34a' : '#94a3b8'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={(file && fileSource === 'camera') ? '#16a34a' : '#94a3b8'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
                       <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Take photo</div><div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Use camera</div></div>
                     </label>
                   </div>
@@ -566,6 +716,7 @@ export default function Home() {
                 </div>
               )}
 
+              {/* ── Hotel picker ── */}
               {uploadStep === 'hotel_pick' && extractResult?.data?.hotels && (
                 <div>
                   <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>We found multiple hotels in your screenshot. Pick the one you want to track:</p>
@@ -579,6 +730,7 @@ export default function Home() {
                 </div>
               )}
 
+              {/* ── Room picker ── */}
               {uploadStep === 'room_pick' && extractResult?.data?.room_options && (
                 <div>
                   <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>Select the room you booked:</p>
@@ -592,137 +744,12 @@ export default function Home() {
                 </div>
               )}
 
+              {/* ── STEP 2: Confirm ── */}
               {uploadStep === 2 && extracted && (
-                <div>
-                  {(docType === 'search_results' || docType === 'hotel_detail_rooms' || docType === 'hotel_detail_top' || docType === 'checkout_page') ? (
-                    <div>
-                      <div style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)', border: '1.5px solid #bfdbfe', borderRadius: 14, padding: '16px 18px', marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                        <div style={{ fontSize: 22, flexShrink: 0 }}>🔍</div>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: 14, color: '#1447b8', marginBottom: 3, fontFamily: "'Sora',sans-serif" }}>Looks like you haven't booked yet — that's perfect.</div>
-                          <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>
-                            {extracted.hotel_name && extracted.check_in && extracted.check_out
-                              ? <>We've picked up <strong>{extracted.hotel_name}</strong> for <strong>{new Date(extracted.check_in+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'})} → {new Date(extracted.check_out+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</strong>. Confirm the details below and we'll alert you the moment this price drops.</>
-                              : <>We'll monitor this hotel's price and alert you the moment it drops — so you can book at the lowest rate. Please fill in the details below.</>
-                            }
-                          </div>
-                        </div>
-                      </div>
-                      {warnings.partialExtraction && (<div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}><strong>Partial read</strong> — Please check and fill in missing details.</div>)}
-                      <div style={{ marginBottom: 16 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{extracted.hotel_name || 'Hotel not detected'}</span>
-                        </div>
-                        <div style={{ fontSize: 13, color: '#64748b' }}>{extracted.hotel_city && `${extracted.hotel_city} · `}{extracted.check_in && extracted.check_out ? `${new Date(extracted.check_in + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} → ${new Date(extracted.check_out + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'Dates not detected'}{extracted.num_adults ? ` · ${extracted.num_adults} Adults` : ''}{extracted.num_children > 0 ? `, ${extracted.num_children} Child${extracted.num_children > 1 ? 'ren' : ''}` : ''}</div>
-                        {extracted.total_price_paid > 0 && <div style={{ fontSize: 14, fontWeight: 700, color: B, marginTop: 4 }}>₹{Math.round(extracted.total_price_paid).toLocaleString('en-IN')} total</div>}
-                        <button onClick={() => setEditMode(!editMode)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: B, padding: 0, fontFamily: 'inherit', fontWeight: 600, marginTop: 8 }}>{editMode ? '✕ Close edit' : 'Something wrong? Edit details'}</button>
-                      </div>
-                      {editMode && (
-                        <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                          <div style={{ marginBottom: 10 }}><label style={lbl}>Hotel name</label><input style={inp} value={extracted.hotel_name} onChange={e => setExtracted({ ...extracted, hotel_name: e.target.value })} /></div>
-                          <div style={{ marginBottom: 10 }}><label style={lbl}>City</label><input style={inp} value={extracted.hotel_city} onChange={e => setExtracted({ ...extracted, hotel_city: e.target.value })} /></div>
-                          <div style={grid2}>
-                            <div><label style={lbl}>Check-in</label><input style={inp} type="date" value={extracted.check_in} onChange={e => setExtracted({ ...extracted, check_in: e.target.value })} /></div>
-                            <div><label style={lbl}>Check-out</label><input style={inp} type="date" value={extracted.check_out} onChange={e => setExtracted({ ...extracted, check_out: e.target.value })} /></div>
-                          </div>
-                          <div style={grid2}>
-                            <div><label style={lbl}>Adults</label><input style={inp} type="number" min="1" max="9" value={extracted.num_adults || 2} onChange={e => setExtracted({ ...extracted, num_adults: Number(e.target.value) })} /></div>
-                            <div><label style={lbl}>Rooms</label><input style={inp} type="number" min="1" max="9" value={extracted.num_rooms || 1} onChange={e => setExtracted({ ...extracted, num_rooms: Number(e.target.value) })} /></div>
-                          </div>
-                          <div style={{ marginBottom: 10 }}><label style={lbl}>Children (ages, comma separated e.g. 5,8)</label><input style={inp} placeholder="Leave blank if no children" value={(extracted.children_ages||[]).join(',')} onChange={e => { const ages = e.target.value.split(',').map((a:string)=>parseInt(a.trim())).filter((a:number)=>!isNaN(a)); setExtracted({ ...extracted, num_children: ages.length, children_ages: ages }); }} /></div>
-                          <div style={{ marginBottom: 10 }}>
-                            <label style={{...lbl, color: !extracted.total_price_paid ? '#dc2626' : undefined}}>
-                              Total price paid (₹){!extracted.total_price_paid ? ' ← Required' : ''}
-                            </label>
-                            <input style={{...inp, borderColor: !extracted.total_price_paid ? '#dc2626' : undefined, background: !extracted.total_price_paid ? '#fef2f2' : undefined}} type="number" value={extracted.total_price_paid || ''} placeholder="Enter total price incl. taxes" onChange={e => setExtracted({ ...extracted, total_price_paid: Number(e.target.value) })} />
-                          </div>
-                        </div>
-                      )}
-                      <div style={{ background: NAVY, borderRadius: 14, padding: 20, marginBottom: 16 }}>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6, fontFamily: "'Sora',sans-serif" }}>One message. One tap. You save.</div>
-                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 16 }}>Free. No app. No spam.</div>
-                        <div style={{ display: 'flex', marginBottom: 12 }}>
-                          <span style={{ ...inp, width: 52, borderRadius: '10px 0 0 10px', borderRight: 'none', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>+91</span>
-                          <input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.15)', borderLeft: 'none' }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number" maxLength={10} />
-                        </div>
-                        <input style={{ ...inp, marginBottom: 12, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.15)' }} type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} placeholder="Email address" />
-                        {submitError && <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#fca5a5' }}>{submitError}</div>}
-                        <button onClick={submitBooking} disabled={loading} style={{ width: '100%', background: '#FCD34D', color: NAVY, border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
-                          {loading ? 'Setting up alert…' : 'Yes, watch this price for me →'}
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', gap: 10 }}>
-                        <label style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '11px', borderRadius: 10, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, textAlign: 'center' as const, display: 'block' }}>
-                          {fileSource === 'camera' ? (
-                            <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('camera'); setExtracted(null); setUploadStep(1); } }} />
-                          ) : (
-                            <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('upload'); setExtracted(null); setUploadStep(1); } }} />
-                          )}
-                          {fileSource === 'camera' ? 'Retake photo' : 'Re-upload'}
-                        </label>
-                        <button onClick={() => setUploadStep(1)} style={{ flex: 1, background: 'none', border: 'none', color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      {warnings.partialExtraction && (<div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}><strong>Partial read</strong> — We could not read all fields. Please check and fill in missing details.</div>)}
-                      {warnings.checkInSoon && (<div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#c2410c' }}><strong>Check-in very soon</strong> — Your check-in is {warnings.checkInSoonDays === 0 ? 'today' : 'tomorrow'}. We will scan immediately but the window to rebook is tight.</div>)}
-                      {warnings.payAtProperty && (<div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#0369a1' }}><strong>Pay at property</strong> — You have not paid yet so amount shows Rs.0. We will still track the rate.</div>)}
-                      {warnings.unknownPolicy && (<div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#92400e' }}><strong>Cancellation policy unclear</strong> — Please select your policy below.</div>)}
-                      {warnings.currencyConverted && extracted?.total_price_paid > 0 && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: '#166534' }}><strong>Currency converted</strong> — Original was in {warnings.originalCurrency}, converted to INR. Please verify.</div>)}
-                      {file && (<div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#166534' }}><strong>AI extracted successfully</strong> — verify and correct anything that looks wrong.</div>)}
-                      <div style={{ background: '#f8fafc', borderRadius: 12, padding: 20, marginBottom: 14 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Hotel details</div>
-                        <div style={{ marginBottom: 14 }}><label style={lbl}>Hotel name *</label><input style={inp} value={extracted.hotel_name} onChange={e => setExtracted({ ...extracted, hotel_name: e.target.value })} placeholder="e.g. Crowne Plaza Dubai Deira" /></div>
-                        <div style={grid2}>
-                          <div><label style={lbl}>Check-in *</label><input style={inp} type="date" value={extracted.check_in} onChange={e => setExtracted({ ...extracted, check_in: e.target.value })} /></div>
-                          <div><label style={lbl}>Check-out *</label><input style={inp} type="date" value={extracted.check_out} onChange={e => setExtracted({ ...extracted, check_out: e.target.value })} /></div>
-                        </div>
-                        <div style={grid2}>
-                          <div><label style={lbl}>Adults *</label><input style={inp} type="number" min={1} max={10} value={extracted.num_adults} onChange={e => setExtracted({ ...extracted, num_adults: Number(e.target.value) })} /></div>
-                          <div><label style={lbl}>Rooms</label><input style={inp} type="number" min={1} max={10} value={extracted.num_rooms} onChange={e => setExtracted({ ...extracted, num_rooms: Number(e.target.value) })} /></div>
-                        </div>
-                        <div style={{ marginBottom: 14 }}><label style={lbl}>Total paid (₹) *</label><input style={inp} type="number" value={extracted.total_price_paid || ''} onChange={e => setExtracted({ ...extracted, total_price_paid: Number(e.target.value) })} placeholder="Total amount including taxes" /></div>
-                        <div style={{ marginBottom: 14 }}><label style={lbl}>Cancellation policy</label>
-                          <select style={inp} value={extracted.cancellation_policy} onChange={e => setExtracted({ ...extracted, cancellation_policy: e.target.value })}>
-                            {CANCEL_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
-                          </select>
-                        </div>
-                        <div style={{ marginBottom: 0 }}><label style={lbl}>Meal plan</label>
-                          <select style={inp} value={extracted.board_basis} onChange={e => { const opt = BOARD_OPTIONS.find(o => o.code === e.target.value); setExtracted({ ...extracted, board_basis: e.target.value, board_basis_label: opt?.label || '' }); }}>
-                            {BOARD_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                      <div style={{ background: NAVY, borderRadius: 14, padding: 20, marginBottom: 14 }}>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6, fontFamily: "'Sora',sans-serif" }}>One message. One tap. You save.</div>
-                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 16 }}>Free. No app. No spam.</div>
-                        <div style={{ display: 'flex', marginBottom: 12 }}>
-                          <span style={{ ...inp, width: 52, borderRadius: '10px 0 0 10px', borderRight: 'none', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>+91</span>
-                          <input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.15)', borderLeft: 'none' }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number" maxLength={10} />
-                        </div>
-                        <input style={{ ...inp, marginBottom: 12, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.15)' }} type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} placeholder="Email address" />
-                        {submitError && <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12, color: '#fca5a5' }}>{submitError}</div>}
-                        <button onClick={submitBooking} disabled={loading || extracted.cancellation_policy === 'non-refundable'} style={{ width: '100%', background: extracted.cancellation_policy === 'non-refundable' ? '#e2e8f0' : '#FCD34D', color: extracted.cancellation_policy === 'non-refundable' ? '#94a3b8' : NAVY, border: 'none', borderRadius: 10, padding: 14, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: extracted.cancellation_policy === 'non-refundable' ? 'not-allowed' : 'pointer' }}>
-                          {loading ? 'Starting tracker…' : extracted.cancellation_policy === 'non-refundable' ? 'Cannot track non-refundable' : 'Start tracking my price →'}
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', gap: 10 }}>
-                        <label style={{ flex: 1, background: '#fff', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '11px', borderRadius: 10, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500, textAlign: 'center' as const, display: 'block' }}>
-                          {fileSource === 'camera' ? (
-                            <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('camera'); setExtracted(null); setUploadStep(1); } }} />
-                          ) : (
-                            <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('upload'); setExtracted(null); setUploadStep(1); } }} />
-                          )}
-                          {fileSource === 'camera' ? 'Retake photo' : 'Re-upload'}
-                        </label>
-                        <button onClick={() => setUploadStep(1)} style={{ flex: 1, background: 'none', border: 'none', color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <ConfirmForm isBrowsing={['search_results','hotel_detail_rooms','hotel_detail_top','checkout_page'].includes(docType)} />
               )}
 
+              {/* ── Blocked states ── */}
               {uploadStep === 'blocked' && blockInfo && (
                 <div>
                   {blockInfo.reason === 'not_hotel' && (<div><div style={{ background: '#fefce8', border: '1.5px solid #fde68a', borderRadius: 14, padding: 24, marginBottom: 20 }}><div style={{ fontSize: 28, marginBottom: 12 }}>📄</div><div style={{ fontSize: 16, fontWeight: 700, color: '#92400e', marginBottom: 8, fontFamily: "'Sora',sans-serif" }}>This does not look like a hotel booking.</div><p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>Please upload a hotel booking confirmation — not a flight ticket, train ticket, restaurant receipt, or other document.</p></div><div style={{ display: 'flex', gap: 10 }}><button onClick={() => { setUploadStep(1); setFile(null); setFileSource(null); setBlockInfo(null); }} style={{ flex: 1, background: B, color: '#fff', border: 'none', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Upload a hotel voucher</button><button onClick={() => { setExtracted(emptyExtracted()); setBlockInfo(null); setUploadStep(2); }} style={{ flex: 1, background: '#fff', color: B, border: '1.5px solid #bfdbfe', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Enter manually</button></div></div>)}
@@ -734,6 +761,7 @@ export default function Home() {
                 </div>
               )}
 
+              {/* ── Success ── */}
               {uploadStep === 'success' && (
                 <div style={{ textAlign: 'center' as const, padding: '20px 0' }}>
                   <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
@@ -742,14 +770,13 @@ export default function Home() {
                   <button onClick={closeModal} style={{ width: '100%', background: B, color: '#fff', border: 'none', borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Done</button>
                 </div>
               )}
+
             </div>
           </div>
         </div>
       )}
 
-      {/* ══════════════════════════════════════
-          TOP NAV
-      ══════════════════════════════════════ */}
+      {/* ══ TOP NAV ══ */}
       <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)" }}>
         <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 40px", height: 60 }}>
           <a href="/" style={{ fontFamily: "'Sora', sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none" }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
@@ -768,11 +795,8 @@ export default function Home() {
           )}
         </nav>
 
-        {/* ══════════════════════════════════════
-            HERO — UPDATED COPY
-        ══════════════════════════════════════ */}
+        {/* ══ HERO ══ */}
         {isMobile ? (
-          /* ── MOBILE HERO ── */
           <section style={{ textAlign: "center", padding: "48px 20px 52px" }}>
             <SocialProofTicker />
             <h1 className="sora" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.1, color: "#fff", margin: "0 auto 18px" }}>
@@ -781,6 +805,7 @@ export default function Home() {
             <p style={{ fontSize: 15, color: "rgba(255,255,255,0.7)", margin: "0 auto 32px", lineHeight: 1.7 }}>
               rebuq monitors your hotel price 24/7. The moment it drops below what you paid, we alert you instantly. Rebook in minutes and keep the difference.
             </p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 24 }}>Free · No credit card needed</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: "15px 0", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
                 Check my booking — it&apos;s free
@@ -792,7 +817,6 @@ export default function Home() {
             <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)", marginTop: 18 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
           </section>
         ) : (
-          /* ── DESKTOP HERO ── */
           <section style={{ textAlign: "center", padding: "90px 24px 70px", background: "transparent" }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 100, marginBottom: 28, letterSpacing: "0.04em", textTransform: "uppercase", border: "1px solid rgba(255,255,255,0.2)" }}>✦ AI-Powered · Watches 24×7</div>
             <h1 className="sora" style={{ fontSize: 64, fontWeight: 800, lineHeight: 1.1, color: "#fff", maxWidth: 760, margin: "0 auto 20px" }}>
@@ -801,33 +825,31 @@ export default function Home() {
             <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", maxWidth: 540, margin: "0 auto 12px", lineHeight: 1.7 }}>
               rebuq monitors your hotel price 24/7. The moment it drops below what you paid, we alert you instantly. Rebook in minutes and keep the difference.
             </p>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 36 }}>Free · No credit card needed · Works on all major OTAs</p>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" as const }}>
               <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
               <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore exclusive member deals →</button>
             </div>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
           </section>
         )}
       </div>
 
-      {/* ══════════════════════════════════════
-          MEMBER DEALS
-      ══════════════════════════════════════ */}
+      {/* ══ MEMBER DEALS ══ */}
       <div id="deals" style={{ padding: isMobile ? "48px 0" : "64px 0" }}>
         <div style={{ textAlign: "center", padding: isMobile ? "0 20px 24px" : "0 40px 32px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 10 }}>Member Exclusive Rates</p>
           <h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY }}>Save up to 60% on member rates.</h2>
         </div>
-        <div
-          style={{ overflow: "hidden", padding: isMobile ? "0 16px" : "0 40px" }}
+        <div style={{ overflow: "hidden", padding: isMobile ? "0 16px" : "0 40px" }}
           onTouchStart={e => { (e.currentTarget as any)._tx = e.touches[0].clientX; }}
-          onTouchEnd={e => { const diff = (e.currentTarget as any)._tx - e.changedTouches[0].clientX; if (Math.abs(diff) > 50) scrollCarousel(diff > 0 ? 1 : -1); }}
-        >
+          onTouchEnd={e => { const diff = (e.currentTarget as any)._tx - e.changedTouches[0].clientX; if (Math.abs(diff) > 50) scrollCarousel(diff > 0 ? 1 : -1); }}>
           <div style={{ display: "flex", gap: 16, transform: `translateX(-${carouselPos * (CARD_WIDTH + 16)}px)`, transition: "transform 0.4s cubic-bezier(.4,0,.2,1)" }}>
             {CARDS.map((c, i) => {
               const ci = new Date(Date.now() + 14*86400000).toISOString().split('T')[0];
               const co = new Date(Date.now() + 15*86400000).toISOString().split('T')[0];
-              const fullDest = c.country ? `${c.name}, ${c.country}` : c.name; const url = `/search?destination=${encodeURIComponent(fullDest)}&checkIn=${ci}&checkOut=${co}&adults=2&rooms=1&children=0&placeId=${c.placeId}&countryCode=${c.countryCode||""}&cityName=${encodeURIComponent(c.name)}`;
+              const fullDest = c.country ? `${c.name}, ${c.country}` : c.name;
+              const url = `/search?destination=${encodeURIComponent(fullDest)}&checkIn=${ci}&checkOut=${co}&adults=2&rooms=1&children=0&placeId=${c.placeId}&countryCode=${c.countryCode||""}&cityName=${encodeURIComponent(c.name)}`;
               return (
                 <div key={i} className="hotel-card" onClick={() => window.location.href = url} style={{ flex: `0 0 ${CARD_WIDTH}px`, borderRadius: 14, overflow: "hidden", position: "relative", height: isMobile ? 160 : 200, cursor: "pointer" }}>
                   <img src={c.img} alt={c.name} className="hotel-card-img" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -853,16 +875,14 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════
-          HOW IT WORKS
-      ══════════════════════════════════════ */}
+      {/* ══ HOW IT WORKS ══ */}
       <div id="how" style={{ background: "#f8fafc", padding: isMobile ? "56px 20px" : "80px 40px" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 12, textAlign: "center" }}>How it works</p>
           <h2 className="sora" style={{ fontSize: isMobile ? 28 : 42, fontWeight: 800, color: NAVY, textAlign: "center", lineHeight: 1.15, marginBottom: 8 }}>Three steps. Zero effort.</h2>
           <p style={{ fontSize: 15, color: "#64748b", textAlign: "center", marginBottom: 48 }}>Upload once. We watch forever. You save when the price drops.</p>
           {isMobile ? (
-            <div style={{ overflowX: "auto", margin: "0 -20px", padding: "0 20px 12px", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" as any }}>
+            <div style={{ overflowX: "auto", margin: "0 -20px", padding: "0 20px 12px", scrollbarWidth: "none" }}>
               <div style={{ display: "flex", gap: 14, width: "max-content", paddingRight: 20 }}>
                 {[
                   { n: "01", title: "Upload", desc: "Scan or upload your hotel booking confirmation. Any PDF, screenshot or email. Our AI reads the hotel, dates, and price in seconds." },
@@ -898,22 +918,20 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════
-          WHY REBUQ
-      ══════════════════════════════════════ */}
+      {/* ══ WHY REBUQ ══ */}
       <div id="why" style={{ padding: isMobile ? "56px 20px" : "80px 40px" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 12, textAlign: "center" }}>Why rebuq</p>
           <h2 className="sora" style={{ fontSize: isMobile ? 26 : 40, fontWeight: 800, color: NAVY, textAlign: "center", lineHeight: 1.15, marginBottom: 48 }}>Built for travelers who hate leaving money on the table.</h2>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: isMobile ? 14 : 20 }}>
             {[
-              { icon: ICONS.clock, title: "AI never sleeps", desc: "Checks your hotel price every 6 hours, through the night, through weekends.", bg: "#eff6ff", ic: B },
-              { icon: ICONS.bell, title: "WhatsApp alerts", desc: "Instant alert with a rebooking link the moment the price drops. No app to install.", bg: "#f0fdf4", ic: "#16a34a" },
-              { icon: ICONS.globe, title: "All major OTAs", desc: "MakeMyTrip, Booking.com, Agoda, Goibibo, Cleartrip, Expedia, Hotels.com and more.", bg: "#fefce8", ic: "#d97706" },
-              { icon: ICONS.shield, title: "Zero risk", desc: "Free to check. We take a small success fee only if we actually save you money.", bg: "#fdf4ff", ic: "#7c3aed" },
+              { icon: ICONS.clock,  title: "AI never sleeps",   desc: "Checks your hotel price every 6 hours, through the night, through weekends.", bg: "#eff6ff", ic: B },
+              { icon: ICONS.bell,   title: "WhatsApp alerts",   desc: "Instant alert with a rebooking link the moment the price drops. No app to install.", bg: "#f0fdf4", ic: "#16a34a" },
+              { icon: ICONS.globe,  title: "All major OTAs",    desc: "MakeMyTrip, Booking.com, Agoda, Goibibo, Cleartrip, Expedia, Hotels.com and more.", bg: "#fefce8", ic: "#d97706" },
+              { icon: ICONS.shield, title: "Zero risk",         desc: "Free to check. We take a small success fee only if we actually save you money.", bg: "#fdf4ff", ic: "#7c3aed" },
             ].map((f, i) => (
               <div key={i} style={{ background: f.bg, borderRadius: 16, padding: isMobile ? 18 : 28 }}>
-                <div style={{ marginBottom: 14 }}><Icon d={f.icon} size={24} color={f.ic} /></div>
+                <div style={{ marginBottom: 14 }}><Icon d={f.icon} size={22} color={f.ic} /></div>
                 <div className="sora" style={{ fontSize: isMobile ? 14 : 16, fontWeight: 700, color: NAVY, marginBottom: 8 }}>{f.title}</div>
                 <p style={{ fontSize: isMobile ? 12 : 13.5, color: "#64748b", lineHeight: 1.6 }}>{f.desc}</p>
               </div>
@@ -978,7 +996,7 @@ export default function Home() {
         </footer>
       )}
 
-      {/* ── STICKY BOTTOM NAV — mobile only ── */}
+      {/* BOTTOM NAV — mobile */}
       {isMobile && (
         <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 68, background: "#fff", borderTop: "1px solid #f1f5f9", zIndex: 200, display: "flex", alignItems: "stretch" }}>
           {[
@@ -998,7 +1016,7 @@ export default function Home() {
         </nav>
       )}
 
-      {/* ── SIGNUP POPUP ── */}
+      {/* SIGNUP POPUP */}
       {signupPopup && (
         <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
           <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 60%, #1565c0 100%)", borderRadius: 20, padding: isMobile ? "32px 24px" : "44px 48px", width: "100%", maxWidth: 420, position: "relative", boxShadow: "0 24px 80px rgba(0,0,0,0.4)" }}>
