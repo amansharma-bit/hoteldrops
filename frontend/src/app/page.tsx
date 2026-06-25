@@ -14,7 +14,7 @@ const B = "#1447b8";
 const NAVY = "#0f172a";
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState<boolean | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -186,8 +186,8 @@ function SocialProofTicker() {
 
 export default function Home() {
   const router = useRouter();
-  const isMobile = useIsMobile();
-  if (isMobile === null) return null;
+  const isMobileRaw = useIsMobile();
+  const isMobile = isMobileRaw ?? false;
   const [openFaq, setOpenFaq] = useState(0);
   const [carouselPos, setCarouselPos] = useState(0);
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
