@@ -439,7 +439,9 @@ export default function Home() {
         {/* Banner */}
         {isBrowsing ? (
           <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: 12, padding: '14px 16px', marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-            <span style={{ fontSize: 18, flexShrink: 0 }}>🔍</span>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14, color: B, marginBottom: 3, fontFamily: "'Sora',sans-serif" }}>Looks like you haven't booked yet — that's perfect.</div>
               <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>
@@ -451,11 +453,13 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <div style={{ background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 16 }}>✅</span>
+          <div style={{ background: B, borderRadius: 12, padding: '16px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
             <div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#166534' }}>Your booking is ready to track</span>
-              <span style={{ fontSize: 13, color: '#166534' }}> — Review the details below and we'll start watching the price.</span>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 2, fontFamily: "'Sora',sans-serif" }}>Your booking is ready to track</div>
+              <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.75)' }}>Review the details below and we'll start watching the price 24/7.</div>
             </div>
           </div>
         )}
