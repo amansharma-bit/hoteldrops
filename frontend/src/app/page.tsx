@@ -618,8 +618,16 @@ export default function Home() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
         @keyframes slideUp { from { opacity:0; transform: translateY(24px); } to { opacity:1; transform: translateY(0); } }
+        .hero-section { opacity: 0; }
+        .hero-section.ready { opacity: 1; transition: opacity 0.15s ease; }
         .hotel-card-img { transition: transform 0.3s ease; }
         .hotel-card:hover .hotel-card-img { transform: scale(1.04); }
+        /* Anti-flash: hide hero text until fonts loaded */
+        .hero-text { opacity: 0; animation: heroFadeIn 0.01s 0.3s forwards; }
+        @keyframes heroFadeIn { to { opacity: 1; } }
+        /* Prevent layout shift from isMobile flip */
+        @media (max-width: 767px) { .desktop-only { display: none !important; } }
+        @media (min-width: 768px) { .mobile-only { display: none !important; } }
         input:focus, select:focus { border-color: ${B} !important; box-shadow: 0 0 0 3px rgba(20,71,184,0.08); }
         .bottom-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 4px; cursor: pointer; background: none; border: none; padding: 8px 0; font-family: inherit; }
         .bottom-tab:active { opacity: 0.7; }
@@ -817,11 +825,11 @@ export default function Home() {
           <section style={{ textAlign: "center", padding: "48px 20px 52px" }}>
             <SocialProofTicker />
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600, padding: "4px 14px", borderRadius: 100, marginBottom: 20, letterSpacing: "0.06em", textTransform: "uppercase" as const, border: "1px solid rgba(255,255,255,0.2)" }}>AI-Powered Hotel Price Tracker</div>
-            <h1 className="sora" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.15, color: "#fff", margin: "0 auto 18px" }}>
-              You booked. The price dropped.<br />You missed it.<br /><span style={{ color: "#FCD34D" }}>Never again.</span>
+            <h1 className="sora hero-text" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.2, color: "#fff", margin: "0 auto 18px" }}>
+              You booked.<br />The price dropped.<br />You missed it. <span style={{ color: "#FCD34D" }}>Never again.</span>
             </h1>
             <p style={{ fontSize: 15, color: "rgba(255,255,255,0.7)", margin: "0 auto 32px", lineHeight: 1.7 }}>
-              Upload your booking confirmation. Our AI watches the price round the clock. The moment it drops — we alert you on WhatsApp. Rebook in minutes. Keep the difference.
+              Upload your <span style={{ color: "#FCD34D", fontWeight: 700 }}>hotel</span> booking confirmation. Our AI watches the price round the clock. The moment it drops — we alert you on WhatsApp. Rebook in minutes. Keep the difference.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: "15px 0", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
@@ -836,13 +844,12 @@ export default function Home() {
         ) : (
           <section style={{ textAlign: "center", padding: "90px 24px 70px", background: "transparent" }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600, padding: "5px 16px", borderRadius: 100, marginBottom: 28, letterSpacing: "0.06em", textTransform: "uppercase" as const, border: "1px solid rgba(255,255,255,0.2)" }}>AI-Powered Hotel Price Tracker</div>
-            <h1 className="sora" style={{ fontSize: 60, fontWeight: 800, lineHeight: 1.15, color: "#fff", maxWidth: 760, margin: "0 auto 20px" }}>
-              You booked. The price dropped.<br />You missed it. <span style={{ color: "#FCD34D" }}>Never again.</span>
+            <h1 className="sora hero-text" style={{ fontSize: 54, fontWeight: 800, lineHeight: 1.15, color: "#fff", maxWidth: 700, margin: "0 auto 20px" }}>
+              You booked.<br />The price dropped.<br />You missed it. <span style={{ color: "#FCD34D" }}>Never again.</span>
             </h1>
             <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", maxWidth: 560, margin: "0 auto 12px", lineHeight: 1.8 }}>
-              Upload your booking confirmation. Our AI watches the price round the clock. The moment it drops — we alert you on WhatsApp. Rebook in minutes. Keep the difference.
+              Upload your <span style={{ color: "#FCD34D", fontWeight: 700 }}>hotel</span> booking confirmation. Our AI watches the price round the clock. The moment it drops — we alert you on WhatsApp. Rebook in minutes. Keep the difference.
             </p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 36 }}>No sign-up · No personal data extracted · No spam</p>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" as const }}>
               <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
               <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore exclusive member deals →</button>
