@@ -829,13 +829,13 @@ export default function Home() {
               You booked.<br />The price dropped.<br />You missed it. <span style={{ color: "#FCD34D" }}>Never again.</span>
             </h1>
             <p style={{ fontSize: 15, color: "rgba(255,255,255,0.7)", margin: "0 auto 32px", lineHeight: 1.7 }}>
-              Upload your <span style={{ color: "#FCD34D", fontWeight: 700 }}>hotel</span> booking confirmation. Our AI watches the price round the clock. The moment it drops — we alert you on WhatsApp. Rebook in minutes. Keep the difference.
+              Upload your hotel booking confirmation. Our AI watches the price round the clock. The moment it drops — we alert you on WhatsApp. Rebook in minutes. Keep the difference.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: "15px 0", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
                 Check my booking — it&apos;s free
               </button>
-              <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "transparent", color: "rgba(255,255,255,0.85)", border: "1.5px solid rgba(255,255,255,0.3)", borderRadius: 12, padding: "13px 0", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
+              <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "transparent", color: "#FCD34D", border: "1.5px solid rgba(252,211,77,0.4)", borderRadius: 12, padding: "13px 0", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
                 Explore member deals
               </button>
             </div>
@@ -844,15 +844,15 @@ export default function Home() {
         ) : (
           <section style={{ textAlign: "center", padding: "90px 24px 70px", background: "transparent" }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600, padding: "5px 16px", borderRadius: 100, marginBottom: 28, letterSpacing: "0.06em", textTransform: "uppercase" as const, border: "1px solid rgba(255,255,255,0.2)" }}>AI-Powered Hotel Price Tracker</div>
-            <h1 className="sora hero-text" style={{ fontSize: 54, fontWeight: 800, lineHeight: 1.15, color: "#fff", maxWidth: 700, margin: "0 auto 20px" }}>
+            <h1 className="sora hero-text" style={{ fontSize: 46, fontWeight: 800, lineHeight: 1.2, color: "#fff", maxWidth: 700, margin: "0 auto 20px" }}>
               You booked.<br />The price dropped.<br />You missed it. <span style={{ color: "#FCD34D" }}>Never again.</span>
             </h1>
             <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", maxWidth: 560, margin: "0 auto 12px", lineHeight: 1.8 }}>
-              Upload your <span style={{ color: "#FCD34D", fontWeight: 700 }}>hotel</span> booking confirmation. Our AI watches the price round the clock. The moment it drops — we alert you on WhatsApp. Rebook in minutes. Keep the difference.
+              Upload your hotel booking confirmation. Our AI watches the price round the clock. The moment it drops — we alert you on WhatsApp. Rebook in minutes. Keep the difference.
             </p>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" as const }}>
-              <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
-              <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore exclusive member deals →</button>
+              <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Start tracking — it&apos;s free</button>
+              <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "rgba(255,255,255,0.06)", color: "#FCD34D", border: "1.5px solid rgba(252,211,77,0.4)", borderRadius: 10, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore member deals →</button>
             </div>
             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>No sign-up · No personal data extracted · No spam</p>
           </section>
