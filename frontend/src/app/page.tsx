@@ -199,7 +199,7 @@ export default function Home() {
   const [popupEmail, setPopupEmail] = useState("");
   const [popupPw, setPopupPw] = useState("");
   const [popupErr, setPopupErr] = useState("");
-  const [activeTab, setActiveTab] = useState<'home' | 'scan' | 'deals' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'upload' | 'deals' | 'profile'>('home');
 
   const [modalOpen, setModalOpen]     = useState(false);
   const [uploadStep, setUploadStep]   = useState<1 | 2 | 'hotel_pick' | 'room_pick' | 'blocked' | 'success'>(1);
@@ -677,7 +677,9 @@ export default function Home() {
                   </div>
                 )}
               </div>
-              <button onClick={closeModal} style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', border: 'none', cursor: 'pointer', fontSize: 18, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', flexShrink: 0 }}>✕</button>
+              <button onClick={closeModal} style={{ width: 32, height: 32, minWidth: 32, borderRadius: 8, background: '#f1f5f9', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
 
             {/* Step indicator */}
@@ -722,7 +724,7 @@ export default function Home() {
                   {file && fileSource === 'upload' && (
                     <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 10, padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>{getFileLabel()}</span>
-                      <button onClick={() => { setFile(null); setFileSource(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#94a3b8', fontFamily: 'inherit' }}>✕</button>
+                      <button onClick={() => { setFile(null); setFileSource(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                     </div>
                   )}
                   <input {...getInputProps()} ref={fileInputRef} style={{ display: 'none' }} />
@@ -823,7 +825,7 @@ export default function Home() {
         {/* ══ HERO ══ */}
         {isMobile ? (
           <section style={{ textAlign: "center", padding: "48px 20px 52px" }}>
-            <SocialProofTicker />
+            {!isMobile && <SocialProofTicker />}
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600, padding: "4px 14px", borderRadius: 100, marginBottom: 20, letterSpacing: "0.06em", textTransform: "uppercase" as const, border: "1px solid rgba(255,255,255,0.2)" }}>AI-Powered Hotel Price Tracker</div>
             <h1 className="sora hero-text" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.2, color: "#fff", margin: "0 auto 18px" }}>
               You booked.<br />The price dropped.<br />You missed it. <span style={{ color: "#FCD34D" }}>Never again.</span>
@@ -974,7 +976,7 @@ export default function Home() {
             Upload your booking confirmation in 30 seconds. We watch and alert you the moment it drops.
           </p>
           <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-            Upload my booking now
+            Start tracking — it&apos;s free
           </button>
         </div>
       )}
@@ -1047,15 +1049,25 @@ export default function Home() {
       {isMobile && (
         <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 68, background: "#fff", borderTop: "1px solid #f1f5f9", zIndex: 200, display: "flex", alignItems: "stretch" }}>
           {[
-            { key: "home",    label: "Home",    icon: ICONS.home,   action: () => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); } },
-            { key: "scan",    label: "Scan",    icon: ICONS.camera, action: () => { setActiveTab('scan'); openModal(); } },
-            { key: "deals",   label: "Deals",   icon: ICONS.tag,    action: () => { setActiveTab('deals'); window.location.href = "/search-hotels"; } },
-            { key: "profile", label: "Profile", icon: ICONS.user,   action: () => { setActiveTab('profile'); window.location.href = user ? "/dashboard" : "/signin"; } },
+            { key: "home",    label: "Home",    action: () => { setActiveTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); },
+              icon: (active: boolean) => <Icon d={ICONS.home} size={22} color={active ? B : "#94a3b8"} /> },
+            { key: "upload",  label: "Upload",  action: () => { setActiveTab('upload'); openModal(); },
+              icon: (active: boolean) => (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? B : "#94a3b8"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              )},
+            { key: "deals",   label: "Deals",   action: () => { setActiveTab('deals'); window.location.href = "/search-hotels"; },
+              icon: (active: boolean) => <Icon d={ICONS.tag} size={22} color={active ? B : "#94a3b8"} /> },
+            { key: "profile", label: "Profile", action: () => { setActiveTab('profile'); window.location.href = user ? "/dashboard" : "/signin"; },
+              icon: (active: boolean) => <Icon d={ICONS.user} size={22} color={active ? B : "#94a3b8"} /> },
           ].map(tab => {
             const isActive = activeTab === tab.key;
             return (
               <button key={tab.key} className="bottom-tab" onClick={tab.action} style={{ color: isActive ? B : "#94a3b8" }}>
-                <Icon d={tab.icon} size={22} color={isActive ? B : "#94a3b8"} />
+                {tab.icon(isActive)}
                 <span style={{ fontSize: 10.5, fontWeight: isActive ? 600 : 400, letterSpacing: "0.01em" }}>{tab.label}</span>
               </button>
             );
@@ -1067,7 +1079,7 @@ export default function Home() {
       {signupPopup && (
         <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
           <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 60%, #1565c0 100%)", borderRadius: 20, padding: isMobile ? "32px 24px" : "44px 48px", width: "100%", maxWidth: 420, position: "relative", boxShadow: "0 24px 80px rgba(0,0,0,0.4)" }}>
-            <button onClick={dismissPopup} style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", color: "#fff", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            <button onClick={dismissPopup} style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 8, width: 32, height: 32, minWidth: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", marginBottom: 16 }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></div>
             {popupMode === 'signup' ? (<>
               <h2 style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: isMobile ? 22 : 26, color: "#fff", marginBottom: 8, lineHeight: 1.2 }}>Your next hotel stay costs less than you think.</h2>
