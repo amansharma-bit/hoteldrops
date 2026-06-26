@@ -93,7 +93,7 @@ const CARDS = [
 
 const FAQS = [
   { q: "Is rebuq really free to check?", a: "Yes — uploading your booking and letting rebuq monitor it is completely free. We only charge a small success fee when we actually save you money. If the price doesn't drop, you pay nothing." },
-  { q: "Which OTAs and hotel chains do you support?", a: "We support MakeMyTrip, Booking.com, Agoda, Goibibo, Expedia, Hotels.com, and over 50 direct hotel websites. We're constantly adding new sources." },
+  { q: "Which booking platforms do you support?", a: "rebuq works with all major hotel booking platforms and direct hotel bookings. Upload any booking confirmation — PDF, screenshot or email — and our AI reads it in seconds." },
   { q: "How do I rebook once you find a drop?", a: "We send you a WhatsApp alert with a direct link to the lower-priced booking. Cancel your old booking (most are free to cancel), rebook at the new rate, and pocket the difference. The whole process usually takes under 10 minutes." },
   { q: "What if I have a non-refundable booking?", a: "rebuq works best with refundable bookings. If your booking is non-refundable, we'll let you know when you upload — and suggest booking a flexible rate next time so you can benefit from price drops." },
 ];
@@ -285,7 +285,7 @@ export default function Home() {
   async function doScan() {
     if (!file) return;
     setScanning(true);
-    const msgs = ['Reading your voucher…', 'Identifying hotel & dates…', 'Extracting pricing…', 'Checking cancellation policy…', 'Almost done…'];
+    const msgs = ['Reading your document…', 'Analysing the content…', 'Extracting details…', 'Almost there…', 'Finishing up…'];
     let i = 0; setScanMsg(msgs[0]);
     const interval = setInterval(() => { i++; if (i < msgs.length) setScanMsg(msgs[i]); }, 900);
     const uploadedUrl = await uploadVoucherToStorage(file);
@@ -534,6 +534,20 @@ export default function Home() {
             </div>
           )}
 
+          {/* Room type */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={lbl}>Room type</label>
+            <input style={inp} value={extracted.room_type} onChange={e => setExtracted({ ...extracted, room_type: e.target.value })} placeholder="e.g. Deluxe King Room" />
+          </div>
+
+          {/* Board basis */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={lbl}>Meal plan</label>
+            <select style={inp} value={extracted.board_basis} onChange={e => { const opt = BOARD_OPTIONS.find(o => o.code === e.target.value); setExtracted({ ...extracted, board_basis: e.target.value, board_basis_label: opt?.label || '' }); }}>
+              {BOARD_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
+            </select>
+          </div>
+
           {/* Total paid */}
           <div style={{ marginBottom: 14 }}>
             <label style={lbl}>Total paid incl. taxes (₹) *</label>
@@ -556,13 +570,7 @@ export default function Home() {
             </select>
           </div>
 
-          {/* Meal plan */}
-          <div style={{ marginBottom: 0 }}>
-            <label style={lbl}>Meal plan</label>
-            <select style={inp} value={extracted.board_basis} onChange={e => { const opt = BOARD_OPTIONS.find(o => o.code === e.target.value); setExtracted({ ...extracted, board_basis: e.target.value, board_basis_label: opt?.label || '' }); }}>
-              {BOARD_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
-            </select>
-          </div>
+          {/* Meal plan moved above total paid */}
         </div>
 
         {/* Alert contact section — clean white card */}
@@ -576,7 +584,7 @@ export default function Home() {
             <input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1, borderLeft: 'none' }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number" maxLength={10} />
           </div>
           <input style={{ ...inp, marginBottom: 14 }} type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} placeholder="Email address" />
-          <div style={{ fontSize: 11.5, color: '#94a3b8', marginBottom: 14 }}>Free · No app needed · No spam</div>
+          <div style={{ fontSize: 11.5, color: '#94a3b8', marginBottom: 14 }}>No account · No card · No data stored</div>
           {submitError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#dc2626' }}>{submitError}</div>}
           <button onClick={submitBooking} disabled={loading || extracted.cancellation_policy === 'non-refundable'}
             style={{ width: '100%', background: extracted.cancellation_policy === 'non-refundable' ? '#e2e8f0' : '#FCD34D', color: extracted.cancellation_policy === 'non-refundable' ? '#94a3b8' : NAVY, border: 'none', borderRadius: 10, padding: '14px', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: extracted.cancellation_policy === 'non-refundable' ? 'not-allowed' : 'pointer' }}>
@@ -717,9 +725,9 @@ export default function Home() {
                     </div>
                   )}
                   <button onClick={doScan} disabled={!file} style={{ width: '100%', background: file ? B : '#e2e8f0', color: file ? '#fff' : '#94a3b8', border: 'none', borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700, cursor: file ? 'pointer' : 'default', fontFamily: 'inherit', transition: 'all 0.2s' }}>
-                    {file ? 'Scan with AI →' : 'Choose a file to continue'}
+                    {file ? 'Scan →' : 'Choose a file to continue'}
                   </button>
-                  <p style={{ fontSize: 11.5, color: '#94a3b8', textAlign: 'center' as const, marginTop: 12, lineHeight: 1.6 }}>Free to check · No app needed · WhatsApp alerts</p>
+                  <p style={{ fontSize: 11.5, color: '#94a3b8', textAlign: 'center' as const, marginTop: 12, lineHeight: 1.6 }}>No account · No card · No data stored</p>
                 </div>
               )}
 
@@ -808,13 +816,13 @@ export default function Home() {
         {isMobile ? (
           <section style={{ textAlign: "center", padding: "48px 20px 52px" }}>
             <SocialProofTicker />
-            <h1 className="sora" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.1, color: "#fff", margin: "0 auto 18px" }}>
-              Hotels drop their prices<br />after you book.<br /><span style={{ color: "#FCD34D" }}>We catch it. You save.</span>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600, padding: "4px 14px", borderRadius: 100, marginBottom: 20, letterSpacing: "0.06em", textTransform: "uppercase" as const, border: "1px solid rgba(255,255,255,0.2)" }}>AI-Powered Hotel Price Tracker</div>
+            <h1 className="sora" style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.15, color: "#fff", margin: "0 auto 18px" }}>
+              You booked. The price dropped.<br />You missed it.<br /><span style={{ color: "#FCD34D" }}>Never again.</span>
             </h1>
             <p style={{ fontSize: 15, color: "rgba(255,255,255,0.7)", margin: "0 auto 32px", lineHeight: 1.7 }}>
-              rebuq monitors your hotel price 24/7. The moment it drops below what you paid, we alert you instantly. Rebook in minutes and keep the difference.
+              Upload your booking confirmation. Our AI watches the price round the clock. The moment it drops — we alert you on WhatsApp. Rebook in minutes. Keep the difference.
             </p>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginBottom: 24 }}>Free · No credit card needed</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 12, padding: "15px 0", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
                 Check my booking — it&apos;s free
@@ -823,23 +831,23 @@ export default function Home() {
                 Explore member deals
               </button>
             </div>
-            <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)", marginTop: 18 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
+            <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)", marginTop: 18 }}>No account · No card · No data stored</p>
           </section>
         ) : (
           <section style={{ textAlign: "center", padding: "90px 24px 70px", background: "transparent" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 100, marginBottom: 28, letterSpacing: "0.04em", textTransform: "uppercase", border: "1px solid rgba(255,255,255,0.2)" }}>✦ AI-Powered · Watches 24×7</div>
-            <h1 className="sora" style={{ fontSize: 64, fontWeight: 800, lineHeight: 1.1, color: "#fff", maxWidth: 760, margin: "0 auto 20px" }}>
-              Hotels drop their prices after you book.<br /><span style={{ color: "#FCD34D" }}>We catch it. You save.</span>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600, padding: "5px 16px", borderRadius: 100, marginBottom: 28, letterSpacing: "0.06em", textTransform: "uppercase" as const, border: "1px solid rgba(255,255,255,0.2)" }}>AI-Powered Hotel Price Tracker</div>
+            <h1 className="sora" style={{ fontSize: 60, fontWeight: 800, lineHeight: 1.15, color: "#fff", maxWidth: 760, margin: "0 auto 20px" }}>
+              You booked. The price dropped.<br />You missed it. <span style={{ color: "#FCD34D" }}>Never again.</span>
             </h1>
-            <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", maxWidth: 540, margin: "0 auto 12px", lineHeight: 1.7 }}>
-              rebuq monitors your hotel price 24/7. The moment it drops below what you paid, we alert you instantly. Rebook in minutes and keep the difference.
+            <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", maxWidth: 560, margin: "0 auto 12px", lineHeight: 1.8 }}>
+              Upload your booking confirmation. Our AI watches the price round the clock. The moment it drops — we alert you on WhatsApp. Rebook in minutes. Keep the difference.
             </p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 36 }}>Free · No credit card needed · Works on all major OTAs</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 36 }}>No account · No card · No data stored</p>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" as const }}>
               <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
               <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore exclusive member deals →</button>
             </div>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>Free to check · No app needed · WhatsApp alerts · Zero-risk pricing</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>No account · No card · No data stored</p>
           </section>
         )}
       </div>
@@ -848,7 +856,7 @@ export default function Home() {
       <div id="deals" style={{ padding: isMobile ? "48px 0" : "64px 0" }}>
         <div style={{ textAlign: "center", padding: isMobile ? "0 20px 24px" : "0 40px 32px" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: B, marginBottom: 10 }}>Member Exclusive Rates</p>
-          <h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY }}>Save up to 60% on member rates.</h2>
+          <h2 className="sora" style={{ fontSize: isMobile ? 24 : 36, fontWeight: 800, color: NAVY }}>Save up to 60% with member rates.</h2>
         </div>
         <div style={{ overflow: "hidden", padding: isMobile ? "0 16px" : "0 40px" }}
           onTouchStart={e => { (e.currentTarget as any)._tx = e.touches[0].clientX; }}
@@ -936,7 +944,7 @@ export default function Home() {
             {[
               { icon: ICONS.clock,  title: "AI never sleeps",   desc: "Checks your hotel price every 6 hours, through the night, through weekends.", bg: "#eff6ff", ic: B },
               { icon: ICONS.bell,   title: "WhatsApp alerts",   desc: "Instant alert with a rebooking link the moment the price drops. No app to install.", bg: "#f0fdf4", ic: "#16a34a" },
-              { icon: ICONS.globe,  title: "All major OTAs",    desc: "MakeMyTrip, Booking.com, Agoda, Goibibo, Cleartrip, Expedia, Hotels.com and more.", bg: "#fefce8", ic: "#d97706" },
+              { icon: ICONS.globe,  title: "All booking platforms", desc: "Works with all major hotel booking platforms. Upload any voucher — PDF, screenshot or email.", bg: "#fefce8", ic: "#d97706" },
               { icon: ICONS.shield, title: "Zero risk",         desc: "Free to check. We take a small success fee only if we actually save you money.", bg: "#fdf4ff", ic: "#7c3aed" },
             ].map((f, i) => (
               <div key={i} style={{ background: f.bg, borderRadius: 16, padding: isMobile ? 18 : 28 }}>
@@ -971,10 +979,21 @@ export default function Home() {
             <div style={{ fontFamily: "'Sora',sans-serif", fontWeight: 700, fontSize: 18, color: "#fff" }}>rebuq<span style={{ color: B }}>.</span></div>
             <span style={{ fontSize: 11.5, color: "#475569" }}>© 2026 rebuq</span>
           </div>
-          <div style={{ display: "flex", gap: 20 }}>
+          <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
             <a href="#" style={{ fontSize: 12, color: "#64748b", textDecoration: "none" }}>Privacy</a>
             <a href="#" style={{ fontSize: 12, color: "#64748b", textDecoration: "none" }}>Terms</a>
             <a href="#" style={{ fontSize: 12, color: "#64748b", textDecoration: "none" }}>About</a>
+            <div style={{ display: "flex", gap: 12, marginLeft: 8 }}>
+              <a href="#" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+              </a>
+              <a href="#" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="#64748b"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              </a>
+              <a href="#" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+              </a>
+            </div>
           </div>
         </footer>
       ) : (
@@ -989,6 +1008,7 @@ export default function Home() {
                 {[
                   { title: "Product", links: [{ l: "How it works", h: "#how" }, { l: "Member Deals", h: "/search-hotels" }, { l: "Dashboard", h: "/dashboard" }] },
                   { title: "Company", links: [{ l: "About", h: "#" }, { l: "Privacy", h: "#" }, { l: "Terms", h: "#" }] },
+                  { title: "Follow Us", links: [] },
                 ].map(col => (
                   <div key={col.title}>
                     <h4 style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#64748b", marginBottom: 14 }}>{col.title}</h4>
@@ -999,6 +1019,17 @@ export default function Home() {
             </div>
             <div style={{ borderTop: "1px solid #1e293b", paddingTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 12.5, color: "#475569" }}>© 2026 rebuq. All rights reserved.</span>
+              <div style={{ display: "flex", gap: 10 }}>
+                <a href="#" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                </a>
+                <a href="#" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#64748b"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+                <a href="#" style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+                </a>
+              </div>
               <span style={{ fontSize: 12.5, color: "#334155" }}>Powered by Claude AI · Anthropic</span>
             </div>
           </div>
