@@ -48,9 +48,49 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <head>
+        {/* Font preconnect — must be before stylesheet */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+        {/* Fonts with display=swap — prevents invisible text flash */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap"
+          rel="stylesheet"
+        />
+
+        {/* Critical anti-flash inline CSS — runs before any JS */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          /* Lock font sizes before JS hydrates to prevent layout shift */
+          html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+          body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+
+          /* Hero text — invisible until Sora font is ready, then fade in */
+          .hero-text {
+            opacity: 0;
+            animation: heroReveal 0.2s ease 0.25s forwards;
+          }
+          @keyframes heroReveal { to { opacity: 1; } }
+
+          /* Responsive hero font sizes via CSS — not JS — prevents isMobile flash */
+          .hero-h1 {
+            font-family: 'Sora', sans-serif;
+            font-weight: 800;
+            line-height: 1.15;
+            color: #fff;
+            font-size: 54px;
+          }
+          @media (max-width: 767px) {
+            .hero-h1 { font-size: 34px; line-height: 1.2; }
+          }
+
+          /* Prevent mobile-only / desktop-only flash */
+          @media (max-width: 767px) { .desktop-only { display: none !important; } }
+          @media (min-width: 768px) { .mobile-only  { display: none !important; } }
+
+          /* Bottom nav placeholder — prevents content jump on mobile */
+          @media (max-width: 767px) { body { padding-bottom: 68px; } }
+        `}} />
+
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
