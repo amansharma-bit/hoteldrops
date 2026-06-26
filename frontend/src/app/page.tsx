@@ -584,7 +584,7 @@ export default function Home() {
             <input style={{ ...inp, borderRadius: '0 10px 10px 0', flex: 1, borderLeft: 'none' }} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="WhatsApp number" maxLength={10} />
           </div>
           <input style={{ ...inp, marginBottom: 14 }} type="email" value={emailVal} onChange={e => setEmailVal(e.target.value)} placeholder="Email address" />
-          <div style={{ fontSize: 11.5, color: '#94a3b8', marginBottom: 14 }}>No account · No card · No data stored</div>
+          <div style={{ fontSize: 11.5, color: '#94a3b8', marginBottom: 14 }}>No sign-up · No personal data extracted · No spam</div>
           {submitError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#dc2626' }}>{submitError}</div>}
           <button onClick={submitBooking} disabled={loading || extracted.cancellation_policy === 'non-refundable'}
             style={{ width: '100%', background: extracted.cancellation_policy === 'non-refundable' ? '#e2e8f0' : '#FCD34D', color: extracted.cancellation_policy === 'non-refundable' ? '#94a3b8' : NAVY, border: 'none', borderRadius: 10, padding: '14px', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', cursor: extracted.cancellation_policy === 'non-refundable' ? 'not-allowed' : 'pointer' }}>
@@ -650,7 +650,7 @@ export default function Home() {
             <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky' as const, top: 0, background: '#fff', zIndex: 10, borderRadius: isMobile ? '20px 20px 0 0' : '16px 16px 0 0' }}>
               <div>
                 <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 17, fontWeight: 700, color: NAVY }}>
-                  {uploadStep === 1 ? 'Upload your voucher'
+                  {uploadStep === 1 ? 'Upload your hotel booking confirmation'
                     : uploadStep === 2 ? ((['search_results','hotel_detail_rooms','hotel_detail_top','checkout_page'].includes(docType)) ? 'Set a price alert' : 'Confirm booking details')
                     : uploadStep === 'hotel_pick' ? 'Select a hotel'
                     : uploadStep === 'room_pick' ? 'Select a room'
@@ -694,7 +694,7 @@ export default function Home() {
                     <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: (file && fileSource === 'upload') ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${(file && fileSource === 'upload') ? '#86efac' : '#e2e8f0'}`, borderRadius: 14, padding: '24px 12px', cursor: 'pointer', minHeight: 110 }}>
                       <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setFileSource('upload'); } }} />
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={(file && fileSource === 'upload') ? '#16a34a' : '#94a3b8'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                      <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Upload file</div><div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>PDF, JPG, PNG</div></div>
+                      <div style={{ textAlign: 'center' as const }}><div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>{file && fileSource === 'upload' ? 'Change file' : 'Upload file'}</div><div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>PDF, JPG, PNG</div></div>
                     </label>
                     {isMobile && (
                       <label style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 10, background: (file && fileSource === 'camera') ? '#f0fdf4' : '#f8fafc', border: `1.5px solid ${(file && fileSource === 'camera') ? '#86efac' : '#e2e8f0'}`, borderRadius: 14, padding: '24px 12px', cursor: 'pointer', minHeight: 110 }}>
@@ -718,7 +718,7 @@ export default function Home() {
                     </div>
                   )}
                   <input {...getInputProps()} ref={fileInputRef} style={{ display: 'none' }} />
-                  {(!file || fileSource === 'upload') && (
+                  {!file && (
                     <div {...getRootProps()} style={{ border: `2px dashed ${dragActive ? B : '#e2e8f0'}`, borderRadius: 12, padding: '20px', marginBottom: 16, textAlign: 'center' as const, cursor: 'pointer', background: dragActive ? '#eff6ff' : '#fafafa', transition: 'all 0.2s' }}>
                       <div style={{ fontSize: 13, color: '#64748b' }}>or drag & drop your voucher here</div>
                       <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>PDF, PNG, JPG up to 10MB</div>
@@ -727,7 +727,7 @@ export default function Home() {
                   <button onClick={doScan} disabled={!file} style={{ width: '100%', background: file ? B : '#e2e8f0', color: file ? '#fff' : '#94a3b8', border: 'none', borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700, cursor: file ? 'pointer' : 'default', fontFamily: 'inherit', transition: 'all 0.2s' }}>
                     {file ? 'Scan →' : 'Choose a file to continue'}
                   </button>
-                  <p style={{ fontSize: 11.5, color: '#94a3b8', textAlign: 'center' as const, marginTop: 12, lineHeight: 1.6 }}>No account · No card · No data stored</p>
+                  <p style={{ fontSize: 11.5, color: '#94a3b8', textAlign: 'center' as const, marginTop: 12, lineHeight: 1.6 }}>No sign-up · No personal data extracted · No spam</p>
                 </div>
               )}
 
@@ -831,7 +831,7 @@ export default function Home() {
                 Explore member deals
               </button>
             </div>
-            <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.35)", marginTop: 18 }}>No account · No card · No data stored</p>
+
           </section>
         ) : (
           <section style={{ textAlign: "center", padding: "90px 24px 70px", background: "transparent" }}>
@@ -842,12 +842,12 @@ export default function Home() {
             <p style={{ fontSize: 17, color: "rgba(255,255,255,0.72)", maxWidth: 560, margin: "0 auto 12px", lineHeight: 1.8 }}>
               Upload your booking confirmation. Our AI watches the price round the clock. The moment it drops — we alert you on WhatsApp. Rebook in minutes. Keep the difference.
             </p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 36 }}>No account · No card · No data stored</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 36 }}>No sign-up · No personal data extracted · No spam</p>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" as const }}>
               <button onClick={openModal} style={{ background: "#fff", color: B, border: "none", borderRadius: 10, padding: "14px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Check my booking — it&apos;s free</button>
               <button onClick={() => window.location.href = "/search-hotels"} style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.25)", borderRadius: 10, padding: "14px 24px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Explore exclusive member deals →</button>
             </div>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>No account · No card · No data stored</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>No sign-up · No personal data extracted · No spam</p>
           </section>
         )}
       </div>
