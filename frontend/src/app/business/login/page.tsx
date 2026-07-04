@@ -31,7 +31,7 @@ export default function BusinessLoginPage() {
           </p>
 
           <h1
-            className="font-extrabold text-4xl lg:text-[2.6rem] leading-[1.12] text-white mb-6 max-w-md"
+            className="font-extrabold text-4xl lg:text-[2.6rem] leading-[1.12] text-white mb-6 max-w-xl"
             style={{ fontFamily: 'Sora, sans-serif' }}
           >
             Track every booking.
