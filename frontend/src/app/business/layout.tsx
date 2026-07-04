@@ -50,7 +50,10 @@ export default function BusinessLayout({ children }: { children: React.ReactNode
     <div className="flex min-h-screen bg-slate-50 text-[#0F172A]">
 
       {/* SIDEBAR */}
-      <aside className="w-64 bg-[#0F172A] flex flex-col justify-between fixed inset-y-0 left-0">
+      <aside
+        className="w-64 flex flex-col justify-between fixed inset-y-0 left-0"
+        style={{ background: 'linear-gradient(180deg, #12379b 0%, #1447b8 55%, #1e56d6 100%)' }}
+      >
         <div>
           <div className="px-6 py-6">
             <Link href="/business" className="flex items-baseline gap-2">
