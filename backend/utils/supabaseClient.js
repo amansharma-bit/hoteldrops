@@ -4,24 +4,24 @@
 // which bypasses Row Level Security — appropriate here since this runs
 // entirely on the server (Railway), never in a browser.
 //
-// Required environment variables (set in Railway — separately from
-// Vercel; these are two different platforms and each needs its own copy):
-//   SUPABASE_URL
-//   SUPABASE_SERVICE_ROLE_KEY
+// Accepts either SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY —
+// your Railway project already had the latter set from earlier work,
+// so this avoids needing to touch Railway again.
 
 const { createClient } = require('@supabase/supabase-js');
 
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
   console.warn(
-    '[supabaseClient] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set yet. ' +
-    'Add them in Railway: Project -> Variables.'
+    '[supabaseClient] SUPABASE_URL or a Supabase service key (SUPABASE_SERVICE_ROLE_KEY / ' +
+    'SUPABASE_SERVICE_KEY) is not set yet. Add them in Railway: Project -> Variables.'
   );
 }
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false } }
-);
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: { persistSession: false },
+});
 
 module.exports = supabase;
