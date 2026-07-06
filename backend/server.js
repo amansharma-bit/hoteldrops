@@ -9,10 +9,9 @@ const alertRoutes   = require('./routes/alerts')
 const adminRoutes   = require('./routes/admin')
 const hotelRoutes   = require('./routes/hotels')
 const voucherRoutes = require('./routes/voucher')
+const rebookingRoutes = require('./routes/rebooking')
 const { runPriceTracker } = require('./jobs/priceTracker')
-
 const app = express()
-
 // ── CORS — must be before all routes ─────────────────────────────────────────
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*')
@@ -23,21 +22,18 @@ app.use((req, res, next) => {
   }
   next()
 })
-
 app.use(cors({ origin: '*' }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
-
 app.use('/api/bookings', bookingRoutes)
 app.use('/api/test',     testRoutes)
 app.use('/api/alerts',   alertRoutes)
 app.use('/api/admin',    adminRoutes)
 app.use('/api/hotels',   hotelRoutes)
 app.use('/api/voucher',  voucherRoutes)
-
+app.use('/api/rebooking', rebookingRoutes)
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }))
-
 // Manual trigger for demo
 app.get('/api/run-tracker', async (req, res) => {
   console.log('🔥 Manual price tracker triggered')
@@ -48,7 +44,6 @@ app.get('/api/run-tracker', async (req, res) => {
     res.status(500).json({ error: e.message })
   }
 })
-
 cron.schedule('*/5 * * * *', async () => {
   console.log('⏰ Running price tracker job...')
   try {
@@ -58,14 +53,17 @@ cron.schedule('*/5 * * * *', async () => {
     console.error('❌ Price tracker error:', err.message)
   }
 })
-
+// NOTE: the rebooking engine is deliberately NOT on a cron schedule yet.
+// It's manual-trigger-only (POST /api/rebooking/run) until dry-run results
+// have been reviewed and DRY_RUN is confidently set to false. Once ready,
+// a cron.schedule(...) block can be added here the same way as the price
+// tracker above.
 if (process.env.NODE_ENV === 'development') {
   setTimeout(async () => {
     console.log('🚀 Running initial price check on startup...')
     try { await runPriceTracker() } catch(e) { console.error(e.message) }
   }, 10000)
 }
-
 const PORT = process.env.PORT || 4000
 app.listen(PORT, () => {
   console.log(`🏨 HotelDrops backend running on port ${PORT}`)
