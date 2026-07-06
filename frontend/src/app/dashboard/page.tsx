@@ -99,6 +99,15 @@ export default function Dashboard() {
   const [nationality, setNationality] = useState("Indian");
   const [passport, setPassport] = useState("");
   const [user, setUser] = useState<{ name: string; email: string; initials: string } | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+
+  function toggleCard(id: string) {
+    setExpandedCards(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -142,6 +151,12 @@ export default function Dashboard() {
 
   const filteredBookings = DEMO_BOOKINGS.filter(b => bookingTab === "all" || b.status === bookingTab);
 
+  const statItems = [
+    { label: "MONITORED", val: String(bookings.length) },
+    { label: "DROPS FOUND", val: String(dropsFound) },
+    { label: "TOTAL SAVED", val: formatINR(totalSaved || 31938) },
+  ];
+
   return (
     <div style={{ fontFamily: "'Inter',sans-serif", background: "#f0f2f8", minHeight: "100vh", color: "#1e293b" }}>
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -154,52 +169,60 @@ export default function Dashboard() {
         .nav-btn:hover { background:#f8fafc !important; }
         .nav-btn.active { background:#eff6ff !important; color:${B} !important; border-left:3px solid ${B} !important; font-weight:600; }
         .booking-card:hover { box-shadow:0 4px 24px rgba(20,71,184,0.10) !important; }
+        .card-summary { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+        .expand-chevron { transition: transform 0.2s ease; }
       `}</style>
 
       {/* ── BLUE HEADER ── */}
       <div style={{ background: "linear-gradient(135deg, #1a237e 0%, #1447b8 55%, #1565c0 100%)" }}>
         {/* Nav */}
-        <nav style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 20px" : "0 48px", position: "sticky", top: 0, zIndex: 300, background: "transparent" }}>
-          <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 20, color: "#fff", textDecoration: "none" }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 100, padding: "5px 14px" }}>
-            <div style={{ width: 7, height: 7, background: "#4ade80", borderRadius: "50%", animation: "pulse 1.5s infinite" }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>PRICE TRACKER ACTIVATED</span>
-          </div>
+        <nav style={{ height: isMobile ? 52 : 60, display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "0 16px" : "0 48px", position: "sticky", top: 0, zIndex: 300, background: "transparent" }}>
+          <a href="/" style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: isMobile ? 18 : 20, color: "#fff", textDecoration: "none" }}>rebuq<span style={{ color: "#FCD34D" }}>.</span></a>
+          {!isMobile && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 100, padding: "5px 14px" }}>
+              <div style={{ width: 7, height: 7, background: "#4ade80", borderRadius: "50%", animation: "pulse 1.5s infinite" }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>PRICE TRACKER ACTIVATED</span>
+            </div>
+          )}
+          {isMobile && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 100, padding: "4px 10px" }}>
+              <div style={{ width: 6, height: 6, background: "#4ade80", borderRadius: "50%", animation: "pulse 1.5s infinite" }} />
+              <span style={{ fontSize: 10, fontWeight: 600, color: "#fff", letterSpacing: "0.02em" }}>TRACKING ON</span>
+            </div>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             {!isMobile && <a href="/search-hotels" style={{ fontSize: 14, color: "#FCD34D", textDecoration: "none", fontWeight: 600 }}>Exclusive Deals</a>}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user?.initials || "M"}</div>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user?.name?.split(" ")[0] || "Member"}</span>
-            </div>
+            {!isMobile && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{user?.initials || "M"}</div>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>{user?.name?.split(" ")[0] || "Member"}</span>
+              </div>
+            )}
           </div>
         </nav>
 
         {/* Profile Banner */}
-        <div style={{ padding: isMobile ? "20px 20px 28px" : "24px 48px 32px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, flexWrap: "wrap" as const }}>
+        <div style={{ padding: isMobile ? "10px 16px 16px" : "24px 48px 32px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: isMobile ? 12 : 24, flexWrap: "wrap" as const }}>
             {/* Left: avatar + info */}
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <div style={{ width: 64, height: 64, borderRadius: 16, background: "rgba(255,255,255,0.18)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 12 : 16 }}>
+              <div style={{ width: isMobile ? 48 : 64, height: isMobile ? 48 : 64, borderRadius: isMobile ? 12 : 16, background: "rgba(255,255,255,0.18)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 17 : 22, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
                 {user?.initials || "M"}
               </div>
               <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.12em", textTransform: "uppercase" as const, marginBottom: 2 }}>MY ACCOUNT</div>
-                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: "#fff", marginBottom: 2 }}>{user?.name || "Member"}</div>
-                <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.65)", marginBottom: 8 }}>{user?.email}</div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <span style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, border: "1px solid rgba(255,255,255,0.2)" }}>Verified Member</span>
-                  <span style={{ background: "rgba(252,211,77,0.15)", color: "#FCD34D", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, border: "1px solid rgba(252,211,77,0.3)" }}>Gold Saver</span>
+                {!isMobile && <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.12em", textTransform: "uppercase" as const, marginBottom: 2 }}>MY ACCOUNT</div>}
+                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 17 : 22, fontWeight: 800, color: "#fff", marginBottom: 2 }}>{user?.name || "Member"}</div>
+                {!isMobile && <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.65)", marginBottom: 8 }}>{user?.email}</div>}
+                <div style={{ display: "flex", gap: isMobile ? 6 : 8 }}>
+                  <span style={{ background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.9)", fontSize: isMobile ? 10 : 11, fontWeight: 600, padding: isMobile ? "2px 8px" : "3px 10px", borderRadius: 100, border: "1px solid rgba(255,255,255,0.2)" }}>Verified Member</span>
+                  <span style={{ background: "rgba(252,211,77,0.15)", color: "#FCD34D", fontSize: isMobile ? 10 : 11, fontWeight: 600, padding: isMobile ? "2px 8px" : "3px 10px", borderRadius: 100, border: "1px solid rgba(252,211,77,0.3)" }}>Gold Saver</span>
                 </div>
               </div>
             </div>
-            {/* Right: stats */}
+            {/* Right: stats — desktop only (full width, horizontal) */}
             {!isMobile && (
               <div style={{ display: "flex", gap: 40 }}>
-                {[
-                  { label: "MONITORED", val: String(bookings.length) },
-                  { label: "DROPS FOUND", val: String(dropsFound) },
-                  { label: "TOTAL SAVED", val: formatINR(totalSaved || 31938) },
-                ].map((s, i) => (
+                {statItems.map((s, i) => (
                   <div key={i} style={{ textAlign: "center" as const }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 6 }}>{s.label}</div>
                     <div style={{ fontFamily: "'Sora',sans-serif", fontSize: i === 2 ? 26 : 30, fontWeight: 800, color: i === 2 ? GOLD : "#fff" }}>{s.val}</div>
@@ -208,11 +231,23 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+
+          {/* Mobile stats: compact row below the profile info, doesn't disappear */}
+          {isMobile && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+              {statItems.map((s, i) => (
+                <div key={i} style={{ textAlign: "center" as const }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.55)", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 3 }}>{s.label}</div>
+                  <div style={{ fontFamily: "'Sora',sans-serif", fontSize: i === 2 ? 15 : 17, fontWeight: 800, color: i === 2 ? GOLD : "#fff" }}>{s.val}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── MAIN LAYOUT: sidebar + content ── */}
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: isMobile ? "20px 16px 60px" : "28px 48px 80px", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "240px 1fr", gap: 24, alignItems: "flex-start" }}>
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: isMobile ? "16px 16px 60px" : "28px 48px 80px", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "240px 1fr", gap: 24, alignItems: "flex-start" }}>
 
         {/* ── LEFT SIDEBAR ── */}
         {!isMobile && (
@@ -309,14 +344,20 @@ export default function Dashboard() {
                 const cancelBg = isFree ? "#f0fdf4" : isNR ? "#fef2f2" : "#fefce8";
                 const cancelBorder = isFree ? "#bbf7d0" : isNR ? "#fecaca" : "#fde68a";
                 const cancelLabel = isFree ? `Free cancel until ${fmtDate(b.cancellation_deadline||"")}` : isNR ? "Non-refundable" : "Cancellation policy unclear";
+                const cardId = b.id || b.hotel_name;
+                const isExpanded = !isMobile || expandedCards.has(cardId);
 
                 return (
                   <div key={b.id} className="booking-card" style={{ background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 16, marginBottom: 16, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", transition: "box-shadow 0.2s" }}>
-                    {/* Header */}
-                    <div style={{ padding: "20px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+                    {/* Header — tappable summary on mobile */}
+                    <div
+                      className={isMobile ? "card-summary" : undefined}
+                      onClick={isMobile ? () => toggleCard(cardId) : undefined}
+                      style={{ padding: isExpanded ? "20px 24px 0" : "18px 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}
+                    >
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" as const, marginBottom: 6 }}>
-                          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, color: NAVY }}>{b.hotel_name}</div>
+                          <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 16 : 18, fontWeight: 800, color: NAVY }}>{b.hotel_name}</div>
                           {isDropFound ? (
                             <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: "#dcfce7", color: "#16a34a", display: "inline-flex", alignItems: "center", gap: 5 }}>
                               <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} /> Price Drop Found
@@ -326,89 +367,110 @@ export default function Dashboard() {
                               <span style={{ width: 7, height: 7, borderRadius: "50%", background: B, display: "inline-block", animation: "pulse 1.5s infinite" }} /> Tracking
                             </span>
                           )}
-                          {b.ota_name && <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, background: "#f1f5f9", color: "#64748b" }}>{b.ota_name}</span>}
+                          {!isMobile && b.ota_name && <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 100, background: "#f1f5f9", color: "#64748b" }}>{b.ota_name}</span>}
                         </div>
-                        <div style={{ fontSize: 13, color: "#64748b" }}>
-                          {b.hotel_city}{b.created_at && <span style={{ color: "#94a3b8", marginLeft: 8 }}>· Tracked {timeAgo(b.created_at)}</span>}
-                        </div>
+                        {(isExpanded || !isMobile) && (
+                          <div style={{ fontSize: 13, color: "#64748b" }}>
+                            {b.hotel_city}{b.created_at && <span style={{ color: "#94a3b8", marginLeft: 8 }}>· Tracked {timeAgo(b.created_at)}</span>}
+                          </div>
+                        )}
                       </div>
                       {/* Price */}
-                      <div style={{ textAlign: "right" as const, flexShrink: 0 }}>
-                        {offer ? (
-                          <div>
-                            <div style={{ fontSize: 12, color: "#94a3b8", textDecoration: "line-through" }}>{formatINR(b.total_price_paid||0)}</div>
-                            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: NAVY }}>{formatINR(offer.offer_price)}</div>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: "#16a34a" }}>Save {formatINR(offer.customer_saving)}</div>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flexShrink: 0 }}>
+                        <div style={{ textAlign: "right" as const }}>
+                          {offer ? (
+                            <div>
+                              <div style={{ fontSize: 12, color: "#94a3b8", textDecoration: "line-through" }}>{formatINR(b.total_price_paid||0)}</div>
+                              <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 800, color: NAVY }}>{formatINR(offer.offer_price)}</div>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: "#16a34a" }}>Save {formatINR(offer.customer_saving)}</div>
+                            </div>
+                          ) : (
+                            <div>
+                              <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>AMOUNT PAID</div>
+                              <div style={{ fontFamily: "'Sora',sans-serif", fontSize: isMobile ? 18 : 22, fontWeight: 800, color: NAVY }}>{b.total_price_paid ? formatINR(b.total_price_paid) : "—"}</div>
+                              {!isMobile && (b.price_per_night||0) > 0 && <div style={{ fontSize: 11, color: "#94a3b8" }}>{formatINR(b.price_per_night||0)}/night</div>}
+                            </div>
+                          )}
+                        </div>
+                        {isMobile && (
+                          <svg
+                            className="expand-chevron"
+                            style={{ marginTop: 4, transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                          ><path d="M6 9l6 6 6-6"/></svg>
+                        )}
+                      </div>
+                    </div>
+
+                    {isExpanded && (
+                      <>
+                        {/* Data grid */}
+                        <div style={{ padding: "16px 24px", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: "14px 24px", borderTop: "1px solid #f1f5f9", marginTop: 16 }}>
+                          {[
+                            { label: "CHECK-IN",    val: fmtDate(b.check_in) },
+                            { label: "CHECK-OUT",   val: fmtDate(b.check_out) },
+                            { label: "GUESTS",      val: `${b.num_adults||2} adult${(b.num_adults||2)>1?"s":""}${(b.num_children||0)>0?` · ${b.num_children} child${(b.num_children||0)>1?"ren":""}`:""}` },
+                            { label: "NIGHTS",      val: `${b.total_nights || Math.max(1,Math.round((new Date(b.check_out).getTime()-new Date(b.check_in).getTime())/86400000))} nights` },
+                          ].map((f,i) => (
+                            <div key={i}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>{f.label}</div>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{f.val}</div>
+                            </div>
+                          ))}
+                          {isMobile && b.ota_name && (
+                            <div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>SOURCE</div>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{b.ota_name}</div>
+                            </div>
+                          )}
+                          {(b.num_children||0)>0 && (b.children_ages||[]).filter(a=>a!==null).length>0 && (
+                            <div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>CHILD AGES</div>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{(b.children_ages||[]).filter(a=>a!==null).map(a=>a===0?"Under 1":`${a} yrs`).join(", ")}</div>
+                            </div>
+                          )}
+                          {b.room_type && (
+                            <div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>ROOM TYPE</div>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{b.room_type}</div>
+                            </div>
+                          )}
+                          {b.board_basis && b.board_basis !== "RO" && (
+                            <div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>BOARD BASIS</div>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{b.board_basis_label||b.board_basis}</div>
+                            </div>
+                          )}
+                          {b.booking_reference && (
+                            <div>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>BOOKING REF</div>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{b.booking_reference}</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Cancellation */}
+                        <div style={{ margin: "0 24px 16px", background: cancelBg, border: `1px solid ${cancelBorder}`, borderRadius: 10, padding: "10px 14px" }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: cancelColor }}>{cancelLabel}</span>
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{ padding: "12px 24px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" as const }}>
+                          <div style={{ fontSize: 12, color: "#94a3b8" }}>
+                            {isDropFound ? "We found a lower price — rebook now to save." : "rebuq checks this price every 6 hours. We'll WhatsApp you the moment it drops."}
                           </div>
-                        ) : (
-                          <div>
-                            <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 2 }}>AMOUNT PAID</div>
-                            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: NAVY }}>{b.total_price_paid ? formatINR(b.total_price_paid) : "—"}</div>
-                            {(b.price_per_night||0) > 0 && <div style={{ fontSize: 11, color: "#94a3b8" }}>{formatINR(b.price_per_night||0)}/night</div>}
+                          <div style={{ display: "flex", gap: 8 }}>
+                            {b.voucher_url && (
+                              <a href={b.voucher_url} target="_blank" rel="noreferrer" style={{ background: "#f0fdf4", color: "#16a34a", border: "1.5px solid #bbf7d0", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>View Voucher</a>
+                            )}
+                            {isDropFound && (
+                              <button onClick={() => offer && router.push(`/offer/${offer.id}`)} style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Claim Saving →</button>
+                            )}
+                            <button onClick={() => router.push("/")} style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Track another</button>
                           </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Data grid */}
-                    <div style={{ padding: "16px 24px", display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: "14px 24px", borderTop: "1px solid #f1f5f9", marginTop: 16 }}>
-                      {[
-                        { label: "CHECK-IN",    val: fmtDate(b.check_in) },
-                        { label: "CHECK-OUT",   val: fmtDate(b.check_out) },
-                        { label: "GUESTS",      val: `${b.num_adults||2} adult${(b.num_adults||2)>1?"s":""}${(b.num_children||0)>0?` · ${b.num_children} child${(b.num_children||0)>1?"ren":""}`:""}` },
-                        { label: "NIGHTS",      val: `${b.total_nights || Math.max(1,Math.round((new Date(b.check_out).getTime()-new Date(b.check_in).getTime())/86400000))} nights` },
-                      ].map((f,i) => (
-                        <div key={i}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>{f.label}</div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{f.val}</div>
                         </div>
-                      ))}
-                      {(b.num_children||0)>0 && (b.children_ages||[]).filter(a=>a!==null).length>0 && (
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>CHILD AGES</div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{(b.children_ages||[]).filter(a=>a!==null).map(a=>a===0?"Under 1":`${a} yrs`).join(", ")}</div>
-                        </div>
-                      )}
-                      {b.room_type && (
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>ROOM TYPE</div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{b.room_type}</div>
-                        </div>
-                      )}
-                      {b.board_basis && b.board_basis !== "RO" && (
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>BOARD BASIS</div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{b.board_basis_label||b.board_basis}</div>
-                        </div>
-                      )}
-                      {b.booking_reference && (
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>BOOKING REF</div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{b.booking_reference}</div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Cancellation */}
-                    <div style={{ margin: "0 24px 16px", background: cancelBg, border: `1px solid ${cancelBorder}`, borderRadius: 10, padding: "10px 14px" }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: cancelColor }}>{cancelLabel}</span>
-                    </div>
-
-                    {/* Footer */}
-                    <div style={{ padding: "12px 24px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" as const }}>
-                      <div style={{ fontSize: 12, color: "#94a3b8" }}>
-                        {isDropFound ? "We found a lower price — rebook now to save." : "rebuq checks this price every 6 hours. We'll WhatsApp you the moment it drops."}
-                      </div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        {b.voucher_url && (
-                          <a href={b.voucher_url} target="_blank" rel="noreferrer" style={{ background: "#f0fdf4", color: "#16a34a", border: "1.5px solid #bbf7d0", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>View Voucher</a>
-                        )}
-                        {isDropFound && (
-                          <button onClick={() => offer && router.push(`/offer/${offer.id}`)} style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Claim Saving →</button>
-                        )}
-                        <button onClick={() => router.push("/")} style={{ background: "#fff", color: NAVY, border: "1.5px solid #e2e8f0", borderRadius: 8, padding: "9px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Track another</button>
-                      </div>
-                    </div>
+                      </>
+                    )}
                   </div>
                 );
               })}
