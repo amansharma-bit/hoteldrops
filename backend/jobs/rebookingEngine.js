@@ -61,11 +61,26 @@ async function syncEligibleBookings() {
         cancelByDate > today &&
         leadDays >= MIN_LEAD_DAYS;
 
+      // supplier_code isn't in the bulk bookings list — only the voucher
+      // endpoint returns it. Only worth the extra call for bookings that
+      // are actually eligible, to avoid wasting calls on ones we'll skip anyway.
+      let supplierCode = null;
+      if (eligible) {
+        try {
+          const voucher = await grn.getVoucher(b.booking_reference);
+          supplierCode = voucher.supplier_code || null;
+          await sleep(DELAY_BETWEEN_CALLS_MS);
+        } catch (err) {
+          console.warn(`[syncEligibleBookings] Voucher lookup failed for ${b.booking_reference}: ${err.message}`);
+        }
+      }
+
       await supabase.from('tracked_bookings').upsert(
         {
           booking_reference: b.booking_reference,
           booking_id: b.booking_id,
           hotel_code: b.hotel_code,
+          supplier_code: supplierCode,
           room_code: b.booking_items?.[0]?.room_code || null,
           room_type: b.booking_items?.[0]?.rooms?.[0]?.room_type || null,
           checkin_date: b.checkin,
@@ -77,6 +92,7 @@ async function syncEligibleBookings() {
           eligible,
           status: eligible ? 'eligible' : 'not_eligible',
           last_checked_at: new Date().toISOString(),
+          is_mock: grn.isMockMode,
         },
         { onConflict: 'booking_reference' }
       );
@@ -101,6 +117,7 @@ async function processBooking(tracked) {
     original_price_amount: tracked.price_amount,
     original_price_currency: tracked.price_currency,
     state: 'pending',
+    is_mock: grn.isMockMode,
   };
 
   try {
