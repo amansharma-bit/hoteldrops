@@ -56,6 +56,7 @@ async function grnRequest(method, path) {
       'api-key': API_KEY, // best guess based on GRN's documented header convention —
                           // adjust here if the real API rejects this
       Accept: 'application/json',
+      'Content-Type': 'application/json', // GRN's server requires this even on GET requests
     },
   });
 
