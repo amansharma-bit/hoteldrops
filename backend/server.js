@@ -10,6 +10,7 @@ const adminRoutes   = require('./routes/admin')
 const hotelRoutes   = require('./routes/hotels')
 const voucherRoutes = require('./routes/voucher')
 const rebookingRoutes = require('./routes/rebooking')
+const probeRoutes   = require('./routes/probe')
 const { runPriceTracker } = require('./jobs/priceTracker')
 const app = express()
 // ── CORS — must be before all routes ─────────────────────────────────────────
@@ -33,6 +34,7 @@ app.use('/api/admin',    adminRoutes)
 app.use('/api/hotels',   hotelRoutes)
 app.use('/api/voucher',  voucherRoutes)
 app.use('/api/rebooking', rebookingRoutes)
+app.use('/api/probe',    probeRoutes)
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }))
 // Manual trigger for demo
 app.get('/api/run-tracker', async (req, res) => {
