@@ -1,4 +1,5 @@
 import { supabaseServer } from '../../../lib/supabase-server';
+import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
 // ^ Adjust this relative path if your lib/ folder lives somewhere else —
 // it should point to wherever you place supabase-server.ts.
 
@@ -30,7 +31,7 @@ export default async function OverviewPage() {
   const hasData = kpi && kpi.total_tracked > 0;
 
   return (
-    <>
+    <BusinessSidebarWrapper>
       {/* TOP BAR */}
       <div className="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between">
         <div>
@@ -104,7 +105,7 @@ export default async function OverviewPage() {
         )}
 
       </div>
-    </>
+    </BusinessSidebarWrapper>
   );
 }
 
