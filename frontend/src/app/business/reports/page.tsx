@@ -1,6 +1,8 @@
+import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
+
 export default function ReportsPage() {
   return (
-    <>
+    <BusinessSidebarWrapper>
       <div className="bg-white border-b border-slate-200 px-8 py-5">
         <h1 className="font-bold text-2xl text-[#0F172A]" style={{ fontFamily: 'Sora, sans-serif' }}>
           Reports
@@ -30,6 +32,6 @@ export default function ReportsPage() {
           </p>
         </div>
       </div>
-    </>
+    </BusinessSidebarWrapper>
   );
 }
