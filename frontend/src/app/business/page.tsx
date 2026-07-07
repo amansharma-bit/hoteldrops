@@ -1,3 +1,5 @@
+ export const dynamic = 'force-dynamic';
+
 export default function BusinessLandingPage() {
   return (
     <div className="bg-white text-[#0F172A] antialiased">
