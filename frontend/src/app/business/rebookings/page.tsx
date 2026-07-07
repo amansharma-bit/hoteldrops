@@ -1,3 +1,5 @@
+import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
+
 const rebookings = [
   { hotel: 'COMO Metropolitan Singapore', city: 'Singapore', room: 'Standard Twin Room', checkin: '27 Jul 2026', original: '$810.00', rebooked: '$772.00', saved: '$38.00', supplier: 'smyrooms_grn', status: 'Confirmed' },
   { hotel: 'Hilton Garden Inn Al Muraqabat', city: 'Dubai', room: 'Deluxe King Room', checkin: '27 Jul 2026', original: '$555.00', rebooked: '$526.00', saved: '$29.00', supplier: 'tbo_grn_intl', status: 'Confirmed' },
@@ -14,7 +16,7 @@ const statusStyles: Record<string, string> = {
 
 export default function RebookingsPage() {
   return (
-    <>
+    <BusinessSidebarWrapper>
       <div className="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between">
         <div>
           <h1 className="font-bold text-2xl text-[#0F172A]" style={{ fontFamily: 'Sora, sans-serif' }}>
@@ -126,6 +128,6 @@ export default function RebookingsPage() {
         </p>
 
       </div>
-    </>
+    </BusinessSidebarWrapper>
   );
 }
