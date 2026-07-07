@@ -1,3 +1,5 @@
+import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
+
 const bookings = [
   { hotel: 'COMO Metropolitan Singapore', city: 'Singapore', room: 'Standard Twin Room', checkin: '27 Jul', checkout: '30 Jul', nights: 3, price: '$810.00', refundable: true, status: 'Rebooked' },
   { hotel: 'Hilton Garden Inn Al Muraqabat', city: 'Dubai', room: 'Deluxe King Room', checkin: '27 Jul', checkout: '29 Jul', nights: 2, price: '$555.00', refundable: true, status: 'Rebooked' },
@@ -17,7 +19,7 @@ const statusStyles: Record<string, string> = {
 
 export default function BookingsPage() {
   return (
-    <>
+    <BusinessSidebarWrapper>
       <div className="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between">
         <div>
           <h1 className="font-bold text-2xl text-[#0F172A]" style={{ fontFamily: 'Sora, sans-serif' }}>
@@ -111,6 +113,6 @@ export default function BookingsPage() {
         </div>
 
       </div>
-    </>
+    </BusinessSidebarWrapper>
   );
 }
