@@ -1,114 +1,117 @@
 // backend/jobs/rebookingEngine.js
 //
-// The core rebuq rebooking pipeline: Search -> Match -> Recheck -> Rebook
-// -> Confirm -> Cancel original. Mirrors the exact sequence documented in
-// GRN's own API docs, and matches the same-supplier-first matching rule
-// validated against real GRN/Hotelmize data (98.6% of real rebookings
-// stay on the same supplier).
+// The core rebuq rebooking pipeline. Two entry points:
 //
-// SAFETY: this file defaults to DRY_RUN mode. In dry-run, it does
-// everything EXCEPT actually call Rebook/Confirm/Cancel — it logs what it
-// WOULD do, and writes a rebooking_attempts row with state='pending' and
-// a note, so you can review a batch of proposed actions before ever
-// letting it touch a real booking.
+//   syncEligibleBookings() — pulls real bookings from GRN (list IDs, then
+//     fetch each one's detail) and populates tracked_bookings. This is
+//     CONFIRMED WORKING with the access we have today.
 //
-// To go live: set DRY_RUN=false in Railway's environment variables.
-// Recommended path: dry-run first, review results, then manual-approve
-// mode (not yet built — ask before skipping straight to full automation).
+//   runRebookingEngine() — the full Search -> Match -> Recheck -> Rebook
+//     -> Confirm -> Cancel pipeline. Only meaningful in MOCK_GRN_API=true
+//     mode right now, since Search/Rebooking/Cancellation endpoints
+//     haven't been granted yet. Calling this for real will sync real
+//     bookings fine, then log a clear "not yet available" error for each
+//     one at the search step — expected, not a bug.
+//
+// SAFETY: DRY_RUN defaults to true. Nothing real gets rebooked or
+// cancelled until it's explicitly set to false in Railway.
 
 const supabase = require('../utils/supabaseClient');
 const grn = require('../utils/grnApiClient');
 
-const DRY_RUN = process.env.DRY_RUN !== 'false'; // defaults to true unless explicitly disabled
-const MIN_SAVING_PERCENT = parseFloat(process.env.MIN_SAVING_PERCENT || '3'); // don't bother under this %
-const MIN_LEAD_DAYS = parseInt(process.env.MIN_LEAD_DAYS || '2', 10); // skip bookings checking in within N days
-const DELAY_BETWEEN_CALLS_MS = 400; // be a good citizen on GRN's API even though no hard limit is documented
+const DRY_RUN = process.env.DRY_RUN !== 'false';
+const MIN_SAVING_PERCENT = parseFloat(process.env.MIN_SAVING_PERCENT || '3');
+const MIN_LEAD_DAYS = parseInt(process.env.MIN_LEAD_DAYS || '2', 10);
+const DELAY_BETWEEN_CALLS_MS = 400;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // ---------------------------------------------------------------------------
-// STEP 1: Sync eligible bookings from GRN into our own tracked_bookings table
+// STEP 1: Sync bookings from GRN into our own tracked_bookings table.
+// Uses the CONFIRMED real pattern: list IDs updated in a date range, then
+// fetch full detail for each one individually.
 // ---------------------------------------------------------------------------
-async function syncEligibleBookings() {
+async function syncEligibleBookings(daysBack = 7) {
   const today = new Date();
-  const start = today.toISOString().slice(0, 10);
-  const endDate = new Date(today);
-  endDate.setDate(endDate.getDate() + 30);
-  const end = endDate.toISOString().slice(0, 10);
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - daysBack);
 
-  console.log(`[syncEligibleBookings] Pulling bookings checking in ${start} to ${end}...`);
+  console.log(`[syncEligibleBookings] Listing bookings updated in the last ${daysBack} days...`);
 
-  let cursor = undefined;
+  const bookingIds = await grn.listBookingIds(startDate, today);
+  console.log(`[syncEligibleBookings] Found ${bookingIds.length} booking IDs. Fetching details...`);
+
   let totalSynced = 0;
+  let totalEligible = 0;
 
-  do {
-    const page = await grn.listBookings({ start, end, from: cursor, count: 100 });
-    const bookings = page.bookings || page.data || [];
-
-    for (const b of bookings) {
-      const cancelByDate = b.cancellation_policy?.cancel_by_date
-        ? new Date(b.cancellation_policy.cancel_by_date)
-        : null;
-
-      const checkinDate = new Date(b.checkin);
-      const leadDays = Math.floor((checkinDate - today) / (1000 * 60 * 60 * 24));
-
-      const eligible =
-        b.non_refundable === false &&
-        cancelByDate !== null &&
-        cancelByDate > today &&
-        leadDays >= MIN_LEAD_DAYS;
-
-      // supplier_code isn't in the bulk bookings list — only the voucher
-      // endpoint returns it. Only worth the extra call for bookings that
-      // are actually eligible, to avoid wasting calls on ones we'll skip anyway.
-      let supplierCode = null;
-      if (eligible) {
-        try {
-          const voucher = await grn.getVoucher(b.booking_reference);
-          supplierCode = voucher.supplier_code || null;
-          await sleep(DELAY_BETWEEN_CALLS_MS);
-        } catch (err) {
-          console.warn(`[syncEligibleBookings] Voucher lookup failed for ${b.booking_reference}: ${err.message}`);
-        }
-      }
-
-      await supabase.from('tracked_bookings').upsert(
-        {
-          booking_reference: b.booking_reference,
-          booking_id: b.booking_id,
-          hotel_code: b.hotel_code,
-          supplier_code: supplierCode,
-          room_code: b.booking_items?.[0]?.room_code || null,
-          room_type: b.booking_items?.[0]?.rooms?.[0]?.room_type || null,
-          checkin_date: b.checkin,
-          checkout_date: b.checkout,
-          price_amount: b.booking_price?.amount,
-          price_currency: b.booking_price?.currency,
-          non_refundable: b.non_refundable,
-          cancel_by_date: cancelByDate,
-          eligible,
-          status: eligible ? 'eligible' : 'not_eligible',
-          last_checked_at: new Date().toISOString(),
-          is_mock: grn.isMockMode,
-        },
-        { onConflict: 'booking_reference' }
-      );
-      totalSynced++;
+  for (const bookingId of bookingIds) {
+    let detail;
+    try {
+      detail = await grn.getBookingDetail(bookingId);
+      await sleep(DELAY_BETWEEN_CALLS_MS);
+    } catch (err) {
+      console.warn(`[syncEligibleBookings] Failed to fetch detail for ${bookingId}: ${err.message}`);
+      continue;
     }
 
-    cursor = page.next_cursor || null; // adjust field name once real response shape is confirmed
-    await sleep(DELAY_BETWEEN_CALLS_MS);
-  } while (cursor);
+    // Defensive field mapping — based on GRN's documented booking shape.
+    // If the real response differs, this is the first place to adjust
+    // once we see actual output.
+    const bookingReference = detail.booking_reference || bookingId;
+    const nonRefundable = detail.non_refundable;
+    const cancelByDate = detail.cancellation_policy?.cancel_by_date
+      ? new Date(detail.cancellation_policy.cancel_by_date)
+      : null;
+    const checkinDate = detail.checkin ? new Date(detail.checkin) : null;
+    const leadDays = checkinDate ? Math.floor((checkinDate - today) / (1000 * 60 * 60 * 24)) : -1;
 
-  console.log(`[syncEligibleBookings] Synced ${totalSynced} bookings.`);
-  return totalSynced;
+    const eligible =
+      nonRefundable === false &&
+      cancelByDate !== null &&
+      cancelByDate > today &&
+      leadDays >= MIN_LEAD_DAYS;
+
+    if (eligible) totalEligible++;
+
+    const { error } = await supabase.from('tracked_bookings').upsert(
+      {
+        booking_reference: bookingReference,
+        booking_id: detail.booking_id || bookingId,
+        hotel_code: detail.hotel_code || null,
+        supplier_code: detail.supplier_code || null,
+        room_code: detail.booking_items?.[0]?.room_code || null,
+        room_type: detail.booking_items?.[0]?.rooms?.[0]?.room_type || null,
+        checkin_date: detail.checkin || null,
+        checkout_date: detail.checkout || null,
+        price_amount: detail.booking_price?.amount ?? null,
+        price_currency: detail.booking_price?.currency ?? null,
+        non_refundable: nonRefundable ?? null,
+        cancel_by_date: cancelByDate,
+        eligible,
+        status: eligible ? 'eligible' : 'not_eligible',
+        last_checked_at: new Date().toISOString(),
+        is_mock: grn.isMockMode,
+      },
+      { onConflict: 'booking_reference' }
+    );
+
+    if (error) {
+      console.error(`[syncEligibleBookings] Failed to upsert ${bookingReference}:`, error.message);
+    } else {
+      totalSynced++;
+    }
+  }
+
+  console.log(`[syncEligibleBookings] Synced ${totalSynced} bookings (${totalEligible} eligible).`);
+  return { totalSynced, totalEligible, totalFound: bookingIds.length };
 }
 
 // ---------------------------------------------------------------------------
-// STEP 2: Process one eligible booking through the full pipeline
+// STEP 2: Process one eligible booking through the full pipeline.
+// NOTE: the Search step below will throw "not yet available" in real mode
+// until GRN grants Search/Availability access — this is expected right now.
 // ---------------------------------------------------------------------------
 async function processBooking(tracked) {
   const attempt = {
@@ -121,23 +124,21 @@ async function processBooking(tracked) {
   };
 
   try {
-    // ---- Search ----
     attempt.search_started_at = new Date().toISOString();
     const searchResult = await grn.searchAvailability({
       checkin: tracked.checkin_date,
       checkout: tracked.checkout_date,
       hotelCodes: [tracked.hotel_code],
-      rooms: [{ adults: 2, children_ages: [] }], // TODO: pull real occupancy once available in tracked_bookings
+      rooms: [{ adults: 2, children_ages: [] }],
     });
     attempt.search_id = searchResult.search_id;
     attempt.raw_search_response = searchResult;
     await sleep(DELAY_BETWEEN_CALLS_MS);
 
-    // ---- Match: same-supplier-first, per validated real-world pattern ----
     const originalSupplier = tracked.supplier_code;
     const rates = searchResult.rates || [];
     const sameSupplierRates = rates.filter((r) => r.supplier === originalSupplier);
-    const candidates = sameSupplierRates.length > 0 ? sameSupplierRates : []; // cross-supplier disabled by default in v1
+    const candidates = sameSupplierRates.length > 0 ? sameSupplierRates : [];
 
     const cheaper = candidates
       .filter((r) => r.room_code === tracked.room_code && r.price?.amount < tracked.price_amount)
@@ -164,14 +165,12 @@ async function processBooking(tracked) {
     attempt.matched_price_currency = cheaper.price.currency;
     attempt.match_type = 'same_supplier';
 
-    // ---- Recheck ----
     const recheck = await grn.recheckRate(attempt.search_id, cheaper.rate_key);
     attempt.recheck_completed_at = new Date().toISOString();
     attempt.recheck_price_changed = recheck.price?.amount !== cheaper.price.amount;
     await sleep(DELAY_BETWEEN_CALLS_MS);
 
     if (attempt.recheck_price_changed && recheck.price.amount >= tracked.price_amount) {
-      // Price moved and is no longer actually cheaper — abort safely.
       attempt.state = 'no_match_found';
       await logAttempt(attempt);
       return { status: 'price_changed_no_longer_cheaper', bookingReference: tracked.booking_reference };
@@ -180,7 +179,6 @@ async function processBooking(tracked) {
     attempt.client_profit_amount = tracked.price_amount - (recheck.price?.amount ?? cheaper.price.amount);
     attempt.client_profit_currency = tracked.price_currency;
 
-    // ---- DRY RUN: stop here, log what we WOULD have done ----
     if (DRY_RUN) {
       attempt.state = 'pending';
       attempt.error_message = '[DRY_RUN] Would have rebooked + cancelled original. No live action taken.';
@@ -188,7 +186,6 @@ async function processBooking(tracked) {
       return { status: 'dry_run_match_found', bookingReference: tracked.booking_reference, savingPercent };
     }
 
-    // ---- Rebook ----
     const rebook = await grn.createRebooking(tracked.booking_reference, {
       rate_key: cheaper.rate_key,
       room_code: cheaper.room_code,
@@ -199,11 +196,9 @@ async function processBooking(tracked) {
     attempt.raw_rebook_response = rebook;
     await sleep(DELAY_BETWEEN_CALLS_MS);
 
-    // ---- Confirm ----
     await grn.confirmRebooking(tracked.booking_reference);
     await sleep(DELAY_BETWEEN_CALLS_MS);
 
-    // ---- Cancel original ----
     const cancellation = await grn.cancelBooking(tracked.booking_reference);
     attempt.original_cancelled_at = new Date().toISOString();
     attempt.cancellation_reference = cancellation.cancellation_reference;
@@ -235,10 +230,13 @@ async function logAttempt(attempt) {
 }
 
 // ---------------------------------------------------------------------------
-// Orchestrator — call this from a route or a scheduled job
+// Full pipeline orchestrator (sync + process). In real mode today, each
+// processBooking() call will log an expected "not yet available" error at
+// the search step — use runSyncOnly() below instead if you just want to
+// pull real bookings without those expected errors cluttering the log.
 // ---------------------------------------------------------------------------
 async function runRebookingEngine() {
-  console.log(`[runRebookingEngine] Starting. DRY_RUN=${DRY_RUN}`);
+  console.log(`[runRebookingEngine] Starting. DRY_RUN=${DRY_RUN} MOCK=${grn.isMockMode}`);
 
   await syncEligibleBookings();
 
@@ -274,4 +272,15 @@ async function runRebookingEngine() {
   return { summary, results };
 }
 
-module.exports = { runRebookingEngine, syncEligibleBookings, processBooking };
+// ---------------------------------------------------------------------------
+// Sync-only entry point — real bookings in, no search/rebook attempted.
+// This is the one to use for real data right now, until Search access lands.
+// ---------------------------------------------------------------------------
+async function runSyncOnly(daysBack = 7) {
+  console.log(`[runSyncOnly] Starting real sync only (no search/rebook attempted). MOCK=${grn.isMockMode}`);
+  const result = await syncEligibleBookings(daysBack);
+  console.log('[runSyncOnly] Done.', result);
+  return result;
+}
+
+module.exports = { runRebookingEngine, syncEligibleBookings, processBooking, runSyncOnly };
