@@ -1,54 +1,62 @@
 // backend/utils/grnApiClient.js
 //
-// Thin wrapper around GRN's Hotels API. All endpoint paths and payload
-// shapes here come directly from GRN's own API v3 documentation.
+// Thin wrapper around GRN's Hotels API.
 //
-// ── MOCK MODE ────────────────────────────────────────────────────────────
-// Set MOCK_GRN_API=true in Railway to run the ENTIRE pipeline against
-// realistic fake data instead of GRN's real API — no credentials needed.
-// This lets us test the matching logic, the Supabase writes, and the
-// dry-run flow completely independently of Naveen's timeline.
+// ── IMPORTANT: real endpoints confirmed by Naveen (INTL bookings only) ──
+//   Base URL: https://v4-api.grnconnect.com/api/v3
+//   1. GET /hotels/bookingids?updated_start=...&updated_end=...
+//      -> lists booking IDs updated in a date range
+//   2. GET /hotels/bookingdetail?booking_id=X
+//      -> fetches full detail for one booking
 //
-// The fake data below deliberately includes a same-supplier cheaper rate
-// (so the matching logic has something real to find) plus some "noise"
-// (other suppliers, non-matching rooms) so the filtering logic actually
-// gets exercised, not just handed a trivial case.
+// These are READ-ONLY lookups of bookings that already exist. We do NOT
+// yet have a Search/Availability endpoint (to find current live rates),
+// nor Rebooking/Cancellation endpoints (to act on anything). Those
+// functions below are kept for when that access arrives, but calling
+// them for real will fail until then — only listBookingIds and
+// getBookingDetail are confirmed working right now.
 //
-// Once real credentials arrive, just set MOCK_GRN_API=false (or delete
-// the variable) — no code changes needed.
+// ── MOCK MODE ──
+// Set MOCK_GRN_API=true to test the FULL pipeline (search/match/rebook)
+// against fake data — still useful for validating logic ahead of getting
+// full API access. Doesn't affect the two real functions below, which
+// always hit the real API regardless of MOCK_GRN_API.
 //
-// Required environment variables for REAL mode (set in Railway):
-//   GRN_API_BASE_URL   — e.g. https://next-api.grnconnect.com/api/v3
-//   GRN_API_KEY        — the API key Naveen provides
+// Required environment variables (set in Railway):
+//   GRN_API_BASE_URL = https://v4-api.grnconnect.com/api/v3
+//   GRN_API_KEY      = (the key Naveen provided)
 
 const MOCK_MODE = process.env.MOCK_GRN_API === 'true';
 const BASE_URL = process.env.GRN_API_BASE_URL;
 const API_KEY = process.env.GRN_API_KEY;
 
-if (!MOCK_MODE && (!BASE_URL || !API_KEY)) {
+if (!BASE_URL || !API_KEY) {
   console.warn(
-    '[grnApiClient] GRN_API_BASE_URL or GRN_API_KEY is not set, and MOCK_GRN_API is not "true". ' +
-    'The rebooking engine cannot call GRN until credentials are added, or set MOCK_GRN_API=true to test with fake data.'
+    '[grnApiClient] GRN_API_BASE_URL or GRN_API_KEY is not set. ' +
+    'Real endpoint calls (listBookingIds, getBookingDetail) will fail until these are added in Railway.'
   );
-}
-
-if (MOCK_MODE) {
-  console.log('[grnApiClient] Running in MOCK MODE — no real GRN API calls will be made.');
 }
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function grnRequest(method, path, body) {
+// Formats a JS Date as "YYYY-MM-DD HH:MM:SS" — the exact format GRN's
+// bookingids endpoint expects (space-separated, not ISO "T" format).
+function formatGrnDateTime(date) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+         `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+async function grnRequest(method, path) {
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: {
-      'api-key': API_KEY,
+      'api-key': API_KEY, // best guess based on GRN's documented header convention —
+                          // adjust here if the real API rejects this
       Accept: 'application/json',
-      'Content-Type': 'application/json',
     },
-    body: body ? JSON.stringify(body) : undefined,
   });
 
   const text = await res.text();
@@ -66,205 +74,124 @@ async function grnRequest(method, path, body) {
 }
 
 // ============================================================================
-// MOCK DATA — realistic fake responses matching GRN's documented shapes
+// REAL, CONFIRMED ENDPOINTS — these actually work right now
 // ============================================================================
 
-function mockListBookings() {
-  const today = new Date();
-  const in10Days = new Date(today);
-  in10Days.setDate(in10Days.getDate() + 10);
-  const in13Days = new Date(today);
-  in13Days.setDate(in13Days.getDate() + 13);
-  const cancelByDate = new Date(today);
-  cancelByDate.setDate(cancelByDate.getDate() + 8);
+/**
+ * GET /hotels/bookingids — lists booking IDs updated within a date range.
+ * In MOCK mode, returns two fake IDs (one eligible, one not) for testing.
+ */
+async function listBookingIds(updatedStart, updatedEnd) {
+  if (MOCK_MODE) {
+    await sleep(150);
+    return ['MOCKREF001', 'MOCKREF002'];
+  }
 
-  return {
-    bookings: [
-      {
+  const start = encodeURIComponent(formatGrnDateTime(updatedStart));
+  const end = encodeURIComponent(formatGrnDateTime(updatedEnd));
+  const response = await grnRequest('GET', `/hotels/bookingids?updated_start=${start}&updated_end=${end}`);
+
+  // Defensive: we don't have a confirmed sample response shape for this
+  // endpoint yet, so try a few likely field names. If none match, log the
+  // raw response so we can see the real shape and fix this on the first try.
+  const ids = response.booking_ids || response.data || response.ids || response.bookings;
+  if (!ids) {
+    console.warn('[listBookingIds] Unrecognized response shape, raw response:', JSON.stringify(response).slice(0, 500));
+    return [];
+  }
+  return ids;
+}
+
+/**
+ * GET /hotels/bookingdetail — fetches full detail for one booking.
+ * In MOCK mode, returns fake detail matching the two fake IDs above.
+ */
+async function getBookingDetail(bookingId) {
+  if (MOCK_MODE) {
+    await sleep(100);
+    const today = new Date();
+    const in10Days = new Date(today); in10Days.setDate(in10Days.getDate() + 10);
+    const in13Days = new Date(today); in13Days.setDate(in13Days.getDate() + 13);
+    const cancelByDate = new Date(today); cancelByDate.setDate(cancelByDate.getDate() + 8);
+
+    if (bookingId === 'MOCKREF001') {
+      return {
         booking_reference: 'MOCKREF001',
         booking_id: 'GRN-MOCK-0001',
         hotel_code: '2435941',
+        supplier_code: 'mock_supplier_a',
         checkin: in10Days.toISOString().slice(0, 10),
         checkout: in13Days.toISOString().slice(0, 10),
         non_refundable: false,
         cancellation_policy: { cancel_by_date: cancelByDate.toISOString() },
         booking_price: { amount: 810.0, currency: 'USD' },
-        booking_items: [
-          {
-            room_code: 'ROOM_STD_TWIN_A',
-            rooms: [{ room_type: 'Standard Twin Room', no_of_adults: 2, no_of_children: 0 }],
-          },
-        ],
-      },
-      {
-        booking_reference: 'MOCKREF002',
-        booking_id: 'GRN-MOCK-0002',
-        hotel_code: '2435941',
-        checkin: in10Days.toISOString().slice(0, 10),
-        checkout: in13Days.toISOString().slice(0, 10),
-        non_refundable: true, // deliberately non-refundable — should be filtered OUT as ineligible
-        cancellation_policy: null,
-        booking_price: { amount: 450.0, currency: 'USD' },
-        booking_items: [
-          { room_code: 'ROOM_DELUXE_A', rooms: [{ room_type: 'Deluxe Room', no_of_adults: 2, no_of_children: 0 }] },
-        ],
-      },
-    ],
-    next_cursor: null, // one page only, in mock mode
-  };
+        booking_items: [{ room_code: 'ROOM_STD_TWIN_A', rooms: [{ room_type: 'Standard Twin Room' }] }],
+      };
+    }
+    // MOCKREF002 — deliberately non-refundable, should be filtered out as ineligible
+    return {
+      booking_reference: 'MOCKREF002',
+      booking_id: 'GRN-MOCK-0002',
+      hotel_code: '2435941',
+      supplier_code: 'mock_supplier_a',
+      checkin: in10Days.toISOString().slice(0, 10),
+      checkout: in13Days.toISOString().slice(0, 10),
+      non_refundable: true,
+      cancellation_policy: null,
+      booking_price: { amount: 450.0, currency: 'USD' },
+      booking_items: [{ room_code: 'ROOM_DELUXE_A', rooms: [{ room_type: 'Deluxe Room' }] }],
+    };
+  }
+
+  return grnRequest('GET', `/hotels/bookingdetail?booking_id=${bookingId}`);
 }
+
+// ============================================================================
+// NOT YET AVAILABLE — kept for when Search/Rebooking/Cancellation access
+// arrives. Calling these for real (MOCK_GRN_API=false) will currently fail,
+// since Naveen has only confirmed the two functions above.
+// ============================================================================
 
 function mockSearchAvailability({ hotelCodes }) {
   return {
     search_id: 'MOCK_SEARCH_' + hotelCodes[0],
     rates: [
-      // Same-supplier cheaper option — this is the one the matching logic SHOULD pick.
-      {
-        supplier: 'mock_supplier_a',
-        room_code: 'ROOM_STD_TWIN_A',
-        rate_key: 'MOCK_RATE_KEY_CHEAPER',
-        price: { amount: 772.0, currency: 'USD' },
-        non_refundable: false,
-      },
-      // Same room, but MORE expensive — should be ignored (not cheaper).
-      {
-        supplier: 'mock_supplier_a',
-        room_code: 'ROOM_STD_TWIN_A',
-        rate_key: 'MOCK_RATE_KEY_PRICIER',
-        price: { amount: 850.0, currency: 'USD' },
-        non_refundable: false,
-      },
-      // Cross-supplier, cheaper still — should be ignored in v1 (same-supplier-only policy).
-      {
-        supplier: 'mock_supplier_b',
-        room_code: 'ROOM_STD_TWIN_A',
-        rate_key: 'MOCK_RATE_KEY_CROSS_SUPPLIER',
-        price: { amount: 700.0, currency: 'USD' },
-        non_refundable: false,
-      },
-      // Different room entirely — should be ignored (room_code doesn't match).
-      {
-        supplier: 'mock_supplier_a',
-        room_code: 'ROOM_SUITE_A',
-        rate_key: 'MOCK_RATE_KEY_WRONG_ROOM',
-        price: { amount: 600.0, currency: 'USD' },
-        non_refundable: false,
-      },
+      { supplier: 'mock_supplier_a', room_code: 'ROOM_STD_TWIN_A', rate_key: 'MOCK_RATE_KEY_CHEAPER', price: { amount: 772.0, currency: 'USD' }, non_refundable: false },
+      { supplier: 'mock_supplier_a', room_code: 'ROOM_STD_TWIN_A', rate_key: 'MOCK_RATE_KEY_PRICIER', price: { amount: 850.0, currency: 'USD' }, non_refundable: false },
+      { supplier: 'mock_supplier_b', room_code: 'ROOM_STD_TWIN_A', rate_key: 'MOCK_RATE_KEY_CROSS_SUPPLIER', price: { amount: 700.0, currency: 'USD' }, non_refundable: false },
+      { supplier: 'mock_supplier_a', room_code: 'ROOM_SUITE_A', rate_key: 'MOCK_RATE_KEY_WRONG_ROOM', price: { amount: 600.0, currency: 'USD' }, non_refundable: false },
     ],
   };
 }
 
-function mockRecheckRate(rateKey) {
-  // Simulate the price holding steady on recheck (the common case).
-  const priceMap = {
-    MOCK_RATE_KEY_CHEAPER: 772.0,
-  };
-  return {
-    price: { amount: priceMap[rateKey] ?? 772.0, currency: 'USD' },
-  };
-}
-
-function mockCreateRebooking(bookingReference) {
-  return {
-    booking_reference: 'MOCKNEW_' + bookingReference,
-    booking_id: 'GRN-MOCK-NEW-' + Math.floor(Math.random() * 100000),
-  };
-}
-
-function mockConfirmRebooking() {
-  return { status: 'confirmed' };
-}
-
-function mockCancelBooking() {
-  return {
-    status: 'confirmed',
-    cancellation_reference: 'MOCK_CANCEL_' + Math.floor(Math.random() * 100000),
-    cancellation_charges: { amount: 0, currency: 'USD' },
-  };
-}
-
-// ============================================================================
-// PUBLIC FUNCTIONS — same signatures whether mock or real
-// ============================================================================
-
-async function listBookings(params) {
-  if (MOCK_MODE) {
-    await sleep(150);
-    return mockListBookings();
-  }
-  const query = new URLSearchParams({
-    filter_type: params.filterType || 'checkin_date',
-    start: params.start,
-    end: params.end,
-    type: params.type || 'B',
-    count: params.count || 100,
-  });
-  if (params.from) query.set('from', params.from);
-  return grnRequest('GET', `/hotels/bookings?${query.toString()}`);
-}
-
-async function getVoucher(bookingReference) {
-  if (MOCK_MODE) {
-    await sleep(100);
-    return { supplier_code: 'mock_supplier_a' };
-  }
-  return grnRequest('GET', `/hotels/bookings/${bookingReference}/voucher`);
-}
-
-async function searchAvailability({ checkin, checkout, hotelCodes, rooms, currency = 'USD' }) {
-  if (MOCK_MODE) {
-    await sleep(200);
-    return mockSearchAvailability({ hotelCodes });
-  }
-  return grnRequest('POST', '/hotels/availability', {
-    version: '2.0',
-    checkin,
-    checkout,
-    client_nationality: 'ID',
-    currency,
-    cutoff_time: 50000,
-    hotel_codes: hotelCodes,
-    hotel_info: false,
-    rates: 'comprehensive',
-    rooms,
-  });
+async function searchAvailability(params) {
+  if (MOCK_MODE) { await sleep(200); return mockSearchAvailability(params); }
+  throw new Error('searchAvailability: not yet available — waiting on GRN Search/Availability endpoint access.');
 }
 
 async function recheckRate(searchId, rateKey) {
-  if (MOCK_MODE) {
-    await sleep(150);
-    return mockRecheckRate(rateKey);
-  }
-  return grnRequest('POST', `/hotels/availability/${searchId}/rates/?action=recheck`, { rate_key: rateKey });
+  if (MOCK_MODE) { await sleep(150); return { price: { amount: 772.0, currency: 'USD' } }; }
+  throw new Error('recheckRate: not yet available — waiting on GRN Search/Availability endpoint access.');
 }
 
 async function createRebooking(bookingReference, payload) {
-  if (MOCK_MODE) {
-    await sleep(200);
-    return mockCreateRebooking(bookingReference);
-  }
-  return grnRequest('POST', `/hotels/rebookings/${bookingReference}`, payload);
+  if (MOCK_MODE) { await sleep(200); return { booking_reference: 'MOCKNEW_' + bookingReference, booking_id: 'GRN-MOCK-NEW-' + Math.floor(Math.random()*100000) }; }
+  throw new Error('createRebooking: not yet available — waiting on GRN Rebookings endpoint access.');
 }
 
 async function confirmRebooking(bookingReference) {
-  if (MOCK_MODE) {
-    await sleep(150);
-    return mockConfirmRebooking();
-  }
-  return grnRequest('POST', `/hotels/rebookings/confirm/${bookingReference}`);
+  if (MOCK_MODE) { await sleep(150); return { status: 'confirmed' }; }
+  throw new Error('confirmRebooking: not yet available — waiting on GRN Rebookings endpoint access.');
 }
 
-async function cancelBooking(bookingReference, comments = 'Rebooked at lower rate') {
-  if (MOCK_MODE) {
-    await sleep(150);
-    return mockCancelBooking();
-  }
-  return grnRequest('DELETE', `/hotels/bookings/${bookingReference}`, { comments, reason: 1 });
+async function cancelBooking(bookingReference, comments) {
+  if (MOCK_MODE) { await sleep(150); return { status: 'confirmed', cancellation_reference: 'MOCK_CANCEL_' + Math.floor(Math.random()*100000), cancellation_charges: { amount: 0, currency: 'USD' } }; }
+  throw new Error('cancelBooking: not yet available — waiting on GRN Cancellation endpoint access.');
 }
 
 module.exports = {
-  listBookings,
-  getVoucher,
+  listBookingIds,
+  getBookingDetail,
   searchAvailability,
   recheckRate,
   createRebooking,
