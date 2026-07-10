@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 const navItems = [
   {
     href: '/business/overview',
-    label: 'Overview',
+    label: 'Dashboard',
     icon: (
       <>
         <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9 9 0 1020.945 13H11V3.055z" />
@@ -32,7 +32,7 @@ const navItems = [
   },
   {
     href: '/business/reports',
-    label: 'Reports',
+    label: 'Analytics',
     icon: (
       <path
         strokeLinecap="round"
@@ -41,15 +41,21 @@ const navItems = [
       />
     ),
   },
+  {
+    href: '/business/settings',
+    label: 'Settings',
+    icon: (
+      <>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </>
+    ),
+  },
 ];
 
 // This is a plain component, NOT a Next.js layout.tsx — it doesn't wrap
 // anything automatically based on folder location. Each dashboard page
-// (Overview, Bookings, Rebookings, Reports) imports this directly and
-// wraps its own content with it. The landing page and login page simply
-// never import this, so they never get the sidebar. No folder-based
-// magic, no route groups, no risk of one page accidentally inheriting
-// something it shouldn't.
+// imports this directly and wraps its own content with it.
 export default function BusinessSidebarWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
@@ -101,11 +107,11 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
         <div className="px-6 py-6 border-t border-white/10">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-[#1447b8] flex items-center justify-center text-xs font-semibold text-white flex-shrink-0">
-              V2F
+              GN
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm text-white truncate">Visa2Fly Ops</p>
-              <p className="text-xs text-white/40 truncate">business@visa2fly.com</p>
+              <p className="text-sm text-white truncate">GRN Connect</p>
+              <p className="text-xs text-white/40 truncate">deepak.narula@grnconnect.com</p>
             </div>
           </div>
         </div>
