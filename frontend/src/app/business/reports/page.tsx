@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
 
 const MONTHLY_DATA = {
   'January':  { refundable: '23,975', rebooked: '912',   profit: '$32,017',  conversion: '3.80%', failure: '8.25%', failureColor: '#DC2626' },
@@ -151,6 +152,7 @@ export default function ReportsPage() {
   ];
 
   return (
+    <BusinessSidebarWrapper>
     <div className="min-h-screen bg-slate-50">
       <div className="bg-white border-b border-slate-200 px-8 py-6">
         <h1 className="text-2xl font-bold" style={{ fontFamily: 'Sora, sans-serif', color: '#0F172A' }}>Reports</h1>
@@ -342,6 +344,7 @@ export default function ReportsPage() {
         )}
       </div>
     </div>
+    </BusinessSidebarWrapper>
   );
 }
 
