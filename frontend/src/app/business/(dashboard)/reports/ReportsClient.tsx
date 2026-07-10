@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
+import BusinessSidebarWrapper from '../../BusinessSidebarWrapper';
 import type { RebookingRow, MonthlySummaryRow, RefundableSummaryRow } from './page';
 
 const GOLD = '#B8860B';
