@@ -63,17 +63,30 @@ const SPEED_DATA: Record<string, { count: string; avgProfit: string }> = {
 const SPEED_ORDER = Object.keys(SPEED_DATA);
 
 const PRICE_DATA: Record<string, { count: string; pct: string }> = {
-  'Under $200':    { count: '1,851', pct: '20.4%' },
-  '$200-500':      { count: '3,575', pct: '39.5%' },
-  '$500-1000':     { count: '2,212', pct: '24.4%' },
-  'Over $1000':    { count: '1,418', pct: '15.7%' },
+  'Under $200':  { count: '1,851', pct: '20.4%' },
+  '$200-500':    { count: '3,575', pct: '39.5%' },
+  '$500-1000':   { count: '2,212', pct: '24.4%' },
+  'Over $1000':  { count: '1,418', pct: '15.7%' },
 };
 const PRICE_ORDER = Object.keys(PRICE_DATA);
+
+const COUNTRY_DATA: Record<string, { rebookings: string; profit: string; avg: string }> = {
+  'United States':    { rebookings: '546', profit: '$23,121', avg: '$42.35' },
+  'Italy':            { rebookings: '437', profit: '$18,905', avg: '$43.26' },
+  'Thailand':         { rebookings: '345', profit: '$15,076', avg: '$43.70' },
+  'India':            { rebookings: '330', profit: '$14,008', avg: '$42.45' },
+  'United Kingdom':   { rebookings: '281', profit: '$10,519', avg: '$37.43' },
+  'UAE':              { rebookings: '255', profit: '$11,637', avg: '$45.64' },
+  'France':           { rebookings: '248', profit: '$15,695', avg: '$63.29' },
+  'Japan':            { rebookings: '234', profit: '$9,524',  avg: '$40.70' },
+  'Spain':            { rebookings: '221', profit: '$10,485', avg: '$47.44' },
+  'Singapore':        { rebookings: '218', profit: '$10,140', avg: '$46.51' },
+};
+const COUNTRY_ORDER = Object.keys(COUNTRY_DATA);
 
 function Dropdown({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -81,7 +94,6 @@ function Dropdown({ options, value, onChange }: { options: string[]; value: stri
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
   return (
     <div className="relative" ref={ref}>
       <button
@@ -93,10 +105,7 @@ function Dropdown({ options, value, onChange }: { options: string[]; value: stri
         <span style={{ fontSize: '10px', color: '#94A3B8' }}>{open ? '▲' : '▼'}</span>
       </button>
       {open && (
-        <div
-          className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-y-auto z-50"
-          style={{ maxHeight: '280px', minWidth: '200px' }}
-        >
+        <div className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-y-auto z-50" style={{ maxHeight: '280px', minWidth: '200px' }}>
           {options.map((opt) => (
             <div
               key={opt}
@@ -113,18 +122,20 @@ function Dropdown({ options, value, onChange }: { options: string[]; value: stri
   );
 }
 
-type ViewType = 'monthly' | 'city' | 'chain' | 'speed' | 'price';
+type ViewType = 'monthly' | 'city' | 'country' | 'chain' | 'speed' | 'price' | 'footprint';
 
 export default function ReportsPage() {
   const [view, setView] = useState<ViewType>('monthly');
   const [selectedMonth, setSelectedMonth] = useState('June');
   const [selectedCity, setSelectedCity] = useState('Bangkok');
+  const [selectedCountry, setSelectedCountry] = useState('United States');
   const [selectedChain, setSelectedChain] = useState('Hilton');
   const [selectedSpeed, setSelectedSpeed] = useState('60+ days');
   const [selectedPrice, setSelectedPrice] = useState('$200-500');
 
   const m = MONTHLY_DATA[selectedMonth as keyof typeof MONTHLY_DATA];
   const c = CITY_DATA[selectedCity];
+  const co = COUNTRY_DATA[selectedCountry];
   const ch = CHAIN_DATA[selectedChain];
   const sp = SPEED_DATA[selectedSpeed];
   const pr = PRICE_DATA[selectedPrice];
@@ -132,9 +143,11 @@ export default function ReportsPage() {
   const tabs: { id: ViewType; label: string }[] = [
     { id: 'monthly', label: 'Monthly' },
     { id: 'city', label: 'By City' },
+    { id: 'country', label: 'By Country' },
     { id: 'chain', label: 'By Chain' },
     { id: 'speed', label: 'By Speed' },
     { id: 'price', label: 'By Price' },
+    { id: 'footprint', label: 'Cancellation Footprint' },
   ];
 
   return (
@@ -145,13 +158,27 @@ export default function ReportsPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-8 py-8">
-        <div className="rounded-xl p-5 mb-8 flex items-start gap-4" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+        <div className="rounded-xl p-5 mb-6 flex items-start gap-4" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
           <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: '#FCD34D', color: '#78350F' }}>i</div>
           <div>
             <p className="text-sm font-semibold" style={{ color: '#92400E' }}>GRN Market Analysis — January to June 2026</p>
             <p className="text-sm mt-1" style={{ color: '#92400E' }}>
               Historical GRN and Mize data, not rebuq's own live activity. A separate live section will appear once rebuq's API access is active.
             </p>
+          </div>
+        </div>
+
+        {/* GAP TO TARGET — persistent tracker */}
+        <div className="rounded-xl p-5 mb-8 flex items-center justify-between" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Conversion vs. Target</p>
+            <p className="text-sm text-slate-600">Current: <span className="font-bold font-mono" style={{ color: '#0F172A' }}>5.94%</span> (June) · Target: <span className="font-bold font-mono" style={{ color: '#1447b8' }}>15%</span></p>
+          </div>
+          <div className="w-64">
+            <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: '#E2E8F0' }}>
+              <div className="h-full rounded-full" style={{ width: `${(5.94/15)*100}%`, background: 'linear-gradient(90deg, #1447b8, #FCD34D)' }} />
+            </div>
+            <p className="text-xs text-slate-400 mt-1 text-right">39.6% of the way there</p>
           </div>
         </div>
 
@@ -181,13 +208,11 @@ export default function ReportsPage() {
               <KpiCard label="Conversion Rate" value={m.conversion} />
               <KpiCard label="Failure Rate" value={m.failure} valueColor={m.failureColor} />
             </div>
-            <DataTable
-              headers={['Month', 'Refundable', 'Rebooked', 'Profit', 'Conversion', 'Failure']}
+            <DataTable headers={['Month', 'Refundable', 'Rebooked', 'Profit', 'Conversion', 'Failure']}
               rows={MONTH_ORDER.map((mo) => {
                 const row = MONTHLY_DATA[mo as keyof typeof MONTHLY_DATA];
                 return { key: mo, selected: mo === selectedMonth, onClick: () => setSelectedMonth(mo), cells: [mo, row.refundable, row.rebooked, row.profit, row.conversion, { text: row.failure, color: row.failureColor }] };
-              })}
-            />
+              })} />
           </>
         )}
 
@@ -203,13 +228,30 @@ export default function ReportsPage() {
               <KpiCard label="Profit Captured" value={c.profit} />
               <KpiCard label="Conversion Rate" value={c.conversion} valueColor={c.convColor} />
             </div>
-            <DataTable
-              headers={['City', 'Refundable', 'GMV', 'Profit', 'Conversion']}
+            <DataTable headers={['City', 'Refundable', 'GMV', 'Profit', 'Conversion']}
               rows={CITY_ORDER.map((city) => {
                 const row = CITY_DATA[city];
                 return { key: city, selected: city === selectedCity, onClick: () => setSelectedCity(city), cells: [city, row.refundable, row.gmv, row.profit, { text: row.conversion, color: row.convColor }] };
-              })}
-            />
+              })} />
+          </>
+        )}
+
+        {view === 'country' && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Showing data for</p>
+              <Dropdown options={COUNTRY_ORDER} value={selectedCountry} onChange={setSelectedCountry} />
+            </div>
+            <div className="grid grid-cols-3 gap-5 mb-8">
+              <KpiCard label="Rebookings" value={co.rebookings} />
+              <KpiCard label="Total Profit" value={co.profit} gold />
+              <KpiCard label="Avg. Profit / Rebooking" value={co.avg} />
+            </div>
+            <DataTable headers={['Country', 'Rebookings', 'Profit', 'Avg/Rebooking']}
+              rows={COUNTRY_ORDER.map((country) => {
+                const row = COUNTRY_DATA[country];
+                return { key: country, selected: country === selectedCountry, onClick: () => setSelectedCountry(country), cells: [country, row.rebookings, row.profit, row.avg] };
+              })} />
           </>
         )}
 
@@ -225,13 +267,11 @@ export default function ReportsPage() {
               <KpiCard label="Same-Supplier Rate" value={ch.sameSupplier} />
               <KpiCard label="Median Price" value={ch.medianPrice} />
             </div>
-            <DataTable
-              headers={['Chain', 'Rebookings', 'Median Saving', 'Same-Supplier', 'Median Price']}
+            <DataTable headers={['Chain', 'Rebookings', 'Median Saving', 'Same-Supplier', 'Median Price']}
               rows={CHAIN_ORDER.map((chain) => {
                 const row = CHAIN_DATA[chain];
                 return { key: chain, selected: chain === selectedChain, onClick: () => setSelectedChain(chain), cells: [chain, row.count, row.medianSaving, row.sameSupplier, row.medianPrice] };
-              })}
-            />
+              })} />
           </>
         )}
 
@@ -245,13 +285,11 @@ export default function ReportsPage() {
               <KpiCard label="Rebookings in this range" value={sp.count} />
               <KpiCard label="Average Profit" value={sp.avgProfit} gold />
             </div>
-            <DataTable
-              headers={['Speed', 'Rebookings', 'Average Profit']}
+            <DataTable headers={['Speed', 'Rebookings', 'Average Profit']}
               rows={SPEED_ORDER.map((speed) => {
                 const row = SPEED_DATA[speed];
                 return { key: speed, selected: speed === selectedSpeed, onClick: () => setSelectedSpeed(speed), cells: [speed, row.count, row.avgProfit] };
-              })}
-            />
+              })} />
           </>
         )}
 
@@ -265,13 +303,41 @@ export default function ReportsPage() {
               <KpiCard label="Rebookings in this range" value={pr.count} />
               <KpiCard label="Share of Total" value={pr.pct} gold />
             </div>
-            <DataTable
-              headers={['Price Bracket', 'Rebookings', 'Share of Total']}
+            <DataTable headers={['Price Bracket', 'Rebookings', 'Share of Total']}
               rows={PRICE_ORDER.map((price) => {
                 const row = PRICE_DATA[price];
                 return { key: price, selected: price === selectedPrice, onClick: () => setSelectedPrice(price), cells: [price, row.count, row.pct] };
-              })}
-            />
+              })} />
+          </>
+        )}
+
+        {view === 'footprint' && (
+          <>
+            <p className="text-sm text-slate-500 mb-5">Mize's own cancellation activity, next to everything happening with no Mize involvement at all.</p>
+            <div className="grid grid-cols-2 gap-5 mb-6">
+              <div className="rounded-2xl p-6" style={{ background: '#EEF2FF', border: '1px solid #C7D2FE' }}>
+                <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#1447b8' }}>Mize's Footprint</p>
+                <p className="font-mono text-3xl font-bold mb-1" style={{ color: '#0F172A' }}>$5.41M</p>
+                <p className="text-xs text-slate-500 mb-4">Total cancelled GMV</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-slate-500">Bookings</span><span className="font-mono font-semibold">9,056</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Avg. value</span><span className="font-mono font-semibold">$598</span></div>
+                </div>
+              </div>
+              <div className="rounded-2xl p-6" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#B8860B' }}>Untapped Market</p>
+                <p className="font-mono text-3xl font-bold mb-1" style={{ color: '#0F172A' }}>$65.97M</p>
+                <p className="text-xs text-slate-500 mb-4">12x Mize's own footprint</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-slate-500">Bookings</span><span className="font-mono font-semibold">84,608</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Avg. value</span><span className="font-mono font-semibold">$780</span></div>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-xl p-5" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
+              <p className="text-sm font-semibold mb-1" style={{ color: '#DC2626' }}>Sharpest single gap: UAE</p>
+              <p className="text-sm text-slate-600">$28,902 actual vs. $1,885,506 potential — a 65.2x gap, the largest of any market.</p>
+            </div>
           </>
         )}
       </div>
@@ -298,9 +364,7 @@ function DataTable({ headers, rows }: { headers: string[]; rows: { key: string; 
       <table className="w-full text-sm">
         <thead>
           <tr className="text-xs font-semibold uppercase text-slate-400">
-            {headers.map((h, i) => (
-              <td key={h} className={`pb-2 border-b border-slate-200 ${i > 0 ? 'text-right' : ''}`}>{h}</td>
-            ))}
+            {headers.map((h, i) => (<td key={h} className={`pb-2 border-b border-slate-200 ${i > 0 ? 'text-right' : ''}`}>{h}</td>))}
           </tr>
         </thead>
         <tbody className="font-mono">
@@ -311,11 +375,7 @@ function DataTable({ headers, rows }: { headers: string[]; rows: { key: string; 
                 const text = isObj ? cell.text : cell;
                 const color = isObj ? cell.color : undefined;
                 return (
-                  <td
-                    key={i}
-                    className={`py-2 border-b border-slate-100 ${i === 0 ? 'font-sans' : 'text-right'} ${row.selected ? 'font-semibold' : ''}`}
-                    style={color ? { color, fontWeight: row.selected ? 600 : undefined } : {}}
-                  >
+                  <td key={i} className={`py-2 border-b border-slate-100 ${i === 0 ? 'font-sans' : 'text-right'} ${row.selected ? 'font-semibold' : ''}`} style={color ? { color, fontWeight: row.selected ? 600 : undefined } : {}}>
                     {text}
                   </td>
                 );
