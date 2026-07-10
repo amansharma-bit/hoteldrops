@@ -52,16 +52,16 @@ const CHAIN_DATA: Record<string, { count: string; medianSaving: string; sameSupp
 };
 const CHAIN_ORDER = Object.keys(CHAIN_DATA);
 
-const SPEED_DATA: Record<string, { count: string; avgProfit: string }> = {
-  'Same day':   { count: '265',   avgProfit: '$47.09' },
-  '1-3 days':   { count: '2,298', avgProfit: '$37.35' },
-  '4-7 days':   { count: '1,879', avgProfit: '$39.32' },
-  '8-14 days':  { count: '1,659', avgProfit: '$39.81' },
-  '15-30 days': { count: '1,602', avgProfit: '$44.58' },
-  '31-60 days': { count: '621',   avgProfit: '$57.82' },
-  '60+ days':   { count: '732',   avgProfit: '$64.64' },
-};
-const SPEED_ORDER = Object.keys(SPEED_DATA);
+const SPEED_DATA: { label: string; count: number; avgProfit: number }[] = [
+  { label: 'Caught same day',       count: 265,   avgProfit: 47.09 },
+  { label: 'Caught in 1-3 days',    count: 2298,  avgProfit: 37.35 },
+  { label: 'Caught in 4-7 days',    count: 1879,  avgProfit: 39.32 },
+  { label: 'Caught in 8-14 days',   count: 1659,  avgProfit: 39.81 },
+  { label: 'Caught in 15-30 days',  count: 1602,  avgProfit: 44.58 },
+  { label: 'Caught in 31-60 days',  count: 621,   avgProfit: 57.82 },
+  { label: 'Caught after 60+ days', count: 732,   avgProfit: 64.64 },
+];
+const maxProfit = Math.max(...SPEED_DATA.map(s => s.avgProfit));
 
 const PRICE_DATA: Record<string, { count: string; pct: string }> = {
   'Under $200':  { count: '1,851', pct: '20.4%' },
@@ -85,6 +85,10 @@ const COUNTRY_DATA: Record<string, { rebookings: string; profit: string; avg: st
 };
 const COUNTRY_ORDER = Object.keys(COUNTRY_DATA);
 
+const GOLD = '#B8860B';
+const GOLD_BG = '#FEF9E7';
+const GOLD_BORDER = '#FCD34D';
+
 function Dropdown({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -99,21 +103,17 @@ function Dropdown({ options, value, onChange }: { options: string[]; value: stri
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="border border-slate-300 rounded-lg px-4 py-2 text-sm font-semibold bg-white cursor-pointer flex items-center gap-2 min-w-[160px] justify-between"
-        style={{ color: '#0F172A' }}
+        className="rounded-lg px-4 py-2 text-sm font-bold cursor-pointer flex items-center gap-2 min-w-[160px] justify-between"
+        style={{ background: GOLD_BG, border: `1.5px solid ${GOLD_BORDER}`, color: '#78350F' }}
       >
         {value}
-        <span style={{ fontSize: '10px', color: '#94A3B8' }}>{open ? '▲' : '▼'}</span>
+        <span style={{ fontSize: '10px' }}>{open ? '▲' : '▼'}</span>
       </button>
       {open && (
         <div className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-y-auto z-50" style={{ maxHeight: '280px', minWidth: '200px' }}>
           {options.map((opt) => (
-            <div
-              key={opt}
-              onClick={() => { onChange(opt); setOpen(false); }}
-              className="px-4 py-2 text-sm cursor-pointer hover:bg-slate-50"
-              style={opt === value ? { background: '#EEF2FF', fontWeight: 600, color: '#1447b8' } : { color: '#334155' }}
-            >
+            <div key={opt} onClick={() => { onChange(opt); setOpen(false); }} className="px-4 py-2 text-sm cursor-pointer hover:bg-slate-50"
+              style={opt === value ? { background: GOLD_BG, fontWeight: 600, color: '#78350F' } : { color: '#334155' }}>
               {opt}
             </div>
           ))}
@@ -123,7 +123,55 @@ function Dropdown({ options, value, onChange }: { options: string[]; value: stri
   );
 }
 
-type ViewType = 'monthly' | 'city' | 'country' | 'chain' | 'speed' | 'price' | 'footprint';
+function SearchDropdown({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setQuery(''); }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
+  return (
+    <div className="relative" ref={ref}>
+      <div
+        onClick={() => setOpen(true)}
+        className="rounded-lg px-4 py-2 text-sm font-bold cursor-pointer flex items-center gap-2 min-w-[200px] justify-between"
+        style={{ background: GOLD_BG, border: `1.5px solid ${GOLD_BORDER}`, color: '#78350F' }}
+      >
+        {open ? (
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Type to search..."
+            className="bg-transparent outline-none w-full"
+            style={{ color: '#78350F' }}
+          />
+        ) : (
+          <span>{value}</span>
+        )}
+        <span style={{ fontSize: '10px' }}>🔍</span>
+      </div>
+      {open && (
+        <div className="absolute right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-y-auto z-50" style={{ maxHeight: '280px', minWidth: '220px' }}>
+          {filtered.length === 0 && <div className="px-4 py-2 text-sm text-slate-400">No matches</div>}
+          {filtered.map((opt) => (
+            <div key={opt} onClick={() => { onChange(opt); setOpen(false); setQuery(''); }} className="px-4 py-2 text-sm cursor-pointer hover:bg-slate-50"
+              style={opt === value ? { background: GOLD_BG, fontWeight: 600, color: '#78350F' } : { color: '#334155' }}>
+              {opt}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type ViewType = 'monthly' | 'city' | 'country' | 'chain' | 'speed' | 'price' | 'supplier' | 'footprint';
 
 export default function ReportsPage() {
   const [view, setView] = useState<ViewType>('monthly');
@@ -131,14 +179,12 @@ export default function ReportsPage() {
   const [selectedCity, setSelectedCity] = useState('Bangkok');
   const [selectedCountry, setSelectedCountry] = useState('United States');
   const [selectedChain, setSelectedChain] = useState('Hilton');
-  const [selectedSpeed, setSelectedSpeed] = useState('60+ days');
   const [selectedPrice, setSelectedPrice] = useState('$200-500');
 
   const m = MONTHLY_DATA[selectedMonth as keyof typeof MONTHLY_DATA];
   const c = CITY_DATA[selectedCity];
   const co = COUNTRY_DATA[selectedCountry];
   const ch = CHAIN_DATA[selectedChain];
-  const sp = SPEED_DATA[selectedSpeed];
   const pr = PRICE_DATA[selectedPrice];
 
   const tabs: { id: ViewType; label: string }[] = [
@@ -148,6 +194,7 @@ export default function ReportsPage() {
     { id: 'chain', label: 'By Chain' },
     { id: 'speed', label: 'By Speed' },
     { id: 'price', label: 'By Price' },
+    { id: 'supplier', label: 'Supplier Match' },
     { id: 'footprint', label: 'Cancellation Footprint' },
   ];
 
@@ -156,42 +203,14 @@ export default function ReportsPage() {
     <div className="min-h-screen bg-slate-50">
       <div className="bg-white border-b border-slate-200 px-8 py-6">
         <h1 className="text-2xl font-bold" style={{ fontFamily: 'Sora, sans-serif', color: '#0F172A' }}>Reports</h1>
-        <p className="text-sm text-slate-500 mt-1">Market analysis and historical performance data.</p>
+        <p className="text-sm text-slate-500 mt-1">Market analysis and historical performance data — Jan–Jun 2026.</p>
       </div>
 
       <div className="max-w-6xl mx-auto px-8 py-8">
-        <div className="rounded-xl p-5 mb-6 flex items-start gap-4" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
-          <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: '#FCD34D', color: '#78350F' }}>i</div>
-          <div>
-            <p className="text-sm font-semibold" style={{ color: '#92400E' }}>GRN Market Analysis — January to June 2026</p>
-            <p className="text-sm mt-1" style={{ color: '#92400E' }}>
-              Historical GRN and Mize data, not rebuq's own live activity. A separate live section will appear once rebuq's API access is active.
-            </p>
-          </div>
-        </div>
-
-        {/* GAP TO TARGET — persistent tracker */}
-        <div className="rounded-xl p-5 mb-8 flex items-center justify-between" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Conversion vs. Target</p>
-            <p className="text-sm text-slate-600">Current: <span className="font-bold font-mono" style={{ color: '#0F172A' }}>5.94%</span> (June) · Target: <span className="font-bold font-mono" style={{ color: '#1447b8' }}>15%</span></p>
-          </div>
-          <div className="w-64">
-            <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: '#E2E8F0' }}>
-              <div className="h-full rounded-full" style={{ width: `${(5.94/15)*100}%`, background: 'linear-gradient(90deg, #1447b8, #FCD34D)' }} />
-            </div>
-            <p className="text-xs text-slate-400 mt-1 text-right">39.6% of the way there</p>
-          </div>
-        </div>
-
         <div className="flex items-center gap-2 mb-6 flex-wrap">
           {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setView(t.id)}
-              className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-              style={view === t.id ? { background: '#1447b8', color: '#fff' } : { background: '#fff', color: '#64748B', border: '1px solid #E2E8F0' }}
-            >
+            <button key={t.id} onClick={() => setView(t.id)} className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+              style={view === t.id ? { background: '#1447b8', color: '#fff' } : { background: '#fff', color: '#64748B', border: '1px solid #E2E8F0' }}>
               {t.label}
             </button>
           ))}
@@ -221,8 +240,8 @@ export default function ReportsPage() {
         {view === 'city' && (
           <>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Showing data for</p>
-              <Dropdown options={CITY_ORDER} value={selectedCity} onChange={setSelectedCity} />
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Search for a city</p>
+              <SearchDropdown options={CITY_ORDER} value={selectedCity} onChange={setSelectedCity} />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
               <KpiCard label="Refundable Bookings" value={c.refundable} />
@@ -241,8 +260,8 @@ export default function ReportsPage() {
         {view === 'country' && (
           <>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Showing data for</p>
-              <Dropdown options={COUNTRY_ORDER} value={selectedCountry} onChange={setSelectedCountry} />
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Search for a country</p>
+              <SearchDropdown options={COUNTRY_ORDER} value={selectedCountry} onChange={setSelectedCountry} />
             </div>
             <div className="grid grid-cols-3 gap-5 mb-8">
               <KpiCard label="Rebookings" value={co.rebookings} />
@@ -279,19 +298,23 @@ export default function ReportsPage() {
 
         {view === 'speed' && (
           <>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Showing data for</p>
-              <Dropdown options={SPEED_ORDER} value={selectedSpeed} onChange={setSelectedSpeed} />
+            <p className="text-sm text-slate-500 mb-1">The longer we wait to catch a deal, the bigger it tends to be.</p>
+            <p className="text-xs text-slate-400 mb-5">Rebookings caught after 60+ days earn <span className="font-semibold" style={{ color: GOLD }}>38% more</span> on average than same-day catches.</p>
+            <div className="bg-white rounded-2xl border border-slate-200 p-6">
+              <div className="space-y-3">
+                {SPEED_DATA.map((s) => (
+                  <div key={s.label}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-slate-600">{s.label} <span className="text-slate-400">({s.count.toLocaleString()} rebookings)</span></span>
+                      <span className="font-mono font-bold" style={{ color: s.avgProfit === maxProfit ? GOLD : '#0F172A' }}>${s.avgProfit.toFixed(2)} avg</span>
+                    </div>
+                    <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: '#F1F5F9' }}>
+                      <div className="h-full rounded-full" style={{ width: `${(s.avgProfit/maxProfit)*100}%`, background: s.avgProfit === maxProfit ? GOLD_BORDER : '#94A3B8' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-5 mb-8">
-              <KpiCard label="Rebookings in this range" value={sp.count} />
-              <KpiCard label="Average Profit" value={sp.avgProfit} gold />
-            </div>
-            <DataTable headers={['Speed', 'Rebookings', 'Average Profit']}
-              rows={SPEED_ORDER.map((speed) => {
-                const row = SPEED_DATA[speed];
-                return { key: speed, selected: speed === selectedSpeed, onClick: () => setSelectedSpeed(speed), cells: [speed, row.count, row.avgProfit] };
-              })} />
           </>
         )}
 
@@ -313,6 +336,29 @@ export default function ReportsPage() {
           </>
         )}
 
+        {view === 'supplier' && (
+          <>
+            <p className="text-sm text-slate-500 mb-5">How often we actually check a different supplier before rebooking — versus just staying with the original one.</p>
+            <div className="grid grid-cols-2 gap-5 mb-6">
+              <div className="rounded-2xl p-6" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
+                <p className="text-xs font-bold uppercase tracking-wide mb-3 text-slate-500">Same Supplier</p>
+                <p className="font-mono text-3xl font-bold mb-1" style={{ color: '#0F172A' }}>8,954</p>
+                <p className="text-sm text-slate-500">98.9% of all rebookings — the new price came from the same supplier as the original booking.</p>
+              </div>
+              <div className="rounded-2xl p-6" style={{ background: GOLD_BG, border: `1px solid ${GOLD_BORDER}` }}>
+                <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: GOLD }}>Different Supplier</p>
+                <p className="font-mono text-3xl font-bold mb-1" style={{ color: '#0F172A' }}>102</p>
+                <p className="text-sm text-slate-500">Just 1.1% — a genuinely different supplier was found and used instead.</p>
+              </div>
+            </div>
+            <div className="rounded-xl p-5" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                This pattern holds across most of the market — 10 of our top 20 cities and 5 major hotel chains (Radisson, Novotel, Crowne Plaza, InterContinental, Marriott) show <span className="font-semibold text-navy" style={{ color: '#0F172A' }}>100% same-supplier</span> behavior. Worth understanding whether this reflects genuinely limited alternatives, or a search that isn't looking as wide as it could.
+              </p>
+            </div>
+          </>
+        )}
+
         {view === 'footprint' && (
           <>
             <p className="text-sm text-slate-500 mb-5">Mize's own cancellation activity, next to everything happening with no Mize involvement at all.</p>
@@ -326,8 +372,8 @@ export default function ReportsPage() {
                   <div className="flex justify-between"><span className="text-slate-500">Avg. value</span><span className="font-mono font-semibold">$598</span></div>
                 </div>
               </div>
-              <div className="rounded-2xl p-6" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
-                <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#B8860B' }}>Untapped Market</p>
+              <div className="rounded-2xl p-6" style={{ background: GOLD_BG, border: `1px solid ${GOLD_BORDER}` }}>
+                <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: GOLD }}>Untapped Market</p>
                 <p className="font-mono text-3xl font-bold mb-1" style={{ color: '#0F172A' }}>$65.97M</p>
                 <p className="text-xs text-slate-500 mb-4">12x Mize's own footprint</p>
                 <div className="space-y-2 text-sm">
@@ -372,7 +418,7 @@ function DataTable({ headers, rows }: { headers: string[]; rows: { key: string; 
         </thead>
         <tbody className="font-mono">
           {rows.map((row) => (
-            <tr key={row.key} onClick={row.onClick} className="cursor-pointer" style={row.selected ? { background: '#EEF2FF' } : {}}>
+            <tr key={row.key} onClick={row.onClick} className="cursor-pointer" style={row.selected ? { background: GOLD_BG } : {}}>
               {row.cells.map((cell, i) => {
                 const isObj = typeof cell === 'object';
                 const text = isObj ? cell.text : cell;
