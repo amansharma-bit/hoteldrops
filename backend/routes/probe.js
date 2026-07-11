@@ -114,4 +114,27 @@ router.get('/full-access-check', async (req, res) => {
   });
 });
 
+
+// ============================================================
+// Route 3: key-check — a safe diagnostic showing exactly what
+// key value is currently loaded on the server, without exposing
+// the whole thing. Lets us rule out whitespace, truncation, or
+// a stale deployment before assuming it's a permissions issue.
+// ============================================================
+router.get('/key-check', (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.json({ keyPresent: false, message: 'GRN_API_KEY is not set at all in this environment.' });
+  }
+  const raw = GRN_API_KEY;
+  res.json({
+    keyPresent: true,
+    length: raw.length,
+    first4: raw.slice(0, 4),
+    last4: raw.slice(-4),
+    hasLeadingOrTrailingWhitespace: raw !== raw.trim(),
+    hasInternalWhitespace: /\s/.test(raw.trim()),
+    expectedLength32: raw.trim().length === 32,
+  });
+});
+
 module.exports = router;
