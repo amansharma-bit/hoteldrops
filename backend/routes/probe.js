@@ -137,4 +137,22 @@ router.get('/key-check', (req, res) => {
   });
 });
 
+
+// ============================================================
+// Route 4: my-ip — reveals the actual outbound IP this server
+// uses when making requests, so it can be sent to GRN for
+// potential IP whitelisting. NOTE: on some Railway plans this
+// IP can be shared/dynamic rather than fixed — worth confirming
+// with Railway's own docs/support if long-term stability matters.
+// ============================================================
+router.get('/my-ip', async (req, res) => {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    res.json({ outboundIp: data.ip, note: 'This is the IP this server currently uses for outbound requests. Confirm with Railway whether this is fixed or can change.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
