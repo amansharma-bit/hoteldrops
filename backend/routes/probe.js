@@ -18,11 +18,11 @@ router.get('/auth-methods', async (req, res) => {
   const testUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=2026-07-01&updated_end=2026-07-08`;
 
   const headerVariants = [
-    { label: 'api-key header', headers: { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json' } },
-    { label: 'Authorization: Bearer', headers: { Authorization: `Bearer ${GRN_API_KEY}`, 'Content-Type': 'application/json' } },
-    { label: 'Authorization: raw key', headers: { Authorization: GRN_API_KEY, 'Content-Type': 'application/json' } },
-    { label: 'x-api-key header', headers: { 'x-api-key': GRN_API_KEY, 'Content-Type': 'application/json' } },
-    { label: 'apikey (no dash)', headers: { apikey: GRN_API_KEY, 'Content-Type': 'application/json' } },
+    { label: 'api-key header', headers: { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' } },
+    { label: 'Authorization: Bearer', headers: { Authorization: `Bearer ${GRN_API_KEY}`, 'Content-Type': 'application/json', 'Accept': 'application/json' } },
+    { label: 'Authorization: raw key', headers: { Authorization: GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' } },
+    { label: 'x-api-key header', headers: { 'x-api-key': GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' } },
+    { label: 'apikey (no dash)', headers: { apikey: GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' } },
   ];
 
   const results = [];
@@ -69,7 +69,7 @@ router.get('/full-access-check', async (req, res) => {
     return res.status(500).json({ error: 'GRN_API_KEY not set in environment variables.' });
   }
 
-  const headers = { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json' };
+  const headers = { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' };
   const results = [];
 
   for (const ep of endpoints) {
