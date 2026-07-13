@@ -162,38 +162,35 @@ export default function LiveSearchPage() {
               )}
 
               <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                <p className="font-bold text-sm mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>Comparison</p>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-xs font-semibold uppercase text-slate-400">
-                      <td className="pb-2 border-b border-slate-200">Field</td>
-                      <td className="pb-2 border-b border-slate-200">Original (Booking)</td>
-                      <td className="pb-2 border-b border-slate-200">New (Live Search)</td>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {originalRow.map(([label, origVal], i) => (
-                      <tr key={label}>
-                        <td className="py-2 border-b border-slate-100 font-semibold text-slate-500">{label}</td>
-                        <td className="py-2 border-b border-slate-100">{String(origVal)}</td>
-                        <td className="py-2 border-b border-slate-100 font-mono">{String(newRow[i]?.[1] ?? '—')}</td>
-                      </tr>
-                    ))}
-                    <tr>
-                      <td className="py-2 font-semibold text-slate-500">Price</td>
-                      <td className="py-2 font-mono">{originalPrice ? `$${originalPrice}` : '—'}</td>
-                      <td className="py-2 font-mono font-bold" style={{ color: '#1447b8' }}>
-                        {result.price ? `${result.currency} ${result.price}` : '—'}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <p className="font-bold text-sm mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>New — Live Search Results</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {newRow.map(([label, val]) => (
+                    <ReadField key={label} label={label} value={String(val)} />
+                  ))}
+                  <ReadField label="Price" value={result.price ? `${result.currency} ${result.price}` : '—'} highlight />
+                </div>
               </div>
             </>
           )}
         </div>
       </div>
     </BusinessSidebarWrapper>
+  );
+}
+
+function ReadField({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div>
+      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">{label}</label>
+      <div
+        className="w-full border rounded-lg px-3 py-2 text-sm font-mono"
+        style={highlight
+          ? { borderColor: '#1447b8', background: '#EEF2FF', color: '#1447b8', fontWeight: 700 }
+          : { borderColor: '#E2E8F0', background: '#F8FAFC', color: '#334155' }}
+      >
+        {value}
+      </div>
+    </div>
   );
 }
 
