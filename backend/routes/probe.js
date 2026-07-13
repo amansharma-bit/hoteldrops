@@ -54,7 +54,7 @@ router.get('/auth-methods', async (req, res) => {
 // need to come from Naveen directly.
 // ============================================================
 const endpoints = [
-  { name: 'List Booking IDs', method: 'GET', path: `/hotels/bookingids?updated_start=2026-07-01T00:00:00&updated_end=2026-07-08T23:59:59`, confidence: 'CONFIRMED — real, documented endpoint' },
+  { name: 'List Booking IDs', method: 'GET', path: `/hotels/bookingids?updated_start=${encodeURIComponent('2026-07-01T00:00:00')}&updated_end=${encodeURIComponent('2026-07-08T23:59:59')}`, confidence: 'CONFIRMED — real, documented endpoint' },
   { name: 'Booking Detail', method: 'GET', path: SAMPLE_BOOKING_ID ? `/hotels/bookingdetail?booking_id=${SAMPLE_BOOKING_ID}` : `/hotels/bookingdetail?booking_id=TEST`, confidence: 'CONFIRMED — real, documented endpoint' },
   { name: 'Search / Availability (guess 1)', method: 'GET', path: `/hotels/search`, confidence: 'UNCONFIRMED — guessed path, never documented' },
   { name: 'Search / Availability (guess 2)', method: 'GET', path: `/hotels/availability`, confidence: 'UNCONFIRMED — guessed path, never documented' },
