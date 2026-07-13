@@ -58,6 +58,16 @@ const endpoints = [
   { name: 'Fetch Bookings List (type=C, cancellations)', method: 'GET', path: `/hotels/bookings?filter_type=booking_date&start=2026-06-14&end=2026-07-13&type=C`, confidence: 'CONFIRMED — testing cancellations specifically' },
   { name: 'Fetch Bookings List (no type filter, both)', method: 'GET', path: `/hotels/bookings?filter_type=booking_date&start=2026-06-14&end=2026-07-13`, confidence: 'CONFIRMED — testing without type filter' },
   { name: 'Fetch Bookings List (by checkin_date instead)', method: 'GET', path: `/hotels/bookings?filter_type=checkin_date&start=2026-06-14&end=2026-07-13`, confidence: 'CONFIRMED — testing checkin_date filter instead of booking_date' },
+  { name: 'Search & Availability (POST, documented)', method: 'POST', path: `/hotels/availability`, body: JSON.stringify({
+    rooms: [{ adults: 2 }],
+    rates: "concise",
+    hotel_codes: ["1848138"],
+    currency: "INR",
+    client_nationality: "IN",
+    checkin: "2026-08-15",
+    checkout: "2026-08-16",
+    purpose_of_travel: 1
+  }), confidence: "CONFIRMED — real documented endpoint, using GRN's own sample hotel_code (may not be currently valid)" },
   { name: 'Fetch Booking (by GRN reference)', method: 'GET', path: SAMPLE_BOOKING_ID ? `/hotels/bookings/${SAMPLE_BOOKING_ID}?type=GRN` : `/hotels/bookings/GRN-202607-2651199?type=GRN`, confidence: 'CONFIRMED — real, documented endpoint (corrected from official docs)' },
   { name: 'Search / Availability (guess 1)', method: 'GET', path: `/hotels/search`, confidence: 'UNCONFIRMED — guessed path, never documented' },
   { name: 'Search / Availability (guess 2)', method: 'GET', path: `/hotels/availability`, confidence: 'UNCONFIRMED — guessed path, never documented' },
@@ -81,7 +91,7 @@ router.get('/full-access-check', async (req, res) => {
       const response = await fetch(url, {
         method: ep.method,
         headers,
-        body: ep.method === 'POST' ? JSON.stringify({}) : undefined,
+        body: ep.method === 'POST' ? (ep.body || JSON.stringify({})) : undefined,
       });
 
       const status = response.status;
