@@ -32,7 +32,7 @@ router.get('/auth-methods', async (req, res) => {
       const status = response.status;
       let bodyPreview;
       try {
-        bodyPreview = JSON.stringify(await response.json()).slice(0, 200);
+        bodyPreview = JSON.stringify(await response.json()).slice(0, 2500);
       } catch {
         bodyPreview = '(non-JSON response)';
       }
@@ -97,7 +97,7 @@ router.get('/full-access-check', async (req, res) => {
       const status = response.status;
       let bodyPreview;
       try {
-        bodyPreview = JSON.stringify(await response.json()).slice(0, 200);
+        bodyPreview = JSON.stringify(await response.json()).slice(0, 2500);
       } catch {
         bodyPreview = '(non-JSON response)';
       }
