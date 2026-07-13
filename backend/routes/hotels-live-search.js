@@ -39,6 +39,7 @@ router.post('/live-search', async (req, res) => {
       headers: {
         'api-key': GRN_API_KEY,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify(payload),
     });
@@ -96,7 +97,7 @@ router.get('/live-search-debug', async (req, res) => {
   try {
     const response = await fetch(`${GRN_API_BASE_URL}/hotels/availability`, {
       method: 'POST',
-      headers: { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json' },
+      headers: { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(payload),
     });
     const data = await response.json();
