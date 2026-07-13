@@ -77,4 +77,33 @@ router.post('/live-search', async (req, res) => {
   }
 });
 
+
+// Temporary debug route — lets me fetch this directly to see the exact error
+router.get('/live-search-debug', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  const payload = {
+    rooms: [{ adults: 2 }],
+    rates: "concise",
+    hotel_codes: ["1848138"],
+    currency: "USD",
+    client_nationality: "US",
+    checkin: "2026-09-15",
+    checkout: "2026-09-16",
+    purpose_of_travel: 1
+  };
+  try {
+    const response = await fetch(`${GRN_API_BASE_URL}/hotels/availability`, {
+      method: 'POST',
+      headers: { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    res.json({ httpStatus: response.status, payloadSent: payload, responseReceived: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
