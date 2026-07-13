@@ -10,6 +10,9 @@ export default function LiveSearchPage() {
   const [checkin, setCheckin] = useState('');
   const [checkout, setCheckout] = useState('');
   const [adults, setAdults] = useState(2);
+  const [childrenAges, setChildrenAges] = useState('');
+  const [originalPrice, setOriginalPrice] = useState('');
+  const [nationality, setNationality] = useState('US');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<any>(null);
@@ -26,7 +29,10 @@ export default function LiveSearchPage() {
       const res = await fetch(`${API_BASE}/api/live-search/live-search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hotel_code: hotelCode, checkin, checkout, adults }),
+        body: JSON.stringify({
+          hotel_code: hotelCode, checkin, checkout, adults, nationality,
+          children_ages: childrenAges ? childrenAges.split(',').map((a) => a.trim()).filter(Boolean) : [],
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -113,6 +119,42 @@ export default function LiveSearchPage() {
                   className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500"
                 />
               </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
+                  Children Ages
+                </label>
+                <input
+                  value={childrenAges}
+                  onChange={(e) => setChildrenAges(e.target.value)}
+                  placeholder="e.g. 8, 12"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
+                  Original Price Paid
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={originalPrice}
+                  onChange={(e) => setOriginalPrice(e.target.value)}
+                  placeholder="e.g. 95.00"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
+                  Client Nationality
+                </label>
+                <input
+                  value={nationality}
+                  onChange={(e) => setNationality(e.target.value.toUpperCase())}
+                  placeholder="e.g. US, IN, AE"
+                  maxLength={2}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500"
+                />
+              </div>
             </div>
             <button
               onClick={handleSearch}
@@ -150,14 +192,58 @@ export default function LiveSearchPage() {
                     {h.description && (
                       <p className="text-xs text-slate-400 mt-1">{h.description}...</p>
                     )}
+                    {h.price && originalPrice && !isNaN(parseFloat(originalPrice)) && (() => {
+                      const orig = parseFloat(originalPrice);
+                      const diff = orig - h.price;
+                      const pct = (diff / orig) * 100;
+                      const hasSaving = diff > 0.01;
+                      return (
+                        <div
+                          className="mt-2 rounded-lg px-3 py-2 text-sm font-semibold"
+                          style={hasSaving
+                            ? { background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0' }
+                            : { background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}
+                        >
+                          {hasSaving
+                            ? `✓ Saving found: ${h.currency} ${diff.toFixed(2)} (${pct.toFixed(1)}% cheaper than originally paid)`
+                            : `No saving — live price is ${diff < -0.01 ? 'higher' : 'the same as'} the original (${h.currency} ${orig.toFixed(2)} paid vs. ${h.currency} ${h.price} now)`}
+                        </div>
+                      );
+                    })()}
+                    {h.price && (
+                      <div className="mt-2 flex items-center gap-3 flex-wrap">
+                        <span className="font-mono font-bold text-lg" style={{ color: '#1447b8' }}>
+                          {h.currency} {h.price}
+                        </span>
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                          style={h.non_refundable
+                            ? { background: '#FEF2F2', color: '#DC2626' }
+                            : { background: '#F0FDF4', color: '#16A34A' }}
+                        >
+                          {h.non_refundable ? 'Non-refundable' : 'Refundable'}
+                        </span>
+                        {h.cancel_by_date && !h.non_refundable && (
+                          <span className="text-xs text-slate-400">
+                            Free cancellation until {new Date(h.cancel_by_date).toLocaleDateString()}
+                          </span>
+                        )}
+                        {h.board_basis && (
+                          <span className="text-xs text-slate-500">· {h.board_basis}</span>
+                        )}
+                        {h.hotel_code && (
+                          <span className="text-xs text-slate-400">· Hotel ID: {h.hotel_code}</span>
+                        )}
+                      </div>
+                    )}
                     {h.rooms && h.rooms.length > 0 && (
                       <div className="mt-2 space-y-1">
                         {h.rooms.map((r: any, ri: number) => (
-                          <div key={ri} className="text-xs text-slate-600 flex justify-between bg-slate-50 rounded px-2 py-1">
-                            <span>{r.name || 'Room'} {r.board_basis ? `— ${r.board_basis}` : ''}</span>
-                            <span className="font-mono font-semibold">
-                              {r.price ? `${r.currency || ''} ${r.price}` : 'Rate on request'}
-                            </span>
+                          <div key={ri} className="text-xs text-slate-600 bg-slate-50 rounded px-2 py-1">
+                            <div>{r.name} — {r.adults} adult{r.adults !== 1 ? 's' : ''}{r.children ? `, ${r.children} child(ren)` : ''}</div>
+                            {r.room_reference && (
+                              <div className="text-slate-400 font-mono" style={{ fontSize: '10px' }}>Room ID: {r.room_reference}</div>
+                            )}
                           </div>
                         ))}
                       </div>
