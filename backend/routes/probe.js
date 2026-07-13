@@ -54,7 +54,10 @@ router.get('/auth-methods', async (req, res) => {
 // need to come from Naveen directly.
 // ============================================================
 const endpoints = [
-  { name: 'Fetch Bookings List', method: 'GET', path: `/hotels/bookings?filter_type=booking_date&start=2026-06-14&end=2026-07-13&type=B`, confidence: 'CONFIRMED — real, documented endpoint (corrected from official docs)' },
+  { name: 'Fetch Bookings List (type=B)', method: 'GET', path: `/hotels/bookings?filter_type=booking_date&start=2026-06-14&end=2026-07-13&type=B`, confidence: 'CONFIRMED — real, documented endpoint (corrected from official docs)' },
+  { name: 'Fetch Bookings List (type=C, cancellations)', method: 'GET', path: `/hotels/bookings?filter_type=booking_date&start=2026-06-14&end=2026-07-13&type=C`, confidence: 'CONFIRMED — testing cancellations specifically' },
+  { name: 'Fetch Bookings List (no type filter, both)', method: 'GET', path: `/hotels/bookings?filter_type=booking_date&start=2026-06-14&end=2026-07-13`, confidence: 'CONFIRMED — testing without type filter' },
+  { name: 'Fetch Bookings List (by checkin_date instead)', method: 'GET', path: `/hotels/bookings?filter_type=checkin_date&start=2026-06-14&end=2026-07-13`, confidence: 'CONFIRMED — testing checkin_date filter instead of booking_date' },
   { name: 'Fetch Booking (by GRN reference)', method: 'GET', path: SAMPLE_BOOKING_ID ? `/hotels/bookings/${SAMPLE_BOOKING_ID}?type=GRN` : `/hotels/bookings/GRN-202607-2651199?type=GRN`, confidence: 'CONFIRMED — real, documented endpoint (corrected from official docs)' },
   { name: 'Search / Availability (guess 1)', method: 'GET', path: `/hotels/search`, confidence: 'UNCONFIRMED — guessed path, never documented' },
   { name: 'Search / Availability (guess 2)', method: 'GET', path: `/hotels/availability`, confidence: 'UNCONFIRMED — guessed path, never documented' },
