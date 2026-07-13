@@ -96,8 +96,25 @@ router.get('/full-access-check', async (req, res) => {
 
       const status = response.status;
       let bodyPreview;
+      let extractedKeys = null;
+      let rawJson;
       try {
-        bodyPreview = JSON.stringify(await response.json()).slice(0, 2500);
+        rawJson = await response.json();
+        const rawText = JSON.stringify(rawJson);
+        bodyPreview = rawText.slice(0, 1200);
+
+        // Specifically hunt for rate_key and group_code anywhere in the response,
+        // regardless of how deeply nested — needed to test Recheck next.
+        const rateKeyMatch = rawText.match(/"rate_key"\s*:\s*"([^"]+)"/);
+        const groupCodeMatch = rawText.match(/"group_code"\s*:\s*"([^"]+)"/);
+        const searchIdMatch = rawText.match(/"search_id"\s*:\s*"([^"]+)"/);
+        if (rateKeyMatch || groupCodeMatch) {
+          extractedKeys = {
+            rate_key: rateKeyMatch ? rateKeyMatch[1] : null,
+            group_code: groupCodeMatch ? groupCodeMatch[1] : null,
+            search_id: searchIdMatch ? searchIdMatch[1] : null,
+          };
+        }
       } catch {
         bodyPreview = '(non-JSON response)';
       }
@@ -115,7 +132,7 @@ router.get('/full-access-check', async (req, res) => {
         interpretation = `Unexpected status ${status} — needs manual review.`;
       }
 
-      results.push({ endpoint: ep.name, confidence: ep.confidence, method: ep.method, url, httpStatus: status, interpretation, bodyPreview });
+      results.push({ endpoint: ep.name, confidence: ep.confidence, method: ep.method, url, httpStatus: status, interpretation, bodyPreview, extractedKeys });
     } catch (err) {
       results.push({ endpoint: ep.name, confidence: ep.confidence, method: ep.method, url, error: err.message, interpretation: 'Request failed to complete — network or DNS issue, not a permissions result.' });
     }
