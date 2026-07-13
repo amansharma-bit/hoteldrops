@@ -55,18 +55,21 @@ router.post('/live-search', async (req, res) => {
       const minRate = h.min_rate || {};
       const roomList = minRate.rooms || [];
       return {
-        name: h.name,
+        hotel_id: h.hotel_code,
+        hotel_name: h.name,
         address: h.address,
-        hotel_code: h.hotel_code,
-        description: h.description ? h.description.replace(/<[^>]+>/g, ' ').slice(0, 300) : null,
+        checkin: data.checkin,
+        checkout: data.checkout,
         price: minRate.price || null,
         currency: minRate.currency || null,
-        non_refundable: minRate.non_refundable || false,
-        cancel_by_date: minRate.cancellation_policy ? minRate.cancellation_policy.cancel_by_date : null,
+        refundable: minRate.non_refundable === false,
+        last_cancellation_date: minRate.cancellation_policy ? minRate.cancellation_policy.cancel_by_date : null,
         board_basis: (minRate.boarding_details && minRate.boarding_details.join(', ')) || null,
+        pan_required: minRate.pan_required !== undefined ? minRate.pan_required : null,
+        nationality: req.body.nationality || null,
         rooms: roomList.map((r) => ({
-          name: r.room_type || r.description,
-          room_reference: r.room_reference || null,
+          room_type: r.room_type || r.description,
+          room_code: r.room_reference || null,
           adults: r.no_of_adults,
           children: r.no_of_children,
         })),
