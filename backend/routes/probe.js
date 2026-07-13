@@ -68,6 +68,10 @@ const endpoints = [
     checkout: "2026-08-16",
     purpose_of_travel: 1
   }), confidence: "CONFIRMED — real documented endpoint, using GRN's own sample hotel_code (may not be currently valid)" },
+  { name: 'Recheck (POST, using real rate_key/group_code just found)', method: 'POST', path: `/hotels/availability/miru7lotu4ihjp3dvvqtgitvpm/rates/?action=recheck`, body: JSON.stringify({
+    rate_key: "4lifhmj45axslrcsvsiw2hgx73l2rs5c6w3phut62fhbt7pjctnxpd7zfigch2hb75otpdhntecqkvlh5oyck7mbqktgzkojylxsvrwt7cpqtbq6zb7dg32bf5t3k",
+    group_code: "wcmqxydhrvzcpucwuwngkh6t4hna"
+  }), confidence: 'CONFIRMED — real documented endpoint, using genuinely real values from the last Search response (may expire quickly)' },
   { name: 'Fetch Booking (by GRN reference)', method: 'GET', path: SAMPLE_BOOKING_ID ? `/hotels/bookings/${SAMPLE_BOOKING_ID}?type=GRN` : `/hotels/bookings/GRN-202607-2651199?type=GRN`, confidence: 'CONFIRMED — real, documented endpoint (corrected from official docs)' },
   { name: 'Search / Availability (guess 1)', method: 'GET', path: `/hotels/search`, confidence: 'UNCONFIRMED — guessed path, never documented' },
   { name: 'Search / Availability (guess 2)', method: 'GET', path: `/hotels/availability`, confidence: 'UNCONFIRMED — guessed path, never documented' },
