@@ -23,7 +23,7 @@ export default function LiveSearchPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/hotels/live-search`, {
+      const res = await fetch(`${API_BASE}/api/live-search/live-search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hotel_code: hotelCode, checkin, checkout, adults }),
