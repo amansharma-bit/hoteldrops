@@ -36,7 +36,7 @@ app.use('/api/hotels',   hotelRoutes)
 app.use('/api/voucher',  voucherRoutes)
 app.use('/api/rebooking', rebookingRoutes)
 app.use('/api/probe',    probeRoutes)
-app.use('/api/hotels',   hotelsLiveSearchRoutes)
+app.use('/api/live-search', hotelsLiveSearchRoutes)
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }))
 // Manual trigger for demo
 app.get('/api/run-tracker', async (req, res) => {
