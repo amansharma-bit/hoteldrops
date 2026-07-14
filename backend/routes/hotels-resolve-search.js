@@ -136,4 +136,35 @@ router.post('/resolve-and-search', async (req, res) => {
   }
 });
 
+
+// Quick GET-based test of the full resolve-and-search chain
+router.get('/test-resolve-and-search', async (req, res) => {
+  const testPayload = {
+    hotel_name: "Signature Inn",
+    hotel_city: "Dubai",
+    check_in: "2026-09-15",
+    check_out: "2026-09-16",
+    num_adults: 2,
+  };
+  const resolved = await resolveGrnHotelId(testPayload.hotel_name, testPayload.hotel_city);
+  if (!resolved.hotel_code) {
+    return res.json({ resolved: false, reason: resolved.reason });
+  }
+  try {
+    const response = await fetch(`${GRN_API_BASE_URL}/hotels/availability`, {
+      method: 'POST',
+      headers: { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        rooms: [{ adults: 2 }], rates: 'concise', hotel_codes: [String(resolved.hotel_code)],
+        currency: 'USD', client_nationality: 'US',
+        checkin: testPayload.check_in, checkout: testPayload.check_out, purpose_of_travel: 1,
+      }),
+    });
+    const data = await response.json();
+    res.json({ resolved: true, matched_hotel_code: resolved.hotel_code, matched_hotel_name: resolved.matched_name, searchStatus: response.status, searchResult: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
