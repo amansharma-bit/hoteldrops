@@ -159,7 +159,7 @@ router.get('/test-static-hotels', async (req, res) => {
   }
   const STATIC_BASE_URL = 'https://cdn-api.grnconnect.com';
   try {
-    const response = await fetch(`${STATIC_BASE_URL}/api/v3/hotels?hcode=1848138&version=2.0`, {
+    const response = await fetch(`${STATIC_BASE_URL}/api/v3/hotels/?city=121449&version=2.0`, {
       method: 'GET',
       headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
     });
@@ -170,7 +170,7 @@ router.get('/test-static-hotels', async (req, res) => {
     } catch {
       data = '(non-JSON response)';
     }
-    res.json({ httpStatus: status, city_code: data.hotels && data.hotels[0] ? data.hotels[0].city_code : null, full: data });
+    res.json({ httpStatus: status, total: data.total, firstFiveNames: (data.hotels || []).slice(0,5).map(h => ({name: h.name, code: h.code})) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
