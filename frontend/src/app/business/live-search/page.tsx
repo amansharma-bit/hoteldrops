@@ -1,181 +1,139 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
 import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
 
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
+const B = '#1447b8';
+const NAVY = '#0f172a';
+
+const inp: React.CSSProperties = { width: '100%', background: '#f9fafb', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '11px 14px', fontSize: 14, fontFamily: 'inherit', outline: 'none', color: NAVY };
+const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#64748b', display: 'block', marginBottom: 6 };
+const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 };
 
 export default function LiveSearchPage() {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [file, setFile] = useState<File | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanMsg, setScanMsg] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [hotelCode, setHotelCode] = useState('');
   const [hotelName, setHotelName] = useState('');
   const [hotelCity, setHotelCity] = useState('');
   const [checkin, setCheckin] = useState('');
   const [checkout, setCheckout] = useState('');
   const [adults, setAdults] = useState(2);
-  const [childrenAges, setChildrenAges] = useState('');
-  const [roomCode, setRoomCode] = useState('');
+  const [numChildren, setNumChildren] = useState(0);
+  const [childrenAges, setChildrenAges] = useState<(number | null)[]>([]);
   const [roomType, setRoomType] = useState('');
   const [boardBasis, setBoardBasis] = useState('');
-  const [boardCode, setBoardCode] = useState('');
   const [refundable, setRefundable] = useState('Yes');
   const [lastCancelDate, setLastCancelDate] = useState('');
-  const [panRequired, setPanRequired] = useState('No');
   const [nationality, setNationality] = useState('US');
   const [originalPrice, setOriginalPrice] = useState('');
 
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
   const [roomMatchFound, setRoomMatchFound] = useState<boolean | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [expanded, setExpanded] = useState(false);
-  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
-  async function handleVoucherUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+  const onDrop = useCallback((accepted: File[]) => { if (accepted[0]) setFile(accepted[0]); }, []);
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop, accept: { 'application/pdf': ['.pdf'], 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }, maxFiles: 1,
+  });
+
+  async function doScan() {
     if (!file) return;
+    setScanning(true);
     setError(null);
-    setNotice(null);
-    setResult(null);
-    setUploading(true);
+    const msgs = ['Reading your voucher…', 'Identifying hotel & dates…', 'Extracting pricing…', 'Checking cancellation policy…'];
+    let i = 0; setScanMsg(msgs[0]);
+    const interval = setInterval(() => { i++; if (i < msgs.length) setScanMsg(msgs[i]); }, 900);
     try {
       const formData = new FormData();
       formData.append('voucher', file);
       const res = await fetch(`${API_BASE}/api/voucher/extract`, { method: 'POST', body: formData });
-      const parsed = await res.json();
+      const json = await res.json();
+      clearInterval(interval);
+      setScanning(false);
 
-      if (!parsed.success || !parsed.data) {
-        setError(parsed.message || 'Could not read this voucher. Please enter details manually.');
+      if (!json.success || !json.data) {
+        setError(json.message || 'Could not read this voucher. Please enter details manually.');
+        setStep(2);
         return;
       }
-      const d = parsed.data;
+      const d = json.data;
       setHotelCode('');
       setHotelName(d.hotel_name || '');
       setHotelCity(d.hotel_city || '');
       setCheckin(d.check_in || '');
       setCheckout(d.check_out || '');
       setAdults(d.num_adults || 2);
-      setChildrenAges((d.children_ages || []).join(', '));
+      setNumChildren(d.num_children || 0);
+      setChildrenAges(d.children_ages || []);
       setRoomType(d.room_type || '');
       setBoardBasis(d.board_basis_label || d.board_basis || '');
       setRefundable(d.cancellation_policy === 'non-refundable' ? 'No' : 'Yes');
       setLastCancelDate(d.cancellation_deadline || '');
       setOriginalPrice(d.total_price_paid ? String(d.total_price_paid) : '');
-      setNotice('Voucher read successfully — please review the details below before searching.');
+      setStep(2);
     } catch (e: any) {
-      setError('Voucher upload failed: ' + e.message);
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      clearInterval(interval);
+      setScanning(false);
+      setError('Could not reach the server: ' + e.message);
+      setStep(2);
     }
   }
 
   async function handleSearch() {
-    setError(null);
+    setSearchError(null);
     setResult(null);
     setRoomMatchFound(null);
-
-    const ages = childrenAges ? childrenAges.split(',').map((a) => a.trim()).filter(Boolean) : [];
-
-    // If we have a hotel_code already (manual entry), search directly.
-    // Otherwise (came from a voucher — name + city, no code yet), resolve first.
+    const ages = childrenAges.filter((a) => a !== null).map(String);
     const useDirectSearch = !!hotelCode;
 
-    if (useDirectSearch) {
-      if (!checkin || !checkout) {
-        setError('Please fill in check-in and check-out dates.');
-        return;
-      }
-    } else {
-      if (!hotelName || !hotelCity || !checkin || !checkout) {
-        setError('Please fill in hotel name, city, check-in, and check-out dates.');
-        return;
-      }
+    if (useDirectSearch ? (!checkin || !checkout) : (!hotelName || !hotelCity || !checkin || !checkout)) {
+      setSearchError('Please fill in all required fields.');
+      return;
     }
 
     setLoading(true);
     try {
-      const url = useDirectSearch
-        ? `${API_BASE}/api/live-search/live-search`
-        : `${API_BASE}/api/live-search/resolve-and-search`;
-
+      const url = useDirectSearch ? `${API_BASE}/api/live-search/live-search` : `${API_BASE}/api/live-search/resolve-and-search`;
       const body = useDirectSearch
         ? { hotel_code: hotelCode, checkin, checkout, adults, nationality, children_ages: ages }
         : { hotel_name: hotelName, hotel_city: hotelCity, check_in: checkin, check_out: checkout, num_adults: adults, nationality, children_ages: ages, room_type: roomType, board_basis: boardBasis };
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Search failed.');
+        setSearchError(data.error || 'Search failed.');
       } else if (useDirectSearch) {
-        if (data.hotels && data.hotels.length > 0) {
-          setResult(data.hotels[0]);
-        } else {
-          setError('No availability found for these dates.');
-        }
+        if (data.hotels?.length > 0) setResult(data.hotels[0]);
+        else setSearchError('No availability found for these dates.');
       } else {
-        if (!data.resolved) {
-          setError(data.message || data.reason || 'Could not match this hotel automatically.');
-        } else if (!data.searchSuccess) {
-          setError(data.message || 'Hotel matched, but no live availability found.');
-        } else {
+        if (!data.resolved) setSearchError(data.message || data.reason || 'Could not match this hotel automatically.');
+        else if (!data.searchSuccess) setSearchError(data.message || 'Hotel matched, but no live availability found.');
+        else {
           setResult(data.result);
           setRoomMatchFound(data.roomMatchFound ?? null);
           setHotelCode(data.matched_hotel_code || '');
         }
       }
     } catch (e: any) {
-      setError('Could not reach the search service. ' + e.message);
+      setSearchError('Could not reach the search service: ' + e.message);
     } finally {
       setLoading(false);
     }
   }
 
-  const originalRow: [string, string | number][] = [
-    ['Hotel ID', hotelCode || '(will be resolved)'],
-    ['Hotel Name', hotelName || '—'],
-    ['City', hotelCity || '—'],
-    ['Check In', checkin || '—'],
-    ['Check Out', checkout || '—'],
-    ['Adults', adults],
-    ['Children w/ Age', childrenAges || '—'],
-    ['Room Code', roomCode || '—'],
-    ['Room Type', roomType || '—'],
-    ['Board Basis', boardBasis || '—'],
-    ['Board Code', boardCode || '—'],
-    ['Refundable', refundable],
-    ['Last Cancellation Date', lastCancelDate || '—'],
-    ['PAN Required', panRequired],
-    ['Nationality', nationality],
-  ];
-
-  const newRow: [string, string | number][] = result ? [
-    ['Hotel ID', result.hotel_id],
-    ['Hotel Name', result.hotel_name],
-    ['City', hotelCity || '—'],
-    ['Check In', result.checkin],
-    ['Check Out', result.checkout],
-    ['Adults', result.rooms?.[0]?.adults ?? '—'],
-    ['Children w/ Age', result.rooms?.[0]?.children ? `${result.rooms[0].children} (age not confirmed by GRN)` : '0'],
-    ['Room Code', result.rooms?.[0]?.room_code || '—'],
-    ['Room Type', result.rooms?.[0]?.room_type || '—'],
-    ['Board Basis', result.board_basis || '—'],
-    ['Board Code', '(use your static lookup)'],
-    ['Refundable', result.refundable ? 'Yes' : 'No'],
-    ['Last Cancellation Date', result.last_cancellation_date ? new Date(result.last_cancellation_date).toLocaleDateString() : '—'],
-    ['PAN Required', result.pan_required === null ? 'Not confirmed' : result.pan_required ? 'Yes' : 'No'],
-    ['Nationality', result.nationality || '—'],
-  ] : [];
-
   const savingsInfo = (() => {
-    if (!result || !result.price || !originalPrice || isNaN(parseFloat(originalPrice))) return null;
+    if (!result?.price || !originalPrice || isNaN(parseFloat(originalPrice))) return null;
     const orig = parseFloat(originalPrice);
     const diff = orig - result.price;
     const pct = (diff / orig) * 100;
@@ -184,193 +142,186 @@ export default function LiveSearchPage() {
 
   return (
     <BusinessSidebarWrapper>
-      <div className="min-h-screen bg-slate-50">
-        <div className="bg-white border-b border-slate-200 px-8 py-5">
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Sora, sans-serif', color: '#0F172A' }}>
-            Live Price Checker
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">Upload a voucher, review the details, and instantly compare against live GRN rates.</p>
+      <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter', sans-serif" }}>
+        <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+        {scanning && (
+          <div style={{ position: 'fixed', inset: 0, background: B, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+            <div style={{ width: 52, height: 52, border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 700, color: '#fff' }}>{scanMsg}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>Our AI is reading your booking details</div>
+          </div>
+        )}
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+        <div style={{ background: '#fff', borderBottom: '1px solid #e2e8f0', padding: '24px 32px' }}>
+          <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: NAVY }}>Live Price Checker</h1>
+          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Upload a voucher and instantly compare against live GRN rates.</p>
         </div>
 
-        <div className="max-w-3xl mx-auto px-8 py-10">
-          {!hotelName && !showManualEntry && (
-            <div className="bg-white rounded-2xl border-2 border-dashed border-slate-300 p-12 text-center mb-6">
-              <div className="text-4xl mb-3">📄</div>
-              <p className="font-bold text-lg mb-1" style={{ fontFamily: 'Sora, sans-serif', color: '#0F172A' }}>
-                Upload a booking voucher
-              </p>
-              <p className="text-sm text-slate-500 mb-5">Image or PDF — we'll read the details automatically.</p>
-              <input ref={fileInputRef} type="file" accept="image/*,.pdf" onChange={handleVoucherUpload} className="hidden" id="voucher-upload" />
-              <label
-                htmlFor="voucher-upload"
-                className="cursor-pointer px-6 py-3 rounded-lg text-sm font-semibold text-white inline-block"
-                style={{ background: uploading ? '#94A3B8' : '#1447b8' }}
-              >
-                {uploading ? 'Reading voucher…' : 'Choose File'}
-              </label>
-              <p className="text-xs text-slate-400 mt-5">
-                or{' '}
-                <button onClick={() => setShowManualEntry(true)} className="underline font-medium" style={{ color: '#1447b8' }}>
-                  enter details manually
-                </button>
-              </p>
-            </div>
-          )}
-
-          {notice && (
-            <div className="rounded-xl p-4 mb-6" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-              <p className="text-sm" style={{ color: '#166534' }}>✓ {notice}</p>
-            </div>
-          )}
-
-          {(hotelName || showManualEntry) && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <p className="font-bold text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>
-                  {hotelName ? 'Review Booking Details' : 'Enter Booking Details'}
-                </p>
-                <button
-                  onClick={() => { setHotelName(''); setShowManualEntry(false); setResult(null); setError(null); setNotice(null); }}
-                  className="text-xs text-slate-400 underline"
-                >
-                  Start over
-                </button>
+        <div style={{ maxWidth: 640, margin: '0 auto', padding: '32px' }}>
+          {/* Step indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            {[{ n: step === 2 ? '✓' : '1', label: 'Upload', done: step === 2 }, { n: '2', label: 'Confirm & Search', active: step === 2 }].map((s, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: s.done ? '#16a34a' : s.active ? B : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: s.done || s.active ? '#fff' : '#94a3b8' }}>{s.n}</div>
+                  <span style={{ fontSize: 12, color: s.done ? '#16a34a' : s.active ? B : '#94a3b8', fontWeight: s.active || s.done ? 600 : 400 }}>{s.label}</span>
+                </div>
+                {i < 1 && <div style={{ width: 24, height: 1, background: '#e2e8f0' }} />}
               </div>
+            ))}
+          </div>
 
-              {/* Compact summary bar */}
-              {hotelName && checkin && checkout && (
-                <div className="rounded-lg px-4 py-3 mb-4 flex items-center justify-between" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                  <div>
-                    <p className="font-semibold text-sm" style={{ color: '#0F172A' }}>{hotelName}{hotelCity ? `, ${hotelCity}` : ''}</p>
-                    <p className="text-xs text-slate-500">{checkin} → {checkout} · {adults} adult{adults !== 1 ? 's' : ''}{childrenAges ? `, children: ${childrenAges}` : ''}</p>
+          {step === 1 && (
+            <div>
+              <div {...getRootProps()} style={{ border: `2px dashed ${file ? '#86efac' : '#bfdbfe'}`, borderRadius: 14, padding: '32px 20px', textAlign: 'center', cursor: 'pointer', background: file ? '#f0fdf4' : '#f8fbff', marginBottom: 16 }}>
+                <input {...getInputProps()} ref={fileInputRef} />
+                {file ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 48, height: 48, background: '#dcfce7', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#166534' }}>{file.name}</div>
+                    <button onClick={(e) => { e.stopPropagation(); setFile(null); }} style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>Remove</button>
                   </div>
-                  <button onClick={() => setExpanded(!expanded)} className="text-xs font-medium underline" style={{ color: '#1447b8' }}>
-                    {expanded ? 'Hide details' : 'Edit details'}
-                  </button>
-                </div>
-              )}
-
-              {(expanded || !hotelName) && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                  <Field label="Hotel ID (optional)" value={hotelCode} onChange={setHotelCode} placeholder="leave blank if from voucher" />
-                  <Field label="Hotel Name" value={hotelName} onChange={setHotelName} />
-                  <Field label="City" value={hotelCity} onChange={setHotelCity} />
-                  <Field label="Check In" value={checkin} onChange={setCheckin} type="date" />
-                  <Field label="Check Out" value={checkout} onChange={setCheckout} type="date" />
-                  <Field label="Adults" value={String(adults)} onChange={(v) => setAdults(parseInt(v, 10) || 1)} type="number" />
-                  <Field label="Children w/ Age" value={childrenAges} onChange={setChildrenAges} placeholder="e.g. 8, 12" />
-                  <Field label="Room Code" value={roomCode} onChange={setRoomCode} />
-                  <Field label="Room Type" value={roomType} onChange={setRoomType} />
-                  <Field label="Board Basis" value={boardBasis} onChange={setBoardBasis} />
-                  <Field label="Board Code" value={boardCode} onChange={setBoardCode} placeholder="from your static data" />
-                  <SelectField label="Refundable" value={refundable} onChange={setRefundable} options={['Yes', 'No']} />
-                  <Field label="Last Cancellation Date" value={lastCancelDate} onChange={setLastCancelDate} type="date" />
-                  <SelectField label="PAN Required" value={panRequired} onChange={setPanRequired} options={['Yes', 'No']} />
-                  <Field label="Nationality" value={nationality} onChange={(v) => setNationality(v.toUpperCase())} />
-                  <Field label="Original Price Paid" value={originalPrice} onChange={setOriginalPrice} type="number" />
-                </div>
-              )}
-
-              {/* Search bar */}
-              <div className="flex gap-3 items-center">
-                <button
-                  onClick={handleSearch}
-                  disabled={loading}
-                  className="px-6 py-3 rounded-lg text-sm font-semibold text-white flex-shrink-0"
-                  style={{ background: loading ? '#94A3B8' : '#1447b8' }}
-                >
-                  {loading ? 'Searching live inventory…' : '🔍 Search Live Rates'}
-                </button>
-                {!hotelCode && hotelName && (
-                  <p className="text-xs text-slate-400">Will look up the hotel automatically from name + city.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 48, height: 48, background: '#dbeafe', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" width="24" height="24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    </div>
+                    <div><div style={{ fontSize: 15, fontWeight: 600, color: NAVY, marginBottom: 4 }}>Drag & drop a voucher</div><div style={{ fontSize: 13, color: '#64748b' }}>PDF, screenshot or email</div></div>
+                    <button onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} style={{ background: B, color: '#fff', fontSize: 14, fontWeight: 600, padding: '10px 24px', borderRadius: 8, border: 'none', cursor: 'pointer' }}>Browse file</button>
+                  </div>
                 )}
               </div>
+              <div style={{ textAlign: 'center', fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+                No voucher?{' '}
+                <button onClick={() => setStep(2)} style={{ color: B, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>Enter details manually →</button>
+              </div>
+              <button onClick={doScan} disabled={!file} style={{ width: '100%', background: file ? NAVY : '#e2e8f0', color: file ? '#fff' : '#94a3b8', border: 'none', borderRadius: 10, padding: 14, fontSize: 15, fontWeight: 700, cursor: file ? 'pointer' : 'not-allowed' }}>
+                {file ? 'Continue →' : 'Upload a file to continue'}
+              </button>
             </div>
           )}
 
-          {result && (
-            <>
-              {roomMatchFound === false && (
-                <div className="rounded-xl p-3 mb-4" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
-                  <p className="text-xs" style={{ color: '#B8860B' }}>⚠ Showing the cheapest available room — an exact match for the original room type / board basis wasn't found for these dates.</p>
-                </div>
+          {step === 2 && (
+            <div>
+              {error && (
+                <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#dc2626' }}>{error}</div>
               )}
-              {savingsInfo && (
-                <div
-                  className="rounded-xl p-4 mb-6 text-center font-bold"
-                  style={savingsInfo.hasSaving
-                    ? { background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0' }
-                    : { background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' }}
-                >
-                  {savingsInfo.hasSaving
-                    ? `✓ Saving found: ${result.currency} ${savingsInfo.diff.toFixed(2)} (${savingsInfo.pct.toFixed(1)}% cheaper)`
-                    : `No saving — live price is ${savingsInfo.diff < -0.01 ? 'higher' : 'the same'}`}
+
+              {hotelName && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 6, fontFamily: "'Sora',sans-serif", letterSpacing: '-0.5px' }}>Spotted.</div>
+                  <div style={{ fontSize: 13, color: '#64748b', marginBottom: 10 }}>Review the details, then search live GRN rates.</div>
+                  <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{hotelName}</div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>{hotelCity}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      <div style={{ fontSize: 13, color: NAVY }}>{checkin} <span style={{ color: '#94a3b8', margin: '0 6px' }}>→</span> {checkout}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                      <div style={{ fontSize: 13, color: '#64748b' }}>{adults} adult{adults > 1 ? 's' : ''}{numChildren > 0 ? ` · ${numChildren} child${numChildren > 1 ? 'ren' : ''}` : ''}</div>
+                    </div>
+                    {originalPrice && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: B, width: 16, textAlign: 'center', flexShrink: 0 }}>$</span>
+                        <div style={{ fontSize: 13, color: NAVY, fontWeight: 600 }}>{originalPrice} paid originally</div>
+                      </div>
+                    )}
+                    <button onClick={() => setEditMode(!editMode)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: B, textAlign: 'left', padding: 0, fontWeight: 600, marginTop: 2 }}>
+                      {editMode ? '✕ Close edit' : 'Something wrong? Edit details'}
+                    </button>
+                  </div>
                 </div>
               )}
 
-              <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                <p className="font-bold text-sm mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>New — Live Search Results</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {newRow.map(([label, val]) => (
-                    <ReadField key={label} label={label} value={String(val)} />
-                  ))}
-                  <ReadField label="Price" value={result.price ? `${result.currency} ${result.price}` : '—'} highlight />
+              {(editMode || !hotelName) && (
+                <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748b' }}>Booking details</div>
+                  <div><label style={lbl}>Hotel ID (optional)</label><input style={inp} value={hotelCode} onChange={(e) => setHotelCode(e.target.value)} placeholder="leave blank if from voucher" /></div>
+                  <div><label style={lbl}>Hotel name</label><input style={inp} value={hotelName} onChange={(e) => setHotelName(e.target.value)} /></div>
+                  <div><label style={lbl}>City</label><input style={inp} value={hotelCity} onChange={(e) => setHotelCity(e.target.value)} /></div>
+                  <div style={grid2}>
+                    <div><label style={lbl}>Check-in</label><input style={inp} type="date" value={checkin} onChange={(e) => setCheckin(e.target.value)} /></div>
+                    <div><label style={lbl}>Check-out</label><input style={inp} type="date" value={checkout} onChange={(e) => setCheckout(e.target.value)} /></div>
+                  </div>
+                  <div style={grid2}>
+                    <div><label style={lbl}>Adults</label><select style={inp} value={adults} onChange={(e) => setAdults(parseInt(e.target.value, 10))}>{[1,2,3,4,5,6].map((n) => <option key={n} value={n}>{n} adult{n > 1 ? 's' : ''}</option>)}</select></div>
+                    <div><label style={lbl}>Children</label><select style={inp} value={numChildren} onChange={(e) => { const n = parseInt(e.target.value, 10); const ages = [...childrenAges]; while (ages.length < n) ages.push(null); setNumChildren(n); setChildrenAges(ages.slice(0, n)); }}>{[0,1,2,3,4].map((n) => <option key={n} value={n}>{n === 0 ? 'No children' : `${n} child${n > 1 ? 'ren' : ''}`}</option>)}</select></div>
+                  </div>
+                  {numChildren > 0 && (
+                    <div>
+                      <label style={lbl}>Child ages</label>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {Array.from({ length: numChildren }, (_, i) => (
+                          <select key={i} style={{ ...inp, width: 100 }} value={childrenAges[i] ?? ''} onChange={(e) => { const ages = [...childrenAges]; ages[i] = e.target.value === '' ? null : parseInt(e.target.value, 10); setChildrenAges(ages); }}>
+                            <option value="">Age</option>
+                            {Array.from({ length: 17 }, (_, a) => a + 1).map((a) => <option key={a} value={a}>{a} yrs</option>)}
+                          </select>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div style={grid2}>
+                    <div><label style={lbl}>Room type</label><input style={inp} value={roomType} onChange={(e) => setRoomType(e.target.value)} placeholder="e.g. Deluxe Twin" /></div>
+                    <div><label style={lbl}>Board basis</label><input style={inp} value={boardBasis} onChange={(e) => setBoardBasis(e.target.value)} placeholder="e.g. Room Only" /></div>
+                  </div>
+                  <div style={grid2}>
+                    <div><label style={lbl}>Refundable</label><select style={inp} value={refundable} onChange={(e) => setRefundable(e.target.value)}><option>Yes</option><option>No</option></select></div>
+                    <div><label style={lbl}>Nationality</label><input style={inp} value={nationality} onChange={(e) => setNationality(e.target.value.toUpperCase())} maxLength={2} /></div>
+                  </div>
+                  <div><label style={lbl}>Original price paid</label><input style={inp} type="number" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} placeholder="e.g. 95.00" /></div>
                 </div>
-              </div>
-            </>
+              )}
+
+              {searchError && (
+                <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#dc2626' }}>{searchError}</div>
+              )}
+
+              <button onClick={handleSearch} disabled={loading} style={{ width: '100%', background: loading ? '#94a3b8' : B, color: '#fff', border: 'none', borderRadius: 10, padding: 14, fontSize: 15, fontWeight: 700, cursor: loading ? 'wait' : 'pointer', marginBottom: 10 }}>
+                {loading ? 'Searching live inventory…' : '🔍 Search Live Rates'}
+              </button>
+              <button onClick={() => { setStep(1); setFile(null); setResult(null); setError(null); setSearchError(null); setHotelName(''); }} style={{ width: '100%', background: 'none', border: 'none', color: '#94a3b8', fontSize: 13, cursor: 'pointer' }}>← Start over</button>
+
+              {result && (
+                <div style={{ marginTop: 24 }}>
+                  {roomMatchFound === false && (
+                    <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 12, color: '#b8860b' }}>
+                      ⚠ Showing the cheapest available room — no exact match for the original room type / board basis.
+                    </div>
+                  )}
+                  {savingsInfo && (
+                    <div style={{ borderRadius: 12, padding: 16, marginBottom: 16, textAlign: 'center', fontWeight: 700, background: savingsInfo.hasSaving ? '#f0fdf4' : '#fef2f2', color: savingsInfo.hasSaving ? '#16a34a' : '#dc2626', border: `1px solid ${savingsInfo.hasSaving ? '#bbf7d0' : '#fecaca'}` }}>
+                      {savingsInfo.hasSaving
+                        ? `✓ Saving found: ${result.currency} ${savingsInfo.diff.toFixed(2)} (${savingsInfo.pct.toFixed(1)}% cheaper)`
+                        : 'No saving — live price is the same or higher'}
+                    </div>
+                  )}
+                  <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12, fontFamily: "'Sora',sans-serif" }}>Live GRN Result</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{result.hotel_name}</div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>{result.checkin} → {result.checkout}</div>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: B, fontFamily: "'Sora',sans-serif" }}>{result.currency} {result.price}</div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600, background: result.refundable ? '#f0fdf4' : '#fef2f2', color: result.refundable ? '#16a34a' : '#dc2626' }}>{result.refundable ? 'Refundable' : 'Non-refundable'}</span>
+                      {result.board_basis && <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600, background: '#f1f5f9', color: '#64748b' }}>{result.board_basis}</span>}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
     </BusinessSidebarWrapper>
-  );
-}
-
-function ReadField({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div>
-      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">{label}</label>
-      <div
-        className="w-full border rounded-lg px-3 py-2 text-sm font-mono"
-        style={highlight
-          ? { borderColor: '#1447b8', background: '#EEF2FF', color: '#1447b8', fontWeight: 700 }
-          : { borderColor: '#E2E8F0', background: '#F8FAFC', color: '#334155' }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function Field({
-  label, value, onChange, type = 'text', placeholder,
-}: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
-  return (
-    <div>
-      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500"
-      />
-    </div>
-  );
-}
-
-function SelectField({
-  label, value, onChange, options,
-}: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
-  return (
-    <div>
-      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 block">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 bg-white"
-      >
-        {options.map((o) => (<option key={o} value={o}>{o}</option>))}
-      </select>
-    </div>
   );
 }
