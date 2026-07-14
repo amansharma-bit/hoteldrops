@@ -32,33 +32,17 @@ async function resolveGrnHotelId(hotelName, hotelCity) {
     const hotels = data.hotels || [];
     if (!hotels.length) return { hotel_code: null, reason: 'No hotels returned for this city.' };
 
-    const nameLower = hotelName.toLowerCase().trim();
+    const normalize = (s) => s.toLowerCase().trim().replace(/\s+/g, ' ');
+    const nameNorm = normalize(hotelName);
 
-    // Tier 1: exact substring match either direction — the strongest possible signal
-    let match = hotels.find((h) => {
-      const hn = (h.name || '').toLowerCase();
-      return hn.includes(nameLower) || nameLower.includes(hn);
-    });
+    // Same supplier on both sides (GRN voucher, GRN static data) — an exact
+    // match after light normalization should work the vast majority of the
+    // time. No cross-supplier fuzzy logic needed here.
+    const match = hotels.find((h) => normalize(h.name || '') === nameNorm);
 
-    // Tier 2: score by how many distinct words overlap, pick the HIGHEST score,
-    // not just the first hit — this is what was missing before and caused the
-    // wrong-hotel match ("Signature Inn" grabbing an unrelated "Signature ...").
     if (!match) {
-      const words = nameLower.split(' ').filter((w) => w.length > 3);
-      let bestScore = 0;
-      let bestMatch = null;
-      for (const h of hotels) {
-        const hn = (h.name || '').toLowerCase();
-        const score = words.filter((w) => hn.includes(w)).length;
-        if (score > bestScore) {
-          bestScore = score;
-          bestMatch = h;
-        }
-      }
-      if (bestScore >= 2) match = bestMatch; // require at least 2 word matches, not just 1
+      return { hotel_code: null, reason: `No exact name match found among ${hotels.length} hotels in ${hotelCity}. Manual selection may be needed.` };
     }
-
-    if (!match) return { hotel_code: null, reason: `No confident name match found among ${hotels.length} hotels in ${hotelCity}.` };
     return { hotel_code: match.code, matched_name: match.name, reason: null };
   } catch (err) {
     return { hotel_code: null, reason: 'GRN Static lookup failed: ' + err.message };
@@ -160,7 +144,7 @@ router.post('/resolve-and-search', async (req, res) => {
 // Quick GET-based test of the full resolve-and-search chain
 router.get('/test-resolve-and-search', async (req, res) => {
   const testPayload = {
-    hotel_name: "Signature Inn",
+    hotel_name: "Signature Inn Hotel Deira",
     hotel_city: "Dubai",
     check_in: "2026-09-15",
     check_out: "2026-09-16",
@@ -182,6 +166,30 @@ router.get('/test-resolve-and-search', async (req, res) => {
     });
     const data = await response.json();
     res.json({ resolved: true, matched_hotel_code: resolved.hotel_code, matched_hotel_name: resolved.matched_name, searchStatus: response.status, searchResult: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// Testing: does an EXACT string match on the full, correct name work directly,
+// with no fuzzy logic at all?
+router.get('/debug-exact-match-test', async (req, res) => {
+  try {
+    const resp = await fetch(
+      `${GRN_STATIC_BASE_URL}/api/v3/hotels/?city=121449&version=2.0`,
+      { headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' } }
+    );
+    const data = await resp.json();
+    const hotels = data.hotels || [];
+    const target = "signature inn hotel deira";
+    const exactMatch = hotels.find(h => (h.name || '').toLowerCase().trim() === target);
+    res.json({
+      totalHotels: hotels.length,
+      searchedFor: target,
+      exactMatchFound: !!exactMatch,
+      result: exactMatch ? { name: exactMatch.name, code: exactMatch.code } : null,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
