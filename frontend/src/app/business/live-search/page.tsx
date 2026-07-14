@@ -12,6 +12,31 @@ const inp: React.CSSProperties = { width: '100%', background: '#f9fafb', border:
 const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#64748b', display: 'block', marginBottom: 6 };
 const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 };
 
+function Row({ icon, label, value, sub, highlight }: { icon: string; label: string; value: string; sub?: string; highlight?: boolean }) {
+  const icons: Record<string, React.ReactElement> = {
+    tag: <path d="M20.59 13.41L11 3.83A2 2 0 009.59 3.24L3 3v6.59a2 2 0 00.59 1.41l9.58 9.58a2 2 0 002.83 0l4.59-4.58a2 2 0 000-2.83z"/>,
+    hotel: <><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></>,
+    calendar: <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
+    guests: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></>,
+    room: <><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/></>,
+    board: <><path d="M3 3h18v18H3z"/><path d="M3 9h18"/></>,
+    check: <><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></>,
+    doc: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>,
+    flag: <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>,
+    price: <><circle cx="12" cy="12" r="10"/><path d="M12 6v12M15 9.5c0-1.4-1.3-2.5-3-2.5s-3 1.1-3 2.5S10.3 12 12 12s3 1.1 3 2.5-1.3 2.5-3 2.5-3-1.1-3-2.5"/></>,
+  };
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={highlight ? '#B8860B' : B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>{icons[icon]}</svg>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#94a3b8' }}>{label}</div>
+        <div style={{ fontSize: 13, color: highlight ? '#B8860B' : NAVY, fontWeight: highlight ? 700 : 500 }}>{value}</div>
+        {sub && <div style={{ fontSize: 12, color: '#64748b' }}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
 export default function LiveSearchPage() {
   const [step, setStep] = useState<1 | 2>(1);
   const [file, setFile] = useState<File | null>(null);
@@ -35,6 +60,10 @@ export default function LiveSearchPage() {
   const [lastCancelDate, setLastCancelDate] = useState('');
   const [nationality, setNationality] = useState('US');
   const [originalPrice, setOriginalPrice] = useState('');
+  const [otaName, setOtaName] = useState('');
+  const [roomCode, setRoomCode] = useState('');
+  const [boardCode, setBoardCode] = useState('');
+  const [panRequired, setPanRequired] = useState('No');
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -80,6 +109,7 @@ export default function LiveSearchPage() {
       setRefundable(d.cancellation_policy === 'non-refundable' ? 'No' : 'Yes');
       setLastCancelDate(d.cancellation_deadline || '');
       setOriginalPrice(d.total_price_paid ? String(d.total_price_paid) : '');
+      setOtaName(d.ota_name || '');
       setStep(2);
     } catch (e: any) {
       clearInterval(interval);
@@ -216,27 +246,19 @@ export default function LiveSearchPage() {
                   <div style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginBottom: 6, fontFamily: "'Sora',sans-serif", letterSpacing: '-0.5px' }}>Spotted.</div>
                   <div style={{ fontSize: 13, color: '#64748b', marginBottom: 10 }}>Review the details, then search live GRN rates.</div>
                   <div style={{ background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{hotelName}</div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{hotelCity}</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      <div style={{ fontSize: 13, color: NAVY }}>{checkin} <span style={{ color: '#94a3b8', margin: '0 6px' }}>→</span> {checkout}</div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                      <div style={{ fontSize: 13, color: '#64748b' }}>{adults} adult{adults > 1 ? 's' : ''}{numChildren > 0 ? ` · ${numChildren} child${numChildren > 1 ? 'ren' : ''}` : ''}</div>
-                    </div>
-                    {originalPrice && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: B, width: 16, textAlign: 'center', flexShrink: 0 }}>$</span>
-                        <div style={{ fontSize: 13, color: NAVY, fontWeight: 600 }}>{originalPrice} paid originally</div>
-                      </div>
+                    {otaName === 'GRNConnect' && (
+                      <Row icon="tag" label="Hotel ID" value={hotelCode || '(will be resolved)'} />
                     )}
+                    <Row icon="hotel" label="Hotel Name" value={hotelName || '—'} sub={hotelCity} />
+                    <Row icon="calendar" label="Dates" value={`${checkin} → ${checkout}`} />
+                    <Row icon="guests" label="Guests" value={`${adults} adult${adults > 1 ? 's' : ''}${numChildren > 0 ? ` · ${numChildren} child${numChildren > 1 ? 'ren' : ''}${childrenAges.filter(a=>a!==null).length ? ' (' + childrenAges.filter(a=>a!==null).join(', ') + ')' : ''}` : ''}`} />
+                    <Row icon="room" label="Room" value={`${roomType || '—'}${roomCode ? ` · Code: ${roomCode}` : ''}`} />
+                    <Row icon="board" label="Board Basis" value={`${boardBasis || '—'}${boardCode ? ` · Code: ${boardCode}` : ''}`} />
+                    <Row icon="check" label="Refundable" value={refundable} />
+                    <Row icon="calendar" label="Last Cancellation Date" value={lastCancelDate || '—'} />
+                    <Row icon="doc" label="PAN Required" value={panRequired} />
+                    <Row icon="flag" label="Nationality" value={nationality} />
+                    {originalPrice && <Row icon="price" label="Original Price Paid" value={originalPrice} highlight />}
                     <button onClick={() => setEditMode(!editMode)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: B, textAlign: 'left', padding: 0, fontWeight: 600, marginTop: 2 }}>
                       {editMode ? '✕ Close edit' : 'Something wrong? Edit details'}
                     </button>
@@ -273,13 +295,23 @@ export default function LiveSearchPage() {
                   )}
                   <div style={grid2}>
                     <div><label style={lbl}>Room type</label><input style={inp} value={roomType} onChange={(e) => setRoomType(e.target.value)} placeholder="e.g. Deluxe Twin" /></div>
+                    <div><label style={lbl}>Room code</label><input style={inp} value={roomCode} onChange={(e) => setRoomCode(e.target.value)} placeholder="from your static data" /></div>
+                  </div>
+                  <div style={grid2}>
                     <div><label style={lbl}>Board basis</label><input style={inp} value={boardBasis} onChange={(e) => setBoardBasis(e.target.value)} placeholder="e.g. Room Only" /></div>
+                    <div><label style={lbl}>Board code</label><input style={inp} value={boardCode} onChange={(e) => setBoardCode(e.target.value)} placeholder="from your static data" /></div>
                   </div>
                   <div style={grid2}>
                     <div><label style={lbl}>Refundable</label><select style={inp} value={refundable} onChange={(e) => setRefundable(e.target.value)}><option>Yes</option><option>No</option></select></div>
-                    <div><label style={lbl}>Nationality</label><input style={inp} value={nationality} onChange={(e) => setNationality(e.target.value.toUpperCase())} maxLength={2} /></div>
+                    <div><label style={lbl}>PAN required</label><select style={inp} value={panRequired} onChange={(e) => setPanRequired(e.target.value)}><option>Yes</option><option>No</option></select></div>
                   </div>
-                  <div><label style={lbl}>Original price paid</label><input style={inp} type="number" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} placeholder="e.g. 95.00" /></div>
+                  <div style={grid2}>
+                    <div><label style={lbl}>Nationality</label><input style={inp} value={nationality} onChange={(e) => setNationality(e.target.value.toUpperCase())} maxLength={2} /></div>
+                    <div><label style={lbl}>Original price paid</label><input style={inp} type="number" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} placeholder="e.g. 95.00" /></div>
+                  </div>
+                  {otaName === 'GRNConnect' && (
+                    <div><label style={lbl}>Hotel ID</label><input style={inp} value={hotelCode} onChange={(e) => setHotelCode(e.target.value)} placeholder="GRN hotel code" /></div>
+                  )}
                 </div>
               )}
 
