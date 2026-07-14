@@ -32,14 +32,33 @@ async function resolveGrnHotelId(hotelName, hotelCity) {
     const hotels = data.hotels || [];
     if (!hotels.length) return { hotel_code: null, reason: 'No hotels returned for this city.' };
 
-    const nameLower = hotelName.toLowerCase();
-    const words = nameLower.split(' ').filter((w) => w.length > 3);
-    const match = hotels.find((h) => {
+    const nameLower = hotelName.toLowerCase().trim();
+
+    // Tier 1: exact substring match either direction — the strongest possible signal
+    let match = hotels.find((h) => {
       const hn = (h.name || '').toLowerCase();
-      return words.some((w) => hn.includes(w));
+      return hn.includes(nameLower) || nameLower.includes(hn);
     });
 
-    if (!match) return { hotel_code: null, reason: `No name match found among ${hotels.length} hotels in ${hotelCity}.` };
+    // Tier 2: score by how many distinct words overlap, pick the HIGHEST score,
+    // not just the first hit — this is what was missing before and caused the
+    // wrong-hotel match ("Signature Inn" grabbing an unrelated "Signature ...").
+    if (!match) {
+      const words = nameLower.split(' ').filter((w) => w.length > 3);
+      let bestScore = 0;
+      let bestMatch = null;
+      for (const h of hotels) {
+        const hn = (h.name || '').toLowerCase();
+        const score = words.filter((w) => hn.includes(w)).length;
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = h;
+        }
+      }
+      if (bestScore >= 2) match = bestMatch; // require at least 2 word matches, not just 1
+    }
+
+    if (!match) return { hotel_code: null, reason: `No confident name match found among ${hotels.length} hotels in ${hotelCity}.` };
     return { hotel_code: match.code, matched_name: match.name, reason: null };
   } catch (err) {
     return { hotel_code: null, reason: 'GRN Static lookup failed: ' + err.message };
