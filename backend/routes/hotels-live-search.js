@@ -151,4 +151,29 @@ router.get('/test-hotel-name-search', async (req, res) => {
   res.json({ results });
 });
 
+
+// Testing the Static Hotels endpoint — different base URL than Search
+router.get('/test-static-hotels', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  const STATIC_BASE_URL = 'https://cdn-api.grnconnect.com';
+  try {
+    const response = await fetch(`${STATIC_BASE_URL}/api/v3/hotels/?city=C!008896&version=2.0`, {
+      method: 'GET',
+      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json' },
+    });
+    const status = response.status;
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      data = '(non-JSON response)';
+    }
+    res.json({ httpStatus: status, preview: JSON.stringify(data).slice(0, 800) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
