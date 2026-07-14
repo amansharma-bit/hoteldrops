@@ -123,27 +123,32 @@ router.get('/test-hotel-name-search', async (req, res) => {
   if (!GRN_API_KEY) {
     return res.status(500).json({ error: 'GRN_API_KEY not set' });
   }
-  const payload = {
-    rooms: [{ adults: 2 }],
-    rates: "concise",
-    hotel_name: "Signature Inn",
-    currency: "USD",
-    client_nationality: "US",
-    checkin: "2026-09-15",
-    checkout: "2026-09-16",
-    purpose_of_travel: 1
-  };
-  try {
-    const response = await fetch(`${GRN_API_BASE_URL}/hotels/availability`, {
-      method: 'POST',
-      headers: { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json();
-    res.json({ httpStatus: response.status, payloadSent: payload, responseReceived: data });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  const testNames = ["Signature Inn", "Signature Inn Hotel Deira", "Signature Inn Deira"];
+  const results = [];
+  for (const name of testNames) {
+    const payload = {
+      rooms: [{ adults: 2 }],
+      rates: "concise",
+      hotel_name: name,
+      currency: "USD",
+      client_nationality: "US",
+      checkin: "2026-09-15",
+      checkout: "2026-09-16",
+      purpose_of_travel: 1
+    };
+    try {
+      const response = await fetch(`${GRN_API_BASE_URL}/hotels/availability`, {
+        method: 'POST',
+        headers: { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      results.push({ nameSearched: name, httpStatus: response.status, responseReceived: data });
+    } catch (err) {
+      results.push({ nameSearched: name, error: err.message });
+    }
   }
+  res.json({ results });
 });
 
 module.exports = router;
