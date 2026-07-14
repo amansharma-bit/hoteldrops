@@ -30,6 +30,8 @@ export default function LiveSearchPage() {
   const [result, setResult] = useState<any>(null);
   const [roomMatchFound, setRoomMatchFound] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [showManualEntry, setShowManualEntry] = useState(false);
 
   async function handleVoucherUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -183,68 +185,106 @@ export default function LiveSearchPage() {
   return (
     <BusinessSidebarWrapper>
       <div className="min-h-screen bg-slate-50">
-        <div className="bg-white border-b border-slate-200 px-8 py-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold" style={{ fontFamily: 'Sora, sans-serif', color: '#0F172A' }}>
-              Live Price Checker
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">Upload a voucher or enter details manually to compare against live GRN rates.</p>
-          </div>
-          <div>
-            <input ref={fileInputRef} type="file" accept="image/*,.pdf" onChange={handleVoucherUpload} className="hidden" id="voucher-upload" />
-            <label
-              htmlFor="voucher-upload"
-              className="cursor-pointer px-5 py-2.5 rounded-lg text-sm font-semibold text-white inline-block"
-              style={{ background: uploading ? '#94A3B8' : '#16A34A' }}
-            >
-              {uploading ? 'Reading voucher…' : '📄 Upload Voucher'}
-            </label>
-          </div>
+        <div className="bg-white border-b border-slate-200 px-8 py-5">
+          <h1 className="text-2xl font-bold" style={{ fontFamily: 'Sora, sans-serif', color: '#0F172A' }}>
+            Live Price Checker
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">Upload a voucher, review the details, and instantly compare against live GRN rates.</p>
         </div>
 
-        <div className="max-w-5xl mx-auto px-8 py-8">
+        <div className="max-w-3xl mx-auto px-8 py-10">
+          {!hotelName && !showManualEntry && (
+            <div className="bg-white rounded-2xl border-2 border-dashed border-slate-300 p-12 text-center mb-6">
+              <div className="text-4xl mb-3">📄</div>
+              <p className="font-bold text-lg mb-1" style={{ fontFamily: 'Sora, sans-serif', color: '#0F172A' }}>
+                Upload a booking voucher
+              </p>
+              <p className="text-sm text-slate-500 mb-5">Image or PDF — we'll read the details automatically.</p>
+              <input ref={fileInputRef} type="file" accept="image/*,.pdf" onChange={handleVoucherUpload} className="hidden" id="voucher-upload" />
+              <label
+                htmlFor="voucher-upload"
+                className="cursor-pointer px-6 py-3 rounded-lg text-sm font-semibold text-white inline-block"
+                style={{ background: uploading ? '#94A3B8' : '#1447b8' }}
+              >
+                {uploading ? 'Reading voucher…' : 'Choose File'}
+              </label>
+              <p className="text-xs text-slate-400 mt-5">
+                or{' '}
+                <button onClick={() => setShowManualEntry(true)} className="underline font-medium" style={{ color: '#1447b8' }}>
+                  enter details manually
+                </button>
+              </p>
+            </div>
+          )}
+
           {notice && (
             <div className="rounded-xl p-4 mb-6" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
               <p className="text-sm" style={{ color: '#166534' }}>✓ {notice}</p>
             </div>
           )}
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
-            <p className="font-bold text-sm mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>Original Booking Details</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Field label="Hotel ID (optional)" value={hotelCode} onChange={setHotelCode} placeholder="leave blank if from voucher" />
-              <Field label="Hotel Name" value={hotelName} onChange={setHotelName} />
-              <Field label="City" value={hotelCity} onChange={setHotelCity} />
-              <Field label="Check In" value={checkin} onChange={setCheckin} type="date" />
-              <Field label="Check Out" value={checkout} onChange={setCheckout} type="date" />
-              <Field label="Adults" value={String(adults)} onChange={(v) => setAdults(parseInt(v, 10) || 1)} type="number" />
-              <Field label="Children w/ Age" value={childrenAges} onChange={setChildrenAges} placeholder="e.g. 8, 12" />
-              <Field label="Room Code" value={roomCode} onChange={setRoomCode} />
-              <Field label="Room Type" value={roomType} onChange={setRoomType} />
-              <Field label="Board Basis" value={boardBasis} onChange={setBoardBasis} />
-              <Field label="Board Code" value={boardCode} onChange={setBoardCode} placeholder="from your static data" />
-              <SelectField label="Refundable" value={refundable} onChange={setRefundable} options={['Yes', 'No']} />
-              <Field label="Last Cancellation Date" value={lastCancelDate} onChange={setLastCancelDate} type="date" />
-              <SelectField label="PAN Required" value={panRequired} onChange={setPanRequired} options={['Yes', 'No']} />
-              <Field label="Nationality" value={nationality} onChange={(v) => setNationality(v.toUpperCase())} />
-              <Field label="Original Price Paid" value={originalPrice} onChange={setOriginalPrice} type="number" />
-            </div>
-            <button
-              onClick={handleSearch}
-              disabled={loading}
-              className="mt-5 px-6 py-2.5 rounded-lg text-sm font-semibold text-white"
-              style={{ background: loading ? '#94A3B8' : '#1447b8' }}
-            >
-              {loading ? 'Searching live inventory…' : 'Search Live Rates'}
-            </button>
-            {!hotelCode && (
-              <p className="text-xs text-slate-400 mt-2">No Hotel ID entered — will look it up automatically from the hotel name and city.</p>
-            )}
-          </div>
+          {(hotelName || showManualEntry) && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <p className="font-bold text-sm" style={{ fontFamily: 'Sora, sans-serif' }}>
+                  {hotelName ? 'Review Booking Details' : 'Enter Booking Details'}
+                </p>
+                <button
+                  onClick={() => { setHotelName(''); setShowManualEntry(false); setResult(null); setError(null); setNotice(null); }}
+                  className="text-xs text-slate-400 underline"
+                >
+                  Start over
+                </button>
+              </div>
 
-          {error && (
-            <div className="rounded-xl p-4 mb-6" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
-              <p className="text-sm" style={{ color: '#DC2626' }}>{error}</p>
+              {/* Compact summary bar */}
+              {hotelName && checkin && checkout && (
+                <div className="rounded-lg px-4 py-3 mb-4 flex items-center justify-between" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: '#0F172A' }}>{hotelName}{hotelCity ? `, ${hotelCity}` : ''}</p>
+                    <p className="text-xs text-slate-500">{checkin} → {checkout} · {adults} adult{adults !== 1 ? 's' : ''}{childrenAges ? `, children: ${childrenAges}` : ''}</p>
+                  </div>
+                  <button onClick={() => setExpanded(!expanded)} className="text-xs font-medium underline" style={{ color: '#1447b8' }}>
+                    {expanded ? 'Hide details' : 'Edit details'}
+                  </button>
+                </div>
+              )}
+
+              {(expanded || !hotelName) && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                  <Field label="Hotel ID (optional)" value={hotelCode} onChange={setHotelCode} placeholder="leave blank if from voucher" />
+                  <Field label="Hotel Name" value={hotelName} onChange={setHotelName} />
+                  <Field label="City" value={hotelCity} onChange={setHotelCity} />
+                  <Field label="Check In" value={checkin} onChange={setCheckin} type="date" />
+                  <Field label="Check Out" value={checkout} onChange={setCheckout} type="date" />
+                  <Field label="Adults" value={String(adults)} onChange={(v) => setAdults(parseInt(v, 10) || 1)} type="number" />
+                  <Field label="Children w/ Age" value={childrenAges} onChange={setChildrenAges} placeholder="e.g. 8, 12" />
+                  <Field label="Room Code" value={roomCode} onChange={setRoomCode} />
+                  <Field label="Room Type" value={roomType} onChange={setRoomType} />
+                  <Field label="Board Basis" value={boardBasis} onChange={setBoardBasis} />
+                  <Field label="Board Code" value={boardCode} onChange={setBoardCode} placeholder="from your static data" />
+                  <SelectField label="Refundable" value={refundable} onChange={setRefundable} options={['Yes', 'No']} />
+                  <Field label="Last Cancellation Date" value={lastCancelDate} onChange={setLastCancelDate} type="date" />
+                  <SelectField label="PAN Required" value={panRequired} onChange={setPanRequired} options={['Yes', 'No']} />
+                  <Field label="Nationality" value={nationality} onChange={(v) => setNationality(v.toUpperCase())} />
+                  <Field label="Original Price Paid" value={originalPrice} onChange={setOriginalPrice} type="number" />
+                </div>
+              )}
+
+              {/* Search bar */}
+              <div className="flex gap-3 items-center">
+                <button
+                  onClick={handleSearch}
+                  disabled={loading}
+                  className="px-6 py-3 rounded-lg text-sm font-semibold text-white flex-shrink-0"
+                  style={{ background: loading ? '#94A3B8' : '#1447b8' }}
+                >
+                  {loading ? 'Searching live inventory…' : '🔍 Search Live Rates'}
+                </button>
+                {!hotelCode && hotelName && (
+                  <p className="text-xs text-slate-400">Will look up the hotel automatically from name + city.</p>
+                )}
+              </div>
             </div>
           )}
 
