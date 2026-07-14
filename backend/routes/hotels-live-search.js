@@ -161,7 +161,7 @@ router.get('/test-static-hotels', async (req, res) => {
   try {
     const response = await fetch(`${STATIC_BASE_URL}/api/v3/hotels/?city=C!008896&version=2.0`, {
       method: 'GET',
-      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json' },
+      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
     });
     const status = response.status;
     let data;
