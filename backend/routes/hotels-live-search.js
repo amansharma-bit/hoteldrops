@@ -170,7 +170,7 @@ router.get('/test-static-hotels', async (req, res) => {
     } catch {
       data = '(non-JSON response)';
     }
-    res.json({ httpStatus: status, preview: JSON.stringify(data).slice(0, 800) });
+    res.json({ httpStatus: status, city_code: data.hotels && data.hotels[0] ? data.hotels[0].city_code : null, full: data });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
