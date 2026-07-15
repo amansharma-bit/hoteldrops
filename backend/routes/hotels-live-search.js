@@ -151,4 +151,29 @@ router.get('/test-january-bookings', async (req, res) => {
   }
 });
 
+
+// Testing /hotels/bookingids with space-separated datetime format, as requested
+router.get('/test-space-format', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  // Properly URL-encoding the space this time — a raw, unencoded space in a
+  // URL is invalid and can get silently mishandled by the server, regardless
+  // of whether the underlying date format itself is correct.
+  const start = encodeURIComponent('2026-06-01 00:00:00');
+  const end = encodeURIComponent('2026-06-25 00:00:00');
+  const url = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
+  try {
+    const response = await fetch(url, {
+      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    });
+    const status = response.status;
+    let data;
+    try { data = await response.json(); } catch { data = '(non-JSON response)'; }
+    res.json({ urlTried: url, httpStatus: status, response: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
