@@ -132,4 +132,23 @@ router.get('/test-bookingids-endpoint', async (req, res) => {
   }
 });
 
+
+// Testing January 2026 specifically, based on Naveen's document showing
+// "Jan'26" as the last booking date for the B2B key
+router.get('/test-january-bookings', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  try {
+    const response = await fetch(
+      `${GRN_API_BASE_URL}/hotels/bookings?filter_type=booking_date&start=2026-01-01&end=2026-01-30`,
+      { headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' } }
+    );
+    const data = await response.json();
+    res.json({ question: 'Bookings for Jan 1-30, 2026?', answer: data.total, dateRange: `${data.start} to ${data.end}`, httpStatus: response.status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
