@@ -69,31 +69,38 @@ export default function BookingsPage() {
             <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                  {['Booking ID', 'Hotel', 'City', 'Room', 'Check-in', 'Check-out', 'Price', 'Refundable', 'Supplier', 'Board Basis', 'Cancel By', 'Status'].map((h) => (
+                  {['Booking ID', 'Hotel', 'Room', 'Stay', 'Price', 'Supplier', 'Status'].map((h) => (
                     <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#94A3B8' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={12} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading live bookings…</td></tr>
+                  <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading live bookings…</td></tr>
                 ) : filteredRows.length === 0 ? (
-                  <tr><td colSpan={12} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>No bookings match this filter on this page.</td></tr>
+                  <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>No bookings match this filter on this page.</td></tr>
                 ) : (
                   filteredRows.map((r: any) => (
                     <tr key={r.bookingId} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: '#64748B' }}>{r.bookingId}</td>
-                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#0F172A' }}>{r.hotelName}</td>
-                      <td style={{ padding: '12px 16px', color: '#64748B' }}>{r.city || '—'}</td>
-                      <td style={{ padding: '12px 16px', color: '#64748B' }}>{r.roomType || '—'}</td>
-                      <td style={{ padding: '12px 16px', color: '#64748B' }}>{r.checkin}</td>
-                      <td style={{ padding: '12px 16px', color: '#64748B' }}>{r.checkout}</td>
-                      <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#0F172A' }}>{r.currency} {r.priceTotal?.toFixed(2) ?? '—'}</td>
-                      <td style={{ padding: '12px 16px' }}>{r.refundable ? 'Yes' : 'No'}</td>
-                      <td style={{ padding: '12px 16px', color: '#64748B', fontSize: 12 }}>{r.supplier || '—'}</td>
-                      <td style={{ padding: '12px 16px', color: '#64748B' }}>{r.boardBasis || '—'}</td>
-                      <td style={{ padding: '12px 16px', color: '#64748B', fontSize: 12 }}>{r.lastCancellationDate ? new Date(r.lastCancellationDate).toLocaleDateString() : '—'}</td>
-                      <td style={{ padding: '12px 16px' }}>
+                      <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: '#94A3B8', verticalAlign: 'top' }}>{r.bookingId}</td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                        <div style={{ fontWeight: 600, color: '#0F172A' }}>{r.hotelName}</div>
+                        <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>{r.city || '—'}</div>
+                      </td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                        <div style={{ color: '#334155' }}>{r.roomType || '—'}</div>
+                        <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>{r.boardBasis || '—'}</div>
+                      </td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                        <div style={{ color: '#334155' }}>{r.checkin} → {r.checkout}</div>
+                        <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>Cancel by {r.lastCancellationDate ? new Date(r.lastCancellationDate).toLocaleDateString() : '—'}</div>
+                      </td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                        <div style={{ fontFamily: 'monospace', fontWeight: 600, color: '#0F172A' }}>{r.currency} {r.priceTotal?.toFixed(2) ?? '—'}</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, marginTop: 4, display: 'inline-block', padding: '2px 8px', borderRadius: 20, background: r.refundable ? '#F0FDF4' : '#FEF2F2', color: r.refundable ? '#16A34A' : '#DC2626' }}>{r.refundable ? 'Refundable' : 'Non-refundable'}</div>
+                      </td>
+                      <td style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, verticalAlign: 'top' }}>{r.supplier || '—'}</td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                         <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: r.status === 'Eligible' ? '#F0FDF4' : '#FEF2F2', color: r.status === 'Eligible' ? '#16A34A' : '#DC2626' }}>{r.status}</span>
                       </td>
                     </tr>
