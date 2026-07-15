@@ -306,7 +306,7 @@ router.get('/bookings-list', async (req, res) => {
           supplier: booking.supplier_code || null,
           boardBasis: item?.boarding_details?.join(', ') || null,
           lastCancellationDate: item?.cancellation_policy?.cancel_by_date || null,
-          status: booking.non_refundable === false ? 'Eligible' : 'Not eligible',
+          bookingStatus: booking.booking_status || 'Unknown', // real GRN lifecycle status: Confirmed, Cancelled, etc.
           rebookedStatus: null, // placeholder — populates once rebuq's own rebooking engine is live
         });
       } catch { /* skip failed individual pulls */ }
@@ -326,38 +326,5 @@ router.get('/bookings-list', async (req, res) => {
 
 
 
-
-// Checking real booking_status values across a sample, to confirm what
-// "Cancelled" actually looks like in GRN's data before building around it
-router.get('/debug-booking-statuses', async (req, res) => {
-  if (!GRN_API_KEY) {
-    return res.status(500).json({ error: 'GRN_API_KEY not set' });
-  }
-  const start = encodeURIComponent('2026-06-01 00:00:00');
-  const end = encodeURIComponent('2026-07-13 23:59:59');
-  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
-  try {
-    const listResp = await fetch(listUrl, {
-      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-    });
-    const listData = await listResp.json();
-    const sample = (listData.bookings || []).slice(0, 30);
-
-    const statusCounts = {};
-    for (const b of sample) {
-      try {
-        const dResp = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${b.bid}`, {
-          headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        });
-        const dData = await dResp.json();
-        const status = dData.booking?.booking_status || 'unknown';
-        statusCounts[status] = (statusCounts[status] || 0) + 1;
-      } catch { /* skip */ }
-    }
-    res.json({ sampleSize: sample.length, statusCounts });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 module.exports = router;
