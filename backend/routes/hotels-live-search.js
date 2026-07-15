@@ -335,6 +335,9 @@ router.get('/dashboard-real', async (req, res) => {
     let totalValue = 0;
     let valueCount = 0;
 
+    // Same currency-conversion rates used throughout tonight's other analysis
+    const rates = { USD: 1.0, EUR: 1.1446, GBP: 1.3401, INR: 0.010526, MXN: 0.05754, AED: 0.27225, AUD: 0.6960, THB: 0.0301, NOK: 0.1016, IDR: 0.0000553, NPR: 0.006569687 };
+
     details.forEach((booking) => {
       if (booking.non_refundable === false) refundableCount++;
 
@@ -342,7 +345,12 @@ router.get('/dashboard-real', async (req, res) => {
       countryCounts[country] = (countryCounts[country] || 0) + 1;
 
       const price = booking.price?.total;
-      if (price) { totalValue += parseFloat(price); valueCount++; }
+      const currency = booking.currency || 'USD';
+      const rate = rates[currency];
+      if (price && rate) {
+        totalValue += parseFloat(price) * rate; // converted to USD before summing
+        valueCount++;
+      }
     });
 
     const topCountries = Object.entries(countryCounts)
