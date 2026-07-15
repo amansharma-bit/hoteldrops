@@ -262,7 +262,7 @@ router.get('/bookings-list', async (req, res) => {
         rows.push({
           bookingId: booking.booking_id,
           hotelName: booking.hotel?.name || 'Unknown',
-          city: booking.hotel?.address?.split(',').slice(-2, -1)[0]?.trim() || null,
+          city: null, // dropped — free-text address parsing proved unreliable, needs a proper city-code lookup instead
           country: booking.hotel?.country_code || null,
           roomType: room?.room_type || room?.description || null,
           checkin: booking.checkin,
