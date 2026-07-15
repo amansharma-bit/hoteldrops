@@ -5,6 +5,28 @@ const GRN_API_BASE_URL = process.env.GRN_API_BASE_URL || 'https://v4-api.grnconn
 const GRN_API_KEY = process.env.GRN_API_KEY;
 const GRN_STATIC_BASE_URL = 'https://cdn-api.grnconnect.com';
 
+// Module-level cache — fetched once, reused across all requests to this
+// running server process. The `city=CODE` filter on GRN's cities endpoint
+// doesn't actually filter (confirmed: returns the full unfiltered list
+// regardless of the code passed) — so we fetch the full list once and do
+// fast local lookups instead of relying on a broken server-side filter.
+let cityCodeToNameCache = null;
+
+async function getCityName(cityCode) {
+  if (!cityCode) return null;
+  if (!cityCodeToNameCache) {
+    cityCodeToNameCache = new Map();
+    try {
+      const resp = await fetch(`${GRN_STATIC_BASE_URL}/api/v3/cities/?version=2.0`, {
+        headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      });
+      const data = await resp.json();
+      (data.cities || []).forEach((c) => cityCodeToNameCache.set(c.code, c.name));
+    } catch { /* leave cache empty on failure, will retry next request */ }
+  }
+  return cityCodeToNameCache.get(cityCode) || null;
+}
+
 // Live search against GRN's real Search & Availability endpoint.
 // Confirmed working July 13 — returns genuine, live hotel rate data.
 router.post('/live-search', async (req, res) => {
@@ -247,7 +269,6 @@ router.get('/bookings-list', async (req, res) => {
     const rates = { USD: 1.0, EUR: 1.1446, GBP: 1.3401, INR: 0.010526, MXN: 0.05754, AED: 0.27225, AUD: 0.6960, THB: 0.0301, NOK: 0.1016, IDR: 0.0000553, NPR: 0.006569687 };
 
     const rows = [];
-    const cityCache = new Map(); // avoid redundant lookups if bookings share a city
     for (const b of pageBookings) {
       try {
         const detailUrl = `${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${b.bid}`;
@@ -261,22 +282,7 @@ router.get('/bookings-list', async (req, res) => {
         const item = booking.hotel?.booking_items?.[0];
         const room = item?.rooms?.[0];
 
-        const cityCode = booking.hotel?.city_code;
-        let cityName = null;
-        if (cityCode) {
-          if (cityCache.has(cityCode)) {
-            cityName = cityCache.get(cityCode);
-          } else {
-            try {
-              const cityResp = await fetch(`${GRN_STATIC_BASE_URL}/api/v3/cities/?city=${cityCode}&version=2.0`, {
-                headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-              });
-              const cityData = await cityResp.json();
-              cityName = cityData.cities?.[0]?.name || cityData.name || null;
-              cityCache.set(cityCode, cityName);
-            } catch { /* leave null if lookup fails */ }
-          }
-        }
+        const cityName = await getCityName(booking.hotel?.city_code);
 
         rows.push({
           bookingId: booking.booking_id,
@@ -310,53 +316,5 @@ router.get('/bookings-list', async (req, res) => {
 });
 
 
-
-// Debug: check the actual raw city_code value for several real bookings
-router.get('/debug-city-codes', async (req, res) => {
-  if (!GRN_API_KEY) {
-    return res.status(500).json({ error: 'GRN_API_KEY not set' });
-  }
-  const testIds = ['GRN-202606-2620756', 'GRN-202606-2620757', 'GRN-202606-2567186'];
-  const results = [];
-  for (const id of testIds) {
-    try {
-      const resp = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${id}`, {
-        headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      });
-      const data = await resp.json();
-      results.push({
-        bookingId: id,
-        hotelName: data.booking?.hotel?.name,
-        rawCityCode: data.booking?.hotel?.city_code,
-        cityCodeType: typeof data.booking?.hotel?.city_code,
-      });
-    } catch (err) {
-      results.push({ bookingId: id, error: err.message });
-    }
-  }
-  res.json({ results });
-});
-
-
-// Debug: test the actual cities lookup for the 3 real, confirmed-different codes
-router.get('/debug-city-lookup-raw', async (req, res) => {
-  if (!GRN_API_KEY) {
-    return res.status(500).json({ error: 'GRN_API_KEY not set' });
-  }
-  const codes = ['124581', '123648', '124725'];
-  const results = [];
-  for (const code of codes) {
-    try {
-      const resp = await fetch(`${GRN_STATIC_BASE_URL}/api/v3/cities/?city=${code}&version=2.0`, {
-        headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      });
-      const data = await resp.json();
-      results.push({ codeTried: code, httpStatus: resp.status, fullRawResponse: data });
-    } catch (err) {
-      results.push({ codeTried: code, error: err.message });
-    }
-  }
-  res.json({ results });
-});
 
 module.exports = router;
