@@ -160,8 +160,12 @@ router.get('/dashboard-real', async (req, res) => {
   if (!GRN_API_KEY) {
     return res.status(500).json({ error: 'GRN_API_KEY not set' });
   }
-  const start = encodeURIComponent('2026-06-01 00:00:00');
-  const end = encodeURIComponent('2026-07-13 23:59:59');
+  // Accepts real start/end dates from the frontend now, defaults to the
+  // last 30 days if not specified (matches the original sample-data page's default)
+  const startParam = req.query.start || '2026-06-14 00:00:00';
+  const endParam = req.query.end || '2026-07-13 23:59:59';
+  const start = encodeURIComponent(startParam);
+  const end = encodeURIComponent(endParam);
   const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
 
   try {
@@ -251,8 +255,12 @@ router.get('/bookings-list', async (req, res) => {
   }
   const page = parseInt(req.query.page, 10) || 1;
   const perPage = 20;
-  const start = encodeURIComponent('2026-06-01 00:00:00');
-  const end = encodeURIComponent('2026-07-13 23:59:59');
+  // Accepts real start/end dates from the frontend now, defaults to the
+  // last 30 days if not specified (matches the original sample-data page's default)
+  const startParam = req.query.start || '2026-06-14 00:00:00';
+  const endParam = req.query.end || '2026-07-13 23:59:59';
+  const start = encodeURIComponent(startParam);
+  const end = encodeURIComponent(endParam);
   const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
 
   try {
@@ -317,39 +325,5 @@ router.get('/bookings-list', async (req, res) => {
 
 
 
-
-// Quick diagnostic: check status distribution across a bigger sample
-router.get('/debug-status-distribution', async (req, res) => {
-  if (!GRN_API_KEY) {
-    return res.status(500).json({ error: 'GRN_API_KEY not set' });
-  }
-  const start = encodeURIComponent('2026-06-01 00:00:00');
-  const end = encodeURIComponent('2026-07-13 23:59:59');
-  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
-  try {
-    const listResp = await fetch(listUrl, {
-      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-    });
-    const listData = await listResp.json();
-    const allBookings = listData.bookings || [];
-    const sample = allBookings.slice(2000, 2050); // a different slice than page 1, 50 bookings
-
-    let eligible = 0, notEligible = 0, failed = 0;
-    for (const b of sample) {
-      try {
-        const dResp = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${b.bid}`, {
-          headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        });
-        const dData = await dResp.json();
-        if (dData.booking?.non_refundable === false) eligible++;
-        else if (dData.booking?.non_refundable === true) notEligible++;
-        else failed++;
-      } catch { failed++; }
-    }
-    res.json({ sampleSize: sample.length, eligible, notEligible, failed });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 module.exports = router;
