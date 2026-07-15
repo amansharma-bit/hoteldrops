@@ -3,6 +3,7 @@ const router = express.Router();
 
 const GRN_API_BASE_URL = process.env.GRN_API_BASE_URL || 'https://v4-api.grnconnect.com/api/v3';
 const GRN_API_KEY = process.env.GRN_API_KEY;
+const GRN_STATIC_BASE_URL = 'https://cdn-api.grnconnect.com';
 
 // Live search against GRN's real Search & Availability endpoint.
 // Confirmed working July 13 — returns genuine, live hotel rate data.
