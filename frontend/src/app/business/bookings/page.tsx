@@ -47,7 +47,7 @@ export default function BookingsPage() {
 
   const rows = data?.rows || [];
   const filteredRows = statusFilter === 'all' ? rows : rows.filter((r: any) =>
-    statusFilter === 'rebooked' ? r.rebookedStatus === 'Rebooked' : (r.bookingStatus || '').toLowerCase() === statusFilter
+    (r.status || '').toLowerCase() === statusFilter
   );
 
   return (
@@ -73,9 +73,9 @@ export default function BookingsPage() {
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 12px', fontSize: 13, background: '#fff', color: '#334155' }}>
                 <option value="all">All bookings</option>
-                <option value="confirmed">Confirmed</option>
+                <option value="refundable">Refundable</option>
+                <option value="non-refundable">Non-Refundable</option>
                 <option value="cancelled">Cancelled</option>
-                <option value="rebooked">Rebooked</option>
               </select>
               <div style={{ display: 'flex', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: 3 }}>
                 {['Today', 'WTD', 'MTD', 'YTD'].map((p) => (
@@ -123,7 +123,10 @@ export default function BookingsPage() {
                 ) : (
                   filteredRows.map((r: any) => (
                     <tr key={r.bookingId} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: '#94A3B8', verticalAlign: 'top' }}>{r.bookingId}</td>
+                      <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
+                        <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#64748B' }}>{r.bookingId}</div>
+                        <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>{r.bookingDate ? new Date(r.bookingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</div>
+                      </td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                         <div style={{ fontWeight: 600, color: '#0F172A' }}>{r.hotelName}</div>
                         <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>{r.city || '—'}</div>
@@ -138,11 +141,10 @@ export default function BookingsPage() {
                       </td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                         <div style={{ fontFamily: 'monospace', fontWeight: 600, color: '#0F172A' }}>{r.currency} {r.priceTotal?.toFixed(2) ?? '—'}</div>
-                        <div style={{ fontSize: 11, fontWeight: 600, marginTop: 4, display: 'inline-block', padding: '2px 8px', borderRadius: 20, background: r.refundable ? '#F0FDF4' : '#FEF2F2', color: r.refundable ? '#16A34A' : '#DC2626' }}>{r.refundable ? 'Refundable' : 'Non-refundable'}</div>
                       </td>
                       <td style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, verticalAlign: 'top' }}>{r.supplier || '—'}</td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: r.bookingStatus === 'Confirmed' ? '#FCD34D' : r.bookingStatus === 'Cancelled' ? '#FEF2F2' : '#F1F5F9', color: r.bookingStatus === 'Confirmed' ? '#78350F' : r.bookingStatus === 'Cancelled' ? '#DC2626' : '#64748B' }}>{r.bookingStatus}</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: r.status === 'Refundable' ? '#FCD34D' : r.status === 'Cancelled' ? '#FEF2F2' : '#F1F5F9', color: r.status === 'Refundable' ? '#78350F' : r.status === 'Cancelled' ? '#DC2626' : '#64748B' }}>{r.status}</span>
                       </td>
                     </tr>
                   ))
