@@ -203,4 +203,43 @@ router.get('/bookings-count-final', async (req, res) => {
   }
 });
 
+
+// Dashboard summary — real booking volume, grouped by day, for a genuine trend
+// chart. Uses the same confirmed-working /hotels/bookingids endpoint.
+router.get('/dashboard-summary', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  const start = encodeURIComponent('2026-06-01 00:00:00');
+  const end = encodeURIComponent('2026-07-13 23:59:59');
+  const url = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
+  try {
+    const response = await fetch(url, {
+      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    });
+    const data = await response.json();
+    const bookings = data.bookings || [];
+
+    // Group by day for a real trend chart
+    const byDay = {};
+    bookings.forEach((b) => {
+      const day = b.updated_at.slice(0, 10); // YYYY-MM-DD
+      byDay[day] = (byDay[day] || 0) + 1;
+    });
+    const trend = Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b));
+
+    // Most recent 10 bookings, newest first
+    const recent = [...bookings].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 10);
+
+    res.json({
+      totalBookings: bookings.length,
+      dateRange: { start: '2026-06-01', end: '2026-07-13' },
+      dailyTrend: trend,
+      recentBookings: recent,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
