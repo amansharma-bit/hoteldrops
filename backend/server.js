@@ -26,14 +26,9 @@ const ALLOWED_ORIGINS = [
 ]
 
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like direct browser navigation, curl, Postman)
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-      return callback(null, true)
-    }
-    callback(null, false) // silently disallow, don't throw an error
-  },
+  origin: ALLOWED_ORIGINS,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
