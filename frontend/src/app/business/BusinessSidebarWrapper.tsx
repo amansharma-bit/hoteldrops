@@ -69,7 +69,7 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
   return (
     <div className="flex min-h-screen bg-slate-50 text-[#0F172A]">
       <aside
-        className="w-64 flex flex-col justify-between fixed inset-y-0 left-0"
+        className="w-52 flex flex-col justify-between fixed inset-y-0 left-0"
         style={{ background: 'linear-gradient(180deg, #12379b 0%, #1447b8 55%, #1e56d6 100%)' }}
       >
         <div>
@@ -95,7 +95,7 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
+                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm transition-colors ${
                     active
                       ? 'bg-white/10 text-white font-semibold'
                       : 'text-white/60 hover:bg-white/5 hover:text-white font-medium'
@@ -124,7 +124,7 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
         </div>
       </aside>
 
-      <main className="flex-1 ml-64">{children}</main>
+      <main className="flex-1 ml-52">{children}</main>
     </div>
   );
 }
