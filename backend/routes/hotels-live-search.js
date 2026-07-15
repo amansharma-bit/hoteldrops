@@ -310,4 +310,31 @@ router.get('/bookings-list', async (req, res) => {
 });
 
 
+
+// Debug: check the actual raw city_code value for several real bookings
+router.get('/debug-city-codes', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  const testIds = ['GRN-202606-2620756', 'GRN-202606-2620757', 'GRN-202606-2567186'];
+  const results = [];
+  for (const id of testIds) {
+    try {
+      const resp = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${id}`, {
+        headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      });
+      const data = await resp.json();
+      results.push({
+        bookingId: id,
+        hotelName: data.booking?.hotel?.name,
+        rawCityCode: data.booking?.hotel?.city_code,
+        cityCodeType: typeof data.booking?.hotel?.city_code,
+      });
+    } catch (err) {
+      results.push({ bookingId: id, error: err.message });
+    }
+  }
+  res.json({ results });
+});
+
 module.exports = router;
