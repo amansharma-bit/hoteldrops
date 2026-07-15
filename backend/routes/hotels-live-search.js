@@ -283,4 +283,83 @@ router.get('/test-bookingdetail-endpoint', async (req, res) => {
   }
 });
 
+
+// Real dashboard summary — pulls a genuine sample of booking details to
+// compute real refundable %, top countries, and avg value. Not fabricated —
+// based on actual GRN data, clearly labeled as sample-based given pulling
+// full detail for all 37,725 bookings isn't practical to do live.
+router.get('/dashboard-real', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  const start = encodeURIComponent('2026-06-01 00:00:00');
+  const end = encodeURIComponent('2026-07-13 23:59:59');
+  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
+
+  try {
+    const listResp = await fetch(listUrl, {
+      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    });
+    const listData = await listResp.json();
+    const allBookings = listData.bookings || [];
+    const totalBookings = allBookings.length;
+
+    // Sample size — 100 real detail pulls, evenly spread across the list,
+    // not just the first 100 (avoids bias toward one time period)
+    const SAMPLE_SIZE = 40; // kept conservative to avoid request timeout — 100 sequential calls risked 30-50s+
+    const step = Math.max(1, Math.floor(allBookings.length / SAMPLE_SIZE));
+    const sample = [];
+    for (let i = 0; i < allBookings.length && sample.length < SAMPLE_SIZE; i += step) {
+      sample.push(allBookings[i]);
+    }
+
+    const details = [];
+    for (const b of sample) {
+      try {
+        const detailUrl = `${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${b.bid}`;
+        const dResp = await fetch(detailUrl, {
+          headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        });
+        const dData = await dResp.json();
+        if (dData.booking) details.push(dData.booking);
+      } catch { /* skip failed individual pulls */ }
+    }
+
+    // Compute real stats from the sample
+    let refundableCount = 0;
+    const countryCounts = {};
+    let totalValue = 0;
+    let valueCount = 0;
+
+    details.forEach((booking) => {
+      const items = booking.hotel?.booking_items || [];
+      items.forEach((item) => {
+        if (item.non_refundable === false) refundableCount++;
+      });
+      const address = booking.hotel?.address || '';
+      const country = address.split(',').pop()?.trim() || 'Unknown';
+      countryCounts[country] = (countryCounts[country] || 0) + 1;
+
+      const price = items[0]?.price;
+      if (price) { totalValue += parseFloat(price); valueCount++; }
+    });
+
+    const topCountries = Object.entries(countryCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([country, count]) => ({ country, count, pct: Math.round((count / details.length) * 100) }));
+
+    res.json({
+      sampleSize: details.length,
+      totalBookings,
+      refundablePctFromSample: details.length ? Math.round((refundableCount / details.length) * 100) : null,
+      topCountries,
+      avgValueFromSample: valueCount ? Math.round(totalValue / valueCount) : null,
+      note: 'Refundable %, countries, and avg value are computed from a real sample of ' + details.length + ' bookings, not the full dataset — pulling full detail for all ' + totalBookings + ' bookings live is not practical.',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
