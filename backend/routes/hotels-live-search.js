@@ -362,4 +362,23 @@ router.get('/dashboard-real', async (req, res) => {
   }
 });
 
+
+// Debug: full raw structure of one booking, to find the real country/price fields
+router.get('/debug-raw-booking-structure', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  const testBookingId = 'GRN-202603-2374997';
+  const url = `${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${testBookingId}`;
+  try {
+    const response = await fetch(url, {
+      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
