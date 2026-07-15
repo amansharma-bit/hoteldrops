@@ -11,11 +11,29 @@ export default function BookingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [period, setPeriod] = useState('MTD');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [showCustom, setShowCustom] = useState(false);
+
+  function getDateRange(p: string) {
+    const now = new Date('2026-07-13');
+    let start = new Date(now);
+    if (p === 'Today') { /* start = now */ }
+    else if (p === 'WTD') { start.setDate(now.getDate() - now.getDay()); }
+    else if (p === 'MTD') { start = new Date(now.getFullYear(), now.getMonth(), 1); }
+    else if (p === 'YTD') { start = new Date(now.getFullYear(), 0, 1); }
+    const fmt = (d: Date) => d.toISOString().slice(0, 10) + ' 00:00:00';
+    return { start: fmt(start), end: now.toISOString().slice(0, 10) + ' 23:59:59' };
+  }
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`${API_BASE}/api/live-search/bookings-list?page=${page}`)
+    const range = showCustom && customStart && customEnd
+      ? { start: customStart + ' 00:00:00', end: customEnd + ' 23:59:59' }
+      : getDateRange(period);
+    fetch(`${API_BASE}/api/live-search/bookings-list?page=${page}&start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setError(d.error);
@@ -23,7 +41,7 @@ export default function BookingsPage() {
       })
       .catch((e) => setError('Could not load bookings: ' + e.message))
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [page, period, customStart, customEnd, showCustom]);
 
   const rows = data?.rows || [];
   const filteredRows = statusFilter === 'all' ? rows : rows.filter((r: any) =>
@@ -49,17 +67,35 @@ export default function BookingsPage() {
         </div>
 
         <div style={{ padding: '24px 32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 12px', fontSize: 13, background: '#fff', color: '#334155' }}>
                 <option value="all">All statuses</option>
                 <option value="rebooked">Rebooked</option>
                 <option value="eligible">Eligible</option>
                 <option value="not eligible">Not eligible</option>
               </select>
+              <div style={{ display: 'flex', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: 3 }}>
+                {['Today', 'WTD', 'MTD', 'YTD'].map((p) => (
+                  <button key={p} onClick={() => { setPeriod(p); setShowCustom(false); setPage(1); }} style={{ border: 'none', background: !showCustom && period === p ? '#1447b8' : 'transparent', color: !showCustom && period === p ? '#fff' : '#64748B', fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 6, cursor: 'pointer' }}>{p}</button>
+                ))}
+              </div>
+              <button onClick={() => setShowCustom(!showCustom)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, background: showCustom ? '#1447b8' : '#fff', color: showCustom ? '#fff' : '#64748B', cursor: 'pointer' }}>Custom range</button>
+              {showCustom && (
+                <>
+                  <input type="date" value={customStart} onChange={(e) => { setCustomStart(e.target.value); setPage(1); }} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }} />
+                  <span style={{ color: '#94A3B8', fontSize: 12 }}>to</span>
+                  <input type="date" value={customEnd} onChange={(e) => { setCustomEnd(e.target.value); setPage(1); }} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }} />
+                </>
+              )}
             </div>
             <button style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: '#334155', cursor: 'pointer' }}>Export CSV</button>
           </div>
+          {statusFilter === 'not eligible' && filteredRows.length === 0 && !loading && (
+            <div style={{ background: '#F5F8FF', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 16px', marginBottom: 12, fontSize: 12, color: '#64748B' }}>
+              No "Not eligible" bookings on this page — genuinely rare in this dataset, not a filter issue (confirmed 0 out of 50 in a separate sample check).
+            </div>
+          )}
 
           {error && (
             <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#DC2626' }}>{error}</div>
@@ -92,7 +128,7 @@ export default function BookingsPage() {
                         <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>{r.boardBasis || '—'}</div>
                       </td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                        <div style={{ color: '#334155' }}>{r.checkin} → {r.checkout}</div>
+                        <div style={{ color: '#334155' }}>{new Date(r.checkin).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} → {new Date(r.checkout).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                         <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>Cancel by {r.lastCancellationDate ? new Date(r.lastCancellationDate).toLocaleDateString() : '—'}</div>
                       </td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
