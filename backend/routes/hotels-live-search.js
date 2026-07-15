@@ -242,4 +242,45 @@ router.get('/dashboard-summary', async (req, res) => {
   }
 });
 
+
+// Testing Fetch Booking with a real bcode from our actual bookings list —
+// should tell us exactly what fields (amount, refundable, country, etc.)
+// are available for the dashboard.
+router.get('/test-fetch-booking-detail', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  // Real bcode from our actual bookingids test result
+  const testBcode = 'HYnZ3i6QAgAJNVkV';
+  const url = `${GRN_API_BASE_URL}/hotels/bookings/${testBcode}?type=GRN`;
+  try {
+    const response = await fetch(url, {
+      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    });
+    const data = await response.json();
+    res.json({ bcodeTried: testBcode, httpStatus: response.status, response: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// Testing the exact bookingdetail endpoint Aman provided
+router.get('/test-bookingdetail-endpoint', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  const testBookingId = 'GRN-202603-2374997';
+  const url = `${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${testBookingId}`;
+  try {
+    const response = await fetch(url, {
+      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    });
+    const data = await response.json();
+    res.json({ bookingIdTried: testBookingId, httpStatus: response.status, response: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
