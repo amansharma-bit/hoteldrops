@@ -337,4 +337,26 @@ router.get('/debug-city-codes', async (req, res) => {
   res.json({ results });
 });
 
+
+// Debug: test the actual cities lookup for the 3 real, confirmed-different codes
+router.get('/debug-city-lookup-raw', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  const codes = ['124581', '123648', '124725'];
+  const results = [];
+  for (const code of codes) {
+    try {
+      const resp = await fetch(`${GRN_STATIC_BASE_URL}/api/v3/cities/?city=${code}&version=2.0`, {
+        headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      });
+      const data = await resp.json();
+      results.push({ codeTried: code, httpStatus: resp.status, fullRawResponse: data });
+    } catch (err) {
+      results.push({ codeTried: code, error: err.message });
+    }
+  }
+  res.json({ results });
+});
+
 module.exports = router;
