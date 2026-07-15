@@ -69,23 +69,25 @@ export default function BookingsPage() {
             <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                  {['Hotel', 'City', 'Room', 'Stay', 'Price', 'Refundable', 'Supplier', 'Board Basis', 'Cancel By', 'Status'].map((h) => (
+                  {['Booking ID', 'Hotel', 'City', 'Room', 'Check-in', 'Check-out', 'Price', 'Refundable', 'Supplier', 'Board Basis', 'Cancel By', 'Status'].map((h) => (
                     <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#94A3B8' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading live bookings…</td></tr>
+                  <tr><td colSpan={12} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading live bookings…</td></tr>
                 ) : filteredRows.length === 0 ? (
-                  <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>No bookings match this filter on this page.</td></tr>
+                  <tr><td colSpan={12} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>No bookings match this filter on this page.</td></tr>
                 ) : (
                   filteredRows.map((r: any) => (
                     <tr key={r.bookingId} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: '#64748B' }}>{r.bookingId}</td>
                       <td style={{ padding: '12px 16px', fontWeight: 600, color: '#0F172A' }}>{r.hotelName}</td>
                       <td style={{ padding: '12px 16px', color: '#64748B' }}>{r.city || '—'}</td>
                       <td style={{ padding: '12px 16px', color: '#64748B' }}>{r.roomType || '—'}</td>
-                      <td style={{ padding: '12px 16px', color: '#64748B' }}>{r.checkin} → {r.checkout}</td>
+                      <td style={{ padding: '12px 16px', color: '#64748B' }}>{r.checkin}</td>
+                      <td style={{ padding: '12px 16px', color: '#64748B' }}>{r.checkout}</td>
                       <td style={{ padding: '12px 16px', fontFamily: 'monospace', color: '#0F172A' }}>{r.currency} {r.priceTotal?.toFixed(2) ?? '—'}</td>
                       <td style={{ padding: '12px 16px' }}>{r.refundable ? 'Yes' : 'No'}</td>
                       <td style={{ padding: '12px 16px', color: '#64748B', fontSize: 12 }}>{r.supplier || '—'}</td>
