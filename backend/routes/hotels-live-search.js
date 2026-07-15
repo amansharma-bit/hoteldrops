@@ -290,4 +290,25 @@ router.get('/bookings-list', async (req, res) => {
   }
 });
 
+
+// Testing how to look up a real city name from a city_code
+router.get('/test-city-lookup', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  const testCityCode = '122861'; // Bangkok, from our real data
+  const url = `${GRN_STATIC_BASE_URL}/api/v3/cities/?city=${testCityCode}&version=2.0`;
+  try {
+    const response = await fetch(url, {
+      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    });
+    const status = response.status;
+    let data;
+    try { data = await response.json(); } catch { data = '(non-JSON)'; }
+    res.json({ cityCodeTried: testCityCode, httpStatus: status, response: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
