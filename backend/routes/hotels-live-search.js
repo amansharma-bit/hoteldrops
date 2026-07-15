@@ -325,22 +325,23 @@ router.get('/dashboard-real', async (req, res) => {
       } catch { /* skip failed individual pulls */ }
     }
 
-    // Compute real stats from the sample
+    // Compute real stats from the sample — using the CORRECT field paths,
+    // confirmed against a real raw booking record:
+    // country_code lives at booking.hotel.country_code (clean ISO code)
+    // refundable status lives at booking.non_refundable (top level)
+    // price lives at booking.price.total (top level)
     let refundableCount = 0;
     const countryCounts = {};
     let totalValue = 0;
     let valueCount = 0;
 
     details.forEach((booking) => {
-      const items = booking.hotel?.booking_items || [];
-      items.forEach((item) => {
-        if (item.non_refundable === false) refundableCount++;
-      });
-      const address = booking.hotel?.address || '';
-      const country = address.split(',').pop()?.trim() || 'Unknown';
+      if (booking.non_refundable === false) refundableCount++;
+
+      const country = booking.hotel?.country_code || 'Unknown';
       countryCounts[country] = (countryCounts[country] || 0) + 1;
 
-      const price = items[0]?.price;
+      const price = booking.price?.total;
       if (price) { totalValue += parseFloat(price); valueCount++; }
     });
 
