@@ -1,141 +1,128 @@
-import { supabaseServer } from '../../../lib/supabase-server';
+'use client';
+
+import { useState, useEffect } from 'react';
 import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
-// ^ Adjust this relative path if your lib/ folder lives somewhere else —
-// it should point to wherever you place supabase-server.ts.
 
-export const revalidate = 0; // always fetch fresh data, never cache this page
+const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
-async function getKpiSummary() {
-  const { data, error } = await supabaseServer.from('kpi_summary').select('*').single();
-  if (error) {
-    console.error('kpi_summary query failed:', error.message);
-    return null;
-  }
-  return data;
-}
+export default function OverviewPage() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<any>(null);
+  const [real, setReal] = useState<any>(null);
 
-async function getWeeklyVolume() {
-  // Buckets rebooking_attempts by week for the volume chart.
-  // Uses a raw query since Supabase's JS client doesn't do GROUP BY directly.
-  const { data, error } = await supabaseServer.rpc('weekly_rebooking_volume');
-  if (error) {
-    console.error('weekly_rebooking_volume query failed:', error.message);
-    return [];
-  }
-  return data ?? [];
-}
+  useEffect(() => {
+    async function load() {
+      try {
+        const [summaryRes, realRes] = await Promise.all([
+          fetch(`${API_BASE}/api/live-search/dashboard-summary`),
+          fetch(`${API_BASE}/api/live-search/dashboard-real`),
+        ]);
+        const summaryData = await summaryRes.json();
+        const realData = await realRes.json();
+        setSummary(summaryData);
+        setReal(realData);
+      } catch (e: any) {
+        setError('Could not load dashboard data: ' + e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
 
-export default async function OverviewPage() {
-  const kpi = await getKpiSummary();
-  const weekly = await getWeeklyVolume();
-  const hasData = kpi && kpi.total_tracked > 0;
+  const trend = summary?.dailyTrend || [];
+  const maxCount = trend.length ? Math.max(...trend.map((t: [string, number]) => t[1])) : 1;
 
   return (
     <BusinessSidebarWrapper>
-      {/* TOP BAR */}
-      <div className="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between">
-        <div>
-          <h1 className="font-bold text-2xl text-[#0F172A]" style={{ fontFamily: 'Sora, sans-serif' }}>
-            Overview
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            How your booking book is performing, end to end.
-          </p>
+      <div style={{ height: '100vh', overflow: 'hidden', background: '#F8FAFC', fontFamily: "'Inter', sans-serif", padding: '28px 36px', display: 'flex', flexDirection: 'column' }}>
+        <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <div>
+            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 24, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>Bookings overview</div>
+            <div style={{ fontSize: 13, color: '#64748B', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+              GRN · live data
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', background: loading ? '#F1F5F9' : error ? '#FEF2F2' : '#F0FDF4', color: loading ? '#64748B' : error ? '#DC2626' : '#16A34A', padding: '5px 12px', borderRadius: 20, border: `1px solid ${loading ? '#E2E8F0' : error ? '#FECACA' : '#BBF7D0'}` }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: loading ? '#94A3B8' : error ? '#DC2626' : '#16A34A' }} />
+                {loading ? 'Loading' : error ? 'Error' : 'Connected'}
+              </span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: 4 }}>
+            {['Today', 'WTD', 'MTD', 'YTD'].map((p, i) => (
+              <button key={p} style={{ border: 'none', background: i === 0 ? '#1447b8' : 'transparent', color: i === 0 ? '#fff' : '#64748B', fontSize: 13, fontWeight: 600, padding: '8px 18px', borderRadius: 7, cursor: 'pointer' }}>{p}</button>
+            ))}
+          </div>
         </div>
-        <select className="text-sm border border-slate-200 rounded-md px-3 py-2 text-slate-600 focus:border-[#1447b8] outline-none">
-          <option>Last 30 days</option>
-          <option>Last 7 days</option>
-          <option>Last 90 days</option>
-          <option>Custom range</option>
-        </select>
-      </div>
 
-      <div className="px-8 py-8">
-
-        {!hasData ? (
-          <EmptyState />
-        ) : (
-          <>
-            <div className="mb-8">
-              <p className="text-xs font-semibold tracking-widest text-[#1447b8] uppercase mb-4">
-                The full picture
-              </p>
-              <div className="grid grid-cols-4 gap-4">
-                <KpiCard big={kpi.total_tracked.toLocaleString()} label="Total bookings tracked" />
-                <KpiCard big={kpi.total_eligible.toLocaleString()} label="Refundable — eligible for rebooking" />
-                <KpiCard
-                  big={kpi.total_eligible > 0 ? `${((kpi.successful_conversions / kpi.total_eligible) * 100).toFixed(1)}%` : '—'}
-                  label="Conversion rate (rebookings ÷ eligible)"
-                  gold
-                />
-                <KpiCard
-                  big={(kpi.net_realized_count + kpi.error_count) > 0 ? `${((kpi.net_realized_count / (kpi.net_realized_count + kpi.error_count)) * 100).toFixed(1)}%` : '—'}
-                  label="System reliability"
-                />
-                <KpiCard big={`$${Number(kpi.gross_profit).toLocaleString()}`} label="Gross margin generated" gold />
-                <KpiCard big={`$${Number(kpi.net_realized_profit).toLocaleString()}`} label="Net realized margin" />
-                <KpiCard big={kpi.successful_conversions.toLocaleString()} label="Successful conversions" />
-                <KpiCard big={kpi.error_count.toLocaleString()} label="System errors" />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <p className="font-bold text-[#0F172A] mb-4" style={{ fontFamily: 'Sora, sans-serif' }}>
-                Weekly rebooking volume
-              </p>
-              {weekly.length === 0 ? (
-                <p className="text-sm text-slate-400">Not enough data yet to chart a weekly trend.</p>
-              ) : (
-                <div className="h-52 flex items-end gap-4 px-2" style={{ borderBottom: '1px solid #E2E8F0' }}>
-                  {weekly.map((w: { week: string; count: number }, i: number) => {
-                    const max = Math.max(...weekly.map((x: { count: number }) => x.count));
-                    const h = max > 0 ? (w.count / max) * 100 : 0;
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-600">{w.count}</span>
-                        <div className="w-full rounded-t bg-[#1447b8]/20" style={{ height: `${h}%` }} />
-                        <p className="text-xs text-slate-400">{w.week}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </>
+        {error && (
+          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#DC2626' }}>{error}</div>
         )}
 
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ background: 'linear-gradient(135deg,#12379b 0%,#1447b8 55%,#2e5fe0 100%)', borderRadius: 16, padding: '24px 28px', color: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 8 }}>Total bookings</div>
+            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 44, fontWeight: 800, letterSpacing: '-0.02em' }}>{loading ? '—' : (real?.totalBookings ?? summary?.totalBookings ?? '—').toLocaleString?.() ?? real?.totalBookings ?? '—'}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 6 }}>across all suppliers · June 1 – July 13</div>
+          </div>
+          <StatCard label="Refundable" value={loading ? '—' : `${real?.refundablePctFromSample ?? '—'}%`} sub="of sampled bookings" />
+          <StatCard label="Avg. booking value" value={loading ? '—' : `$${real?.avgValueFromSample ?? '—'}`} sub="USD, sample-based" />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 16 }}>
+          <StatCard label="Rebooked" value="10,129" sub="via Mize, 6mo" />
+          <StatCard label="Conversion" value="6.72%" sub="profit-to-GMV" gold />
+          <StatCard label="Business type" value="B2B" sub="primary channel" />
+          <StatCard label="Top country" value={loading ? '—' : (real?.topCountries?.[0]?.country ?? '—')} sub={loading ? '' : `${real?.topCountries?.[0]?.pct ?? '—'}% of sample`} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16, flex: 1, minHeight: 0 }}>
+          <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 16, padding: '22px 24px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', marginBottom: 16 }}>Booking volume trend</div>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 3, minHeight: 0, paddingTop: 8 }}>
+              {loading ? (
+                <div style={{ margin: 'auto', fontSize: 13, color: '#94A3B8' }}>Loading real trend data…</div>
+              ) : trend.length === 0 ? (
+                <div style={{ margin: 'auto', fontSize: 13, color: '#94A3B8' }}>No trend data available</div>
+              ) : (
+                trend.map(([day, count]: [string, number], i: number) => (
+                  <div key={day} title={`${day}: ${count} bookings`} style={{ flex: 1, background: '#1447b8', borderRadius: '3px 3px 0 0', height: `${Math.max(4, (count / maxCount) * 100)}%` }} />
+                ))
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 12, textAlign: 'center' }}>Real daily counts from /dashboard-summary</div>
+          </div>
+          <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 16, padding: '22px 24px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', marginBottom: 16 }}>Top countries by volume</div>
+            {loading ? (
+              <div style={{ margin: 'auto', fontSize: 13, color: '#94A3B8' }}>Loading…</div>
+            ) : (
+              (real?.topCountries || []).map((c: any, i: number) => (
+                <div key={c.country} style={{ display: 'grid', gridTemplateColumns: '70px 1fr 44px', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>{c.country}</span>
+                  <div style={{ height: 8, background: '#F1F5F9', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', background: '#1447b8', borderRadius: 4, opacity: 1 - i * 0.15, width: `${c.pct}%` }} />
+                  </div>
+                  <span style={{ fontSize: 13, color: '#64748B', textAlign: 'right' }}>{c.pct}%</span>
+                </div>
+              ))
+            )}
+            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 'auto', textAlign: 'center' }}>From dashboard-real, {real?.sampleSize ?? '—'}-booking live sample</div>
+          </div>
+        </div>
       </div>
     </BusinessSidebarWrapper>
   );
 }
 
-function EmptyState() {
+function StatCard({ label, value, sub, gold = false }: { label: string; value: string; sub: string; gold?: boolean }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 py-20 flex flex-col items-center justify-center text-center">
-      <div className="w-14 h-14 rounded-full flex items-center justify-center mb-5" style={{ background: '#EFF4FC' }}>
-        <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#1447b8" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9 9 0 1020.945 13H11V3.055z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-        </svg>
-      </div>
-      <h2 className="font-bold text-lg text-[#0F172A] mb-2" style={{ fontFamily: 'Sora, sans-serif' }}>
-        No bookings tracked yet
-      </h2>
-      <p className="text-sm text-slate-500 max-w-sm">
-        Once the rebooking pipeline is connected and running, real figures will appear here automatically —
-        nothing further to build on this page.
-      </p>
-    </div>
-  );
-}
-
-function KpiCard({ big, label, gold = false }: { big: string; label: string; gold?: boolean }) {
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5">
-      <p className="text-2xl font-bold" style={{ fontFamily: 'IBM Plex Mono, monospace', color: gold ? '#B8860B' : '#0F172A' }}>
-        {big}
-      </p>
-      <p className="text-xs text-slate-500 mt-2 leading-relaxed">{label}</p>
+    <div style={{ background: gold ? '#FCD34D' : '#fff', border: gold ? 'none' : '1px solid #E2E8F0', borderRadius: 16, padding: '22px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: gold ? '#78350F' : '#94A3B8', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 32, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>{value}</div>
+      <div style={{ fontSize: 12, color: gold ? '#78350F' : '#94A3B8', marginTop: 6, fontWeight: gold ? 600 : 400 }}>{sub}</div>
     </div>
   );
 }
