@@ -89,88 +89,44 @@ router.post('/live-search', async (req, res) => {
 });
 
 
-// Temporary debug route — lets me fetch this directly to see the exact error
-router.get('/live-search-debug', async (req, res) => {
+// Clean, focused check — ONLY bookings count, nothing else. Built specifically
+// to show Naveen a clear, unambiguous result without any other data mixed in.
+router.get('/bookings-count-only', async (req, res) => {
   if (!GRN_API_KEY) {
     return res.status(500).json({ error: 'GRN_API_KEY not set' });
   }
-  const payload = {
-    rooms: [{ adults: 2 }],
-    rates: "concise",
-    hotel_codes: ["1848138"],
-    currency: "USD",
-    client_nationality: "US",
-    checkin: "2026-09-15",
-    checkout: "2026-09-16",
-    purpose_of_travel: 1
-  };
   try {
-    const response = await fetch(`${GRN_API_BASE_URL}/hotels/availability`, {
-      method: 'POST',
-      headers: { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    const response = await fetch(
+      `${GRN_API_BASE_URL}/hotels/bookings?filter_type=booking_date&start=2026-06-14&end=2026-07-13`,
+      { headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' } }
+    );
     const data = await response.json();
-    res.json({ httpStatus: response.status, payloadSent: payload, responseReceived: data });
+    res.json({
+      question: 'How many bookings (refundable + non-refundable) does GRN show for June 14 - July 13, 2026?',
+      answer: data.total,
+      dateRange: `${data.start} to ${data.end}`,
+      httpStatus: response.status,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 
-// Testing whether hotel_name alone (without hotel_codes) works as a search parameter
-router.get('/test-hotel-name-search', async (req, res) => {
+// Testing the alternate /hotels/bookingids endpoint specifically, as requested
+router.get('/test-bookingids-endpoint', async (req, res) => {
   if (!GRN_API_KEY) {
     return res.status(500).json({ error: 'GRN_API_KEY not set' });
   }
-  const testNames = ["Signature Inn", "Signature Inn Hotel Deira", "Signature Inn Deira"];
-  const results = [];
-  for (const name of testNames) {
-    const payload = {
-      rooms: [{ adults: 2 }],
-      rates: "concise",
-      hotel_name: name,
-      currency: "USD",
-      client_nationality: "US",
-      checkin: "2026-09-15",
-      checkout: "2026-09-16",
-      purpose_of_travel: 1
-    };
-    try {
-      const response = await fetch(`${GRN_API_BASE_URL}/hotels/availability`, {
-        method: 'POST',
-        headers: { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      results.push({ nameSearched: name, httpStatus: response.status, responseReceived: data });
-    } catch (err) {
-      results.push({ nameSearched: name, error: err.message });
-    }
-  }
-  res.json({ results });
-});
-
-
-// Testing the Static Hotels endpoint — different base URL than Search
-router.get('/test-static-hotels', async (req, res) => {
-  if (!GRN_API_KEY) {
-    return res.status(500).json({ error: 'GRN_API_KEY not set' });
-  }
-  const STATIC_BASE_URL = 'https://cdn-api.grnconnect.com';
   try {
-    const response = await fetch(`${STATIC_BASE_URL}/api/v3/hotels/?city=121449&version=2.0`, {
-      method: 'GET',
-      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-    });
+    const response = await fetch(
+      `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=2026-06-01`,
+      { headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' } }
+    );
     const status = response.status;
     let data;
-    try {
-      data = await response.json();
-    } catch {
-      data = '(non-JSON response)';
-    }
-    res.json({ httpStatus: status, total: data.total, firstFiveNames: (data.hotels || []).slice(0,5).map(h => ({name: h.name, code: h.code})) });
+    try { data = await response.json(); } catch { data = '(non-JSON response)'; }
+    res.json({ httpStatus: status, response: data });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
