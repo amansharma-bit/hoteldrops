@@ -16,20 +16,17 @@ const hotelsLiveSearchRoutes = require('./routes/hotels-live-search')
 const hotelsResolveSearchRoutes = require('./routes/hotels-resolve-search')
 const { runPriceTracker } = require('./jobs/priceTracker')
 const app = express()
-// ── CORS — locked down to real, trusted origins only ──────────────────────────
-// Single mechanism only (previous version accidentally had two CORS
-// handlers running at once, which caused real requests to fail).
-const ALLOWED_ORIGINS = [
-  'https://www.rebuq.com',
-  'https://rebuq.com',
-  'http://localhost:3000', // local dev only
-]
-
-app.use(cors({
-  origin: ALLOWED_ORIGINS,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}))
+// ── CORS — must be before all routes ─────────────────────────────────────────
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200)
+  }
+  next()
+})
+app.use(cors({ origin: '*' }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
