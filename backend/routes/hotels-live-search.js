@@ -247,6 +247,7 @@ router.get('/bookings-list', async (req, res) => {
     const rates = { USD: 1.0, EUR: 1.1446, GBP: 1.3401, INR: 0.010526, MXN: 0.05754, AED: 0.27225, AUD: 0.6960, THB: 0.0301, NOK: 0.1016, IDR: 0.0000553, NPR: 0.006569687 };
 
     const rows = [];
+    const cityCache = new Map(); // avoid redundant lookups if bookings share a city
     for (const b of pageBookings) {
       try {
         const detailUrl = `${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${b.bid}`;
@@ -260,10 +261,27 @@ router.get('/bookings-list', async (req, res) => {
         const item = booking.hotel?.booking_items?.[0];
         const room = item?.rooms?.[0];
 
+        const cityCode = booking.hotel?.city_code;
+        let cityName = null;
+        if (cityCode) {
+          if (cityCache.has(cityCode)) {
+            cityName = cityCache.get(cityCode);
+          } else {
+            try {
+              const cityResp = await fetch(`${GRN_STATIC_BASE_URL}/api/v3/cities/?city=${cityCode}&version=2.0`, {
+                headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+              });
+              const cityData = await cityResp.json();
+              cityName = cityData.cities?.[0]?.name || cityData.name || null;
+              cityCache.set(cityCode, cityName);
+            } catch { /* leave null if lookup fails */ }
+          }
+        }
+
         rows.push({
           bookingId: booking.booking_id,
           hotelName: booking.hotel?.name || 'Unknown',
-          city: null, // dropped — free-text address parsing proved unreliable, needs a proper city-code lookup instead
+          city: cityName,
           country: booking.hotel?.country_code || null,
           roomType: room?.room_type || room?.description || null,
           checkin: booking.checkin,
@@ -291,25 +309,5 @@ router.get('/bookings-list', async (req, res) => {
   }
 });
 
-
-// Testing how to look up a real city name from a city_code
-router.get('/test-city-lookup', async (req, res) => {
-  if (!GRN_API_KEY) {
-    return res.status(500).json({ error: 'GRN_API_KEY not set' });
-  }
-  const testCityCode = '122861'; // Bangkok, from our real data
-  const url = `${GRN_STATIC_BASE_URL}/api/v3/cities/?city=${testCityCode}&version=2.0`;
-  try {
-    const response = await fetch(url, {
-      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
-    });
-    const status = response.status;
-    let data;
-    try { data = await response.json(); } catch { data = '(non-JSON)'; }
-    res.json({ cityCodeTried: testCityCode, httpStatus: status, response: data });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 module.exports = router;
