@@ -14,6 +14,8 @@ export default function BookingsPage() {
   const [period, setPeriod] = useState('MTD');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  const [pendingStart, setPendingStart] = useState('');
+  const [pendingEnd, setPendingEnd] = useState('');
   const [showCustom, setShowCustom] = useState(false);
 
   function getDateRange(p: string) {
@@ -45,7 +47,7 @@ export default function BookingsPage() {
 
   const rows = data?.rows || [];
   const filteredRows = statusFilter === 'all' ? rows : rows.filter((r: any) =>
-    statusFilter === 'rebooked' ? r.rebookedStatus === 'Rebooked' : r.status.toLowerCase() === statusFilter
+    statusFilter === 'rebooked' ? r.rebookedStatus === 'Rebooked' : (r.bookingStatus || '').toLowerCase() === statusFilter
   );
 
   return (
@@ -57,7 +59,7 @@ export default function BookingsPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: '#0F172A' }}>Bookings</h1>
-              <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>Every booking in your GRN book — not just the ones we've rebooked.</p>
+              <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>All bookings across your GRN book — search, filter, and track cancellation windows in real time.</p>
             </div>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', background: loading ? '#F1F5F9' : error ? '#FEF2F2' : '#F0FDF4', color: loading ? '#64748B' : error ? '#DC2626' : '#16A34A', padding: '5px 12px', borderRadius: 20, border: `1px solid ${loading ? '#E2E8F0' : error ? '#FECACA' : '#BBF7D0'}` }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: loading ? '#94A3B8' : error ? '#DC2626' : '#16A34A' }} />
@@ -70,10 +72,10 @@ export default function BookingsPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 12px', fontSize: 13, background: '#fff', color: '#334155' }}>
-                <option value="all">All statuses</option>
+                <option value="all">All bookings</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="cancelled">Cancelled</option>
                 <option value="rebooked">Rebooked</option>
-                <option value="eligible">Eligible</option>
-                <option value="not eligible">Not eligible</option>
               </select>
               <div style={{ display: 'flex', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: 3 }}>
                 {['Today', 'WTD', 'MTD', 'YTD'].map((p) => (
@@ -83,19 +85,22 @@ export default function BookingsPage() {
               <button onClick={() => setShowCustom(!showCustom)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, background: showCustom ? '#1447b8' : '#fff', color: showCustom ? '#fff' : '#64748B', cursor: 'pointer' }}>Custom range</button>
               {showCustom && (
                 <>
-                  <input type="date" value={customStart} onChange={(e) => { setCustomStart(e.target.value); setPage(1); }} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }} />
+                  <input type="date" value={pendingStart} onChange={(e) => setPendingStart(e.target.value)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }} />
                   <span style={{ color: '#94A3B8', fontSize: 12 }}>to</span>
-                  <input type="date" value={customEnd} onChange={(e) => { setCustomEnd(e.target.value); setPage(1); }} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }} />
+                  <input type="date" value={pendingEnd} onChange={(e) => setPendingEnd(e.target.value)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }} />
+                  <button
+                    onClick={() => { if (pendingStart && pendingEnd) { setCustomStart(pendingStart); setCustomEnd(pendingEnd); setPage(1); } }}
+                    disabled={!pendingStart || !pendingEnd}
+                    style={{ border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 12, fontWeight: 600, background: pendingStart && pendingEnd ? '#1447b8' : '#E2E8F0', color: pendingStart && pendingEnd ? '#fff' : '#94A3B8', cursor: pendingStart && pendingEnd ? 'pointer' : 'not-allowed' }}
+                  >
+                    Apply
+                  </button>
                 </>
               )}
             </div>
             <button style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: '#334155', cursor: 'pointer' }}>Export CSV</button>
           </div>
-          {statusFilter === 'not eligible' && filteredRows.length === 0 && !loading && (
-            <div style={{ background: '#F5F8FF', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 16px', marginBottom: 12, fontSize: 12, color: '#64748B' }}>
-              No "Not eligible" bookings on this page — genuinely rare in this dataset, not a filter issue (confirmed 0 out of 50 in a separate sample check).
-            </div>
-          )}
+
 
           {error && (
             <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#DC2626' }}>{error}</div>
@@ -137,7 +142,7 @@ export default function BookingsPage() {
                       </td>
                       <td style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, verticalAlign: 'top' }}>{r.supplier || '—'}</td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: r.status === 'Eligible' ? '#F0FDF4' : '#FEF2F2', color: r.status === 'Eligible' ? '#16A34A' : '#DC2626' }}>{r.status}</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: r.bookingStatus === 'Confirmed' ? '#FCD34D' : r.bookingStatus === 'Cancelled' ? '#FEF2F2' : '#F1F5F9', color: r.bookingStatus === 'Confirmed' ? '#78350F' : r.bookingStatus === 'Cancelled' ? '#DC2626' : '#64748B' }}>{r.bookingStatus}</span>
                       </td>
                     </tr>
                   ))
