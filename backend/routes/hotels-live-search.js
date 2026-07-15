@@ -219,4 +219,75 @@ router.get('/dashboard-real', async (req, res) => {
 
 // Debug: full raw structure of one booking, to find the real country/price fields
 
+
+// Paginated live bookings list — pulls full detail only for the current
+// page (not all 80,000+ at once), keeping this practical to run live.
+router.get('/bookings-list', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  const page = parseInt(req.query.page, 10) || 1;
+  const perPage = 20;
+  const start = encodeURIComponent('2026-06-01 00:00:00');
+  const end = encodeURIComponent('2026-07-13 23:59:59');
+  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
+
+  try {
+    const listResp = await fetch(listUrl, {
+      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    });
+    const listData = await listResp.json();
+    const allBookings = listData.bookings || [];
+    const totalBookings = allBookings.length;
+
+    const pageStart = (page - 1) * perPage;
+    const pageBookings = allBookings.slice(pageStart, pageStart + perPage);
+
+    const rates = { USD: 1.0, EUR: 1.1446, GBP: 1.3401, INR: 0.010526, MXN: 0.05754, AED: 0.27225, AUD: 0.6960, THB: 0.0301, NOK: 0.1016, IDR: 0.0000553, NPR: 0.006569687 };
+
+    const rows = [];
+    for (const b of pageBookings) {
+      try {
+        const detailUrl = `${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${b.bid}`;
+        const dResp = await fetch(detailUrl, {
+          headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        });
+        const dData = await dResp.json();
+        const booking = dData.booking;
+        if (!booking) continue;
+
+        const item = booking.hotel?.booking_items?.[0];
+        const room = item?.rooms?.[0];
+
+        rows.push({
+          bookingId: booking.booking_id,
+          hotelName: booking.hotel?.name || 'Unknown',
+          city: booking.hotel?.address?.split(',').slice(-2, -1)[0]?.trim() || null,
+          country: booking.hotel?.country_code || null,
+          roomType: room?.room_type || room?.description || null,
+          checkin: booking.checkin,
+          checkout: booking.checkout,
+          priceTotal: booking.price?.total ? parseFloat(booking.price.total) : null,
+          currency: booking.currency,
+          refundable: booking.non_refundable === false,
+          supplier: booking.supplier_code || null,
+          boardBasis: item?.boarding_details?.join(', ') || null,
+          lastCancellationDate: item?.cancellation_policy?.cancel_by_date || null,
+          status: booking.non_refundable === false ? 'Eligible' : 'Not eligible',
+          rebookedStatus: null, // placeholder — populates once rebuq's own rebooking engine is live
+        });
+      } catch { /* skip failed individual pulls */ }
+    }
+
+    res.json({
+      page, perPage, totalBookings,
+      totalPages: Math.ceil(totalBookings / perPage),
+      rows,
+      note: 'Status shows Refundable vs Non-refundable, direct from GRN. "Rebooked" status needs a separate cross-reference against Mize data, not included here yet.',
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
