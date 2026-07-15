@@ -294,6 +294,7 @@ router.get('/bookings-list', async (req, res) => {
 
         rows.push({
           bookingId: booking.booking_id,
+          bookingDate: booking.booking_date || null,
           hotelName: booking.hotel?.name || 'Unknown',
           city: cityName,
           country: booking.hotel?.country_code || null,
@@ -306,7 +307,9 @@ router.get('/bookings-list', async (req, res) => {
           supplier: booking.supplier_code || null,
           boardBasis: item?.boarding_details?.join(', ') || null,
           lastCancellationDate: item?.cancellation_policy?.cancel_by_date || null,
-          bookingStatus: booking.booking_status || 'Unknown', // real GRN lifecycle status: Confirmed, Cancelled, etc.
+          status: booking.booking_status === 'Cancelled'
+            ? 'Cancelled'
+            : (booking.non_refundable === false ? 'Refundable' : 'Non-Refundable'),
           rebookedStatus: null, // placeholder — populates once rebuq's own rebooking engine is live
         });
       } catch { /* skip failed individual pulls */ }
