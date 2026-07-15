@@ -176,4 +176,31 @@ router.get('/test-space-format', async (req, res) => {
   }
 });
 
+
+// Clean count summary — the actual number of bookings, properly encoded,
+// confirmed working.
+router.get('/bookings-count-final', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  const start = encodeURIComponent('2026-06-01 00:00:00');
+  const end = encodeURIComponent('2026-06-25 00:00:00');
+  const url = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
+  try {
+    const response = await fetch(url, {
+      headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    });
+    const data = await response.json();
+    const bookings = data.bookings || [];
+    res.json({
+      dateRangeChecked: 'June 1 - June 25, 2026',
+      totalBookingsFound: bookings.length,
+      httpStatus: response.status,
+      sampleFirst5: bookings.slice(0, 5),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
