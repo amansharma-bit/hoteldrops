@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabase-client';
 
 const navItems = [
   {
@@ -70,6 +72,29 @@ const navItems = [
 // imports this directly and wraps its own content with it.
 export default function BusinessSidebarWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [authed, setAuthed] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
+      if (!data.session) {
+        router.push('/business/login');
+      } else {
+        setAuthed(true);
+      }
+      setCheckingAuth(false);
+    });
+  }, [router]);
+
+  if (checkingAuth) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8FAFC' }}>
+        <p style={{ fontSize: 14, color: '#64748B' }}>Checking access…</p>
+      </div>
+    );
+  }
+  if (!authed) return null; // redirecting to login
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-[#0F172A]">
