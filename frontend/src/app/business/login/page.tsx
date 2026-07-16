@@ -26,82 +26,23 @@ export default function BusinessLoginPage() {
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-6">
+      <div className="w-full max-w-sm">
 
-      {/* LEFT: brand panel */}
-      <div
-        className="relative flex flex-col justify-between px-10 lg:px-14 py-12 min-h-[320px] lg:min-h-screen overflow-hidden"
-        style={{
-          background: 'linear-gradient(155deg, #0b1440 0%, #12379b 30%, #1447b8 70%, #2e5fe0 100%)',
-        }}
-      >
-        {/* Subtle grid texture, same pattern used on the cover deck slides */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-40"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-            backgroundSize: '48px 48px',
-          }}
-        />
-
-        <div className="relative z-10">
-          <a href="/business" className="flex items-baseline gap-2 mb-1">
-            <span className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
+        {/* Logo */}
+        <div className="text-center mb-10">
+          <a href="/business" className="inline-flex items-baseline gap-1">
+            <span className="font-extrabold text-2xl text-[#0F172A]" style={{ fontFamily: 'Sora, sans-serif' }}>
               rebuq<span className="text-[#FCD34D]">.</span>
             </span>
           </a>
-          <p className="text-xs font-semibold tracking-widest text-white/50 uppercase mb-14">
-            Business Console
-          </p>
-
-          <h1
-            className="font-extrabold text-4xl lg:text-[2.8rem] leading-[1.12] text-white mb-6 max-w-xl"
-            style={{ fontFamily: 'Sora, sans-serif', letterSpacing: '-0.02em' }}
-          >
-            Real bookings.
-            <br />
-            <span style={{ color: '#FCD34D' }}>Real savings.</span>
-            <br />
-            Live, right now.
-          </h1>
-          <p className="text-white/70 leading-relaxed max-w-sm mb-10">
-            Direct access to your GRN booking book — real-time rates, live
-            repricing, and every saving found, backed by a real API
-            connection, not a spreadsheet.
-          </p>
-
-          {/* Real, live-feeling stat row instead of a generic bullet list */}
-          <div className="grid grid-cols-3 gap-6 border-t border-white/10 pt-6 max-w-md">
-            <div>
-              <div className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>80K+</div>
-              <div className="text-xs text-white/50 mt-1">Live bookings tracked</div>
-            </div>
-            <div>
-              <div className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Real-time</div>
-              <div className="text-xs text-white/50 mt-1">GRN API connection</div>
-            </div>
-            <div>
-              <div className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Secured</div>
-              <div className="text-xs text-white/50 mt-1">Invite-only access</div>
-            </div>
-          </div>
         </div>
 
-        <p className="relative z-10 text-xs text-white/40">© 2026 rebuq. Business partners only.</p>
-      </div>
-
-      {/* RIGHT: form */}
-      <div className="flex items-center justify-center px-6 py-16 bg-white">
-        <div className="w-full max-w-sm">
-
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="font-extrabold text-2xl text-[#0F172A]" style={{ fontFamily: 'Sora, sans-serif' }}>
-              Welcome back
-            </h2>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#FCD34D]" />
-          </div>
-          <p className="text-sm text-slate-500 mb-8">Sign in to the rebuq business console</p>
+        <div className="bg-white border border-slate-200 rounded-2xl px-8 py-10">
+          <h1 className="font-extrabold text-xl text-[#0F172A] mb-1" style={{ fontFamily: 'Sora, sans-serif' }}>
+            Sign in
+          </h1>
+          <p className="text-sm text-slate-500 mb-8">Business console access</p>
 
           {error && (
             <div className="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
@@ -111,8 +52,8 @@ export default function BusinessLoginPage() {
 
           <form className="space-y-5" onSubmit={handleLogin}>
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-[#0F172A] mb-2">
-                Company Email
+              <label htmlFor="email" className="block text-sm font-medium text-[#0F172A] mb-2">
+                Email
               </label>
               <input
                 id="email"
@@ -126,7 +67,7 @@ export default function BusinessLoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-[#0F172A] mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-[#0F172A] mb-2">
                 Password
               </label>
               <div className="relative">
@@ -161,25 +102,21 @@ export default function BusinessLoginPage() {
                   Signing in…
                 </>
               ) : (
-                <>Access Business Console →</>
+                <>Sign in</>
               )}
             </button>
           </form>
-
-          <div className="flex items-center justify-between mt-8">
-            <a href="/business" className="text-sm text-slate-500 hover:text-[#0F172A] transition-colors">
-              ← Back to home
-            </a>
-            <a
-              href="mailto:business@rebuq.com"
-              className="text-sm font-medium text-[#1447b8] hover:text-[#1447b8]/80 transition-colors"
-            >
-              Request access →
-            </a>
-          </div>
         </div>
-      </div>
 
+        <div className="flex items-center justify-center gap-1.5 mt-6 text-sm text-slate-500">
+          Need access?
+          <a href="mailto:business@rebuq.com" className="font-medium text-[#1447b8] hover:text-[#1447b8]/80 transition-colors">
+            Contact us
+          </a>
+        </div>
+
+        <p className="text-center text-xs text-slate-400 mt-10">© 2026 rebuq. Business partners only.</p>
+      </div>
     </div>
   );
 }
