@@ -20,7 +20,7 @@ export default function BookingsPage() {
   const [showCustom, setShowCustom] = useState(false);
 
   function getDateRange(p: string) {
-    const now = new Date('2026-07-13');
+    const now = new Date(); // real, live current date — not a hardcoded date
     let start = new Date(now);
     if (p === 'Today') { /* start = now */ }
     else if (p === 'WTD') { start.setDate(now.getDate() - now.getDay()); }
