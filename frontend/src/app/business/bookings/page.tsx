@@ -44,7 +44,7 @@ export default function BookingsPage() {
       })
       .catch((e: any) => setError('Could not load bookings: ' + e.message))
       .finally(() => setLoading(false));
-  }, [page, period, customStart, customEnd, showCustom]);
+  }, [page, period, customStart, customEnd, showCustom, statusFilter]);
 
   const rows = data?.rows || [];
   const filteredRows = rows; // filtering now happens server-side, by real booking_date + status
@@ -84,9 +84,24 @@ export default function BookingsPage() {
               <button onClick={() => setShowCustom(!showCustom)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, background: showCustom ? '#1447b8' : '#fff', color: showCustom ? '#fff' : '#64748B', cursor: 'pointer' }}>Custom range</button>
               {showCustom && (
                 <>
-                  <input type="date" value={pendingStart} onChange={(e) => setPendingStart(e.target.value)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }} />
+                  <input
+                    type="date"
+                    value={pendingStart}
+                    onChange={(e) => {
+                      setPendingStart(e.target.value);
+                      // Auto-advance focus to the end-date field once a start date is picked
+                      document.getElementById('bookingsEndDateInput')?.focus();
+                    }}
+                    style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }}
+                  />
                   <span style={{ color: '#94A3B8', fontSize: 12 }}>to</span>
-                  <input type="date" value={pendingEnd} onChange={(e) => setPendingEnd(e.target.value)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }} />
+                  <input
+                    id="bookingsEndDateInput"
+                    type="date"
+                    value={pendingEnd}
+                    onChange={(e) => setPendingEnd(e.target.value)}
+                    style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }}
+                  />
                   <button
                     onClick={() => { if (pendingStart && pendingEnd) { setCustomStart(pendingStart); setCustomEnd(pendingEnd); setPage(1); } }}
                     disabled={!pendingStart || !pendingEnd}
