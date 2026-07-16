@@ -30,18 +30,24 @@ export default function BusinessLoginPage() {
 
       {/* LEFT: brand panel */}
       <div
-        className="relative flex flex-col justify-between px-10 lg:px-14 py-12 min-h-[320px] lg:min-h-screen"
+        className="relative flex flex-col justify-between px-10 lg:px-14 py-12 min-h-[320px] lg:min-h-screen overflow-hidden"
         style={{
-          background:
-            'linear-gradient(155deg, #0b1440 0%, #12379b 30%, #1447b8 70%, #2e5fe0 100%)',
+          background: 'linear-gradient(155deg, #0b1440 0%, #12379b 30%, #1447b8 70%, #2e5fe0 100%)',
         }}
       >
-        <div>
+        {/* Subtle grid texture, same pattern used on the cover deck slides */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-40"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+          }}
+        />
+
+        <div className="relative z-10">
           <a href="/business" className="flex items-baseline gap-2 mb-1">
-            <span
-              className="font-extrabold text-2xl text-white"
-              style={{ fontFamily: 'Sora, sans-serif' }}
-            >
+            <span className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
               rebuq<span className="text-[#FCD34D]">.</span>
             </span>
           </a>
@@ -50,37 +56,39 @@ export default function BusinessLoginPage() {
           </p>
 
           <h1
-            className="font-extrabold text-4xl lg:text-[2.6rem] leading-[1.12] text-white mb-6 max-w-xl"
-            style={{ fontFamily: 'Sora, sans-serif' }}
+            className="font-extrabold text-4xl lg:text-[2.8rem] leading-[1.12] text-white mb-6 max-w-xl"
+            style={{ fontFamily: 'Sora, sans-serif', letterSpacing: '-0.02em' }}
           >
-            Track every booking.
+            Real bookings.
             <br />
-            Catch every drop.
+            <span style={{ color: '#FCD34D' }}>Real savings.</span>
             <br />
-            Keep the margin.
+            Live, right now.
           </h1>
           <p className="text-white/70 leading-relaxed max-w-sm mb-10">
-            The rebuq Business console — see every booking that&apos;s been
-            automatically rebooked, exactly how much you saved, and what
-            needs your attention.
+            Direct access to your GRN booking book — real-time rates, live
+            repricing, and every saving found, backed by a real API
+            connection, not a spreadsheet.
           </p>
 
-          <ul className="space-y-4">
-            {[
-              'Live rebooking dashboard',
-              'Per-client margin tracking',
-              'Real-time price drop alerts',
-              'Secure, invite-only access',
-            ].map((item) => (
-              <li key={item} className="flex items-center gap-3 text-white/80 text-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FCD34D] flex-shrink-0" />
-                {item}
-              </li>
-            ))}
-          </ul>
+          {/* Real, live-feeling stat row instead of a generic bullet list */}
+          <div className="grid grid-cols-3 gap-6 border-t border-white/10 pt-6 max-w-md">
+            <div>
+              <div className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>80K+</div>
+              <div className="text-xs text-white/50 mt-1">Live bookings tracked</div>
+            </div>
+            <div>
+              <div className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Real-time</div>
+              <div className="text-xs text-white/50 mt-1">GRN API connection</div>
+            </div>
+            <div>
+              <div className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Secured</div>
+              <div className="text-xs text-white/50 mt-1">Invite-only access</div>
+            </div>
+          </div>
         </div>
 
-        <p className="text-xs text-white/40">© 2026 rebuq. Business partners only.</p>
+        <p className="relative z-10 text-xs text-white/40">© 2026 rebuq. Business partners only.</p>
       </div>
 
       {/* RIGHT: form */}
@@ -88,15 +96,12 @@ export default function BusinessLoginPage() {
         <div className="w-full max-w-sm">
 
           <div className="flex items-center gap-2 mb-1">
-            <h2
-              className="font-extrabold text-2xl text-[#0F172A]"
-              style={{ fontFamily: 'Sora, sans-serif' }}
-            >
-              Business Sign In
+            <h2 className="font-extrabold text-2xl text-[#0F172A]" style={{ fontFamily: 'Sora, sans-serif' }}>
+              Welcome back
             </h2>
             <span className="w-1.5 h-1.5 rounded-full bg-[#FCD34D]" />
           </div>
-          <p className="text-sm text-slate-500 mb-8">rebuq business console</p>
+          <p className="text-sm text-slate-500 mb-8">Sign in to the rebuq business console</p>
 
           {error && (
             <div className="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
@@ -116,7 +121,7 @@ export default function BusinessLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] outline-none transition-colors"
+                className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] focus:ring-2 focus:ring-[#1447b8]/10 outline-none transition-all"
               />
             </div>
 
@@ -132,7 +137,7 @@ export default function BusinessLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••"
-                  className="w-full border border-slate-200 rounded-lg px-4 py-3 pr-11 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] outline-none transition-colors"
+                  className="w-full border border-slate-200 rounded-lg px-4 py-3 pr-11 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] focus:ring-2 focus:ring-[#1447b8]/10 outline-none transition-all"
                 />
                 <button
                   type="button"
@@ -148,9 +153,16 @@ export default function BusinessLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full font-semibold text-sm py-3.5 rounded-lg bg-[#1447b8] text-white hover:bg-[#1447b8]/90 transition-colors mt-2 disabled:opacity-60"
+              className="w-full font-semibold text-sm py-3.5 rounded-lg bg-[#1447b8] text-white hover:bg-[#0f3a94] transition-colors mt-2 disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              {loading ? 'Signing in…' : 'Access Business Console →'}
+              {loading ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                <>Access Business Console →</>
+              )}
             </button>
           </form>
 
