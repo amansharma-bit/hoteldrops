@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
+import { authenticatedFetch } from '../../../lib/supabase-client';
 
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
@@ -25,17 +26,17 @@ export default function RepricingPage() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`${API_BASE}/api/live-search/bookings-list?page=${page}`)
-      .then((r) => r.json())
-      .then((d) => { if (d.error) setError(d.error); else setData(d); })
-      .catch((e) => setError('Could not load bookings: ' + e.message))
+    authenticatedFetch(`${API_BASE}/api/live-search/bookings-list?page=${page}`)
+      .then((r: Response) => r.json())
+      .then((d: any) => { if (d.error) setError(d.error); else setData(d); })
+      .catch((e: any) => setError('Could not load bookings: ' + e.message))
       .finally(() => setLoading(false));
   }, [page]);
 
   async function handleReprice(row: any) {
     setRepricingId(row.bookingId);
     try {
-      const res = await fetch(`${API_BASE}/api/live-search/live-search`, {
+      const res = await authenticatedFetch(`${API_BASE}/api/live-search/live-search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hotel_code: row.hotelCode, checkin: row.checkin, checkout: row.checkout, adults: row.adults }),
