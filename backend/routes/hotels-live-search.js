@@ -119,8 +119,11 @@ router.get('/dashboard-summary', async (req, res) => {
   if (!GRN_API_KEY) {
     return res.status(500).json({ error: 'GRN_API_KEY not set' });
   }
-  const start = encodeURIComponent('2026-06-01 00:00:00');
-  const end = encodeURIComponent('2026-07-13 23:59:59');
+  const nowD = new Date();
+  const startD = new Date(nowD); startD.setDate(startD.getDate() - 44); // same ~44-day window as before, but relative to TODAY
+  const fmtD = (d) => d.toISOString().slice(0,19).replace('T',' ');
+  const start = encodeURIComponent(fmtD(startD));
+  const end = encodeURIComponent(fmtD(nowD));
   const url = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
   try {
     const response = await fetch(url, {
@@ -142,7 +145,7 @@ router.get('/dashboard-summary', async (req, res) => {
 
     res.json({
       totalBookings: bookings.length,
-      dateRange: { start: '2026-06-01', end: '2026-07-13' },
+      dateRange: { start: startD.toISOString().slice(0,10), end: nowD.toISOString().slice(0,10) },
       dailyTrend: trend,
       recentBookings: recent,
     });
@@ -162,8 +165,11 @@ router.get('/dashboard-real', async (req, res) => {
   }
   // Accepts real start/end dates from the frontend now, defaults to the
   // last 30 days if not specified (matches the original sample-data page's default)
-  const startParam = req.query.start || '2026-06-14 00:00:00';
-  const endParam = req.query.end || '2026-07-13 23:59:59';
+  const _now1 = new Date();
+  const _start1 = new Date(_now1); _start1.setDate(_start1.getDate() - 30);
+  const _fmt1 = (d) => d.toISOString().slice(0,19).replace('T',' ');
+  const startParam = req.query.start || _fmt1(_start1);
+  const endParam = req.query.end || _fmt1(_now1);
   const start = encodeURIComponent(startParam);
   const end = encodeURIComponent(endParam);
   const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
@@ -260,8 +266,11 @@ router.get('/bookings-list', async (req, res) => {
 
   // The date range the user actually wants — filtered by REAL booking_date,
   // not GRN's unreliable "last updated" timestamp.
-  const targetStart = req.query.start || '2026-06-01 00:00:00';
-  const targetEnd = req.query.end || '2026-07-16 23:59:59';
+  const _now2 = new Date();
+  const _start2 = new Date(_now2); _start2.setDate(_start2.getDate() - 45);
+  const _fmt2 = (d) => d.toISOString().slice(0,19).replace('T',' ');
+  const targetStart = req.query.start || _fmt2(_start2);
+  const targetEnd = req.query.end || _fmt2(_now2);
   const targetStartDate = new Date(targetStart.replace(' ', 'T'));
   const targetEndDate = new Date(targetEnd.replace(' ', 'T'));
 
@@ -269,7 +278,7 @@ router.get('/bookings-list', async (req, res) => {
   // touched before it exists) — so searching from targetStart through NOW
   // is guaranteed to include every booking actually made in the target
   // window, even if GRN also touched it again more recently.
-  const now = new Date('2026-07-16T23:59:59');
+  const now = new Date(); // real, live current time — not a hardcoded date
   const searchStart = targetStart;
   const searchEnd = now.toISOString().slice(0, 19).replace('T', ' ');
 
