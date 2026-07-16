@@ -1,10 +1,29 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '../../../lib/supabase-client';
 
 export default function BusinessLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    if (authError) {
+      setError('Incorrect email or password.');
+      setLoading(false);
+      return;
+    }
+    router.push('/business/overview');
+  }
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
@@ -51,7 +70,7 @@ export default function BusinessLoginPage() {
               'Live rebooking dashboard',
               'Per-client margin tracking',
               'Real-time price drop alerts',
-              'Secure, API-key gated access',
+              'Secure, invite-only access',
             ].map((item) => (
               <li key={item} className="flex items-center gap-3 text-white/80 text-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#FCD34D] flex-shrink-0" />
@@ -79,13 +98,13 @@ export default function BusinessLoginPage() {
           </div>
           <p className="text-sm text-slate-500 mb-8">rebuq business console</p>
 
-          <form
-            className="space-y-5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              // TODO: wire up to real auth endpoint
-            }}
-          >
+          {error && (
+            <div className="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
+          <form className="space-y-5" onSubmit={handleLogin}>
             <div>
               <label htmlFor="email" className="block text-sm font-semibold text-[#0F172A] mb-2">
                 Company Email
@@ -94,6 +113,8 @@ export default function BusinessLoginPage() {
                 id="email"
                 type="email"
                 required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
                 className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] outline-none transition-colors"
               />
@@ -108,6 +129,8 @@ export default function BusinessLoginPage() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••"
                   className="w-full border border-slate-200 rounded-lg px-4 py-3 pr-11 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] outline-none transition-colors"
                 />
@@ -122,37 +145,12 @@ export default function BusinessLoginPage() {
               </div>
             </div>
 
-            <div>
-              <label htmlFor="apikey" className="block text-sm font-semibold text-[#0F172A] mb-2">
-                GRN API Key
-              </label>
-              <div className="relative">
-                <input
-                  id="apikey"
-                  type={showApiKey ? 'text' : 'password'}
-                  required
-                  placeholder="GRN-XXXX-XXXX"
-                  className="w-full border border-slate-200 rounded-lg px-4 py-3 pr-11 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] outline-none transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey((v) => !v)}
-                  aria-label="Toggle API key visibility"
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  <EyeIcon />
-                </button>
-              </div>
-              <p className="text-xs text-slate-400 mt-2">
-                Used only to read your booking book. Never shared.
-              </p>
-            </div>
-
             <button
               type="submit"
-              className="w-full font-semibold text-sm py-3.5 rounded-lg bg-[#1447b8] text-white hover:bg-[#1447b8]/90 transition-colors mt-2"
+              disabled={loading}
+              className="w-full font-semibold text-sm py-3.5 rounded-lg bg-[#1447b8] text-white hover:bg-[#1447b8]/90 transition-colors mt-2 disabled:opacity-60"
             >
-              Access Business Console →
+              {loading ? 'Signing in…' : 'Access Business Console →'}
             </button>
           </form>
 
