@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
+import { authenticatedFetch } from '../../../lib/supabase-client';
 
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
@@ -35,13 +36,13 @@ export default function BookingsPage() {
     const range = showCustom && customStart && customEnd
       ? { start: customStart + ' 00:00:00', end: customEnd + ' 23:59:59' }
       : getDateRange(period);
-    fetch(`${API_BASE}/api/live-search/bookings-list?page=${page}&start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}`)
-      .then((r) => r.json())
-      .then((d) => {
+    authenticatedFetch(`${API_BASE}/api/live-search/bookings-list?page=${page}&start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}`)
+      .then((r: Response) => r.json())
+      .then((d: any) => {
         if (d.error) setError(d.error);
         else setData(d);
       })
-      .catch((e) => setError('Could not load bookings: ' + e.message))
+      .catch((e: any) => setError('Could not load bookings: ' + e.message))
       .finally(() => setLoading(false));
   }, [page, period, customStart, customEnd, showCustom]);
 
