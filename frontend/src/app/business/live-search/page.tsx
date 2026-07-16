@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
+import { authenticatedFetch } from '../../../lib/supabase-client';
 
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 const B = '#1447b8';
@@ -85,7 +86,7 @@ export default function LiveSearchPage() {
     try {
       const formData = new FormData();
       formData.append('voucher', file);
-      const res = await fetch(`${API_BASE}/api/voucher/extract`, { method: 'POST', body: formData });
+      const res = await authenticatedFetch(`${API_BASE}/api/voucher/extract`, { method: 'POST', body: formData });
       const json = await res.json();
       clearInterval(interval);
       setScanning(false);
@@ -138,7 +139,7 @@ export default function LiveSearchPage() {
         ? { hotel_code: hotelCode, checkin, checkout, adults, nationality, children_ages: ages }
         : { hotel_name: hotelName, hotel_city: hotelCity, check_in: checkin, check_out: checkout, num_adults: adults, nationality, children_ages: ages, room_type: roomType, board_basis: boardBasis };
 
-      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const res = await authenticatedFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await res.json();
 
       if (!res.ok) {
