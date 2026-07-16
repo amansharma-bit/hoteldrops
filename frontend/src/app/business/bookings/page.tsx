@@ -31,19 +31,22 @@ export default function BookingsPage() {
   }
 
   useEffect(() => {
+    let cancelled = false; // guards against a slower, older request overwriting a newer one
     setLoading(true);
     setError(null);
     const range = showCustom && customStart && customEnd
       ? { start: customStart + ' 00:00:00', end: customEnd + ' 23:59:59' }
       : getDateRange(period);
-    authenticatedFetch(`${API_BASE}/api/live-search/bookings-list?page=${page}&status=${statusFilter}&start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}`)
+    authenticatedFetch(`${API_BASE}/api/live-search/bookings-list?page=${page}&status=${statusFilter}&start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}&_t=${Date.now()}`)
       .then((r: Response) => r.json())
       .then((d: any) => {
+        if (cancelled) return; // a newer request already started — ignore this stale response
         if (d.error) setError(d.error);
         else setData(d);
       })
-      .catch((e: any) => setError('Could not load bookings: ' + e.message))
-      .finally(() => setLoading(false));
+      .catch((e: any) => { if (!cancelled) setError('Could not load bookings: ' + e.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; }; // cleanup — runs when filters change again before this finishes
   }, [page, period, customStart, customEnd, showCustom, statusFilter]);
 
   const rows = data?.rows || [];
