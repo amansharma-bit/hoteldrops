@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
+import { authenticatedFetch } from '../../../lib/supabase-client';
 
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
@@ -15,8 +16,8 @@ export default function OverviewPage() {
     async function load() {
       try {
         const [summaryRes, realRes] = await Promise.all([
-          fetch(`${API_BASE}/api/live-search/dashboard-summary`),
-          fetch(`${API_BASE}/api/live-search/dashboard-real`),
+          authenticatedFetch(`${API_BASE}/api/live-search/dashboard-summary`),
+          authenticatedFetch(`${API_BASE}/api/live-search/dashboard-real`),
         ]);
         const summaryData = await summaryRes.json();
         const realData = await realRes.json();
