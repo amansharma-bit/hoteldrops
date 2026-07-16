@@ -26,11 +26,11 @@ export default function BusinessLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-6">
+    <div className="min-h-screen flex items-center justify-center bg-white px-6">
       <div className="w-full max-w-sm">
 
         {/* Logo */}
-        <div className="text-center mb-10">
+        <div className="mb-10">
           <a href="/business" className="inline-flex items-baseline gap-1">
             <span className="font-extrabold text-2xl text-[#0F172A]" style={{ fontFamily: 'Sora, sans-serif' }}>
               rebuq<span className="text-[#FCD34D]">.</span>
@@ -38,19 +38,13 @@ export default function BusinessLoginPage() {
           </a>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl px-8 py-10">
-          <h1 className="font-extrabold text-xl text-[#0F172A] mb-1" style={{ fontFamily: 'Sora, sans-serif' }}>
-            Sign in
-          </h1>
-          <p className="text-sm text-slate-500 mb-8">Business console access</p>
+        {error && (
+          <div className="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
 
-          {error && (
-            <div className="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
-              {error}
-            </div>
-          )}
-
-          <form className="space-y-5" onSubmit={handleLogin}>
+        <form className="space-y-5" onSubmit={handleLogin}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-[#0F172A] mb-2">
                 Email
@@ -105,17 +99,14 @@ export default function BusinessLoginPage() {
                 <>Sign in</>
               )}
             </button>
-          </form>
-        </div>
+        </form>
 
-        <div className="flex items-center justify-center gap-1.5 mt-6 text-sm text-slate-500">
+        <div className="flex items-center gap-1.5 mt-6 text-sm text-slate-500">
           Need access?
           <a href="mailto:business@rebuq.com" className="font-medium text-[#1447b8] hover:text-[#1447b8]/80 transition-colors">
             Contact us
           </a>
         </div>
-
-        <p className="text-center text-xs text-slate-400 mt-10">© 2026 rebuq. Business partners only.</p>
       </div>
     </div>
   );
