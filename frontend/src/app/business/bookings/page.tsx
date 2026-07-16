@@ -36,7 +36,7 @@ export default function BookingsPage() {
     const range = showCustom && customStart && customEnd
       ? { start: customStart + ' 00:00:00', end: customEnd + ' 23:59:59' }
       : getDateRange(period);
-    authenticatedFetch(`${API_BASE}/api/live-search/bookings-list?page=${page}&start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}`)
+    authenticatedFetch(`${API_BASE}/api/live-search/bookings-list?page=${page}&status=${statusFilter}&start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}`)
       .then((r: Response) => r.json())
       .then((d: any) => {
         if (d.error) setError(d.error);
@@ -47,9 +47,7 @@ export default function BookingsPage() {
   }, [page, period, customStart, customEnd, showCustom]);
 
   const rows = data?.rows || [];
-  const filteredRows = statusFilter === 'all' ? rows : rows.filter((r: any) =>
-    (r.status || '').toLowerCase() === statusFilter
-  );
+  const filteredRows = rows; // filtering now happens server-side, by real booking_date + status
 
   return (
     <BusinessSidebarWrapper>
@@ -72,11 +70,11 @@ export default function BookingsPage() {
         <div style={{ padding: '24px 32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 12px', fontSize: 13, background: '#fff', color: '#334155' }}>
+              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 12px', fontSize: 13, background: '#fff', color: '#334155' }}>
                 <option value="all">All bookings</option>
+                <option value="cancelled">Cancelled</option>
                 <option value="refundable">Refundable</option>
                 <option value="non-refundable">Non-Refundable</option>
-                <option value="cancelled">Cancelled</option>
               </select>
               <div style={{ display: 'flex', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: 3 }}>
                 {['Today', 'WTD', 'MTD', 'YTD'].map((p) => (
@@ -145,7 +143,11 @@ export default function BookingsPage() {
                       </td>
                       <td style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, verticalAlign: 'top' }}>{r.supplier || '—'}</td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: r.status === 'Refundable' ? '#FCD34D' : r.status === 'Cancelled' ? '#FEF2F2' : '#F1F5F9', color: r.status === 'Refundable' ? '#78350F' : r.status === 'Cancelled' ? '#DC2626' : '#64748B' }}>{r.status}</span>
+                        <span style={{
+                          fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
+                          background: r.status === 'Refundable' ? '#FCD34D' : r.status === 'Cancelled' ? '#FEE2E2' : '#E2E8F0',
+                          color: r.status === 'Refundable' ? '#78350F' : r.status === 'Cancelled' ? '#B91C1C' : '#475569',
+                        }}>{r.status}</span>
                       </td>
                     </tr>
                   ))
@@ -156,11 +158,11 @@ export default function BookingsPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
             <span style={{ fontSize: 13, color: '#64748B' }}>
-              {loading ? 'Loading…' : `Showing ${rows.length} of ${data?.totalBookings?.toLocaleString() ?? '—'} bookings · Page ${page} of ${data?.totalPages?.toLocaleString() ?? '—'}`}
+              {loading ? 'Loading…' : `Showing ${rows.length} matching bookings · ${data?.note ?? ''}`}
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: page === 1 ? '#CBD5E1' : '#334155', cursor: page === 1 ? 'not-allowed' : 'pointer' }}>Previous</button>
-              <button onClick={() => setPage((p) => p + 1)} disabled={loading || (data && page >= data.totalPages)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#1447b8', color: '#fff', cursor: 'pointer' }}>Next</button>
+              <button onClick={() => setPage((p) => p + 1)} disabled={loading || (data && data.matchedSoFar < page * 20)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: (data && data.matchedSoFar < page * 20) ? '#E2E8F0' : '#1447b8', color: (data && data.matchedSoFar < page * 20) ? '#94A3B8' : '#fff', cursor: 'pointer' }}>Next</button>
             </div>
           </div>
         </div>
