@@ -19,39 +19,61 @@ export default function BookingsPage() {
   const [pendingEnd, setPendingEnd] = useState('');
   const [showCustom, setShowCustom] = useState(false);
 
+  // ---------------------------------------------------------------------
+  // THE OFF-BY-ONE-DAY BUG.
+  //
+  // The old code did:  d.toISOString().slice(0, 10)
+  //
+  // toISOString() converts to UTC. We are at UTC+5:30, so a Date built from
+  // LOCAL components — new Date(2026, 6, 1) = Jul 1, 00:00 IST — becomes
+  // "2026-06-30T18:30:00Z" in UTC, and slicing the first 10 chars yields
+  // "2026-06-30". Every preset queried from the previous day; "Today"
+  // queried yesterday.
+  //
+  // Fix: format from the LOCAL calendar fields directly. No UTC conversion.
+  // ---------------------------------------------------------------------
+  const fmtLocalDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
   function getDateRange(p: string) {
-    const now = new Date(); // real, live current date — not a hardcoded date
+    const now = new Date();
     let start = new Date(now);
-    if (p === 'Today') { /* start = now */ }
+    if (p === 'Today') { /* start = today */ }
     else if (p === 'WTD') { start.setDate(now.getDate() - now.getDay()); }
     else if (p === 'MTD') { start = new Date(now.getFullYear(), now.getMonth(), 1); }
     else if (p === 'YTD') { start = new Date(now.getFullYear(), 0, 1); }
-    const fmt = (d: Date) => d.toISOString().slice(0, 10) + ' 00:00:00';
-    return { start: fmt(start), end: now.toISOString().slice(0, 10) + ' 23:59:59' };
+    return {
+      start: fmtLocalDate(start) + ' 00:00:00',
+      end: fmtLocalDate(now) + ' 23:59:59',
+    };
   }
 
   useEffect(() => {
-    let cancelled = false; // guards against a slower, older request overwriting a newer one
+    let cancelled = false;
     setLoading(true);
     setError(null);
-    setData(null); // clear old results immediately — prevents stale rows from a previous filter lingering on screen
+    setData(null);
     const range = showCustom && customStart && customEnd
       ? { start: customStart + ' 00:00:00', end: customEnd + ' 23:59:59' }
       : getDateRange(period);
     authenticatedFetch(`${API_BASE}/api/live-search/bookings-list?page=${page}&status=${statusFilter}&start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}&_t=${Date.now()}`)
       .then((r: Response) => r.json())
       .then((d: any) => {
-        if (cancelled) return; // a newer request already started — ignore this stale response
+        if (cancelled) return;
         if (d.error) setError(d.error);
         else setData(d);
       })
       .catch((e: any) => { if (!cancelled) setError('Could not load bookings: ' + e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; }; // cleanup — runs when filters change again before this finishes
+    return () => { cancelled = true; };
   }, [page, period, customStart, customEnd, showCustom, statusFilter]);
 
   const rows = data?.rows || [];
-  const filteredRows = rows; // filtering now happens server-side, by real booking_date + status
+  const diag = data?.diagnostics;
+  // The backend now caps `total` at the true filtered count, so "Next" can be
+  // disabled correctly. The old `matchedSoFar < page * 20` could never fire,
+  // because matched.length was capped at exactly page * 20 by the break.
+  const hasMore = data?.hasMore ?? false;
 
   return (
     <BusinessSidebarWrapper>
@@ -79,6 +101,7 @@ export default function BookingsPage() {
                 <option value="cancelled">Cancelled</option>
                 <option value="refundable">Refundable</option>
                 <option value="non-refundable">Non-Refundable</option>
+                <option value="unknown">Unclassified</option>
               </select>
               <div style={{ display: 'flex', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: 3 }}>
                 {['Today', 'WTD', 'MTD', 'YTD'].map((p) => (
@@ -93,7 +116,6 @@ export default function BookingsPage() {
                     value={pendingStart}
                     onChange={(e) => {
                       setPendingStart(e.target.value);
-                      // Auto-advance focus to the end-date field once a start date is picked
                       document.getElementById('bookingsEndDateInput')?.focus();
                     }}
                     style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }}
@@ -119,6 +141,18 @@ export default function BookingsPage() {
             <button style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: '#334155', cursor: 'pointer' }}>Export CSV</button>
           </div>
 
+          {/* Diagnostics strip — shows the REAL status distribution in this window.
+              This is what tells us whether an empty filter means "no such rows"
+              or "the classifier never fired". Delete once the data is trusted. */}
+          {diag && (
+            <div style={{ background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>
+              scanned {diag.candidatesScanned}/{diag.candidatesReturned} · details {diag.detailsFetched} · in-window {diag.inWindow} · out-of-window {diag.outOfWindow} · bad-date {diag.unparseableDate}
+              <br />
+              status breakdown: {Object.entries(diag.statusBreakdown || {}).map(([k, v]) => `${k}=${v}`).join('  ') || '(none)'}
+              {diag.hitTimeBudget && <><br /><span style={{ color: '#B91C1C' }}>⚠ stopped at time budget — partial results</span></>}
+              {diag.hitSafetyLimit && <><br /><span style={{ color: '#B45309' }}>⚠ candidate list capped at 600</span></>}
+            </div>
+          )}
 
           {error && (
             <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#DC2626' }}>{error}</div>
@@ -135,11 +169,11 @@ export default function BookingsPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading live bookings…</td></tr>
-                ) : filteredRows.length === 0 ? (
+                  <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading live bookings… (first scan of a window can take ~25s)</td></tr>
+                ) : rows.length === 0 ? (
                   <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>No bookings match this filter on this page.</td></tr>
                 ) : (
-                  filteredRows.map((r: any) => (
+                  rows.map((r: any) => (
                     <tr key={r.bookingId} style={{ borderBottom: '1px solid #F1F5F9' }}>
                       <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                         <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#64748B' }}>{r.bookingId}</div>
@@ -164,8 +198,8 @@ export default function BookingsPage() {
                       <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                         <span style={{
                           fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
-                          background: r.status === 'Refundable' ? '#FCD34D' : r.status === 'Cancelled' ? '#FEE2E2' : '#E2E8F0',
-                          color: r.status === 'Refundable' ? '#78350F' : r.status === 'Cancelled' ? '#B91C1C' : '#475569',
+                          background: r.status === 'Refundable' ? '#FCD34D' : r.status === 'Cancelled' ? '#FEE2E2' : r.status === 'Unknown' ? '#FEF3C7' : '#E2E8F0',
+                          color: r.status === 'Refundable' ? '#78350F' : r.status === 'Cancelled' ? '#B91C1C' : r.status === 'Unknown' ? '#92400E' : '#475569',
                         }}>{r.status}</span>
                       </td>
                     </tr>
@@ -177,11 +211,11 @@ export default function BookingsPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
             <span style={{ fontSize: 13, color: '#64748B' }}>
-              {loading ? 'Loading…' : `Showing ${rows.length} matching bookings · ${data?.note ?? ''}`}
+              {loading ? 'Loading…' : `Showing ${rows.length} of ${data?.total ?? 0} matching bookings · ${data?.note ?? ''}`}
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: page === 1 ? '#CBD5E1' : '#334155', cursor: page === 1 ? 'not-allowed' : 'pointer' }}>Previous</button>
-              <button onClick={() => setPage((p) => p + 1)} disabled={loading || (data && data.matchedSoFar < page * 20)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: (data && data.matchedSoFar < page * 20) ? '#E2E8F0' : '#1447b8', color: (data && data.matchedSoFar < page * 20) ? '#94A3B8' : '#fff', cursor: 'pointer' }}>Next</button>
+              <button onClick={() => setPage((p) => p + 1)} disabled={loading || !hasMore} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: !hasMore ? '#E2E8F0' : '#1447b8', color: !hasMore ? '#94A3B8' : '#fff', cursor: !hasMore ? 'not-allowed' : 'pointer' }}>Next</button>
             </div>
           </div>
         </div>
