@@ -356,4 +356,37 @@ router.get('/bookings-list', async (req, res) => {
   }
 });
 
+
+// Real, direct proof — shows exactly what happens for real bookings when
+// filtering for non-refundable specifically.
+router.get('/debug-nonrefundable-proof', async (req, res) => {
+  if (!GRN_API_KEY) {
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  }
+  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${encodeURIComponent('2026-06-01 00:00:00')}&updated_end=${encodeURIComponent('2026-07-16 23:59:59')}`;
+  const listResp = await fetch(listUrl, {
+    headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+  });
+  const listData = await listResp.json();
+  const candidates = (listData.bookings || []).slice(0, 15);
+
+  const proof = [];
+  for (const c of candidates) {
+    try {
+      const dResp = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${c.bid}`, {
+        headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      });
+      const dData = await dResp.json();
+      const booking = dData.booking;
+      proof.push({
+        bookingId: booking?.booking_id,
+        raw_non_refundable_field: booking?.non_refundable,
+        raw_booking_status_field: booking?.booking_status,
+        computed_status: booking?.booking_status === 'Cancelled' ? 'Cancelled' : (booking?.non_refundable === false ? 'Refundable' : 'Non-Refundable'),
+      });
+    } catch (e) { proof.push({ bookingId: c.bid, error: e.message }); }
+  }
+  res.json({ receivedStatusFilterParam: req.query.status, proof });
+});
+
 module.exports = router;
