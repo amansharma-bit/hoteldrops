@@ -3,145 +3,37 @@ const router = express.Router();
 
 const GRN_API_BASE_URL = process.env.GRN_API_BASE_URL || 'https://v4-api.grnconnect.com/api/v3';
 const GRN_API_KEY = process.env.GRN_API_KEY;
-const SAMPLE_BOOKING_ID = process.env.SAMPLE_BOOKING_ID || null;
 
-// ============================================================
-// Route 1: auth-methods — tests 5 header formats against the
-// real bookingids endpoint, to confirm the correct header name.
-// (Kept from the original probe.js.)
-// ============================================================
-router.get('/auth-methods', async (req, res) => {
+// Temporary diagnostic — checking real non_refundable field values.
+// Not behind login, since this is a one-time check, not a permanent route.
+router.get('/nonrefundable-proof', async (req, res) => {
   if (!GRN_API_KEY) {
-    return res.status(500).json({ error: 'GRN_API_KEY not set in environment variables.' });
+    return res.status(500).json({ error: 'GRN_API_KEY not set' });
   }
-
-  const testUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=2026-07-01&updated_end=2026-07-08`;
-
-  const headerVariants = [
-    { label: 'api-key header', headers: { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' } },
-    { label: 'Authorization: Bearer', headers: { Authorization: `Bearer ${GRN_API_KEY}`, 'Content-Type': 'application/json', 'Accept': 'application/json' } },
-    { label: 'Authorization: raw key', headers: { Authorization: GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' } },
-    { label: 'x-api-key header', headers: { 'x-api-key': GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' } },
-    { label: 'apikey (no dash)', headers: { apikey: GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' } },
-  ];
-
-  const results = [];
-  for (const variant of headerVariants) {
-    try {
-      const response = await fetch(testUrl, { method: 'GET', headers: variant.headers });
-      const status = response.status;
-      let bodyPreview;
-      try {
-        bodyPreview = JSON.stringify(await response.json()).slice(0, 2500);
-      } catch {
-        bodyPreview = '(non-JSON response)';
-      }
-      results.push({ headerFormat: variant.label, httpStatus: status, bodyPreview });
-    } catch (err) {
-      results.push({ headerFormat: variant.label, error: err.message });
-    }
-  }
-
-  res.json({ testUrl, results });
-});
-
-// ============================================================
-// Route 2: full-access-check — tests every endpoint we care
-// about in one pass. Confirmed endpoints (bookingids,
-// bookingdetail) give a real permissions answer. Search/Rebook/
-// Cancel are UNCONFIRMED guessed paths — a 404 there means
-// "wrong URL", not "no access". Real paths for those still
-// need to come from Naveen directly.
-// ============================================================
-const endpoints = [
-  { name: 'Fetch Bookings List (type=B)', method: 'GET', path: `/hotels/bookings?filter_type=booking_date&start=2026-06-14&end=2026-07-13&type=B`, confidence: 'CONFIRMED — real, documented endpoint (corrected from official docs)' },
-  { name: 'Fetch Bookings List (type=C, cancellations)', method: 'GET', path: `/hotels/bookings?filter_type=booking_date&start=2026-06-14&end=2026-07-13&type=C`, confidence: 'CONFIRMED — testing cancellations specifically' },
-  { name: 'Fetch Bookings List (no type filter, both)', method: 'GET', path: `/hotels/bookings?filter_type=booking_date&start=2026-06-14&end=2026-07-13`, confidence: 'CONFIRMED — testing without type filter' },
-  { name: 'Fetch Bookings List (by checkin_date instead)', method: 'GET', path: `/hotels/bookings?filter_type=checkin_date&start=2026-06-14&end=2026-07-13`, confidence: 'CONFIRMED — testing checkin_date filter instead of booking_date' },
-  { name: 'Search & Availability (POST, documented)', method: 'POST', path: `/hotels/availability`, body: JSON.stringify({
-    rooms: [{ adults: 2 }],
-    rates: "concise",
-    hotel_codes: ["1848138"],
-    currency: "INR",
-    client_nationality: "IN",
-    checkin: "2026-08-15",
-    checkout: "2026-08-16",
-    purpose_of_travel: 1
-  }), confidence: "CONFIRMED — real documented endpoint, using GRN's own sample hotel_code (may not be currently valid)" },
-  { name: 'Fetch Booking (by GRN reference)', method: 'GET', path: SAMPLE_BOOKING_ID ? `/hotels/bookings/${SAMPLE_BOOKING_ID}?type=GRN` : `/hotels/bookings/GRN-202607-2651199?type=GRN`, confidence: 'CONFIRMED — real, documented endpoint (corrected from official docs)' },
-  { name: 'Search / Availability (guess 1)', method: 'GET', path: `/hotels/search`, confidence: 'UNCONFIRMED — guessed path, never documented' },
-  { name: 'Search / Availability (guess 2)', method: 'GET', path: `/hotels/availability`, confidence: 'UNCONFIRMED — guessed path, never documented' },
-  { name: 'Rebooking (guess 1)', method: 'POST', path: `/hotels/rebook`, confidence: 'UNCONFIRMED — guessed path, never documented' },
-  { name: 'Rebooking (guess 2)', method: 'POST', path: `/hotels/rebookings`, confidence: 'UNCONFIRMED — guessed path, never documented' },
-  { name: 'Cancellation (guess 1)', method: 'POST', path: `/hotels/cancel`, confidence: 'UNCONFIRMED — guessed path, never documented' },
-  { name: 'Cancellation (guess 2)', method: 'POST', path: `/hotels/bookingcancel`, confidence: 'UNCONFIRMED — guessed path, never documented' },
-];
-
-router.get('/full-access-check', async (req, res) => {
-  if (!GRN_API_KEY) {
-    return res.status(500).json({ error: 'GRN_API_KEY not set in environment variables.' });
-  }
-
-  const headers = { 'api-key': GRN_API_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json' };
-  const results = [];
-
-  for (const ep of endpoints) {
-    const url = `${GRN_API_BASE_URL}${ep.path}`;
-    try {
-      const response = await fetch(url, {
-        method: ep.method,
-        headers,
-        body: ep.method === 'POST' ? (ep.body || JSON.stringify({})) : undefined,
-      });
-
-      const status = response.status;
-      let bodyPreview;
-      let extractedKeys = null;
-      let rawJson;
-      try {
-        rawJson = await response.json();
-        const rawText = JSON.stringify(rawJson);
-        bodyPreview = rawText.slice(0, 1200);
-
-        // Specifically hunt for rate_key and group_code anywhere in the response,
-        // regardless of how deeply nested — needed to test Recheck next.
-        const rateKeyMatch = rawText.match(/"rate_key"\s*:\s*"([^"]+)"/);
-        const groupCodeMatch = rawText.match(/"group_code"\s*:\s*"([^"]+)"/);
-        const searchIdMatch = rawText.match(/"search_id"\s*:\s*"([^"]+)"/);
-        if (rateKeyMatch || groupCodeMatch) {
-          extractedKeys = {
-            rate_key: rateKeyMatch ? rateKeyMatch[1] : null,
-            group_code: groupCodeMatch ? groupCodeMatch[1] : null,
-            search_id: searchIdMatch ? searchIdMatch[1] : null,
-          };
-        }
-      } catch {
-        bodyPreview = '(non-JSON response)';
-      }
-
-      let interpretation;
-      if (status === 401 || status === 403) {
-        interpretation = 'Access denied — key does not have permission for this endpoint.';
-      } else if (status === 404) {
-        interpretation = ep.confidence.startsWith('CONFIRMED')
-          ? 'Not found — unexpected for a confirmed endpoint, worth investigating.'
-          : 'Not found — likely just means this guessed URL is wrong, NOT that access is denied.';
-      } else if (status >= 200 && status < 300) {
-        interpretation = 'Success — this endpoint is reachable with this key.';
-      } else {
-        interpretation = `Unexpected status ${status} — needs manual review.`;
-      }
-
-      results.push({ endpoint: ep.name, confidence: ep.confidence, method: ep.method, url, httpStatus: status, interpretation, bodyPreview, extractedKeys });
-    } catch (err) {
-      results.push({ endpoint: ep.name, confidence: ep.confidence, method: ep.method, url, error: err.message, interpretation: 'Request failed to complete — network or DNS issue, not a permissions result.' });
-    }
-  }
-
-  res.json({
-    summary: 'Confirmed endpoints show real access status. Guessed endpoints (Search/Rebook/Cancel) need real paths from Naveen to test properly — a 404 there is not proof of missing access.',
-    results,
+  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${encodeURIComponent('2026-06-01 00:00:00')}&updated_end=${encodeURIComponent('2026-07-16 23:59:59')}`;
+  const listResp = await fetch(listUrl, {
+    headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
   });
+  const listData = await listResp.json();
+  const candidates = (listData.bookings || []).slice(0, 15);
+
+  const proof = [];
+  for (const c of candidates) {
+    try {
+      const dResp = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${c.bid}`, {
+        headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      });
+      const dData = await dResp.json();
+      const booking = dData.booking;
+      proof.push({
+        bookingId: booking?.booking_id,
+        raw_non_refundable_field: booking?.non_refundable,
+        raw_booking_status_field: booking?.booking_status,
+        computed_status: booking?.booking_status === 'Cancelled' ? 'Cancelled' : (booking?.non_refundable === false ? 'Refundable' : 'Non-Refundable'),
+      });
+    } catch (e) { proof.push({ bookingId: c.bid, error: e.message }); }
+  }
+  res.json({ proof });
 });
 
 module.exports = router;
