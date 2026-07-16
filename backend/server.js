@@ -14,9 +14,12 @@ const rebookingRoutes = require('./routes/rebooking')
 const probeRoutes   = require('./routes/probe')
 const hotelsLiveSearchRoutes = require('./routes/hotels-live-search')
 const hotelsResolveSearchRoutes = require('./routes/hotels-resolve-search')
+const { requireAuth } = require('./middleware/requireAuth')
 const { runPriceTracker } = require('./jobs/priceTracker')
 const app = express()
 // ── CORS — locked down to real, trusted origins only ──────────────────────────
+// Single mechanism only (previous version accidentally had two CORS
+// handlers running at once, which caused real requests to fail).
 const ALLOWED_ORIGINS = [
   'https://www.rebuq.com',
   'https://rebuq.com',
@@ -36,11 +39,11 @@ app.use('/api/test',     testRoutes)
 app.use('/api/alerts',   alertRoutes)
 app.use('/api/admin',    adminRoutes)
 app.use('/api/hotels',   hotelRoutes)
-app.use('/api/voucher',  voucherRoutes)
+app.use('/api/voucher',  requireAuth, voucherRoutes)
 app.use('/api/rebooking', rebookingRoutes)
 app.use('/api/probe',    probeRoutes)
-app.use('/api/live-search', hotelsLiveSearchRoutes)
-app.use('/api/live-search', hotelsResolveSearchRoutes)
+app.use('/api/live-search', requireAuth, hotelsLiveSearchRoutes)
+app.use('/api/live-search', requireAuth, hotelsResolveSearchRoutes)
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }))
 // Manual trigger for demo
 app.get('/api/run-tracker', async (req, res) => {
