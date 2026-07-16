@@ -26,25 +26,26 @@ export default function BusinessLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-6">
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: '#1447b8' }}>
       <div className="w-full max-w-sm">
 
         {/* Logo */}
-        <div className="mb-10">
+        <div className="text-center mb-10">
           <a href="/business" className="inline-flex items-baseline gap-1">
-            <span className="font-extrabold text-2xl text-[#0F172A]" style={{ fontFamily: 'Sora, sans-serif' }}>
+            <span className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
               rebuq<span className="text-[#FCD34D]">.</span>
             </span>
           </a>
         </div>
 
-        {error && (
-          <div className="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
-            {error}
-          </div>
-        )}
+        <div className="bg-white rounded-2xl px-8 py-10">
+          {error && (
+            <div className="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
 
-        <form className="space-y-5" onSubmit={handleLogin}>
+          <form className="space-y-5" onSubmit={handleLogin}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-[#0F172A] mb-2">
                 Email
@@ -56,7 +57,7 @@ export default function BusinessLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] focus:ring-2 focus:ring-[#1447b8]/10 outline-none transition-all"
+                className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] outline-none transition-all"
               />
             </div>
 
@@ -72,7 +73,7 @@ export default function BusinessLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••"
-                  className="w-full border border-slate-200 rounded-lg px-4 py-3 pr-11 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] focus:ring-2 focus:ring-[#1447b8]/10 outline-none transition-all"
+                  className="w-full border border-slate-200 rounded-lg px-4 py-3 pr-11 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] outline-none transition-all"
                 />
                 <button
                   type="button"
@@ -88,22 +89,24 @@ export default function BusinessLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full font-semibold text-sm py-3.5 rounded-lg bg-[#1447b8] text-white hover:bg-[#0f3a94] transition-colors mt-2 disabled:opacity-60 flex items-center justify-center gap-2"
+              className="w-full font-semibold text-sm py-3.5 rounded-lg text-[#0F172A] hover:opacity-90 transition-opacity mt-2 disabled:opacity-60 flex items-center justify-center gap-2"
+              style={{ background: '#FCD34D' }}
             >
               {loading ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-[#0F172A]/30 border-t-[#0F172A] rounded-full animate-spin" />
                   Signing in…
                 </>
               ) : (
                 <>Sign in</>
               )}
             </button>
-        </form>
+          </form>
+        </div>
 
-        <div className="flex items-center gap-1.5 mt-6 text-sm text-slate-500">
+        <div className="flex items-center justify-center gap-1.5 mt-6 text-sm text-white/70">
           Need access?
-          <a href="mailto:business@rebuq.com" className="font-medium text-[#1447b8] hover:text-[#1447b8]/80 transition-colors">
+          <a href="mailto:business@rebuq.com" className="font-medium text-[#FCD34D] hover:text-[#FCD34D]/80 transition-colors">
             Contact us
           </a>
         </div>
