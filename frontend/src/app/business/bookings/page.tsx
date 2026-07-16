@@ -19,19 +19,19 @@ export default function BookingsPage() {
   const [pendingEnd, setPendingEnd] = useState('');
   const [showCustom, setShowCustom] = useState(false);
 
-  // ---------------------------------------------------------------------
+  // -------------------------------------------------------------------------
   // THE OFF-BY-ONE-DAY BUG.
   //
-  // The old code did:  d.toISOString().slice(0, 10)
+  // Old code:  d.toISOString().slice(0, 10)
   //
-  // toISOString() converts to UTC. We are at UTC+5:30, so a Date built from
-  // LOCAL components — new Date(2026, 6, 1) = Jul 1, 00:00 IST — becomes
-  // "2026-06-30T18:30:00Z" in UTC, and slicing the first 10 chars yields
-  // "2026-06-30". Every preset queried from the previous day; "Today"
-  // queried yesterday.
+  // toISOString() converts to UTC. We're at UTC+5:30, so a Date built from
+  // LOCAL parts — new Date(2026, 6, 1) = Jul 1 00:00 IST — becomes
+  // "2026-06-30T18:30:00Z", and slicing gives "2026-06-30". Every preset
+  // queried from the day before; "Today" queried yesterday. It's why MTD
+  // showed rows booked Jun 30.
   //
-  // Fix: format from the LOCAL calendar fields directly. No UTC conversion.
-  // ---------------------------------------------------------------------
+  // Fix: format from the LOCAL calendar fields. No UTC conversion.
+  // -------------------------------------------------------------------------
   const fmtLocalDate = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
@@ -42,10 +42,7 @@ export default function BookingsPage() {
     else if (p === 'WTD') { start.setDate(now.getDate() - now.getDay()); }
     else if (p === 'MTD') { start = new Date(now.getFullYear(), now.getMonth(), 1); }
     else if (p === 'YTD') { start = new Date(now.getFullYear(), 0, 1); }
-    return {
-      start: fmtLocalDate(start) + ' 00:00:00',
-      end: fmtLocalDate(now) + ' 23:59:59',
-    };
+    return { start: fmtLocalDate(start) + ' 00:00:00', end: fmtLocalDate(now) + ' 23:59:59' };
   }
 
   useEffect(() => {
@@ -60,7 +57,7 @@ export default function BookingsPage() {
       .then((r: Response) => r.json())
       .then((d: any) => {
         if (cancelled) return;
-        if (d.error) setError(d.error);
+        if (d.error) setError(d.error + (d.hint ? ` — ${d.hint}` : ''));
         else setData(d);
       })
       .catch((e: any) => { if (!cancelled) setError('Could not load bookings: ' + e.message); })
@@ -70,10 +67,10 @@ export default function BookingsPage() {
 
   const rows = data?.rows || [];
   const diag = data?.diagnostics;
-  // The backend now caps `total` at the true filtered count, so "Next" can be
-  // disabled correctly. The old `matchedSoFar < page * 20` could never fire,
-  // because matched.length was capped at exactly page * 20 by the break.
   const hasMore = data?.hasMore ?? false;
+
+  const fmtSynced = (v: string | null) =>
+    v ? new Date(v).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null;
 
   return (
     <BusinessSidebarWrapper>
@@ -84,16 +81,27 @@ export default function BookingsPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: '#0F172A' }}>Bookings</h1>
-              <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>All bookings across your GRN book — search, filter, and track cancellation windows in real time.</p>
+              <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>All bookings across your GRN book — search, filter, and track cancellation windows.</p>
             </div>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', background: loading ? '#F1F5F9' : error ? '#FEF2F2' : '#F0FDF4', color: loading ? '#64748B' : error ? '#DC2626' : '#16A34A', padding: '5px 12px', borderRadius: 20, border: `1px solid ${loading ? '#E2E8F0' : error ? '#FECACA' : '#BBF7D0'}` }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: loading ? '#94A3B8' : error ? '#DC2626' : '#16A34A' }} />
-              {loading ? 'Loading' : error ? 'Error' : 'Live'}
+              {loading ? 'Loading' : error ? 'Error' : 'Synced'}
             </span>
           </div>
         </div>
 
         <div style={{ padding: '24px 32px' }}>
+          {/* Data freshness. This page no longer pretends to be "live" — it
+              shows our own synced copy, and says exactly how fresh it is.
+              An honest timestamp beats a "Live" badge over stale numbers. */}
+          {diag?.syncedThrough && (
+            <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#1E40AF' }}>
+              Data synced through <strong>{fmtSynced(diag.syncedThrough)}</strong>
+              {diag.lastSyncStatus === 'running' && <> · <span style={{ color: '#B45309' }}>sync in progress: {diag.lastSyncProgress}</span></>}
+              {diag.lastSyncStatus === 'error' && <> · <span style={{ color: '#B91C1C' }}>last sync failed</span></>}
+            </div>
+          )}
+
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 12px', fontSize: 13, background: '#fff', color: '#334155' }}>
@@ -111,46 +119,23 @@ export default function BookingsPage() {
               <button onClick={() => setShowCustom(!showCustom)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, background: showCustom ? '#1447b8' : '#fff', color: showCustom ? '#fff' : '#64748B', cursor: 'pointer' }}>Custom range</button>
               {showCustom && (
                 <>
-                  <input
-                    type="date"
-                    value={pendingStart}
-                    onChange={(e) => {
-                      setPendingStart(e.target.value);
-                      document.getElementById('bookingsEndDateInput')?.focus();
-                    }}
-                    style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }}
-                  />
+                  <input type="date" value={pendingStart} onChange={(e) => { setPendingStart(e.target.value); document.getElementById('bookingsEndDateInput')?.focus(); }} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }} />
                   <span style={{ color: '#94A3B8', fontSize: 12 }}>to</span>
-                  <input
-                    id="bookingsEndDateInput"
-                    type="date"
-                    value={pendingEnd}
-                    onChange={(e) => setPendingEnd(e.target.value)}
-                    style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }}
-                  />
-                  <button
-                    onClick={() => { if (pendingStart && pendingEnd) { setCustomStart(pendingStart); setCustomEnd(pendingEnd); setPage(1); } }}
-                    disabled={!pendingStart || !pendingEnd}
-                    style={{ border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 12, fontWeight: 600, background: pendingStart && pendingEnd ? '#1447b8' : '#E2E8F0', color: pendingStart && pendingEnd ? '#fff' : '#94A3B8', cursor: pendingStart && pendingEnd ? 'pointer' : 'not-allowed' }}
-                  >
-                    Apply
-                  </button>
+                  <input id="bookingsEndDateInput" type="date" value={pendingEnd} onChange={(e) => setPendingEnd(e.target.value)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }} />
+                  <button onClick={() => { if (pendingStart && pendingEnd) { setCustomStart(pendingStart); setCustomEnd(pendingEnd); setPage(1); } }} disabled={!pendingStart || !pendingEnd} style={{ border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 12, fontWeight: 600, background: pendingStart && pendingEnd ? '#1447b8' : '#E2E8F0', color: pendingStart && pendingEnd ? '#fff' : '#94A3B8', cursor: pendingStart && pendingEnd ? 'pointer' : 'not-allowed' }}>Apply</button>
                 </>
               )}
             </div>
             <button style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: '#334155', cursor: 'pointer' }}>Export CSV</button>
           </div>
 
-          {/* Diagnostics strip — shows the REAL status distribution in this window.
-              This is what tells us whether an empty filter means "no such rows"
-              or "the classifier never fired". Delete once the data is trusted. */}
-          {diag && (
+          {/* The real status distribution in this window. This is the answer to
+              "why is the dropdown empty?" — either there genuinely are none, or
+              they're all landing in Unclassified because GRN never sent the
+              field. Remove this box once the data is trusted. */}
+          {diag?.statusBreakdown && (
             <div style={{ background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>
-              scanned {diag.candidatesScanned}/{diag.candidatesReturned} · details {diag.detailsFetched} · in-window {diag.inWindow} · out-of-window {diag.outOfWindow} · bad-date {diag.unparseableDate}
-              <br />
-              status breakdown: {Object.entries(diag.statusBreakdown || {}).map(([k, v]) => `${k}=${v}`).join('  ') || '(none)'}
-              {diag.hitTimeBudget && <><br /><span style={{ color: '#B91C1C' }}>⚠ stopped at time budget — partial results</span></>}
-              {diag.hitSafetyLimit && <><br /><span style={{ color: '#B45309' }}>⚠ candidate list capped at 600</span></>}
+              in this window: {Object.entries(diag.statusBreakdown).map(([k, v]) => `${k}=${v}`).join('  ')} · total={data?.totalAllStatuses ?? 0}
             </div>
           )}
 
@@ -169,9 +154,12 @@ export default function BookingsPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading live bookings… (first scan of a window can take ~25s)</td></tr>
+                  <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>No bookings match this filter on this page.</td></tr>
+                  <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>
+                    No bookings match this filter.
+                    {data && data.totalAllStatuses === 0 && <div style={{ marginTop: 8, fontSize: 12 }}>The table is empty for this window — has the sync run yet?</div>}
+                  </td></tr>
                 ) : (
                   rows.map((r: any) => (
                     <tr key={r.bookingId} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -188,7 +176,7 @@ export default function BookingsPage() {
                         <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>{r.boardBasis || '—'}</div>
                       </td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                        <div style={{ color: '#334155' }}>{new Date(r.checkin).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} → {new Date(r.checkout).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                        <div style={{ color: '#334155' }}>{r.checkin ? new Date(r.checkin).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'} → {r.checkout ? new Date(r.checkout).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</div>
                         <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>Cancel by {r.lastCancellationDate ? new Date(r.lastCancellationDate).toLocaleDateString() : '—'}</div>
                       </td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
@@ -196,11 +184,11 @@ export default function BookingsPage() {
                       </td>
                       <td style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, verticalAlign: 'top' }}>{r.supplier || '—'}</td>
                       <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                        <span style={{
+                        <span title={`GRN sent: booking_status=${r.rawBookingStatus ?? 'null'}, non_refundable=${String(r.rawNonRefundable)}`} style={{
                           fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
                           background: r.status === 'Refundable' ? '#FCD34D' : r.status === 'Cancelled' ? '#FEE2E2' : r.status === 'Unknown' ? '#FEF3C7' : '#E2E8F0',
                           color: r.status === 'Refundable' ? '#78350F' : r.status === 'Cancelled' ? '#B91C1C' : r.status === 'Unknown' ? '#92400E' : '#475569',
-                        }}>{r.status}</span>
+                        }}>{r.status === 'Unknown' ? 'Unclassified' : r.status}</span>
                       </td>
                     </tr>
                   ))
@@ -211,7 +199,7 @@ export default function BookingsPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
             <span style={{ fontSize: 13, color: '#64748B' }}>
-              {loading ? 'Loading…' : `Showing ${rows.length} of ${data?.total ?? 0} matching bookings · ${data?.note ?? ''}`}
+              {loading ? 'Loading…' : `Showing ${rows.length} of ${data?.total ?? 0} matching bookings`}
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: page === 1 ? '#CBD5E1' : '#334155', cursor: page === 1 ? 'not-allowed' : 'pointer' }}>Previous</button>
