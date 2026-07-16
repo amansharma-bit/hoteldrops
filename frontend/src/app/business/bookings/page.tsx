@@ -34,6 +34,7 @@ export default function BookingsPage() {
     let cancelled = false; // guards against a slower, older request overwriting a newer one
     setLoading(true);
     setError(null);
+    setData(null); // clear old results immediately — prevents stale rows from a previous filter lingering on screen
     const range = showCustom && customStart && customEnd
       ? { start: customStart + ' 00:00:00', end: customEnd + ' 23:59:59' }
       : getDateRange(period);
