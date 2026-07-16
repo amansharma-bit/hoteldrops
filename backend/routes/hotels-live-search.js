@@ -253,46 +253,68 @@ router.get('/bookings-list', async (req, res) => {
   if (!GRN_API_KEY) {
     return res.status(500).json({ error: 'GRN_API_KEY not set' });
   }
+
   const page = parseInt(req.query.page, 10) || 1;
   const perPage = 20;
-  // Accepts real start/end dates from the frontend now, defaults to the
-  // last 30 days if not specified (matches the original sample-data page's default)
-  const startParam = req.query.start || '2026-06-14 00:00:00';
-  const endParam = req.query.end || '2026-07-13 23:59:59';
-  const start = encodeURIComponent(startParam);
-  const end = encodeURIComponent(endParam);
-  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
+  const statusFilter = (req.query.status || 'all').toLowerCase();
+
+  // The date range the user actually wants — filtered by REAL booking_date,
+  // not GRN's unreliable "last updated" timestamp.
+  const targetStart = req.query.start || '2026-06-01 00:00:00';
+  const targetEnd = req.query.end || '2026-07-16 23:59:59';
+  const targetStartDate = new Date(targetStart.replace(' ', 'T'));
+  const targetEndDate = new Date(targetEnd.replace(' ', 'T'));
+
+  // A booking's updated_at is always >= its booking_date (it can't be
+  // touched before it exists) — so searching from targetStart through NOW
+  // is guaranteed to include every booking actually made in the target
+  // window, even if GRN also touched it again more recently.
+  const now = new Date('2026-07-16T23:59:59');
+  const searchStart = targetStart;
+  const searchEnd = now.toISOString().slice(0, 19).replace('T', ' ');
+
+  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${encodeURIComponent(searchStart)}&updated_end=${encodeURIComponent(searchEnd)}`;
 
   try {
     const listResp = await fetch(listUrl, {
       headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
     });
     const listData = await listResp.json();
-    const allBookings = listData.bookings || [];
-    const totalBookings = allBookings.length;
+    const candidates = listData.bookings || [];
 
-    const pageStart = (page - 1) * perPage;
-    const pageBookings = allBookings.slice(pageStart, pageStart + perPage);
+    const MAX_CHECK = 600; // safety limit — avoids scanning indefinitely on a wide window
+    const neededCount = page * perPage;
 
-    const rates = { USD: 1.0, EUR: 1.1446, GBP: 1.3401, INR: 0.010526, MXN: 0.05754, AED: 0.27225, AUD: 0.6960, THB: 0.0301, NOK: 0.1016, IDR: 0.0000553, NPR: 0.006569687 };
+    const matched = [];
+    let checked = 0;
 
-    const rows = [];
-    for (const b of pageBookings) {
+    for (const candidate of candidates) {
+      if (checked >= MAX_CHECK || matched.length >= neededCount) break;
+      checked++;
+
       try {
-        const detailUrl = `${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${b.bid}`;
-        const dResp = await fetch(detailUrl, {
+        const detailResp = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${candidate.bid}`, {
           headers: { 'api-key': GRN_API_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' },
         });
-        const dData = await dResp.json();
-        const booking = dData.booking;
+        const detailData = await detailResp.json();
+        const booking = detailData.booking;
         if (!booking) continue;
+
+        // The actual filter — real booking_date, not updated_at
+        const bookingDateObj = new Date((booking.booking_date || '').replace(' ', 'T'));
+        if (isNaN(bookingDateObj.getTime()) || bookingDateObj < targetStartDate || bookingDateObj > targetEndDate) continue;
+
+        const status = booking.booking_status === 'Cancelled'
+          ? 'Cancelled'
+          : (booking.non_refundable === false ? 'Refundable' : 'Non-Refundable');
+
+        if (statusFilter !== 'all' && status.toLowerCase() !== statusFilter) continue;
 
         const item = booking.hotel?.booking_items?.[0];
         const room = item?.rooms?.[0];
-
         const cityName = await getCityName(booking.hotel?.city_code);
 
-        rows.push({
+        matched.push({
           bookingId: booking.booking_id,
           bookingDate: booking.booking_date || null,
           hotelName: booking.hotel?.name || 'Unknown',
@@ -306,31 +328,32 @@ router.get('/bookings-list', async (req, res) => {
           checkout: booking.checkout,
           priceTotal: booking.price?.total ? parseFloat(booking.price.total) : null,
           currency: booking.currency,
-          refundable: booking.non_refundable === false,
           supplier: booking.supplier_code || null,
           boardBasis: item?.boarding_details?.join(', ') || null,
           lastCancellationDate: item?.cancellation_policy?.cancel_by_date || null,
-          status: booking.booking_status === 'Cancelled'
-            ? 'Cancelled'
-            : (booking.non_refundable === false ? 'Refundable' : 'Non-Refundable'),
-          rebookedStatus: null, // placeholder — populates once rebuq's own rebooking engine is live
+          status,
         });
-      } catch { /* skip failed individual pulls */ }
+      } catch { /* skip this one candidate, keep going */ }
     }
 
+    const pageStart = (page - 1) * perPage;
+    const pageRows = matched.slice(pageStart, pageStart + perPage);
+    const hitSafetyLimit = checked >= MAX_CHECK;
+
     res.json({
-      page, perPage, totalBookings,
-      totalPages: Math.ceil(totalBookings / perPage),
-      rows,
-      note: 'Status shows Refundable vs Non-refundable, direct from GRN. "Rebooked" status needs a separate cross-reference against Mize data, not included here yet.',
+      page,
+      perPage,
+      rows: pageRows,
+      matchedSoFar: matched.length,
+      candidatesScanned: checked,
+      hitSafetyLimit,
+      note: hitSafetyLimit
+        ? `Scanned ${checked} candidates (safety limit) — there may be more matches beyond this page than shown.`
+        : `Scanned all ${checked} candidates in this window.`,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
-
-
-
 
 module.exports = router;
