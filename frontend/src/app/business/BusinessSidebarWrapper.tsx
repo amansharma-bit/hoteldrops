@@ -142,7 +142,7 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
         </div>
 
         <div className="px-6 py-6 border-t border-white/10">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-full bg-[#1447b8] flex items-center justify-center text-xs font-semibold text-white flex-shrink-0">
               GN
             </div>
@@ -151,6 +151,13 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
               <p className="text-xs text-white/40 truncate">deepak.narula@grnconnect.com</p>
             </div>
           </div>
+          <button
+            onClick={async () => { await supabase.auth.signOut(); router.push('/business/login'); }}
+            className="w-full text-xs font-semibold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-md py-2 transition-colors flex items-center justify-center gap-2"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            Sign out
+          </button>
         </div>
       </aside>
 
