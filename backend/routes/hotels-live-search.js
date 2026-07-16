@@ -1,9 +1,43 @@
 const express = require('express');
 const router = express.Router();
 
+// ===========================================================================
+// rebuq — GRN integration
+//
+// WHAT CHANGED AND WHY (read this before editing anything below):
+//
+// The old /bookings-list asked GRN for one booking at a time, live, on every
+// page load, capped at 600 out of 80,000+. "All bookings" worked because it
+// stopped after 20 matches. Every other filter had to keep scanning until it
+// found 20 or burned all 600 — up to 600 sequential round-trips. That is why
+// the status dropdown appeared to "show nothing".
+//
+// That approach cannot be the foundation of a rebooking engine. Any total it
+// reports is "what we managed to scan", not "what exists" — authoritative
+// looking, and wrong.
+//
+// So: we now keep our own copy. A background sync pulls GRN bookings into
+// Supabase; the page queries our own table. Instant loads, real totals, no
+// 600-cap, no timeouts.
+//
+// DESIGN NOTE: we store GRN's COMPLETE raw JSON for every booking. We do not
+// yet know for certain whether `non_refundable` exists on GRN's response —
+// the old code assumed it did and defaulted everything missing to
+// "Non-Refundable". Storing raw means the labels can be corrected later with
+// one SQL UPDATE instead of re-downloading 80,000 bookings.
+//
+// NO NEW DEPENDENCIES. Supabase is called over its REST API with plain
+// fetch(), exactly like GRN. Nothing to npm install. Nothing in server.js
+// to change — this file is already mounted at /api/live-search.
+// ===========================================================================
+
 const GRN_API_BASE_URL = process.env.GRN_API_BASE_URL || 'https://v4-api.grnconnect.com/api/v3';
 const GRN_API_KEY = process.env.GRN_API_KEY;
 const GRN_STATIC_BASE_URL = 'https://cdn-api.grnconnect.com';
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SYNC_SECRET = process.env.SYNC_SECRET;
 
 const GRN_HEADERS = () => ({
   'api-key': GRN_API_KEY,
@@ -12,20 +46,88 @@ const GRN_HEADERS = () => ({
 });
 
 // ---------------------------------------------------------------------------
-// City code -> name lookup
+// Supabase over plain REST.
+// ---------------------------------------------------------------------------
+function sbHeaders(extra = {}) {
+  return {
+    'apikey': SUPABASE_SERVICE_ROLE_KEY,
+    'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    'Content-Type': 'application/json',
+    ...extra,
+  };
+}
+
+function sbConfigured() {
+  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+}
+
+async function sbSelect(table, query, extraHeaders = {}) {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    headers: sbHeaders(extraHeaders),
+  });
+  const contentRange = resp.headers.get('content-range'); // e.g. "0-19/1234"
+  const body = resp.status === 200 || resp.status === 206 ? await resp.json() : [];
+  if (!resp.ok && resp.status !== 206) {
+    const text = JSON.stringify(body);
+    throw new Error(`Supabase select on ${table} failed (${resp.status}): ${text}`);
+  }
+  let total = null;
+  if (contentRange && contentRange.includes('/')) {
+    const t = contentRange.split('/')[1];
+    if (t !== '*') total = parseInt(t, 10);
+  }
+  return { rows: body, total };
+}
+
+async function sbCount(table, query) {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}&select=booking_id`, {
+    method: 'HEAD',
+    headers: sbHeaders({ 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' }),
+  });
+  const cr = resp.headers.get('content-range');
+  if (!cr || !cr.includes('/')) return 0;
+  const t = cr.split('/')[1];
+  return t === '*' ? 0 : parseInt(t, 10);
+}
+
+async function sbUpsert(table, rows, onConflict) {
+  if (!rows.length) return;
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
+    method: 'POST',
+    headers: sbHeaders({ 'Prefer': 'resolution=merge-duplicates,return=minimal' }),
+    body: JSON.stringify(rows),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Supabase upsert into ${table} failed (${resp.status}): ${text}`);
+  }
+}
+
+async function sbPatch(table, query, patch) {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    method: 'PATCH',
+    headers: sbHeaders({ 'Prefer': 'return=minimal' }),
+    body: JSON.stringify(patch),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Supabase patch on ${table} failed (${resp.status}): ${text}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// City code -> name.
 //
 // FIX: the previous version assigned the cache Map BEFORE the try block, so a
 // failed fetch left an empty Map in place permanently. `!cityCodeToNameCache`
-// was false from then on, so it never retried and every city rendered as "—"
-// until the process restarted. Now we only commit the cache on success.
+// was false from then on, so it never retried — despite a comment claiming it
+// would — and every city rendered "—" until the process restarted.
 // ---------------------------------------------------------------------------
 let cityCodeToNameCache = null;
 let cityCacheInFlight = null;
 
 async function loadCityCache() {
-  const resp = await fetch(`${GRN_STATIC_BASE_URL}/api/v3/cities/?version=2.0`, {
-    headers: GRN_HEADERS(),
-  });
+  const resp = await fetch(`${GRN_STATIC_BASE_URL}/api/v3/cities/?version=2.0`, { headers: GRN_HEADERS() });
   if (!resp.ok) throw new Error(`cities endpoint returned ${resp.status}`);
   const data = await resp.json();
   const map = new Map();
@@ -37,11 +139,10 @@ async function loadCityCache() {
 async function getCityName(cityCode) {
   if (!cityCode) return null;
   if (!cityCodeToNameCache) {
-    // De-dupe concurrent callers so 20 parallel rows don't fire 20 fetches.
     if (!cityCacheInFlight) {
       cityCacheInFlight = loadCityCache()
         .then((map) => { cityCodeToNameCache = map; return map; })
-        .catch(() => null)          // genuinely retried on the next request
+        .catch(() => null)               // genuinely retried next time
         .finally(() => { cityCacheInFlight = null; });
     }
     const map = await cityCacheInFlight;
@@ -51,8 +152,7 @@ async function getCityName(cityCode) {
 }
 
 // ---------------------------------------------------------------------------
-// Small concurrency helper with a wall-clock deadline.
-// Returns whatever finished before the deadline; the rest come back undefined.
+// Concurrency helper with a wall-clock deadline.
 // ---------------------------------------------------------------------------
 async function mapWithConcurrency(items, limit, deadlineTs, fn) {
   const results = new Array(items.length);
@@ -61,34 +161,267 @@ async function mapWithConcurrency(items, limit, deadlineTs, fn) {
 
   const worker = async () => {
     for (;;) {
-      if (Date.now() > deadlineTs) { stoppedEarly = true; return; }
+      if (deadlineTs && Date.now() > deadlineTs) { stoppedEarly = true; return; }
       const idx = cursor++;
       if (idx >= items.length) return;
-      try {
-        results[idx] = await fn(items[idx], idx);
-      } catch {
-        results[idx] = undefined; // one bad record must not kill the batch
-      }
+      try { results[idx] = await fn(items[idx], idx); }
+      catch { results[idx] = undefined; }
     }
   };
 
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, worker)
-  );
-
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   return { results, stoppedEarly, processed: Math.min(cursor, items.length) };
 }
 
-// ---------------------------------------------------------------------------
-// Live search against GRN's Search & Availability endpoint. (Unchanged.)
-// ---------------------------------------------------------------------------
-router.post('/live-search', async (req, res) => {
-  if (!GRN_API_KEY) {
-    return res.status(500).json({ error: 'GRN_API_KEY not set in environment variables.' });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ===========================================================================
+// THE SYNC ENGINE
+// ===========================================================================
+
+const SYNC_CONCURRENCY = 8;      // parallel booking-detail fetches
+const CHUNK_DAYS = 3;            // window slice size — keeps each list call small
+const UPSERT_BATCH = 100;
+const DEFAULT_BACKFILL_DAYS = 90;
+
+let syncRunning = false;         // in-process guard against double-starts
+
+function fmtGrn(d) {
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+// Derive our label. Note the explicit 'Unknown' bucket: if GRN doesn't send
+// the field, we say so rather than silently guessing "Non-Refundable", which
+// is precisely the bug that broke the dropdown.
+function deriveStatus(booking) {
+  const raw = String(booking.booking_status || '').trim().toLowerCase();
+  if (raw.startsWith('cancel')) return 'Cancelled';
+  if (booking.non_refundable === false) return 'Refundable';
+  if (booking.non_refundable === true) return 'Non-Refundable';
+  return 'Unknown';
+}
+
+function toRow(booking, bid, cityName) {
+  const item = booking.hotel?.booking_items?.[0];
+  const room = item?.rooms?.[0];
+  const parseTs = (v) => {
+    if (!v) return null;
+    const d = new Date(String(v).replace(' ', 'T'));
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  };
+  const parseDate = (v) => {
+    const iso = parseTs(v);
+    return iso ? iso.slice(0, 10) : null;
+  };
+
+  return {
+    booking_id: booking.booking_id,
+    bid: bid ? String(bid) : null,
+    booking_date: parseTs(booking.booking_date),
+    grn_updated_at: parseTs(booking.updated_at),
+    checkin: parseDate(booking.checkin),
+    checkout: parseDate(booking.checkout),
+    hotel_name: booking.hotel?.name || null,
+    hotel_code: booking.hotel?.hotel_code ? String(booking.hotel.hotel_code) : null,
+    city_code: booking.hotel?.city_code || null,
+    city_name: cityName,
+    country_code: booking.hotel?.country_code || null,
+    room_type: room?.room_type || room?.description || null,
+    board_basis: item?.boarding_details?.join(', ') || null,
+    price_total: booking.price?.total ? parseFloat(booking.price.total) : null,
+    currency: booking.currency || null,
+    supplier_code: booking.supplier_code || null,
+    cancel_by_date: parseTs(item?.cancellation_policy?.cancel_by_date),
+    raw_booking_status: booking.booking_status ?? null,
+    raw_non_refundable: typeof booking.non_refundable === 'boolean' ? booking.non_refundable : null,
+    status: deriveStatus(booking),
+    raw: booking,                       // the safety net
+    synced_at: new Date().toISOString(),
+  };
+}
+
+async function setSyncState(patch) {
+  try { await sbPatch('grn_sync_state', 'id=eq.1', patch); } catch { /* never kill the sync over a status write */ }
+}
+
+async function getSyncState() {
+  const { rows } = await sbSelect('grn_sync_state', 'id=eq.1&select=*');
+  return rows[0] || null;
+}
+
+// Sync one time-slice: list the booking ids GRN touched in it, pull details
+// in parallel, upsert. Returns how many rows landed.
+async function syncChunk(chunkStart, chunkEnd) {
+  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids`
+    + `?updated_start=${encodeURIComponent(fmtGrn(chunkStart))}`
+    + `&updated_end=${encodeURIComponent(fmtGrn(chunkEnd))}`;
+
+  const listResp = await fetch(listUrl, { headers: GRN_HEADERS() });
+  if (!listResp.ok) throw new Error(`GRN bookingids returned ${listResp.status}`);
+  const listData = await listResp.json();
+  const candidates = listData.bookings || [];
+  if (!candidates.length) return 0;
+
+  const { results } = await mapWithConcurrency(candidates, SYNC_CONCURRENCY, null, async (c) => {
+    const r = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${c.bid}`, {
+      headers: GRN_HEADERS(),
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.booking ? { booking: d.booking, bid: c.bid } : null;
+  });
+
+  const found = results.filter(Boolean);
+
+  const rows = [];
+  for (const { booking, bid } of found) {
+    if (!booking.booking_id) continue;
+    const cityName = await getCityName(booking.hotel?.city_code);
+    rows.push(toRow(booking, bid, cityName));
   }
 
-  const { hotel_code, checkin, checkout, adults, children_ages, nationality, currency } = req.body;
+  for (let i = 0; i < rows.length; i += UPSERT_BATCH) {
+    await sbUpsert('grn_bookings', rows.slice(i, i + UPSERT_BATCH), 'booking_id');
+  }
 
+  return rows.length;
+}
+
+// The whole job. Runs in the background — never inside a request.
+async function runSync({ fromISO }) {
+  syncRunning = true;
+  let total = 0;
+
+  try {
+    const state = await getSyncState();
+
+    // Where to start: explicit ?from=, else the saved watermark, else default backfill.
+    let cursor;
+    if (fromISO) cursor = new Date(fromISO);
+    else if (state?.watermark) cursor = new Date(state.watermark);
+    else { cursor = new Date(); cursor.setDate(cursor.getDate() - DEFAULT_BACKFILL_DAYS); }
+
+    // Overlap slightly so nothing falls through a boundary crack.
+    cursor.setMinutes(cursor.getMinutes() - 30);
+
+    const end = new Date();
+    const totalMs = Math.max(1, end - cursor);
+
+    await setSyncState({
+      last_run_status: 'running',
+      last_run_at: new Date().toISOString(),
+      last_run_error: null,
+      progress: `Starting from ${cursor.toISOString().slice(0, 10)}`,
+    });
+
+    while (cursor < end) {
+      const chunkEnd = new Date(cursor);
+      chunkEnd.setDate(chunkEnd.getDate() + CHUNK_DAYS);
+      const cappedEnd = chunkEnd > end ? end : chunkEnd;
+
+      let attempt = 0;
+      for (;;) {
+        try {
+          total += await syncChunk(cursor, cappedEnd);
+          break;
+        } catch (e) {
+          attempt++;
+          if (attempt >= 3) throw e;
+          await sleep(2000 * attempt); // back off, then retry the slice
+        }
+      }
+
+      // Advance the watermark only after the slice actually landed, so a
+      // crash resumes here rather than starting over.
+      cursor = cappedEnd;
+      const pct = Math.min(99, Math.round(((cursor - (end - totalMs)) / totalMs) * 100));
+      await setSyncState({
+        watermark: cursor.toISOString(),
+        progress: `${pct}% — through ${cursor.toISOString().slice(0, 10)} · ${total} bookings synced`,
+        bookings_synced: total,
+      });
+    }
+
+    await setSyncState({
+      last_run_status: 'idle',
+      progress: `Done — ${total} bookings synced up to ${end.toISOString().slice(0, 16).replace('T', ' ')} UTC`,
+      bookings_synced: total,
+      watermark: end.toISOString(),
+    });
+  } catch (err) {
+    await setSyncState({
+      last_run_status: 'error',
+      last_run_error: String(err.message || err),
+      progress: `Failed after ${total} bookings`,
+    });
+  } finally {
+    syncRunning = false;
+  }
+}
+
+function checkSecret(req, res) {
+  if (!SYNC_SECRET) {
+    res.status(500).json({ error: 'SYNC_SECRET is not set in Railway variables. Add it, then retry.' });
+    return false;
+  }
+  if (req.query.secret !== SYNC_SECRET) {
+    res.status(401).json({ error: 'Wrong or missing ?secret=' });
+    return false;
+  }
+  return true;
+}
+
+// GET /api/live-search/sync-run?secret=XXX&from=2026-04-01
+// Kicks the sync off in the background and returns immediately.
+router.get('/sync-run', async (req, res) => {
+  if (!checkSecret(req, res)) return;
+  if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  if (!sbConfigured()) {
+    return res.status(500).json({
+      error: 'Supabase not configured',
+      missing: [
+        !SUPABASE_URL ? 'SUPABASE_URL' : null,
+        !SUPABASE_SERVICE_ROLE_KEY ? 'SUPABASE_SERVICE_ROLE_KEY' : null,
+      ].filter(Boolean),
+      hint: 'Add these in Railway -> your backend service -> Variables, then redeploy.',
+    });
+  }
+  if (syncRunning) {
+    return res.json({ started: false, message: 'A sync is already running. Check /sync-status.' });
+  }
+
+  const fromISO = req.query.from ? `${req.query.from}T00:00:00Z` : null;
+
+  runSync({ fromISO }); // deliberately not awaited — this must not block the request
+
+  res.json({
+    started: true,
+    from: fromISO || 'saved watermark, or last 90 days on first run',
+    message: 'Sync started in the background. Poll /sync-status to watch it.',
+  });
+});
+
+// GET /api/live-search/sync-status?secret=XXX
+router.get('/sync-status', async (req, res) => {
+  if (!checkSecret(req, res)) return;
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  try {
+    const state = await getSyncState();
+    const rowsInTable = await sbCount('grn_bookings', 'booking_id=not.is.null');
+    res.json({ running: syncRunning, rowsInTable, state });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===========================================================================
+// EXISTING ROUTES — unchanged behaviour
+// ===========================================================================
+
+router.post('/live-search', async (req, res) => {
+  if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set in environment variables.' });
+
+  const { hotel_code, checkin, checkout, adults, children_ages, nationality, currency } = req.body;
   if (!hotel_code || !checkin || !checkout) {
     return res.status(400).json({ error: 'hotel_code, checkin, and checkout are required.' });
   }
@@ -115,12 +448,8 @@ router.post('/live-search', async (req, res) => {
       headers: GRN_HEADERS(),
       body: JSON.stringify(payload),
     });
-
     const data = await response.json();
-
-    if (!response.ok) {
-      return res.status(response.status).json({ error: 'GRN API returned an error', details: data });
-    }
+    if (!response.ok) return res.status(response.status).json({ error: 'GRN API returned an error', details: data });
 
     const hotels = (data.hotels || []).map((h) => {
       const minRate = h.min_rate || {};
@@ -159,18 +488,14 @@ router.post('/live-search', async (req, res) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Dashboard summary. (Unchanged.)
-// ---------------------------------------------------------------------------
 router.get('/dashboard-summary', async (req, res) => {
   if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set' });
 
   const nowD = new Date();
   const startD = new Date(nowD); startD.setDate(startD.getDate() - 44);
-  const fmtD = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
-  const start = encodeURIComponent(fmtD(startD));
-  const end = encodeURIComponent(fmtD(nowD));
-  const url = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${start}&updated_end=${end}`;
+  const url = `${GRN_API_BASE_URL}/hotels/bookingids`
+    + `?updated_start=${encodeURIComponent(fmtGrn(startD))}`
+    + `&updated_end=${encodeURIComponent(fmtGrn(nowD))}`;
 
   try {
     const response = await fetch(url, { headers: GRN_HEADERS() });
@@ -182,82 +507,64 @@ router.get('/dashboard-summary', async (req, res) => {
       const day = b.updated_at.slice(0, 10);
       byDay[day] = (byDay[day] || 0) + 1;
     });
-    const trend = Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b));
-    const recent = [...bookings].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 10);
 
     res.json({
       totalBookings: bookings.length,
       dateRange: { start: startD.toISOString().slice(0, 10), end: nowD.toISOString().slice(0, 10) },
-      dailyTrend: trend,
-      recentBookings: recent,
+      dailyTrend: Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b)),
+      recentBookings: [...bookings].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 10),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ---------------------------------------------------------------------------
-// Sampled dashboard stats. (Unchanged.)
-// ---------------------------------------------------------------------------
 router.get('/dashboard-real', async (req, res) => {
   if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set' });
 
-  const _now1 = new Date();
-  const _start1 = new Date(_now1); _start1.setDate(_start1.getDate() - 30);
-  const _fmt1 = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
-  const startParam = req.query.start || _fmt1(_start1);
-  const endParam = req.query.end || _fmt1(_now1);
-  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids?updated_start=${encodeURIComponent(startParam)}&updated_end=${encodeURIComponent(endParam)}`;
+  const _now = new Date();
+  const _start = new Date(_now); _start.setDate(_start.getDate() - 30);
+  const startParam = req.query.start || fmtGrn(_start);
+  const endParam = req.query.end || fmtGrn(_now);
+  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids`
+    + `?updated_start=${encodeURIComponent(startParam)}&updated_end=${encodeURIComponent(endParam)}`;
 
   try {
     const listResp = await fetch(listUrl, { headers: GRN_HEADERS() });
     const listData = await listResp.json();
     const allBookings = listData.bookings || [];
-    const totalBookings = allBookings.length;
 
     const SAMPLE_SIZE = 40;
     const step = Math.max(1, Math.floor(allBookings.length / SAMPLE_SIZE));
     const sample = [];
-    for (let i = 0; i < allBookings.length && sample.length < SAMPLE_SIZE; i += step) {
-      sample.push(allBookings[i]);
-    }
+    for (let i = 0; i < allBookings.length && sample.length < SAMPLE_SIZE; i += step) sample.push(allBookings[i]);
 
     const { results } = await mapWithConcurrency(sample, 10, Date.now() + 25000, async (b) => {
-      const dResp = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${b.bid}`, {
-        headers: GRN_HEADERS(),
-      });
-      const dData = await dResp.json();
-      return dData.booking || null;
+      const r = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${b.bid}`, { headers: GRN_HEADERS() });
+      const d = await r.json();
+      return d.booking || null;
     });
     const details = results.filter(Boolean);
 
-    let refundableCount = 0;
-    const countryCounts = {};
-    let totalValue = 0;
-    let valueCount = 0;
-
     const rates = { USD: 1.0, EUR: 1.1446, GBP: 1.3401, INR: 0.010526, MXN: 0.05754, AED: 0.27225, AUD: 0.6960, THB: 0.0301, NOK: 0.1016, IDR: 0.0000553, NPR: 0.006569687 };
+    let refundableCount = 0, totalValue = 0, valueCount = 0;
+    const countryCounts = {};
 
     details.forEach((booking) => {
       if (booking.non_refundable === false) refundableCount++;
       const country = booking.hotel?.country_code || 'Unknown';
       countryCounts[country] = (countryCounts[country] || 0) + 1;
       const price = booking.price?.total;
-      const currency = booking.currency || 'USD';
-      const rate = rates[currency];
+      const rate = rates[booking.currency || 'USD'];
       if (price && rate) { totalValue += parseFloat(price) * rate; valueCount++; }
     });
 
-    const topCountries = Object.entries(countryCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
-      .map(([country, count]) => ({ country, count, pct: Math.round((count / details.length) * 100) }));
-
     res.json({
       sampleSize: details.length,
-      totalBookings,
+      totalBookings: allBookings.length,
       refundablePctFromSample: details.length ? Math.round((refundableCount / details.length) * 100) : null,
-      topCountries,
+      topCountries: Object.entries(countryCounts).sort(([, a], [, b]) => b - a).slice(0, 5)
+        .map(([country, count]) => ({ country, count, pct: Math.round((count / details.length) * 100) })),
       avgValueFromSample: valueCount ? Math.round(totalValue / valueCount) : null,
       note: `Computed from a real sample of ${details.length} bookings, not the full dataset.`,
     });
@@ -266,160 +573,28 @@ router.get('/dashboard-real', async (req, res) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// BOOKINGS LIST — rewritten.
-//
-// What was wrong:
-//   1. N+1 SEQUENTIAL fetches. One awaited round-trip per candidate inside a
-//      for-loop. `status=all` stopped at 20 matches (~20-30 calls, tolerable).
-//      Any other filter kept scanning until 20 matches or MAX_CHECK=600 —
-//      i.e. up to 600 sequential round-trips. Minutes. That is why "all"
-//      worked and every other dropdown option did not.
-//   2. Every page re-scanned from scratch, and every filter change re-scanned
-//      from scratch, because nothing was cached.
-//   3. `matched.length >= neededCount` capped matched at exactly page*perPage,
-//      so the frontend's `matchedSoFar < page*20` check could never be true
-//      and "Next" was never correctly disabled.
-//   4. No visibility into WHY a filter returned nothing.
-//
-// What this does instead:
-//   - Scans the window ONCE, keeps every row regardless of status.
-//   - Detail fetches run 10-wide with a hard wall-clock budget.
-//   - Caches the scanned window for 10 minutes, keyed by date range, so
-//     switching filters / paging is served from memory instantly.
-//   - Returns `statusBreakdown` so the real distribution is visible.
-//
-// NOTE: this is still fundamentally an N+1 against GRN. The durable fix is a
-// scheduled sync of bookings into Supabase, then querying our own table. This
-// makes the live version usable; it does not make it correct architecture.
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// BOOKINGS LIST — now served from OUR table. Instant. Real totals.
+// ===========================================================================
 
-const WINDOW_CACHE_TTL_MS = 10 * 60 * 1000;
-const windowCache = new Map(); // key -> { ts, payload }
-
-function cacheGet(key) {
-  const hit = windowCache.get(key);
-  if (!hit) return null;
-  if (Date.now() - hit.ts > WINDOW_CACHE_TTL_MS) { windowCache.delete(key); return null; }
-  return hit.payload;
-}
-
-function cacheSet(key, payload) {
-  windowCache.set(key, { ts: Date.now(), payload });
-  if (windowCache.size > 20) {
-    const oldest = [...windowCache.entries()].sort((a, b) => a[1].ts - b[1].ts)[0];
-    if (oldest) windowCache.delete(oldest[0]);
-  }
-}
-
-function deriveStatus(booking) {
-  const raw = String(booking.booking_status || '').trim().toLowerCase();
-  if (raw === 'cancelled' || raw === 'canceled') return 'Cancelled';
-  // Explicitly guard against a MISSING field. Previously `non_refundable`
-  // being undefined silently classified the booking as Non-Refundable, which
-  // is a guess dressed up as a fact.
-  if (booking.non_refundable === false) return 'Refundable';
-  if (booking.non_refundable === true) return 'Non-Refundable';
-  return 'Unknown';
-}
-
-async function scanWindow(targetStart, targetEnd, maxCheck, budgetMs) {
-  const targetStartDate = new Date(targetStart.replace(' ', 'T'));
-  const targetEndDate = new Date(targetEnd.replace(' ', 'T'));
-
-  // A booking's updated_at is always >= its booking_date, so searching
-  // updated_at from targetStart through now is guaranteed to include every
-  // booking actually made in the target window.
-  const searchEnd = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids`
-    + `?updated_start=${encodeURIComponent(targetStart)}`
-    + `&updated_end=${encodeURIComponent(searchEnd)}`;
-
-  const listResp = await fetch(listUrl, { headers: GRN_HEADERS() });
-  const listData = await listResp.json();
-  const candidates = (listData.bookings || []).slice(0, maxCheck);
-
-  const deadline = Date.now() + budgetMs;
-
-  const { results, stoppedEarly, processed } = await mapWithConcurrency(
-    candidates, 10, deadline,
-    async (candidate) => {
-      const detailResp = await fetch(
-        `${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${candidate.bid}`,
-        { headers: GRN_HEADERS() }
-      );
-      const detailData = await detailResp.json();
-      return detailData.booking || null;
-    }
-  );
-
-  const bookings = results.filter(Boolean);
-
-  const rows = [];
-  const statusBreakdown = {};
-  let outOfWindow = 0;
-  let unparseableDate = 0;
-
-  for (const booking of bookings) {
-    const bookingDateObj = new Date(String(booking.booking_date || '').replace(' ', 'T'));
-    if (isNaN(bookingDateObj.getTime())) { unparseableDate++; continue; }
-    if (bookingDateObj < targetStartDate || bookingDateObj > targetEndDate) { outOfWindow++; continue; }
-
-    const status = deriveStatus(booking);
-    statusBreakdown[status] = (statusBreakdown[status] || 0) + 1;
-
-    const item = booking.hotel?.booking_items?.[0];
-    const room = item?.rooms?.[0];
-
-    rows.push({
-      bookingId: booking.booking_id,
-      bookingDate: booking.booking_date || null,
-      hotelName: booking.hotel?.name || 'Unknown',
-      hotelCode: booking.hotel?.hotel_code || null,
-      cityCode: booking.hotel?.city_code || null,
-      adults: room?.no_of_adults || 2,
-      children: room?.no_of_children || 0,
-      country: booking.hotel?.country_code || null,
-      roomType: room?.room_type || room?.description || null,
-      checkin: booking.checkin,
-      checkout: booking.checkout,
-      priceTotal: booking.price?.total ? parseFloat(booking.price.total) : null,
-      currency: booking.currency,
-      supplier: booking.supplier_code || null,
-      boardBasis: item?.boarding_details?.join(', ') || null,
-      lastCancellationDate: item?.cancellation_policy?.cancel_by_date || null,
-      status,
-      rawBookingStatus: booking.booking_status ?? null,
-      rawNonRefundable: booking.non_refundable ?? null,
-    });
-  }
-
-  rows.sort((a, b) => String(b.bookingDate || '').localeCompare(String(a.bookingDate || '')));
-
-  // Resolve city names once, only for the codes we actually need.
-  const uniqueCodes = [...new Set(rows.map((r) => r.cityCode).filter(Boolean))];
-  const cityNames = new Map();
-  for (const code of uniqueCodes) cityNames.set(code, await getCityName(code));
-  rows.forEach((r) => { r.city = r.cityCode ? cityNames.get(r.cityCode) || null : null; });
-
-  return {
-    rows,
-    diagnostics: {
-      candidatesReturned: (listData.bookings || []).length,
-      candidatesScanned: processed,
-      detailsFetched: bookings.length,
-      inWindow: rows.length,
-      outOfWindow,
-      unparseableDate,
-      statusBreakdown,
-      hitSafetyLimit: (listData.bookings || []).length > maxCheck,
-      hitTimeBudget: stoppedEarly,
-    },
-  };
-}
+const STATUS_LABEL = {
+  'refundable': 'Refundable',
+  'non-refundable': 'Non-Refundable',
+  'cancelled': 'Cancelled',
+  'unknown': 'Unknown',
+};
 
 router.get('/bookings-list', async (req, res) => {
-  if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  if (!sbConfigured()) {
+    return res.status(500).json({
+      error: 'Supabase not configured — the bookings table cannot be read.',
+      missing: [
+        !SUPABASE_URL ? 'SUPABASE_URL' : null,
+        !SUPABASE_SERVICE_ROLE_KEY ? 'SUPABASE_SERVICE_ROLE_KEY' : null,
+      ].filter(Boolean),
+      hint: 'Add these in Railway -> your backend service -> Variables, then redeploy.',
+    });
+  }
 
   const page = parseInt(req.query.page, 10) || 1;
   const perPage = 20;
@@ -427,47 +602,75 @@ router.get('/bookings-list', async (req, res) => {
 
   const _now = new Date();
   const _start = new Date(_now); _start.setDate(_start.getDate() - 45);
-  const _fmt = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
-  const targetStart = req.query.start || _fmt(_start);
-  const targetEnd = req.query.end || _fmt(_now);
+  const start = (req.query.start || fmtGrn(_start)).replace(' ', 'T');
+  const end = (req.query.end || fmtGrn(_now)).replace(' ', 'T');
 
-  const MAX_CHECK = 600;
-  const TIME_BUDGET_MS = 25000;
+  const dateWhere = `booking_date=gte.${encodeURIComponent(start)}&booking_date=lte.${encodeURIComponent(end)}`;
+  const statusWhere = statusFilter !== 'all' && STATUS_LABEL[statusFilter]
+    ? `&status=eq.${encodeURIComponent(STATUS_LABEL[statusFilter])}`
+    : '';
 
-  const cacheKey = `${targetStart}|${targetEnd}`;
+  const offset = (page - 1) * perPage;
 
   try {
-    let scan = cacheGet(cacheKey);
-    let servedFromCache = true;
-    if (!scan) {
-      servedFromCache = false;
-      scan = await scanWindow(targetStart, targetEnd, MAX_CHECK, TIME_BUDGET_MS);
-      cacheSet(cacheKey, scan);
+    const { rows, total } = await sbSelect(
+      'grn_bookings',
+      `${dateWhere}${statusWhere}`
+        + `&select=booking_id,booking_date,hotel_name,city_name,country_code,room_type,board_basis,`
+        + `checkin,checkout,price_total,currency,supplier_code,cancel_by_date,status,`
+        + `raw_booking_status,raw_non_refundable`
+        + `&order=booking_date.desc&offset=${offset}&limit=${perPage}`,
+      { 'Prefer': 'count=exact' }
+    );
+
+    // Real distribution in this window — this is what tells us whether an
+    // empty filter means "no such rows" or "the classifier never fired".
+    const statusBreakdown = {};
+    for (const key of Object.keys(STATUS_LABEL)) {
+      statusBreakdown[STATUS_LABEL[key]] = await sbCount(
+        'grn_bookings',
+        `${dateWhere}&status=eq.${encodeURIComponent(STATUS_LABEL[key])}`
+      );
     }
 
-    const filtered = statusFilter === 'all'
-      ? scan.rows
-      : scan.rows.filter((r) => r.status.toLowerCase() === statusFilter);
-
-    const pageStart = (page - 1) * perPage;
-    const pageRows = filtered.slice(pageStart, pageStart + perPage);
-
-    const d = scan.diagnostics;
-    const noteParts = [`Scanned ${d.candidatesScanned} of ${d.candidatesReturned} candidates in this window.`];
-    if (d.hitTimeBudget) noteParts.push('Stopped at the time budget — results are partial.');
-    if (d.hitSafetyLimit) noteParts.push(`Capped at ${MAX_CHECK} candidates.`);
-    if (servedFromCache) noteParts.push('Served from cache.');
+    const state = await getSyncState().catch(() => null);
+    const totalAllStatuses = await sbCount('grn_bookings', dateWhere);
 
     res.json({
       page,
       perPage,
-      rows: pageRows,
-      total: filtered.length,
-      totalAllStatuses: scan.rows.length,
-      hasMore: pageStart + perPage < filtered.length,
-      matchedSoFar: filtered.length, // kept for backwards compatibility
-      diagnostics: d,
-      note: noteParts.join(' '),
+      rows: rows.map((r) => ({
+        bookingId: r.booking_id,
+        bookingDate: r.booking_date,
+        hotelName: r.hotel_name || 'Unknown',
+        city: r.city_name,
+        country: r.country_code,
+        roomType: r.room_type,
+        boardBasis: r.board_basis,
+        checkin: r.checkin,
+        checkout: r.checkout,
+        priceTotal: r.price_total !== null ? Number(r.price_total) : null,
+        currency: r.currency,
+        supplier: r.supplier_code,
+        lastCancellationDate: r.cancel_by_date,
+        status: r.status,
+        rawBookingStatus: r.raw_booking_status,
+        rawNonRefundable: r.raw_non_refundable,
+      })),
+      total: total ?? 0,
+      totalAllStatuses,
+      hasMore: offset + perPage < (total ?? 0),
+      matchedSoFar: total ?? 0,
+      diagnostics: {
+        statusBreakdown,
+        source: 'supabase',
+        syncedThrough: state?.watermark || null,
+        lastSyncStatus: state?.last_run_status || null,
+        lastSyncProgress: state?.progress || null,
+      },
+      note: state?.watermark
+        ? `Served from our own table. Synced through ${String(state.watermark).slice(0, 16).replace('T', ' ')} UTC.`
+        : 'Served from our own table. No sync has run yet — the table may be empty.',
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
