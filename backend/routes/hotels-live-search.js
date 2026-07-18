@@ -816,4 +816,190 @@ router.get('/bookings-list', async (req, res) => {
   }
 });
 
+
+
+// ===========================================================================
+// DASHBOARD DATA — all tiles, real, USD-converted
+// ===========================================================================
+// ---- USD conversion rates (same table used elsewhere in the codebase) ----
+// These are static reference rates; fine for dashboard display. A live-rate
+// refresh can come later. Everything shown in USD.
+const USD_RATES = {
+  USD: 1.0, EUR: 1.1446, GBP: 1.3401, INR: 0.011765, AED: 0.27225,
+  AUD: 0.6960, THB: 0.0301, NOK: 0.1016, IDR: 0.0000553, NPR: 0.007353,
+  SGD: 0.7770, MYR: 0.2360, JPY: 0.0067, CNY: 0.1400, HKD: 0.1280,
+  SAR: 0.2666, QAR: 0.2747, KWD: 3.26, BHD: 2.65, OMR: 2.60,
+  LKR: 0.0033, ZAR: 0.0550, TRY: 0.029, EGP: 0.0203, MXN: 0.0575,
+};
+
+function toUsd(amount, currency) {
+  if (amount == null) return 0;
+  const rate = USD_RATES[currency];
+  if (!rate) return 0;               // unknown currency -> excluded, not guessed
+  return parseFloat(amount) * rate;
+}
+
+// ===========================================================================
+// GET /api/live-search/dashboard
+// Returns every tile the Dashboard needs, all real.
+// ===========================================================================
+router.get('/dashboard', async (req, res) => {
+  if (!sbConfigured()) {
+    return res.status(500).json({ error: 'Supabase not configured' });
+  }
+
+  try {
+    const nowIso = new Date().toISOString();
+    const todayIso = nowIso.slice(0, 10);
+
+    // Cut-offs for the "soon" windows.
+    const in7 = new Date(); in7.setDate(in7.getDate() + 7);
+    const in30 = new Date(); in30.setDate(in30.getDate() + 30);
+    const in3 = new Date(); in3.setDate(in3.getDate() + 3);
+    const in7Iso = in7.toISOString().slice(0, 10);
+    const in30Iso = in30.toISOString().slice(0, 10);
+    const in3Iso = in3.toISOString();
+
+    // ---- LIVE REBOOKABLE INVENTORY -------------------------------------
+    // Still cancellable AND guest hasn't checked in yet. This is the working
+    // set the whole product operates on.
+    const liveWhere =
+      `cancel_by_date=gt.${encodeURIComponent(nowIso)}` +
+      `&checkin_date=gte.${todayIso}` +
+      `&raw_booking_status=not.ilike.cancel*`;
+    const liveCount = await sbCount('grn_bookings', liveWhere);
+
+    // ---- CHECKING IN SOON (imminent revenue) ---------------------------
+    const checkin7Count = await sbCount('grn_bookings',
+      `checkin_date=gte.${todayIso}&checkin_date=lte.${in7Iso}` +
+      `&cancel_by_date=gt.${encodeURIComponent(nowIso)}`);
+    const checkin30Count = await sbCount('grn_bookings',
+      `checkin_date=gte.${todayIso}&checkin_date=lte.${in30Iso}` +
+      `&cancel_by_date=gt.${encodeURIComponent(nowIso)}`);
+
+    // ---- EXPIRING SOON (cancel window closing in <=3 days) -------------
+    const expiringCount = await sbCount('grn_bookings',
+      `cancel_by_date=gt.${encodeURIComponent(nowIso)}` +
+      `&cancel_by_date=lte.${encodeURIComponent(in3Iso)}` +
+      `&checkin_date=gte.${todayIso}`);
+
+    // ---- USD VALUE of the live inventory --------------------------------
+    // We page through the live set pulling just price+currency, convert, sum.
+    // Capped for safety; if the set is huge we sample and scale, stating so.
+    let liveValueUsd = 0;
+    let valueBasis = 'exact';
+    {
+      const PAGE = 1000;
+      let offset = 0;
+      let scanned = 0;
+      const MAX_SCAN = 20000; // safety ceiling on the dashboard query
+      for (;;) {
+        const { rows } = await sbSelect('grn_bookings',
+          `${liveWhere}&select=price_total,currency&limit=${PAGE}&offset=${offset}`);
+        if (!rows.length) break;
+        for (const r of rows) liveValueUsd += toUsd(r.price_total, r.currency);
+        scanned += rows.length;
+        offset += PAGE;
+        if (rows.length < PAGE) break;
+        if (scanned >= MAX_SCAN) { valueBasis = 'capped'; break; }
+      }
+      if (valueBasis === 'capped' && liveCount > scanned) {
+        // scale the partial sum up to the full count, and say so
+        liveValueUsd = liveValueUsd * (liveCount / scanned);
+      }
+    }
+
+    // ---- CAUGHT THIS MONTH (savings) -----------------------------------
+    // Honest zero until the rebooking engine runs. We read from a rebookings
+    // table if it exists; otherwise report zero cleanly.
+    let caughtCount = 0;
+    let caughtSavedUsd = 0;
+    let caughtBasis = 'no_rebookings_yet';
+    try {
+      const monthStart = todayIso.slice(0, 8) + '01';
+      const { rows } = await sbSelect('rebookings',
+        `created_at=gte.${monthStart}&select=saved_amount,saved_currency`);
+      caughtCount = rows.length;
+      for (const r of rows) caughtSavedUsd += toUsd(r.saved_amount, r.saved_currency);
+      caughtBasis = 'live';
+    } catch {
+      // table doesn't exist yet — that's fine, honest zero
+    }
+
+    // ---- DAILY TREND of refundable bookings (last 30 days) -------------
+    // Grouped by booking_date. We pull minimal columns and bucket in JS.
+    const trendFrom = new Date(); trendFrom.setDate(trendFrom.getDate() - 30);
+    const trendFromIso = trendFrom.toISOString();
+    const trend = {};
+    {
+      const PAGE = 1000;
+      let offset = 0;
+      for (;;) {
+        const { rows } = await sbSelect('grn_bookings',
+          `booking_date=gte.${encodeURIComponent(trendFromIso)}` +
+          `&select=booking_date&limit=${PAGE}&offset=${offset}`);
+        if (!rows.length) break;
+        for (const r of rows) {
+          const day = String(r.booking_date || '').slice(0, 10);
+          if (day) trend[day] = (trend[day] || 0) + 1;
+        }
+        offset += PAGE;
+        if (rows.length < PAGE) break;
+      }
+    }
+    const dailyTrend = Object.entries(trend).sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, count]) => ({ date, count }));
+
+    // ---- TOP 10 CITIES by live rebookable volume -----------------------
+    const cityCounts = {};
+    {
+      const PAGE = 1000;
+      let offset = 0;
+      let scanned = 0;
+      const MAX_SCAN = 20000;
+      for (;;) {
+        const { rows } = await sbSelect('grn_bookings',
+          `${liveWhere}&select=city_name&limit=${PAGE}&offset=${offset}`);
+        if (!rows.length) break;
+        for (const r of rows) {
+          const c = r.city_name || 'Unknown';
+          cityCounts[c] = (cityCounts[c] || 0) + 1;
+        }
+        scanned += rows.length;
+        offset += PAGE;
+        if (rows.length < PAGE) break;
+        if (scanned >= MAX_SCAN) break;
+      }
+    }
+    const topCities = Object.entries(cityCounts)
+      .filter(([c]) => c !== 'Unknown')
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([city, count]) => ({ city, count }));
+
+    // ---- freshness ------------------------------------------------------
+    const state = await getSyncState().catch(() => null);
+
+    res.json({
+      currency: 'USD',
+      generatedAt: nowIso,
+      tiles: {
+        liveRebookable: { count: liveCount, valueUsd: Math.round(liveValueUsd), valueBasis },
+        checkingIn7: { count: checkin7Count },
+        checkingIn30: { count: checkin30Count },
+        expiringSoon: { count: expiringCount, windowDays: 3 },
+        caughtThisMonth: { count: caughtCount, savedUsd: Math.round(caughtSavedUsd), basis: caughtBasis },
+      },
+      dailyTrend,
+      topCities,
+      sync: {
+        syncedThrough: state?.watermark || null,
+        lastStatus: state?.last_run_status || null,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
