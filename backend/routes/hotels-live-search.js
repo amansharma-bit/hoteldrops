@@ -1001,9 +1001,9 @@ async function computeDashboard() {
     }
     const topCities = Object.entries(cityCounts)
       .filter(([c]) => c !== 'Unknown')
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 10)
-      .map(([city, count]) => ({ city, count, valueUsd: Math.round(cityValue[city] || 0) }));
+      .map(([city, count]) => ({ city, count, valueUsd: Math.round(cityValue[city] || 0) }))
+      .sort((a, b) => b.valueUsd - a.valueUsd)   // by VALUE — matches "by rebookable value"
+      .slice(0, 10);
 
     // ---- freshness ------------------------------------------------------
     const state = await getSyncState().catch(() => null);
