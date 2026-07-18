@@ -100,7 +100,7 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
     <div className="flex min-h-screen bg-slate-50 text-[#0F172A]">
       <aside
         className="w-52 flex flex-col justify-between fixed inset-y-0 left-0"
-        style={{ background: 'linear-gradient(180deg, #12379b 0%, #1447b8 55%, #1e56d6 100%)' }}
+        style={{ background: 'linear-gradient(180deg, #4f93f2 0%, #4589f0 55%, #3d7fe8 100%)' }}
       >
         <div>
           <div className="px-6 py-6">
@@ -108,12 +108,12 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
               <span className="font-extrabold text-lg text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
                 rebuq<span className="text-[#FCD34D]">.</span>
               </span>
-              <span className="text-xs font-semibold tracking-wide text-white/50 uppercase">Business</span>
+              <span className="text-xs font-semibold tracking-wide text-white/70 uppercase">Business</span>
             </Link>
           </div>
 
           <div className="px-6 mb-6">
-            <button className="w-full text-xs font-semibold text-white/70 bg-white/5 hover:bg-white/10 border border-white/10 rounded-md py-2.5 transition-colors">
+            <button className="w-full text-xs font-semibold text-white/90 bg-white/10 hover:bg-white/20 border border-white/20 rounded-md py-2.5 transition-colors">
               Send us feedback
             </button>
           </div>
@@ -127,8 +127,8 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
                   href={item.href}
                   className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm transition-colors ${
                     active
-                      ? 'bg-white/10 text-white font-semibold'
-                      : 'text-white/60 hover:bg-white/5 hover:text-white font-medium'
+                      ? 'bg-white/20 text-white font-semibold'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white font-medium'
                   }`}
                 >
                   <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -141,19 +141,19 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
           </nav>
         </div>
 
-        <div className="px-6 py-6 border-t border-white/10">
+        <div className="px-6 py-6 border-t border-white/15">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-[#1447b8] flex items-center justify-center text-xs font-semibold text-white flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-semibold text-white flex-shrink-0">
               GN
             </div>
             <div className="overflow-hidden">
               <p className="text-sm text-white truncate">GRN Connect</p>
-              <p className="text-xs text-white/40 truncate">deepak.narula@grnconnect.com</p>
+              <p className="text-xs text-white/60 truncate">deepak.narula@grnconnect.com</p>
             </div>
           </div>
           <button
             onClick={async () => { await supabase.auth.signOut(); router.push('/business/login'); }}
-            className="w-full text-xs font-semibold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-md py-2 transition-colors flex items-center justify-center gap-2"
+            className="w-full text-xs font-semibold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-md py-2 transition-colors flex items-center justify-center gap-2"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
             Sign out
