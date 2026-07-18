@@ -33,23 +33,25 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
+  function load(url: string, isRefresh = false) {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
     setError(null);
-    authenticatedFetch(`${API_BASE}/api/live-search/dashboard?_t=${Date.now()}`)
+    authenticatedFetch(`${url}${url.includes('?') ? '&' : '?'}_t=${Date.now()}`)
       .then((r: Response) => r.json())
-      .then((d: any) => { if (!cancelled) { d.error ? setError(d.error) : setData(d); } })
-      .catch((e: any) => { if (!cancelled) setError('Could not load dashboard: ' + e.message); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, []);
+      .then((d: any) => { d.error ? setError(d.error) : setData(d); })
+      .catch((e: any) => setError('Could not load dashboard: ' + e.message))
+      .finally(() => { setLoading(false); setRefreshing(false); });
+  }
+
+  useEffect(() => { load(`${API_BASE}/api/live-search/dashboard`); }, []);
 
   const t = data?.tiles;
   const c = data?.closing;
-  const fresh = data?.sync?.syncedThrough
-    ? new Date(data.sync.syncedThrough).toLocaleString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  const snapAt = data?.snapshot?.computedAt;
+  const fresh = snapAt
+    ? new Date(snapAt).toLocaleString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
     : null;
   const maxCityVal = Math.max(1, ...(data?.topCities || []).map((x: any) => x.valueUsd || x.count));
 
@@ -62,9 +64,23 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div>
             <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 23, fontWeight: 800, color: NAVY, margin: 0 }}>Dashboard</h1>
-            <p style={{ fontSize: 13, color: SLATE, marginTop: 3 }}>Rebookable value on your GRN book — and what's closing soon.</p>
+            <p style={{ fontSize: 13, color: SLATE, marginTop: 3 }}>All live rebookable inventory on your GRN book — and what's closing soon.</p>
           </div>
-          {fresh && <span style={{ fontSize: 12, color: SLATE }}>Live · synced through <strong style={{ color: NAVY }}>{fresh}</strong></span>}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+            <button
+              onClick={() => load(`${API_BASE}/api/live-search/dashboard-refresh`, true)}
+              disabled={refreshing || loading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7, border: `1px solid ${LINE}`, borderRadius: 8,
+                padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: refreshing ? 'wait' : 'pointer',
+                background: refreshing ? '#EDF1F7' : '#fff', color: refreshing ? SLATE : NAVY,
+              }}
+            >
+              <span style={{ fontSize: 13 }}>{refreshing ? '↻' : '⟳'}</span>
+              {refreshing ? 'Refreshing…' : 'Refresh data'}
+            </button>
+            {fresh && <span style={{ fontSize: 11, color: SLATE }}>Updated {fresh}{data?.snapshot?.stale ? ' · refreshing' : ''}</span>}
+          </div>
         </div>
 
         {error && (
@@ -144,17 +160,17 @@ export default function DashboardPage() {
             <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY }}>Top cities by rebookable value</span>
             <span style={{ fontSize: 11, color: SLATE }}>value · bookings</span>
           </div>
-          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 40px', alignContent: 'start' }}>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 44px', alignContent: 'start' }}>
             {(!data?.topCities || data.topCities.length === 0) ? (
               <div style={{ padding: '30px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No city data yet.</div>
             ) : (
               data.topCities.slice(0, 8).map((city: any) => (
-                <div key={city.city} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
-                  <div style={{ width: 130, fontSize: 12, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{city.city}</div>
-                  <div style={{ flex: 1, background: '#EDF1F7', borderRadius: 6, height: 8 }}>
+                <div key={city.city} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 11 }}>
+                  <div style={{ width: 118, flexShrink: 0, fontSize: 12, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{city.city}</div>
+                  <div style={{ flex: 1, minWidth: 40, background: '#EDF1F7', borderRadius: 6, height: 8 }}>
                     <div style={{ width: `${((city.valueUsd || city.count) / maxCityVal) * 100}%`, background: GOLD, height: '100%', borderRadius: 6 }} />
                   </div>
-                  <div style={{ width: 104, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                  <div style={{ width: 92, flexShrink: 0, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                     <span style={{ fontSize: 13, color: NAVY, fontWeight: 700 }}>{usdShort(city.valueUsd)}</span>
                     <span style={{ fontSize: 11, color: SLATE, marginLeft: 6 }}>{num(city.count)}</span>
                   </div>
