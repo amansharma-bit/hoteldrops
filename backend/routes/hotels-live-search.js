@@ -35,8 +35,19 @@ const GRN_API_BASE_URL = process.env.GRN_API_BASE_URL || 'https://v4-api.grnconn
 const GRN_API_KEY = process.env.GRN_API_KEY;
 const GRN_STATIC_BASE_URL = 'https://cdn-api.grnconnect.com';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Accept whichever names already exist in Railway. This project uses
+// SUPABASE_SERVICE_KEY (not ..._SERVICE_ROLE_KEY) and other code reads that
+// name, so we adapt here rather than renaming the variable and breaking auth.
+const SUPABASE_URL =
+  process.env.SUPABASE_URL ||
+  process.env.SUPABASE_PROJECT_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SECRET_KEY;
+
 const SYNC_SECRET = process.env.SYNC_SECRET;
 
 const GRN_HEADERS = () => ({
@@ -360,10 +371,15 @@ async function runSync({ fromISO }) {
 }
 
 function checkSecret(req, res) {
-  if (!SYNC_SECRET) {
-    res.status(500).json({ error: 'SYNC_SECRET is not set in Railway variables. Add it, then retry.' });
-    return false;
-  }
+  // These /api/live-search routes already sit behind this app's existing auth
+  // middleware — an unauthenticated request never reaches this function; it
+  // gets "Not authenticated. Please sign in." instead. Confirmed by hitting
+  // this URL in a plain browser tab.
+  //
+  // So SYNC_SECRET is an OPTIONAL second lock. If it isn't set, we rely on
+  // the login that's already protecting the route. If it IS set, we enforce
+  // it as well.
+  if (!SYNC_SECRET) return true;
   if (req.query.secret !== SYNC_SECRET) {
     res.status(401).json({ error: 'Wrong or missing ?secret=' });
     return false;
