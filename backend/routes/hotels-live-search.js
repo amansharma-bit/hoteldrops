@@ -851,16 +851,25 @@ const SNAPSHOT_STALE_MS = 4 * 60 * 60 * 1000; // 4 hours
 let snapshotComputing = false;
 
 async function computeDashboard() {
-  const nowIso = new Date().toISOString();
-  const todayIso = nowIso.slice(0, 10);
+  // ---- IST ANCHORING ---------------------------------------------------
+  // Railway runs in UTC. rebuq operates in India (IST = UTC+5:30). Computing
+  // "today" / deadlines / windows in UTC makes them a day off for India.
+  // We shift "now" by +5:30 so date math reflects the Indian calendar day,
+  // then compare against stored timestamps (which are UTC absolute instants —
+  // those comparisons are correct regardless of zone).
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const nowUtc = new Date();
+  const nowIst = new Date(nowUtc.getTime() + IST_OFFSET_MS);
 
-    // Cut-offs for the "soon" windows.
-    const in7 = new Date(); in7.setDate(in7.getDate() + 7);
-    const in30 = new Date(); in30.setDate(in30.getDate() + 30);
-    const in3 = new Date(); in3.setDate(in3.getDate() + 3);
-    const in7Iso = in7.toISOString().slice(0, 10);
-    const in30Iso = in30.toISOString().slice(0, 10);
-    const in3Iso = in3.toISOString();
+  const nowIso = nowUtc.toISOString();                // absolute instant (for cancel_by_date > now)
+  const todayIso = nowIst.toISOString().slice(0, 10); // IST calendar day (for checkin_date >= today)
+
+    // Rolling deadline windows — anchored to the IST "now". These are stable:
+    // "next 7 days" always means 7 days of runway, whatever day you look.
+    const plusDays = (d) => { const x = new Date(nowUtc.getTime() + d * 86400000); return x.toISOString(); };
+    const in3Iso = plusDays(3);
+    const in7Iso = new Date(nowIst.getTime() + 7 * 86400000).toISOString().slice(0, 10);
+    const in30Iso = new Date(nowIst.getTime() + 30 * 86400000).toISOString().slice(0, 10);
 
     // ---- LIVE REBOOKABLE INVENTORY -------------------------------------
     // Still cancellable AND guest hasn't checked in yet. This is the working
@@ -886,19 +895,20 @@ async function computeDashboard() {
       `&checkin_date=gte.${todayIso}`);
 
     // ---- CLOSING WINDOWS — the wedge -----------------------------------
-    // Rebookable value whose CANCELLATION DEADLINE falls within each calendar
-    // period. Cancel-by is the ONLY clock that matters: you can only rebook
-    // before the window shuts. This is the runway of opportunity by when it
-    // expires — money that's gone if left unworked.
-    async function closingByDeadline(endDate) {
-      const endIso = endDate.toISOString();
-      const where =
+    // Rebookable value whose CANCELLATION DEADLINE falls within a ROLLING
+    // window from now. Rolling (not calendar) so the numbers are stable: "next
+    // 7 days" always means 7 days of runway, whatever day you look — no more
+    // "this week is nearly over" distortion. Cancel-by is the only clock that
+    // matters. All anchored to IST "now".
+    async function closingWithinDays(days) {
+      const end = days === null ? null : new Date(nowUtc.getTime() + days * 86400000).toISOString();
+      let where =
         `cancel_by_date=gt.${encodeURIComponent(nowIso)}` +
-        `&cancel_by_date=lte.${encodeURIComponent(endIso)}` +
         `&checkin_date=gte.${todayIso}` +
         `&raw_booking_status=not.ilike.cancel*`;
+      if (end) where += `&cancel_by_date=lte.${encodeURIComponent(end)}`;
       let valueUsd = 0, count = 0, scanned = 0;
-      const PAGE = 1000, MAX_SCAN = 20000;
+      const PAGE = 1000, MAX_SCAN = 25000;
       for (;;) {
         const { rows } = await sbSelect('grn_bookings',
           `${where}&select=price_total,currency&limit=${PAGE}&offset=${scanned}`);
@@ -910,24 +920,11 @@ async function computeDashboard() {
       return { valueUsd: Math.round(valueUsd), count };
     }
 
-    const nowD = new Date();
-    // End of THIS WEEK (Sunday, so week = Mon–Sun)
-    const endOfWeek = new Date(nowD);
-    const daysToSunday = (7 - nowD.getDay()) % 7;
-    endOfWeek.setDate(nowD.getDate() + daysToSunday); endOfWeek.setHours(23, 59, 59, 999);
-    // End of THIS MONTH
-    const endOfMonth = new Date(nowD.getFullYear(), nowD.getMonth() + 1, 0, 23, 59, 59, 999);
-    // End of THIS QUARTER
-    const q = Math.floor(nowD.getMonth() / 3);
-    const endOfQuarter = new Date(nowD.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999);
-    // End of THIS YEAR
-    const endOfYear = new Date(nowD.getFullYear(), 11, 31, 23, 59, 59, 999);
-
     const closing = {
-      week: await closingByDeadline(endOfWeek),
-      month: await closingByDeadline(endOfMonth),
-      quarter: await closingByDeadline(endOfQuarter),
-      year: await closingByDeadline(endOfYear),
+      d7: await closingWithinDays(7),
+      d30: await closingWithinDays(30),
+      d90: await closingWithinDays(90),
+      all: await closingWithinDays(null),   // everything still open
     };
 
     // ---- USD VALUE of the live inventory --------------------------------
