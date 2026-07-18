@@ -6,124 +6,176 @@ import { authenticatedFetch } from '../../../lib/supabase-client';
 
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
-export default function OverviewPage() {
+// Brand tokens (existing rebuq identity)
+const NAVY = '#0F172A';
+const BLUE = '#1447b8';
+const GOLD = '#FCD34D';
+const GREEN = '#16A34A';
+const SLATE = '#64748B';
+const LINE = '#E2E8F0';
+const BG = '#F8FAFC';
+
+function usd(n: number | null | undefined) {
+  if (n == null) return '—';
+  return '$' + Math.round(n).toLocaleString('en-US');
+}
+function num(n: number | null | undefined) {
+  if (n == null) return '—';
+  return n.toLocaleString('en-US');
+}
+
+export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<any>(null);
-  const [real, setReal] = useState<any>(null);
+  const [data, setData] = useState<any>(null);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [summaryRes, realRes] = await Promise.all([
-          authenticatedFetch(`${API_BASE}/api/live-search/dashboard-summary`),
-          authenticatedFetch(`${API_BASE}/api/live-search/dashboard-real`),
-        ]);
-        const summaryData = await summaryRes.json();
-        const realData = await realRes.json();
-        setSummary(summaryData);
-        setReal(realData);
-      } catch (e: any) {
-        setError('Could not load dashboard data: ' + e.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    authenticatedFetch(`${API_BASE}/api/live-search/dashboard?_t=${Date.now()}`)
+      .then((r: Response) => r.json())
+      .then((d: any) => { if (!cancelled) { d.error ? setError(d.error) : setData(d); } })
+      .catch((e: any) => { if (!cancelled) setError('Could not load dashboard: ' + e.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
-  const trend = summary?.dailyTrend || [];
-  const maxCount = trend.length ? Math.max(...trend.map((t: [string, number]) => t[1])) : 1;
+  const t = data?.tiles;
+  const fresh = data?.sync?.syncedThrough
+    ? new Date(data.sync.syncedThrough).toLocaleString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+    : null;
+
+  const maxTrend = Math.max(1, ...(data?.dailyTrend || []).map((d: any) => d.count));
+  const maxCity = Math.max(1, ...(data?.topCities || []).map((c: any) => c.count));
 
   return (
     <BusinessSidebarWrapper>
-      <div style={{ height: '100vh', overflow: 'hidden', background: '#F8FAFC', fontFamily: "'Inter', sans-serif", padding: '28px 36px', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ minHeight: '100vh', background: BG, fontFamily: "'Inter',sans-serif" }}>
         <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <div>
-            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 24, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>Bookings overview</div>
-            <div style={{ fontSize: 13, color: '#64748B', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-              GRN · live data
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', background: loading ? '#F1F5F9' : error ? '#FEF2F2' : '#F0FDF4', color: loading ? '#64748B' : error ? '#DC2626' : '#16A34A', padding: '5px 12px', borderRadius: 20, border: `1px solid ${loading ? '#E2E8F0' : error ? '#FECACA' : '#BBF7D0'}` }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: loading ? '#94A3B8' : error ? '#DC2626' : '#16A34A' }} />
-                {loading ? 'Loading' : error ? 'Error' : 'Connected'}
-              </span>
+        {/* Header */}
+        <div style={{ padding: '28px 32px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 24, fontWeight: 800, color: NAVY, margin: 0 }}>Overview</h1>
+              <p style={{ fontSize: 13, color: SLATE, marginTop: 4 }}>Your live GRN book, and where money can still be caught.</p>
             </div>
-          </div>
-          <div style={{ display: 'flex', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, padding: 4 }}>
-            {['Today', 'WTD', 'MTD', 'YTD'].map((p, i) => (
-              <button key={p} style={{ border: 'none', background: i === 0 ? '#1447b8' : 'transparent', color: i === 0 ? '#fff' : '#64748B', fontSize: 13, fontWeight: 600, padding: '8px 18px', borderRadius: 7, cursor: 'pointer' }}>{p}</button>
-            ))}
+            <span style={{ fontSize: 12, color: SLATE }}>
+              {loading ? 'Loading…' : fresh ? <>Synced through <strong style={{ color: NAVY }}>{fresh}</strong></> : ''}
+            </span>
           </div>
         </div>
 
         {error && (
-          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#DC2626' }}>{error}</div>
+          <div style={{ margin: '20px 32px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#DC2626' }}>{error}</div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
-          <div style={{ background: 'linear-gradient(135deg,#12379b 0%,#1447b8 55%,#2e5fe0 100%)', borderRadius: 16, padding: '24px 28px', color: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 8 }}>Total bookings</div>
-            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 44, fontWeight: 800, letterSpacing: '-0.02em' }}>{loading ? '—' : (real?.totalBookings ?? summary?.totalBookings ?? '—').toLocaleString?.() ?? real?.totalBookings ?? '—'}</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 6 }}>across all suppliers · June 1 – July 13</div>
-          </div>
-          <StatCard label="Refundable" value={loading ? '—' : `${real?.refundablePctFromSample ?? '—'}%`} sub="of sampled bookings" />
-          <StatCard label="Avg. booking value" value={loading ? '—' : `$${real?.avgValueFromSample ?? '—'}`} sub="USD, sample-based" />
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 16 }}>
-          <StatCard label="Rebooked" value="10,129" sub="via Mize, 6mo" />
-          <StatCard label="Conversion" value="6.72%" sub="profit-to-GMV" gold />
-          <StatCard label="Business type" value="B2B" sub="primary channel" />
-          <StatCard label="Top country" value={loading ? '—' : (real?.topCountries?.[0]?.country ?? '—')} sub={loading ? '' : `${real?.topCountries?.[0]?.pct ?? '—'}% of sample`} />
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16, flex: 1, minHeight: 0 }}>
-          <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 16, padding: '22px 24px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', marginBottom: 16 }}>Booking volume trend</div>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 3, minHeight: 0, paddingTop: 8 }}>
-              {loading ? (
-                <div style={{ margin: 'auto', fontSize: 13, color: '#94A3B8' }}>Loading real trend data…</div>
-              ) : trend.length === 0 ? (
-                <div style={{ margin: 'auto', fontSize: 13, color: '#94A3B8' }}>No trend data available</div>
-              ) : (
-                trend.map(([day, count]: [string, number], i: number) => (
-                  <div key={day} title={`${day}: ${count} bookings`} style={{ flex: 1, background: '#1447b8', borderRadius: '3px 3px 0 0', height: `${Math.max(4, (count / maxCount) * 100)}%` }} />
-                ))
-              )}
+        {/* HERO — the money still on the table */}
+        <div style={{ padding: '24px 32px 0' }}>
+          <div style={{
+            background: `linear-gradient(135deg, ${NAVY} 0%, #1E293B 100%)`,
+            borderRadius: 18, padding: '28px 32px', color: '#fff',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24,
+          }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#94A3B8' }}>Live rebookable value</div>
+              <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 46, fontWeight: 800, lineHeight: 1.1, marginTop: 8 }}>
+                {loading ? '—' : usd(t?.liveRebookable?.valueUsd)}
+                <span style={{ fontSize: 15, fontWeight: 600, color: '#94A3B8', marginLeft: 10 }}>USD</span>
+              </div>
+              <div style={{ fontSize: 14, color: '#CBD5E1', marginTop: 6 }}>
+                across <strong style={{ color: '#fff' }}>{loading ? '—' : num(t?.liveRebookable?.count)}</strong> bookings still open to cancel &amp; rebook
+                {t?.liveRebookable?.valueBasis === 'capped' && <span style={{ color: GOLD, marginLeft: 8, fontSize: 12 }}>(estimated)</span>}
+              </div>
             </div>
-            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 12, textAlign: 'center' }}>Real daily counts from /dashboard-summary</div>
+            {/* urgency rail */}
+            <div style={{ display: 'flex', gap: 28 }}>
+              <div>
+                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 26, fontWeight: 800, color: GOLD }}>{loading ? '—' : num(t?.expiringSoon?.count)}</div>
+                <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>expiring in {t?.expiringSoon?.windowDays ?? 3}d</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 26, fontWeight: 800, color: '#fff' }}>{loading ? '—' : num(t?.checkingIn7?.count)}</div>
+                <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>check in ≤7d</div>
+              </div>
+            </div>
           </div>
-          <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 16, padding: '22px 24px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', marginBottom: 16 }}>Top countries by volume</div>
-            {loading ? (
-              <div style={{ margin: 'auto', fontSize: 13, color: '#94A3B8' }}>Loading…</div>
+        </div>
+
+        {/* SECONDARY tiles */}
+        <div style={{ padding: '20px 32px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+          <Tile label="Checking in ≤30 days" value={loading ? '—' : num(t?.checkingIn30?.count)} sub="imminent revenue" accent={BLUE} />
+          <Tile label="Live inventory" value={loading ? '—' : num(t?.liveRebookable?.count)} sub="still cancellable" accent={NAVY} />
+          <Tile
+            label="Caught this month"
+            value={loading ? '—' : usd(t?.caughtThisMonth?.savedUsd)}
+            sub={t?.caughtThisMonth?.basis === 'no_rebookings_yet' ? 'runs after first reprice' : `${num(t?.caughtThisMonth?.count)} rebookings`}
+            accent={GREEN}
+            muted={t?.caughtThisMonth?.basis === 'no_rebookings_yet'}
+          />
+        </div>
+
+        {/* Charts row */}
+        <div style={{ padding: '24px 32px 40px', display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 20 }}>
+          {/* Daily trend */}
+          <Panel title="Refundable bookings · last 30 days">
+            {(!data?.dailyTrend || data.dailyTrend.length === 0) ? (
+              <Empty>No booking activity in this window yet.</Empty>
             ) : (
-              (real?.topCountries || []).map((c: any, i: number) => (
-                <div key={c.country} style={{ display: 'grid', gridTemplateColumns: '70px 1fr 44px', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>{c.country}</span>
-                  <div style={{ height: 8, background: '#F1F5F9', borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', background: '#1447b8', borderRadius: 4, opacity: 1 - i * 0.15, width: `${c.pct}%` }} />
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 160, marginTop: 8 }}>
+                {data.dailyTrend.map((d: any) => (
+                  <div key={d.date} title={`${d.date}: ${d.count}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '100%' }}>
+                    <div style={{ height: `${(d.count / maxTrend) * 100}%`, background: BLUE, borderRadius: '3px 3px 0 0', minHeight: 2 }} />
                   </div>
-                  <span style={{ fontSize: 13, color: '#64748B', textAlign: 'right' }}>{c.pct}%</span>
-                </div>
-              ))
+                ))}
+              </div>
             )}
-            <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 'auto', textAlign: 'center' }}>From dashboard-real, {real?.sampleSize ?? '—'}-booking live sample</div>
-          </div>
+          </Panel>
+
+          {/* Top cities */}
+          <Panel title="Top cities · live rebookable">
+            {(!data?.topCities || data.topCities.length === 0) ? (
+              <Empty>No city data yet.</Empty>
+            ) : (
+              <div style={{ marginTop: 4 }}>
+                {data.topCities.map((c: any) => (
+                  <div key={c.city} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
+                    <div style={{ width: 110, fontSize: 12, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.city}</div>
+                    <div style={{ flex: 1, background: '#EEF2F7', borderRadius: 6, height: 8 }}>
+                      <div style={{ width: `${(c.count / maxCity) * 100}%`, background: GOLD, height: '100%', borderRadius: 6 }} />
+                    </div>
+                    <div style={{ width: 44, textAlign: 'right', fontSize: 12, color: SLATE, fontVariantNumeric: 'tabular-nums' }}>{num(c.count)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
         </div>
       </div>
     </BusinessSidebarWrapper>
   );
 }
 
-function StatCard({ label, value, sub, gold = false }: { label: string; value: string; sub: string; gold?: boolean }) {
+function Tile({ label, value, sub, accent, muted }: any) {
   return (
-    <div style={{ background: gold ? '#FCD34D' : '#fff', border: gold ? 'none' : '1px solid #E2E8F0', borderRadius: 16, padding: '22px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: gold ? '#78350F' : '#94A3B8', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 32, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>{value}</div>
-      <div style={{ fontSize: 12, color: gold ? '#78350F' : '#94A3B8', marginTop: 6, fontWeight: gold ? 600 : 400 }}>{sub}</div>
+    <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '18px 20px', borderTop: `3px solid ${accent}` }}>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: SLATE }}>{label}</div>
+      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 28, fontWeight: 800, color: muted ? '#94A3B8' : NAVY, marginTop: 8 }}>{value}</div>
+      <div style={{ fontSize: 12, color: SLATE, marginTop: 4 }}>{sub}</div>
     </div>
   );
+}
+
+function Panel({ title, children }: any) {
+  return (
+    <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '18px 20px' }}>
+      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 14, fontWeight: 700, color: NAVY }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function Empty({ children }: any) {
+  return <div style={{ padding: '40px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>{children}</div>;
 }
