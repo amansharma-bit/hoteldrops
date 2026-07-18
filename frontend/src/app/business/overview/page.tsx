@@ -57,7 +57,7 @@ export default function DashboardPage() {
 
   return (
     <BusinessSidebarWrapper>
-      <div style={{ height: '100vh', overflow: 'hidden', background: BG, fontFamily: "'Inter',sans-serif", padding: '22px 30px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ minHeight: '100vh', background: BG, fontFamily: "'Inter',sans-serif", padding: '22px 30px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
         {/* Header */}
@@ -109,10 +109,10 @@ export default function DashboardPage() {
             <span style={{ fontSize: 12, color: SLATE }}>rebookable value by cancellation deadline — money that expires if left unworked</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-            <ClosingCard label="This week" win={c?.week} loading={loading} accent={GOLD} />
-            <ClosingCard label="This month" win={c?.month} loading={loading} accent={BLUE} />
-            <ClosingCard label="This quarter" win={c?.quarter} loading={loading} accent={BLUE} />
-            <ClosingCard label="This year" win={c?.year} loading={loading} accent={NAVY} />
+            <ClosingCard label="Next 7 days" win={c?.d7} loading={loading} accent={GOLD} />
+            <ClosingCard label="Next 30 days" win={c?.d30} loading={loading} accent={BLUE} />
+            <ClosingCard label="Next 90 days" win={c?.d90} loading={loading} accent={BLUE} />
+            <ClosingCard label="All open" win={c?.all} loading={loading} accent={NAVY} />
           </div>
         </div>
 
@@ -160,12 +160,12 @@ export default function DashboardPage() {
             <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY }}>Top cities by rebookable value</span>
             <span style={{ fontSize: 11, color: SLATE }}>value · bookings</span>
           </div>
-          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
             {(!data?.topCities || data.topCities.length === 0) ? (
               <div style={{ padding: '30px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No city data yet.</div>
             ) : (
-              data.topCities.slice(0, 8).map((city: any, i: number) => (
-                <div key={city.city} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+              data.topCities.slice(0, 10).map((city: any, i: number) => (
+                <div key={city.city} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 9 }}>
                   <div style={{ width: 20, flexShrink: 0, fontFamily: "'Sora',sans-serif", fontSize: 12, fontWeight: 700, color: '#94A3B8', textAlign: 'right' }}>{i + 1}</div>
                   <div style={{ width: 150, flexShrink: 0, fontSize: 13, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{city.city}</div>
                   <div style={{ flex: 1, minWidth: 60, background: '#EDF1F7', borderRadius: 6, height: 9 }}>
