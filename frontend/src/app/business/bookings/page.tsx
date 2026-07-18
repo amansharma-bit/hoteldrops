@@ -20,6 +20,57 @@ export default function BookingsPage() {
   const [showCustom, setShowCustom] = useState(false);
 
   // -------------------------------------------------------------------------
+  // Sync control.
+  //
+  // The sync can't be triggered from the browser address bar: /api/live-search/*
+  // sits behind this app's auth middleware, and a URL typed into the address
+  // bar carries no login token — it just returns "Not authenticated."
+  //
+  // authenticatedFetch attaches the Supabase session token, so triggering it
+  // from this page (where you're already signed in) works, and needs no
+  // separate secret.
+  // -------------------------------------------------------------------------
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncState, setSyncState] = useState<any>(null);
+
+  async function startSync() {
+    setSyncBusy(true);
+    setSyncMsg('Starting sync…');
+    try {
+      const r = await authenticatedFetch(`${API_BASE}/api/live-search/sync-run?from=2026-04-15`);
+      const d = await r.json();
+      if (d.error) {
+        setSyncMsg(`Error: ${d.error}${d.missing ? ' — missing: ' + d.missing.join(', ') : ''}${d.hint ? ' — ' + d.hint : ''}`);
+      } else {
+        setSyncMsg(d.started ? 'Sync started. It runs in the background — this can take 10–15 minutes.' : d.message);
+      }
+    } catch (e: any) {
+      setSyncMsg('Could not start sync: ' + e.message);
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function checkSync() {
+    try {
+      const r = await authenticatedFetch(`${API_BASE}/api/live-search/sync-status?_t=${Date.now()}`);
+      const d = await r.json();
+      setSyncState(d);
+      if (d.error) setSyncMsg(`Error: ${d.error}`);
+    } catch (e: any) {
+      setSyncMsg('Could not read sync status: ' + e.message);
+    }
+  }
+
+  // While a sync is running, poll every 5s so progress is visible.
+  useEffect(() => {
+    if (!syncState?.running) return;
+    const id = setInterval(checkSync, 5000);
+    return () => clearInterval(id);
+  }, [syncState?.running]);
+
+  // -------------------------------------------------------------------------
   // THE OFF-BY-ONE-DAY BUG.
   //
   // Old code:  d.toISOString().slice(0, 10)
@@ -83,10 +134,18 @@ export default function BookingsPage() {
               <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: '#0F172A' }}>Bookings</h1>
               <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>All bookings across your GRN book — search, filter, and track cancellation windows.</p>
             </div>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', background: loading ? '#F1F5F9' : error ? '#FEF2F2' : '#F0FDF4', color: loading ? '#64748B' : error ? '#DC2626' : '#16A34A', padding: '5px 12px', borderRadius: 20, border: `1px solid ${loading ? '#E2E8F0' : error ? '#FECACA' : '#BBF7D0'}` }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: loading ? '#94A3B8' : error ? '#DC2626' : '#16A34A' }} />
-              {loading ? 'Loading' : error ? 'Error' : 'Synced'}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button onClick={startSync} disabled={syncBusy} style={{ border: '1px solid #1447b8', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, background: syncBusy ? '#E2E8F0' : '#1447b8', color: syncBusy ? '#94A3B8' : '#fff', cursor: syncBusy ? 'not-allowed' : 'pointer' }}>
+                {syncBusy ? 'Starting…' : 'Sync now'}
+              </button>
+              <button onClick={checkSync} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#fff', color: '#334155', cursor: 'pointer' }}>
+                Check status
+              </button>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', background: loading ? '#F1F5F9' : error ? '#FEF2F2' : '#F0FDF4', color: loading ? '#64748B' : error ? '#DC2626' : '#16A34A', padding: '5px 12px', borderRadius: 20, border: `1px solid ${loading ? '#E2E8F0' : error ? '#FECACA' : '#BBF7D0'}` }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: loading ? '#94A3B8' : error ? '#DC2626' : '#16A34A' }} />
+                {loading ? 'Loading' : error ? 'Error' : 'Synced'}
+              </span>
+            </div>
           </div>
         </div>
 
