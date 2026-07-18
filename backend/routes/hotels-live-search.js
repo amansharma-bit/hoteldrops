@@ -973,36 +973,8 @@ async function computeDashboard() {
       // table doesn't exist yet — that's fine, honest zero
     }
 
-    // ---- DAILY TREND, scoped to the selected PERIOD -------------------
-    // Today / WTD / MTD / YTD, filtered by booking_date. The action tiles
-    // above stay always-live; only this trend responds to the buttons.
-    const period = (req.query.period || 'Today');
-    const trendStart = new Date();
-    if (period === 'Today') { trendStart.setHours(0, 0, 0, 0); }
-    else if (period === 'WTD') { trendStart.setDate(trendStart.getDate() - trendStart.getDay()); trendStart.setHours(0,0,0,0); }
-    else if (period === 'MTD') { trendStart.setDate(1); trendStart.setHours(0,0,0,0); }
-    else if (period === 'YTD') { trendStart.setMonth(0, 1); trendStart.setHours(0,0,0,0); }
-    else { trendStart.setDate(trendStart.getDate() - 30); } // fallback
-    const trendFromIso = trendStart.toISOString();
-    const trend = {};
-    {
-      const PAGE = 1000;
-      let offset = 0;
-      for (;;) {
-        const { rows } = await sbSelect('grn_bookings',
-          `booking_date=gte.${encodeURIComponent(trendFromIso)}` +
-          `&select=booking_date&limit=${PAGE}&offset=${offset}`);
-        if (!rows.length) break;
-        for (const r of rows) {
-          const day = String(r.booking_date || '').slice(0, 10);
-          if (day) trend[day] = (trend[day] || 0) + 1;
-        }
-        offset += PAGE;
-        if (rows.length < PAGE) break;
-      }
-    }
-    const dailyTrend = Object.entries(trend).sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, count]) => ({ date, count }));
+    // (Daily trend removed — not shown on the current dashboard, and it
+    // referenced a request param this function doesn't receive.)
 
     // ---- TOP 10 CITIES by live rebookable volume + USD value -----------
     const cityCounts = {};
@@ -1047,7 +1019,6 @@ async function computeDashboard() {
         caughtThisMonth: { count: caughtCount, savedUsd: Math.round(caughtSavedUsd), basis: caughtBasis },
       },
       closing,
-      dailyTrend,
       topCities,
       sync: {
         syncedThrough: state?.watermark || null,
