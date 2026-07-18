@@ -190,10 +190,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // THE SYNC ENGINE
 // ===========================================================================
 
-const SYNC_CONCURRENCY = 8;      // parallel booking-detail fetches
-const CHUNK_DAYS = 3;            // window slice size — keeps each list call small
+// -------------------------------------------------------------------------
+// RATE-LIMIT & FOOTPRINT SETTINGS — deliberately conservative.
+//
+// This runs against GRN's REAL production API. We are a guest on Naveen's
+// infrastructure. So the sync trickles rather than floods:
+//   - one page at a time, never parallel booking pulls
+//   - a deliberate pause between every GRN call
+//   - a hard ceiling on calls per run, so it can never run away
+//   - incremental by default: after the first fill, only pull what's NEW
+// -------------------------------------------------------------------------
+const GRN_PAGE_SIZE = 100;          // max the endpoint allows per page
+const GRN_WINDOW_DAYS = 30;         // max window the endpoint allows per query
+const PAUSE_BETWEEN_CALLS_MS = 400; // deliberate breather between GRN calls
+const MAX_CALLS_PER_RUN = 120;      // hard safety ceiling (~12,000 bookings/run)
 const UPSERT_BATCH = 100;
-const DEFAULT_BACKFILL_DAYS = 90;
+const DEFAULT_INCREMENTAL_DAYS = 2; // routine run only looks back a couple of days
 
 let syncRunning = false;         // in-process guard against double-starts
 
@@ -201,52 +213,123 @@ function fmtGrn(d) {
   return d.toISOString().slice(0, 19).replace('T', ' ');
 }
 
-// Derive our label. Note the explicit 'Unknown' bucket: if GRN doesn't send
-// the field, we say so rather than silently guessing "Non-Refundable", which
-// is precisely the bug that broke the dropdown.
-function deriveStatus(booking) {
-  const raw = String(booking.booking_status || '').trim().toLowerCase();
-  if (raw.startsWith('cancel')) return 'Cancelled';
-  if (booking.non_refundable === false) return 'Refundable';
-  if (booking.non_refundable === true) return 'Non-Refundable';
-  return 'Unknown';
+const parseTs = (v) => {
+  if (!v) return null;
+  const d = new Date(String(v).replace(' ', 'T'));
+  return isNaN(d.getTime()) ? null : d.toISOString();
+};
+const parseDate = (v) => {
+  const iso = parseTs(v);
+  return iso ? iso.slice(0, 10) : null;
+};
+
+// -------------------------------------------------------------------------
+// MULTI-ROOM ROLLUP — the heart of the correctness fix.
+//
+// Confirmed from GRN's doc: a booking can have MANY booking_items, each with
+// its OWN price, non_refundable flag, and cancellation deadline. The old code
+// read booking.non_refundable at the TOP level (doesn't exist) and only ever
+// looked at booking_items[0].
+//
+// Roll-up rules (agreed with Aman):
+//   price  = SUM of every item's price
+//   status = Cancelled (if booking says so) > else derived from the rooms:
+//              all refundable      -> Refundable
+//              all non-refundable  -> Non-Refundable
+//              a mix               -> Partial
+//              field truly missing -> Unknown
+//   cancel_by_date = the EARLIEST deadline across rooms (tightest window is
+//                    the one that governs when we must act)
+// -------------------------------------------------------------------------
+function rollUpBooking(booking) {
+  const items = booking.hotel?.booking_items || [];
+
+  // Cancelled always wins.
+  const rawStatus = String(booking.booking_status || '').trim().toLowerCase();
+  const isCancelled = rawStatus.startsWith('cancel') || booking.booking_type === 'C';
+
+  let priceSum = 0;
+  let anyPrice = false;
+  let refundableCount = 0;
+  let nonRefundableCount = 0;
+  let unknownCount = 0;
+  let earliestCancelBy = null;
+
+  for (const item of items) {
+    const p = parseFloat(item.price);
+    if (!isNaN(p)) { priceSum += p; anyPrice = true; }
+
+    if (item.non_refundable === false) refundableCount++;
+    else if (item.non_refundable === true) nonRefundableCount++;
+    else unknownCount++;
+
+    const cby = parseTs(item.cancellation_policy?.cancel_by_date);
+    if (cby && (!earliestCancelBy || cby < earliestCancelBy)) earliestCancelBy = cby;
+  }
+
+  let status;
+  if (isCancelled) status = 'Cancelled';
+  else if (items.length === 0 || unknownCount === items.length) status = 'Unknown';
+  else if (nonRefundableCount === 0) status = 'Refundable';
+  else if (refundableCount === 0 && unknownCount === 0) status = 'Non-Refundable';
+  else status = 'Partial';
+
+  return {
+    priceTotal: anyPrice ? priceSum : (booking.price?.total ? parseFloat(booking.price.total) : null),
+    status,
+    cancelByDate: earliestCancelBy,
+    roomCount: items.length,
+    // For the raw_* audit columns we record the first item's flag as a sample,
+    // but 'status' above is the real, rolled-up answer.
+    sampleNonRefundable: typeof items[0]?.non_refundable === 'boolean' ? items[0].non_refundable : null,
+  };
 }
 
-function toRow(booking, bid, cityName) {
-  const item = booking.hotel?.booking_items?.[0];
-  const room = item?.rooms?.[0];
-  const parseTs = (v) => {
-    if (!v) return null;
-    const d = new Date(String(v).replace(' ', 'T'));
-    return isNaN(d.getTime()) ? null : d.toISOString();
-  };
-  const parseDate = (v) => {
-    const iso = parseTs(v);
-    return iso ? iso.slice(0, 10) : null;
-  };
+// Build a DB row from ONE booking object as returned by GET /hotels/bookings.
+// (No detail call — the list response already contains everything.)
+function toRow(booking, cityName) {
+  const roll = rollUpBooking(booking);
+  const item0 = booking.hotel?.booking_items?.[0];
+  const room0 = item0?.rooms?.[0];
+
+  // Guest name: prefer holder, fall back to first pax.
+  let guestName = null;
+  if (booking.holder) {
+    guestName = `${booking.holder.name || ''} ${booking.holder.surname || ''}`.trim() || null;
+  }
+  if (!guestName && booking.hotel?.paxes?.[0]) {
+    const p = booking.hotel.paxes[0];
+    guestName = `${p.name || ''} ${p.surname || ''}`.trim() || null;
+  }
+
+  const checkinDate = parseDate(booking.checkin);
 
   return {
     booking_id: booking.booking_id,
-    bid: bid ? String(bid) : null,
+    booking_reference: booking.booking_reference || null,
+    supplier_reference: booking.supplier_reference || null,
     booking_date: parseTs(booking.booking_date),
     grn_updated_at: parseTs(booking.updated_at),
-    checkin: parseDate(booking.checkin),
+    checkin: checkinDate,
+    checkin_date: checkinDate,           // first-class copy — the product's spine
     checkout: parseDate(booking.checkout),
-    hotel_name: booking.hotel?.name || null,
+    hotel_name: booking.hotel?.name || booking.hotel?.hotel_confirmation_number || null,
     hotel_code: booking.hotel?.hotel_code ? String(booking.hotel.hotel_code) : null,
     city_code: booking.hotel?.city_code || null,
     city_name: cityName,
     country_code: booking.hotel?.country_code || null,
-    room_type: room?.room_type || room?.description || null,
-    board_basis: item?.boarding_details?.join(', ') || null,
-    price_total: booking.price?.total ? parseFloat(booking.price.total) : null,
-    currency: booking.currency || null,
+    room_type: room0?.room_type || room0?.description || null,
+    room_count: roll.roomCount,
+    guest_name: guestName,
+    board_basis: item0?.boarding_details?.join(', ') || null,
+    price_total: roll.priceTotal,
+    currency: booking.currency || item0?.currency || null,
     supplier_code: booking.supplier_code || null,
-    cancel_by_date: parseTs(item?.cancellation_policy?.cancel_by_date),
+    cancel_by_date: roll.cancelByDate,
     raw_booking_status: booking.booking_status ?? null,
-    raw_non_refundable: typeof booking.non_refundable === 'boolean' ? booking.non_refundable : null,
-    status: deriveStatus(booking),
-    raw: booking,                       // the safety net
+    raw_non_refundable: roll.sampleNonRefundable,
+    status: roll.status,
+    raw: booking,                        // the safety net — full JSON kept
     synced_at: new Date().toISOString(),
   };
 }
@@ -260,110 +343,140 @@ async function getSyncState() {
   return rows[0] || null;
 }
 
-// Sync one time-slice: list the booking ids GRN touched in it, pull details
-// in parallel, upsert. Returns how many rows landed.
-async function syncChunk(chunkStart, chunkEnd) {
-  const listUrl = `${GRN_API_BASE_URL}/hotels/bookingids`
-    + `?updated_start=${encodeURIComponent(fmtGrn(chunkStart))}`
-    + `&updated_end=${encodeURIComponent(fmtGrn(chunkEnd))}`;
+const fmtDay = (d) => d.toISOString().slice(0, 10); // YYYY-MM-DD, per GRN doc
 
-  const listResp = await fetch(listUrl, { headers: GRN_HEADERS() });
-  if (!listResp.ok) throw new Error(`GRN bookingids returned ${listResp.status}`);
-  const listData = await listResp.json();
-  const candidates = listData.bookings || [];
-  if (!candidates.length) return 0;
+// Sync ONE date window (<= 30 days) using the CONFIRMED endpoint:
+//   GET /hotels/bookings?filter_type=booking_date&start&end&count&from&direction
+// The list response already contains full booking objects, so NO detail calls.
+// Cursor pagination: first page by dates, then from=<last ref>&direction=next.
+// Returns { rows: n, calls: n } so the caller can enforce the per-run budget.
+async function syncWindow(windowStart, windowEnd, callBudget, onProgress) {
+  let callsUsed = 0;
+  let rowsLanded = 0;
+  let fromRef = null;
 
-  const { results } = await mapWithConcurrency(candidates, SYNC_CONCURRENCY, null, async (c) => {
-    const r = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${c.bid}`, {
-      headers: GRN_HEADERS(),
-    });
-    if (!r.ok) return null;
-    const d = await r.json();
-    return d.booking ? { booking: d.booking, bid: c.bid } : null;
-  });
+  for (;;) {
+    if (callsUsed >= callBudget) break;
 
-  const found = results.filter(Boolean);
+    let url = `${GRN_API_BASE_URL}/hotels/bookings`
+      + `?filter_type=booking_date`
+      + `&start=${fmtDay(windowStart)}`
+      + `&end=${fmtDay(windowEnd)}`
+      + `&count=${GRN_PAGE_SIZE}`;
+    if (fromRef) url += `&from=${encodeURIComponent(fromRef)}&direction=next`;
 
-  const rows = [];
-  for (const { booking, bid } of found) {
-    if (!booking.booking_id) continue;
-    const cityName = await getCityName(booking.hotel?.city_code);
-    rows.push(toRow(booking, bid, cityName));
+    const resp = await fetch(url, { headers: GRN_HEADERS() });
+    callsUsed++;
+    if (!resp.ok) throw new Error(`GRN /hotels/bookings returned HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    // GRN returns some errors as 200 with an error code in the body.
+    if (data.error || data.error_code) {
+      throw new Error(`GRN error: ${JSON.stringify(data).slice(0, 200)}`);
+    }
+
+    const bookings = data.bookings || [];
+    if (bookings.length === 0) break;
+
+    // Build rows. City-name resolution is a local cache lookup (no GRN call
+    // after the one-time city list load), so it's cheap.
+    const rows = [];
+    for (const b of bookings) {
+      if (!b.booking_id) continue;
+      const cityName = await getCityName(b.hotel?.city_code);
+      rows.push(toRow(b, cityName));
+    }
+    for (let i = 0; i < rows.length; i += UPSERT_BATCH) {
+      await sbUpsert('grn_bookings', rows.slice(i, i + UPSERT_BATCH), 'booking_id');
+    }
+    rowsLanded += rows.length;
+
+    if (onProgress) await onProgress(rowsLanded);
+
+    // Advance the cursor. If GRN gave us fewer than a full page, we're done.
+    fromRef = bookings[bookings.length - 1].booking_reference;
+    if (bookings.length < GRN_PAGE_SIZE || !fromRef) break;
+
+    await sleep(PAUSE_BETWEEN_CALLS_MS); // be a polite guest
   }
 
-  for (let i = 0; i < rows.length; i += UPSERT_BATCH) {
-    await sbUpsert('grn_bookings', rows.slice(i, i + UPSERT_BATCH), 'booking_id');
-  }
-
-  return rows.length;
+  return { rows: rowsLanded, calls: callsUsed };
 }
 
 // The whole job. Runs in the background — never inside a request.
-async function runSync({ fromISO }) {
+//
+// mode:
+//   'incremental' (default) — only the last DEFAULT_INCREMENTAL_DAYS. Tiny.
+//   'range'                 — explicit fromISO..toISO, walked in <=30-day windows.
+async function runSync({ fromISO, toISO, mode }) {
   syncRunning = true;
   let total = 0;
+  let callsUsed = 0;
 
   try {
-    const state = await getSyncState();
+    let windowFrom, windowTo;
 
-    // Where to start: explicit ?from=, else the saved watermark, else default backfill.
-    let cursor;
-    if (fromISO) cursor = new Date(fromISO);
-    else if (state?.watermark) cursor = new Date(state.watermark);
-    else { cursor = new Date(); cursor.setDate(cursor.getDate() - DEFAULT_BACKFILL_DAYS); }
-
-    // Overlap slightly so nothing falls through a boundary crack.
-    cursor.setMinutes(cursor.getMinutes() - 30);
-
-    const end = new Date();
-    const totalMs = Math.max(1, end - cursor);
+    if (mode === 'range' && fromISO) {
+      windowFrom = new Date(fromISO);
+      windowTo = toISO ? new Date(toISO) : new Date();
+    } else {
+      // Incremental: just look back a couple of days from now. Cheap, routine,
+      // safe to run often. This is what a scheduled job would call.
+      windowTo = new Date();
+      windowFrom = new Date(windowTo);
+      windowFrom.setDate(windowFrom.getDate() - DEFAULT_INCREMENTAL_DAYS);
+    }
 
     await setSyncState({
       last_run_status: 'running',
       last_run_at: new Date().toISOString(),
       last_run_error: null,
-      progress: `Starting from ${cursor.toISOString().slice(0, 10)}`,
+      progress: `Starting ${mode || 'incremental'} sync from ${fmtDay(windowFrom)}`,
     });
 
-    while (cursor < end) {
-      const chunkEnd = new Date(cursor);
-      chunkEnd.setDate(chunkEnd.getDate() + CHUNK_DAYS);
-      const cappedEnd = chunkEnd > end ? end : chunkEnd;
-
-      let attempt = 0;
-      for (;;) {
-        try {
-          total += await syncChunk(cursor, cappedEnd);
-          break;
-        } catch (e) {
-          attempt++;
-          if (attempt >= 3) throw e;
-          await sleep(2000 * attempt); // back off, then retry the slice
-        }
+    // Walk the whole span in <=30-day windows (endpoint limit), oldest first.
+    let cursor = new Date(windowFrom);
+    while (cursor < windowTo) {
+      if (callsUsed >= MAX_CALLS_PER_RUN) {
+        await setSyncState({
+          progress: `Paused at call budget (${MAX_CALLS_PER_RUN}). ${total} synced. Run again to continue.`,
+          watermark: cursor.toISOString(),
+          bookings_synced: total,
+        });
+        break;
       }
 
-      // Advance the watermark only after the slice actually landed, so a
-      // crash resumes here rather than starting over.
-      cursor = cappedEnd;
-      const pct = Math.min(99, Math.round(((cursor - (end - totalMs)) / totalMs) * 100));
-      await setSyncState({
-        watermark: cursor.toISOString(),
-        progress: `${pct}% — through ${cursor.toISOString().slice(0, 10)} · ${total} bookings synced`,
-        bookings_synced: total,
+      const winEnd = new Date(cursor);
+      winEnd.setDate(winEnd.getDate() + GRN_WINDOW_DAYS);
+      const cappedEnd = winEnd > windowTo ? windowTo : winEnd;
+
+      const remainingBudget = MAX_CALLS_PER_RUN - callsUsed;
+      const result = await syncWindow(cursor, cappedEnd, remainingBudget, async (n) => {
+        await setSyncState({
+          progress: `Syncing ${fmtDay(cursor)}–${fmtDay(cappedEnd)} · ${total + n} bookings so far`,
+          bookings_synced: total + n,
+        });
       });
+
+      total += result.rows;
+      callsUsed += result.calls;
+      cursor = cappedEnd;
+
+      await setSyncState({ watermark: cursor.toISOString(), bookings_synced: total });
+      await sleep(PAUSE_BETWEEN_CALLS_MS);
     }
 
     await setSyncState({
       last_run_status: 'idle',
-      progress: `Done — ${total} bookings synced up to ${end.toISOString().slice(0, 16).replace('T', ' ')} UTC`,
+      progress: `Done — ${total} bookings synced through ${fmtDay(windowTo)} (${callsUsed} GRN calls)`,
       bookings_synced: total,
-      watermark: end.toISOString(),
+      watermark: windowTo.toISOString(),
     });
   } catch (err) {
     await setSyncState({
       last_run_status: 'error',
       last_run_error: String(err.message || err),
-      progress: `Failed after ${total} bookings`,
+      progress: `Failed after ${total} bookings (${callsUsed} GRN calls)`,
     });
   } finally {
     syncRunning = false;
@@ -406,13 +519,19 @@ router.get('/sync-run', async (req, res) => {
     return res.json({ started: false, message: 'A sync is already running. Check /sync-status.' });
   }
 
+  // Default is a tiny INCREMENTAL sync (last 2 days). To pull a specific
+  // historical span, pass ?mode=range&from=YYYY-MM-DD&to=YYYY-MM-DD.
+  const mode = req.query.mode === 'range' ? 'range' : 'incremental';
   const fromISO = req.query.from ? `${req.query.from}T00:00:00Z` : null;
+  const toISO = req.query.to ? `${req.query.to}T23:59:59Z` : null;
 
-  runSync({ fromISO }); // deliberately not awaited — this must not block the request
+  runSync({ fromISO, toISO, mode }); // not awaited — must not block the request
 
   res.json({
     started: true,
-    from: fromISO || 'saved watermark, or last 90 days on first run',
+    mode,
+    from: mode === 'range' ? (fromISO || '(missing — range mode needs ?from=)') : `last ${DEFAULT_INCREMENTAL_DAYS} days`,
+    to: mode === 'range' ? (toISO || 'now') : 'now',
     message: 'Sync started in the background. Poll /sync-status to watch it.',
   });
 });
@@ -596,6 +715,7 @@ router.get('/dashboard-real', async (req, res) => {
 const STATUS_LABEL = {
   'refundable': 'Refundable',
   'non-refundable': 'Non-Refundable',
+  'partial': 'Partial',
   'cancelled': 'Cancelled',
   'unknown': 'Unknown',
 };
@@ -632,8 +752,8 @@ router.get('/bookings-list', async (req, res) => {
     const { rows, total } = await sbSelect(
       'grn_bookings',
       `${dateWhere}${statusWhere}`
-        + `&select=booking_id,booking_date,hotel_name,city_name,country_code,room_type,board_basis,`
-        + `checkin,checkout,price_total,currency,supplier_code,cancel_by_date,status,`
+        + `&select=booking_id,booking_reference,booking_date,hotel_name,city_name,country_code,room_type,room_count,guest_name,board_basis,`
+        + `checkin,checkin_date,checkout,price_total,currency,supplier_code,cancel_by_date,status,`
         + `raw_booking_status,raw_non_refundable`
         + `&order=booking_date.desc&offset=${offset}&limit=${perPage}`,
       { 'Prefer': 'count=exact' }
@@ -657,13 +777,16 @@ router.get('/bookings-list', async (req, res) => {
       perPage,
       rows: rows.map((r) => ({
         bookingId: r.booking_id,
+        bookingReference: r.booking_reference,
         bookingDate: r.booking_date,
         hotelName: r.hotel_name || 'Unknown',
         city: r.city_name,
         country: r.country_code,
         roomType: r.room_type,
+        roomCount: r.room_count,
+        guestName: r.guest_name,
         boardBasis: r.board_basis,
-        checkin: r.checkin,
+        checkin: r.checkin_date || r.checkin,
         checkout: r.checkout,
         priceTotal: r.price_total !== null ? Number(r.price_total) : null,
         currency: r.currency,
