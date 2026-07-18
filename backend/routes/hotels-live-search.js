@@ -883,6 +883,45 @@ router.get('/dashboard', async (req, res) => {
       `&cancel_by_date=lte.${encodeURIComponent(in3Iso)}` +
       `&checkin_date=gte.${todayIso}`);
 
+    // ---- CLOSING WINDOWS — the wedge -----------------------------------
+    // Value + count of rebookable bookings whose CANCEL-BY date falls within
+    // each window (and check-in still ahead). Money with a deadline: if nobody
+    // rebooks before cancel-by, the chance is gone. The VALUE closing in
+    // 7/14/21 days and MTD is the case for rebuq — inventory that expires
+    // unworked.
+    async function windowValue(daysAhead, useMonthEnd) {
+      let end;
+      if (useMonthEnd) {
+        const d = new Date(); end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+      } else {
+        end = new Date(); end.setDate(end.getDate() + daysAhead);
+      }
+      const endIso = end.toISOString();
+      const where =
+        `cancel_by_date=gt.${encodeURIComponent(nowIso)}` +
+        `&cancel_by_date=lte.${encodeURIComponent(endIso)}` +
+        `&checkin_date=gte.${todayIso}` +
+        `&raw_booking_status=not.ilike.cancel*`;
+      let valueUsd = 0, count = 0, scanned = 0;
+      const PAGE = 1000, MAX_SCAN = 20000;
+      for (;;) {
+        const { rows } = await sbSelect('grn_bookings',
+          `${where}&select=price_total,currency&limit=${PAGE}&offset=${scanned}`);
+        if (!rows.length) break;
+        for (const r of rows) { valueUsd += toUsd(r.price_total, r.currency); count++; }
+        scanned += rows.length;
+        if (rows.length < PAGE || scanned >= MAX_SCAN) break;
+      }
+      return { valueUsd: Math.round(valueUsd), count };
+    }
+
+    const closing = {
+      d7: await windowValue(7, false),
+      d14: await windowValue(14, false),
+      d21: await windowValue(21, false),
+      mtd: await windowValue(0, true),
+    };
+
     // ---- USD VALUE of the live inventory --------------------------------
     // We page through the live set pulling just price+currency, convert, sum.
     // Capped for safety; if the set is huge we sample and scale, stating so.
@@ -999,6 +1038,7 @@ router.get('/dashboard', async (req, res) => {
         expiringSoon: { count: expiringCount, windowDays: 3 },
         caughtThisMonth: { count: caughtCount, savedUsd: Math.round(caughtSavedUsd), basis: caughtBasis },
       },
+      closing,
       dailyTrend,
       topCities,
       sync: {
