@@ -840,17 +840,19 @@ function toUsd(amount, currency) {
 }
 
 // ===========================================================================
-// GET /api/live-search/dashboard
-// Returns every tile the Dashboard needs, all real.
+// DASHBOARD — snapshot model.
+//
+// computeDashboard() does the heavy scanning ONCE and returns the payload.
+// It's called by /dashboard-refresh (button or stale auto-refresh), and the
+// result is stored in dashboard_snapshot. /dashboard just reads that stored
+// row — instant, no timeout, no hammering the DB on every page view.
 // ===========================================================================
-router.get('/dashboard', async (req, res) => {
-  if (!sbConfigured()) {
-    return res.status(500).json({ error: 'Supabase not configured' });
-  }
+const SNAPSHOT_STALE_MS = 4 * 60 * 60 * 1000; // 4 hours
+let snapshotComputing = false;
 
-  try {
-    const nowIso = new Date().toISOString();
-    const todayIso = nowIso.slice(0, 10);
+async function computeDashboard() {
+  const nowIso = new Date().toISOString();
+  const todayIso = nowIso.slice(0, 10);
 
     // Cut-offs for the "soon" windows.
     const in7 = new Date(); in7.setDate(in7.getDate() + 7);
@@ -884,19 +886,12 @@ router.get('/dashboard', async (req, res) => {
       `&checkin_date=gte.${todayIso}`);
 
     // ---- CLOSING WINDOWS — the wedge -----------------------------------
-    // Value + count of rebookable bookings whose CANCEL-BY date falls within
-    // each window (and check-in still ahead). Money with a deadline: if nobody
-    // rebooks before cancel-by, the chance is gone. The VALUE closing in
-    // 7/14/21 days and MTD is the case for rebuq — inventory that expires
-    // unworked.
-    async function windowValue(daysAhead, useMonthEnd) {
-      let end;
-      if (useMonthEnd) {
-        const d = new Date(); end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
-      } else {
-        end = new Date(); end.setDate(end.getDate() + daysAhead);
-      }
-      const endIso = end.toISOString();
+    // Rebookable value whose CANCELLATION DEADLINE falls within each calendar
+    // period. Cancel-by is the ONLY clock that matters: you can only rebook
+    // before the window shuts. This is the runway of opportunity by when it
+    // expires — money that's gone if left unworked.
+    async function closingByDeadline(endDate) {
+      const endIso = endDate.toISOString();
       const where =
         `cancel_by_date=gt.${encodeURIComponent(nowIso)}` +
         `&cancel_by_date=lte.${encodeURIComponent(endIso)}` +
@@ -915,11 +910,24 @@ router.get('/dashboard', async (req, res) => {
       return { valueUsd: Math.round(valueUsd), count };
     }
 
+    const nowD = new Date();
+    // End of THIS WEEK (Sunday, so week = Mon–Sun)
+    const endOfWeek = new Date(nowD);
+    const daysToSunday = (7 - nowD.getDay()) % 7;
+    endOfWeek.setDate(nowD.getDate() + daysToSunday); endOfWeek.setHours(23, 59, 59, 999);
+    // End of THIS MONTH
+    const endOfMonth = new Date(nowD.getFullYear(), nowD.getMonth() + 1, 0, 23, 59, 59, 999);
+    // End of THIS QUARTER
+    const q = Math.floor(nowD.getMonth() / 3);
+    const endOfQuarter = new Date(nowD.getFullYear(), q * 3 + 3, 0, 23, 59, 59, 999);
+    // End of THIS YEAR
+    const endOfYear = new Date(nowD.getFullYear(), 11, 31, 23, 59, 59, 999);
+
     const closing = {
-      d7: await windowValue(7, false),
-      d14: await windowValue(14, false),
-      d21: await windowValue(21, false),
-      mtd: await windowValue(0, true),
+      week: await closingByDeadline(endOfWeek),
+      month: await closingByDeadline(endOfMonth),
+      quarter: await closingByDeadline(endOfQuarter),
+      year: await closingByDeadline(endOfYear),
     };
 
     // ---- USD VALUE of the live inventory --------------------------------
@@ -1028,7 +1036,7 @@ router.get('/dashboard', async (req, res) => {
     // ---- freshness ------------------------------------------------------
     const state = await getSyncState().catch(() => null);
 
-    res.json({
+    return {
       currency: 'USD',
       generatedAt: nowIso,
       tiles: {
@@ -1045,7 +1053,72 @@ router.get('/dashboard', async (req, res) => {
         syncedThrough: state?.watermark || null,
         lastStatus: state?.last_run_status || null,
       },
+    };
+}
+
+async function readSnapshot() {
+  const { rows } = await sbSelect('dashboard_snapshot', 'id=eq.1&select=*');
+  return rows[0] || null;
+}
+
+async function writeSnapshot(payload) {
+  await sbUpsert('dashboard_snapshot',
+    [{ id: 1, computed_at: new Date().toISOString(), payload }], 'id');
+}
+
+// Recompute and store. Guards against two runs at once.
+async function refreshSnapshot() {
+  if (snapshotComputing) return { skipped: true };
+  snapshotComputing = true;
+  try {
+    const payload = await computeDashboard();
+    await writeSnapshot(payload);
+    return { payload };
+  } finally {
+    snapshotComputing = false;
+  }
+}
+
+// GET /dashboard — reads the stored snapshot INSTANTLY. If none exists yet,
+// or it's older than 4h, kicks off a refresh in the background (and, on the
+// very first run when there's nothing at all, waits for it once).
+router.get('/dashboard', async (req, res) => {
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  try {
+    let snap = await readSnapshot();
+
+    // First ever load — no snapshot at all. Compute once, synchronously.
+    if (!snap || !snap.payload) {
+      const { payload } = await refreshSnapshot();
+      return res.json({ ...payload, snapshot: { computedAt: new Date().toISOString(), fresh: true, firstRun: true } });
+    }
+
+    const ageMs = Date.now() - new Date(snap.computed_at).getTime();
+    const stale = ageMs > SNAPSHOT_STALE_MS;
+
+    // Stale → refresh in the background, but serve the existing snapshot NOW.
+    if (stale && !snapshotComputing) {
+      refreshSnapshot().catch(() => {});
+    }
+
+    res.json({
+      ...snap.payload,
+      snapshot: { computedAt: snap.computed_at, ageMinutes: Math.round(ageMs / 60000), stale, refreshing: snapshotComputing },
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /dashboard-refresh — the "Refresh" button. Recomputes now, returns fresh.
+router.get('/dashboard-refresh', async (req, res) => {
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  try {
+    if (snapshotComputing) {
+      return res.json({ started: false, message: 'A refresh is already running.' });
+    }
+    const { payload } = await refreshSnapshot();
+    res.json({ ...payload, snapshot: { computedAt: new Date().toISOString(), fresh: true } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
