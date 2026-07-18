@@ -93,52 +93,88 @@ export default function DashboardPage() {
             <span style={{ fontSize: 12, color: SLATE }}>rebookable value by cancellation deadline — money that expires if left unworked</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-            <ClosingCard label="Next 7 days" win={c?.d7} loading={loading} accent={GOLD} />
-            <ClosingCard label="Next 14 days" win={c?.d14} loading={loading} accent={BLUE} />
-            <ClosingCard label="Next 21 days" win={c?.d21} loading={loading} accent={BLUE} />
-            <ClosingCard label="This month" win={c?.mtd} loading={loading} accent={NAVY} />
+            <ClosingCard label="This week" win={c?.week} loading={loading} accent={GOLD} />
+            <ClosingCard label="This month" win={c?.month} loading={loading} accent={BLUE} />
+            <ClosingCard label="This quarter" win={c?.quarter} loading={loading} accent={BLUE} />
+            <ClosingCard label="This year" win={c?.year} loading={loading} accent={NAVY} />
           </div>
         </div>
 
-        {/* Bottom row — inventory summary + top cities */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: 16, flex: 1, minHeight: 0 }}>
-          {/* Live inventory summary */}
-          <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Live inventory</div>
-            <SummaryRow label="Still cancellable" value={loading ? '—' : num(t?.liveRebookable?.count)} sub="future check-in, window open" />
-            <SummaryRow label="Checking in within 7 days" value={loading ? '—' : num(t?.checkingIn7?.count)} sub="imminent revenue" />
-            <SummaryRow label="Checking in within 30 days" value={loading ? '—' : num(t?.checkingIn30?.count)} sub="" />
-            <SummaryRow label="Caught this month" value={loading ? '—' : usd(t?.caughtThisMonth?.savedUsd)} sub={t?.caughtThisMonth?.basis === 'no_rebookings_yet' ? 'runs after first reprice' : `${num(t?.caughtThisMonth?.count)} rebookings`} muted={t?.caughtThisMonth?.basis === 'no_rebookings_yet'} last />
+        {/* REBOOKINGS SCOREBOARD — the achievement story (fills once live) */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
+            <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY }}>Rebookings</span>
+            <span style={{ fontSize: 12, color: SLATE }}>what we've captured against the opportunity above</span>
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+            <ScoreBlock
+              label="Rebooked"
+              value={loading ? '—' : num(t?.caughtThisMonth?.count ?? 0)}
+              sub="bookings moved to a lower rate"
+              bg={`linear-gradient(135deg, ${BLUE} 0%, #3576dd 100%)`}
+              fg="#fff"
+            />
+            <ScoreBlock
+              label="Revenue"
+              value={loading ? '—' : usd(t?.caughtThisMonth?.savedUsd ?? 0)}
+              sub="extra margin generated"
+              bg={`linear-gradient(135deg, ${GREEN} 0%, #12833e 100%)`}
+              fg="#fff"
+            />
+            <ScoreBlock
+              label="Rebooked GMV"
+              value={loading ? '—' : usdShort(0)}
+              sub={`of ${loading ? '—' : usdShort(t?.liveRebookable?.valueUsd)} rebookable`}
+              bg={`linear-gradient(135deg, ${NAVY} 0%, #1E293B 100%)`}
+              fg="#fff"
+            />
+            <ScoreBlock
+              label="Conversion"
+              value={loading ? '—' : '0%'}
+              sub="rebooked ÷ opportunity"
+              bg={`linear-gradient(135deg, ${GOLD} 0%, #e0a52a 100%)`}
+              fg="#3d2c00"
+            />
+          </div>
+        </div>
 
-          {/* Top cities */}
-          <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY }}>Top cities by rebookable value</span>
-              <span style={{ fontSize: 11, color: SLATE }}>value · bookings</span>
-            </div>
-            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-              {(!data?.topCities || data.topCities.length === 0) ? (
-                <div style={{ padding: '30px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No city data yet.</div>
-              ) : (
-                data.topCities.slice(0, 8).map((city: any) => (
-                  <div key={city.city} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
-                    <div style={{ width: 130, fontSize: 12, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{city.city}</div>
-                    <div style={{ flex: 1, background: '#EDF1F7', borderRadius: 6, height: 8 }}>
-                      <div style={{ width: `${((city.valueUsd || city.count) / maxCityVal) * 100}%`, background: GOLD, height: '100%', borderRadius: 6 }} />
-                    </div>
-                    <div style={{ width: 104, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      <span style={{ fontSize: 13, color: NAVY, fontWeight: 700 }}>{usdShort(city.valueUsd)}</span>
-                      <span style={{ fontSize: 11, color: SLATE, marginLeft: 6 }}>{num(city.count)}</span>
-                    </div>
+        {/* Top cities — full width */}
+        <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '18px 20px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY }}>Top cities by rebookable value</span>
+            <span style={{ fontSize: 11, color: SLATE }}>value · bookings</span>
+          </div>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 40px', alignContent: 'start' }}>
+            {(!data?.topCities || data.topCities.length === 0) ? (
+              <div style={{ padding: '30px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No city data yet.</div>
+            ) : (
+              data.topCities.slice(0, 8).map((city: any) => (
+                <div key={city.city} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
+                  <div style={{ width: 130, fontSize: 12, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{city.city}</div>
+                  <div style={{ flex: 1, background: '#EDF1F7', borderRadius: 6, height: 8 }}>
+                    <div style={{ width: `${((city.valueUsd || city.count) / maxCityVal) * 100}%`, background: GOLD, height: '100%', borderRadius: 6 }} />
                   </div>
-                ))
-              )}
-            </div>
+                  <div style={{ width: 104, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ fontSize: 13, color: NAVY, fontWeight: 700 }}>{usdShort(city.valueUsd)}</span>
+                    <span style={{ fontSize: 11, color: SLATE, marginLeft: 6 }}>{num(city.count)}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
     </BusinessSidebarWrapper>
+  );
+}
+
+function ScoreBlock({ label, value, sub, bg, fg }: any) {
+  return (
+    <div style={{ background: bg, borderRadius: 14, padding: '18px 20px', color: fg }}>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.85 }}>{label}</div>
+      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 30, fontWeight: 800, marginTop: 8 }}>{value}</div>
+      <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>{sub}</div>
+    </div>
   );
 }
 
@@ -150,18 +186,6 @@ function ClosingCard({ label, win, loading, accent }: any) {
         {loading ? '—' : usdShort(win?.valueUsd)}
       </div>
       <div style={{ fontSize: 12, color: SLATE, marginTop: 3 }}>{loading ? '' : `${num(win?.count)} bookings`}</div>
-    </div>
-  );
-}
-
-function SummaryRow({ label, value, sub, muted, last }: any) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 0', borderBottom: last ? 'none' : `1px solid ${LINE}` }}>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>{label}</div>
-        {sub && <div style={{ fontSize: 11, color: SLATE, marginTop: 1 }}>{sub}</div>}
-      </div>
-      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 800, color: muted ? '#94A3B8' : NAVY }}>{value}</div>
     </div>
   );
 }
