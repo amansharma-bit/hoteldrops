@@ -926,10 +926,17 @@ router.get('/dashboard', async (req, res) => {
       // table doesn't exist yet — that's fine, honest zero
     }
 
-    // ---- DAILY TREND of refundable bookings (last 30 days) -------------
-    // Grouped by booking_date. We pull minimal columns and bucket in JS.
-    const trendFrom = new Date(); trendFrom.setDate(trendFrom.getDate() - 30);
-    const trendFromIso = trendFrom.toISOString();
+    // ---- DAILY TREND, scoped to the selected PERIOD -------------------
+    // Today / WTD / MTD / YTD, filtered by booking_date. The action tiles
+    // above stay always-live; only this trend responds to the buttons.
+    const period = (req.query.period || 'Today');
+    const trendStart = new Date();
+    if (period === 'Today') { trendStart.setHours(0, 0, 0, 0); }
+    else if (period === 'WTD') { trendStart.setDate(trendStart.getDate() - trendStart.getDay()); trendStart.setHours(0,0,0,0); }
+    else if (period === 'MTD') { trendStart.setDate(1); trendStart.setHours(0,0,0,0); }
+    else if (period === 'YTD') { trendStart.setMonth(0, 1); trendStart.setHours(0,0,0,0); }
+    else { trendStart.setDate(trendStart.getDate() - 30); } // fallback
+    const trendFromIso = trendStart.toISOString();
     const trend = {};
     {
       const PAGE = 1000;
@@ -950,8 +957,9 @@ router.get('/dashboard', async (req, res) => {
     const dailyTrend = Object.entries(trend).sort(([a], [b]) => a.localeCompare(b))
       .map(([date, count]) => ({ date, count }));
 
-    // ---- TOP 10 CITIES by live rebookable volume -----------------------
+    // ---- TOP 10 CITIES by live rebookable volume + USD value -----------
     const cityCounts = {};
+    const cityValue = {};
     {
       const PAGE = 1000;
       let offset = 0;
@@ -959,11 +967,12 @@ router.get('/dashboard', async (req, res) => {
       const MAX_SCAN = 20000;
       for (;;) {
         const { rows } = await sbSelect('grn_bookings',
-          `${liveWhere}&select=city_name&limit=${PAGE}&offset=${offset}`);
+          `${liveWhere}&select=city_name,price_total,currency&limit=${PAGE}&offset=${offset}`);
         if (!rows.length) break;
         for (const r of rows) {
           const c = r.city_name || 'Unknown';
           cityCounts[c] = (cityCounts[c] || 0) + 1;
+          cityValue[c] = (cityValue[c] || 0) + toUsd(r.price_total, r.currency);
         }
         scanned += rows.length;
         offset += PAGE;
@@ -975,7 +984,7 @@ router.get('/dashboard', async (req, res) => {
       .filter(([c]) => c !== 'Unknown')
       .sort(([, a], [, b]) => b - a)
       .slice(0, 10)
-      .map(([city, count]) => ({ city, count }));
+      .map(([city, count]) => ({ city, count, valueUsd: Math.round(cityValue[city] || 0) }));
 
     // ---- freshness ------------------------------------------------------
     const state = await getSyncState().catch(() => null);
