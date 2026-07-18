@@ -160,19 +160,20 @@ export default function DashboardPage() {
             <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY }}>Top cities by rebookable value</span>
             <span style={{ fontSize: 11, color: SLATE }}>value · bookings</span>
           </div>
-          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 44px', alignContent: 'start' }}>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             {(!data?.topCities || data.topCities.length === 0) ? (
               <div style={{ padding: '30px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No city data yet.</div>
             ) : (
-              data.topCities.slice(0, 8).map((city: any) => (
-                <div key={city.city} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 11 }}>
-                  <div style={{ width: 118, flexShrink: 0, fontSize: 12, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{city.city}</div>
-                  <div style={{ flex: 1, minWidth: 40, background: '#EDF1F7', borderRadius: 6, height: 8 }}>
+              data.topCities.slice(0, 8).map((city: any, i: number) => (
+                <div key={city.city} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                  <div style={{ width: 20, flexShrink: 0, fontFamily: "'Sora',sans-serif", fontSize: 12, fontWeight: 700, color: '#94A3B8', textAlign: 'right' }}>{i + 1}</div>
+                  <div style={{ width: 150, flexShrink: 0, fontSize: 13, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{city.city}</div>
+                  <div style={{ flex: 1, minWidth: 60, background: '#EDF1F7', borderRadius: 6, height: 9 }}>
                     <div style={{ width: `${((city.valueUsd || city.count) / maxCityVal) * 100}%`, background: GOLD, height: '100%', borderRadius: 6 }} />
                   </div>
-                  <div style={{ width: 92, flexShrink: 0, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                    <span style={{ fontSize: 13, color: NAVY, fontWeight: 700 }}>{usdShort(city.valueUsd)}</span>
-                    <span style={{ fontSize: 11, color: SLATE, marginLeft: 6 }}>{num(city.count)}</span>
+                  <div style={{ width: 110, flexShrink: 0, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 14, color: NAVY, fontWeight: 700 }}>{usdShort(city.valueUsd)}</span>
+                    <span style={{ fontSize: 12, color: SLATE, marginLeft: 8 }}>{num(city.count)}</span>
                   </div>
                 </div>
               ))
