@@ -40,6 +40,13 @@ export default function BookingsPage() {
   const [period, setPeriod] = useState('MTD');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [citySearch, setCitySearch] = useState('');
+  const [cityQuery, setCityQuery] = useState(''); // debounced value actually sent to server
+
+  // Debounce the city search so we don't hit the server on every keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => { setCityQuery(citySearch.trim()); setPage(1); }, 350);
+    return () => clearTimeout(id);
+  }, [citySearch]);
 
   function getDateRange(p: string) {
     const now = new Date();
@@ -57,18 +64,16 @@ export default function BookingsPage() {
     setLoading(true);
     setError(null);
     const range = getDateRange(period);
-    authenticatedFetch(`${API_BASE}/api/live-search/bookings-list?page=${page}&status=all&start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}&_t=${Date.now()}`)
+    const cityParam = cityQuery ? `&city=${encodeURIComponent(cityQuery)}` : '';
+    authenticatedFetch(`${API_BASE}/api/live-search/bookings-list?page=${page}&status=all&start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}${cityParam}&_t=${Date.now()}`)
       .then((r: Response) => r.json())
       .then((d: any) => { if (!cancelled) { d.error ? setError(d.error) : setData(d); } })
       .catch((e: any) => { if (!cancelled) setError('Could not load bookings: ' + e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [page, period]);
+  }, [page, period, cityQuery]);
 
-  const allRows = data?.rows || [];
-  const rows = citySearch.trim()
-    ? allRows.filter((r: any) => (r.city || '').toLowerCase().includes(citySearch.trim().toLowerCase()))
-    : allRows;
+  const rows = data?.rows || [];
   const hasMore = data?.hasMore ?? false;
 
   return (
@@ -109,7 +114,7 @@ export default function BookingsPage() {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={SLATE} strokeWidth={2} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
           </div>
           <div style={{ flex: 1 }} />
-          <span style={{ fontSize: 13, color: SLATE }}>{loading ? 'Loading…' : `${rows.length} shown · ${data?.total ?? 0} total`}</span>
+          <span style={{ fontSize: 13, color: SLATE }}>{loading ? 'Loading…' : cityQuery ? `${data?.total ?? 0} in "${cityQuery}"` : `${data?.total ?? 0} total`}</span>
         </div>
 
         {error && (
@@ -120,7 +125,7 @@ export default function BookingsPage() {
         <div style={{ padding: '18px 32px 40px' }}>
           <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, overflow: 'hidden' }}>
             {/* Column header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '96px minmax(0,1fr) 130px 120px 96px 100px 28px', gap: 14, padding: '13px 20px', borderBottom: `1px solid ${LINE}`, background: '#FBFCFE' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '92px minmax(0,1fr) 150px 130px 92px 110px 24px', gap: 14, padding: '13px 20px', borderBottom: `1px solid ${LINE}`, background: '#FBFCFE' }}>
               {['Booked', 'Hotel', 'Supplier', 'Amount', 'Rebook by', 'Status', ''].map((h, i) => (
                 <div key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#94A3B8', textAlign: i === 3 ? 'right' : 'left' }}>{h}</div>
               ))}
@@ -140,11 +145,11 @@ export default function BookingsPage() {
                     {/* Summary row */}
                     <div
                       onClick={() => setExpanded(isOpen ? null : r.bookingId)}
-                      style={{ display: 'grid', gridTemplateColumns: '96px minmax(0,1fr) 130px 120px 96px 100px 28px', gap: 14, padding: '14px 20px', cursor: 'pointer', alignItems: 'center', background: isOpen ? '#F7FAFF' : '#fff', transition: 'background 0.15s' }}
+                      style={{ display: 'grid', gridTemplateColumns: '92px minmax(0,1fr) 150px 130px 92px 110px 24px', gap: 14, padding: '14px 20px', cursor: 'pointer', alignItems: 'center', background: isOpen ? '#F7FAFF' : '#fff', transition: 'background 0.15s' }}
                     >
                       <div>
                         <div style={{ fontSize: 12, color: NAVY, fontWeight: 600 }}>{fmtDate(r.bookingDate, false)}</div>
-                        <div style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'monospace', marginTop: 2 }}>{r.bookingId}</div>
+                        <div style={{ fontSize: 9.5, color: '#94A3B8', fontFamily: 'monospace', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.bookingId}>{r.bookingId}</div>
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.hotelName}</div>
