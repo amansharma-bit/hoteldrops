@@ -1117,4 +1117,200 @@ router.get('/dashboard-refresh', async (req, res) => {
   }
 });
 
+// ===========================================================================
+// REPRICING — manual, one-booking-at-a-time price checks.
+//
+// The whole point: a human hunts for price drops GRN's automated partner
+// (Mize) misses — especially in the 70+ cities Mize converts zero. Deliberate,
+// low-volume. NO bulk checking. One GRN availability call per button click.
+// ===========================================================================
+
+// GET /repricing/candidates — real rebookable bookings to work on.
+// Reads from OUR table (no GRN call). Optional ?city= and pagination.
+router.get('/repricing/candidates', async (req, res) => {
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  const page = parseInt(req.query.page, 10) || 1;
+  const perPage = 20;
+  const offset = (page - 1) * perPage;
+  const nowIso = new Date().toISOString();
+  const todayIso = nowIso.slice(0, 10);
+  const cityQuery = (req.query.city || '').trim();
+  const cityWhere = cityQuery ? `&city_name=ilike.*${encodeURIComponent(cityQuery)}*` : '';
+
+  // Rebookable = cancel window still open AND check-in ahead.
+  const where =
+    `cancel_by_date=gt.${encodeURIComponent(nowIso)}` +
+    `&checkin_date=gte.${todayIso}` +
+    `&raw_booking_status=not.ilike.cancel*` +
+    cityWhere;
+
+  try {
+    const { rows, total } = await sbSelect(
+      'grn_bookings',
+      `${where}&select=booking_id,hotel_name,hotel_code,city_name,country_code,room_type,room_count,`
+        + `board_basis,checkin,checkin_date,checkout,price_total,currency,supplier_code,cancel_by_date,raw`
+        + `&order=cancel_by_date.asc&offset=${offset}&limit=${perPage}`,
+      { 'Prefer': 'count=exact' }
+    );
+
+    // For each candidate, pull its latest check (if any) so the page shows state.
+    const ids = rows.map((r) => r.booking_id);
+    const lastChecks = {};
+    if (ids.length) {
+      const inList = ids.map((i) => `"${i}"`).join(',');
+      const { rows: checks } = await sbSelect('grn_price_checks',
+        `booking_id=in.(${encodeURIComponent(inList)})&select=booking_id,checked_at,live_usd,dropped,gap_usd,gap_pct&order=checked_at.desc`);
+      for (const c of checks) if (!lastChecks[c.booking_id]) lastChecks[c.booking_id] = c;
+    }
+
+    res.json({
+      page, perPage, total: total ?? 0,
+      hasMore: offset + perPage < (total ?? 0),
+      rows: rows.map((r) => {
+        const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 }[r.currency];
+        const origUsd = (r.price_total != null && usdRate) ? Math.round(Number(r.price_total) * usdRate) : null;
+        const last = lastChecks[r.booking_id] || null;
+        return {
+          bookingId: r.booking_id,
+          hotel: r.hotel_name,
+          hotelCode: r.hotel_code,
+          city: r.city_name,
+          room: r.room_type,
+          board: r.board_basis,
+          checkin: r.checkin_date || r.checkin,
+          checkout: r.checkout,
+          origLocal: r.price_total != null ? Number(r.price_total) : null,
+          origCur: r.currency,
+          origUsd,
+          supplier: r.supplier_code,
+          cancelBy: r.cancel_by_date,
+          lastCheck: last ? {
+            checkedAt: last.checked_at, liveUsd: last.live_usd, dropped: last.dropped,
+            gapUsd: last.gap_usd, gapPct: last.gap_pct,
+          } : null,
+        };
+      }),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /repricing/history?booking_id=... — full check log for one booking.
+router.get('/repricing/history', async (req, res) => {
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  const bookingId = req.query.booking_id;
+  if (!bookingId) return res.status(400).json({ error: 'booking_id required' });
+  try {
+    const { rows } = await sbSelect('grn_price_checks',
+      `booking_id=eq.${encodeURIComponent(bookingId)}&select=checked_at,live_usd,live_price,live_currency,dropped,gap_usd,gap_pct,room_match,board_match,dates_match&order=checked_at.desc&limit=50`);
+    res.json({ bookingId, checks: rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /repricing/check — THE price check. ONE booking, ONE GRN availability
+// call. Only fires when the user clicks "Check price". Logs the result.
+// Body: { booking_id }
+router.post('/repricing/check', async (req, res) => {
+  if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+
+  const bookingId = req.body?.booking_id;
+  if (!bookingId) return res.status(400).json({ error: 'booking_id required' });
+
+  try {
+    // 1. Load the original booking from our table.
+    const { rows } = await sbSelect('grn_bookings',
+      `booking_id=eq.${encodeURIComponent(bookingId)}&select=booking_id,hotel_code,checkin,checkin_date,checkout,room_type,board_basis,price_total,currency,raw&limit=1`);
+    const b = rows[0];
+    if (!b) return res.status(404).json({ error: 'Booking not found in synced table' });
+    if (!b.hotel_code) return res.status(400).json({ error: 'Booking has no hotel_code — cannot reprice' });
+
+    const checkin = (b.checkin_date || b.checkin || '').slice(0, 10);
+    const checkout = (b.checkout || '').slice(0, 10);
+    if (!checkin || !checkout) return res.status(400).json({ error: 'Booking missing check-in/out dates' });
+
+    // Rooms/occupancy from the raw booking, so we ask GRN for the same shape.
+    const item0 = b.raw?.hotel?.booking_items?.[0];
+    const paxes = b.raw?.hotel?.paxes || [];
+    const adults = paxes.filter((p) => p.type === 'AD').length || 2;
+    const childAges = paxes.filter((p) => p.type === 'CH').map((p) => p.age).filter((a) => a != null);
+    const roomReq = { adults };
+    if (childAges.length) roomReq.children_ages = childAges;
+
+    // 2. ONE GRN availability call for THIS hotel + dates.
+    const payload = {
+      rooms: [roomReq],
+      rates: 'concise',
+      hotel_codes: [String(b.hotel_code)],
+      currency: b.currency || 'USD',
+      client_nationality: 'US',
+      checkin,
+      checkout,
+      purpose_of_travel: 1,
+    };
+    const resp = await fetch(`${GRN_API_BASE_URL}/hotels/availability`, {
+      method: 'POST', headers: GRN_HEADERS(), body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok) return res.status(resp.status).json({ error: 'GRN availability error', details: data });
+
+    // 3. Extract the live min-rate for this hotel.
+    const hotel = (data.hotels || [])[0];
+    const minRate = hotel?.min_rate || null;
+    const liveRoom = minRate?.rooms?.[0];
+
+    const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 };
+    const origLocal = b.price_total != null ? Number(b.price_total) : null;
+    const origCur = b.currency || 'USD';
+    const origUsd = (origLocal != null && usdRate[origCur]) ? origLocal * usdRate[origCur] : null;
+
+    const liveLocal = minRate?.price != null ? Number(minRate.price) : null;
+    const liveCur = minRate?.currency || origCur;
+    const liveUsd = (liveLocal != null && usdRate[liveCur]) ? liveLocal * usdRate[liveCur] : null;
+
+    // 4. Like-for-like checks.
+    const norm = (s) => String(s || '').trim().toLowerCase();
+    const roomMatch = liveRoom ? norm(liveRoom.room_type || liveRoom.description) === norm(b.room_type) : null;
+    const boardMatch = minRate?.boarding_details ? norm(minRate.boarding_details.join(', ')) === norm(b.board_basis) : null;
+    const datesMatch = (data.checkin?.slice(0,10) === checkin && data.checkout?.slice(0,10) === checkout);
+
+    const gapUsd = (origUsd != null && liveUsd != null) ? Math.round((origUsd - liveUsd) * 100) / 100 : null;
+    const gapPct = (gapUsd != null && origUsd) ? Math.round((gapUsd / origUsd) * 100) : null;
+    const dropped = gapUsd != null ? gapUsd > 0 : false;
+
+    // 5. Log the check.
+    await sbUpsert('grn_price_checks', [{
+      booking_id: bookingId,
+      checked_at: new Date().toISOString(),
+      original_price: origLocal, original_currency: origCur, original_usd: origUsd != null ? Math.round(origUsd) : null,
+      live_price: liveLocal, live_currency: liveCur, live_usd: liveUsd != null ? Math.round(liveUsd) : null,
+      dropped, gap_usd: gapUsd, gap_pct: gapPct,
+      room_match: roomMatch, board_match: boardMatch, dates_match: datesMatch,
+      raw: minRate || { note: 'no availability returned' },
+      source: 'manual',
+    }], 'id');
+
+    // 6. Return the result for the UI.
+    res.json({
+      bookingId,
+      checkedAt: new Date().toISOString(),
+      original: { local: origLocal, currency: origCur, usd: origUsd != null ? Math.round(origUsd) : null, room: b.room_type, board: b.board_basis, checkin, checkout },
+      live: liveLocal != null
+        ? { local: liveLocal, currency: liveCur, usd: liveUsd != null ? Math.round(liveUsd) : null,
+            room: liveRoom?.room_type || liveRoom?.description || null,
+            board: minRate?.boarding_details?.join(', ') || null,
+            cancelBy: minRate?.cancellation_policy?.cancel_by_date || null }
+        : null,
+      available: liveLocal != null,
+      dropped, gapUsd, gapPct,
+      match: { room: roomMatch, board: boardMatch, dates: datesMatch },
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Price check failed', message: String(err.message || err) });
+  }
+});
+
 module.exports = router;
