@@ -752,9 +752,9 @@ router.get('/bookings-list', async (req, res) => {
     const { rows, total } = await sbSelect(
       'grn_bookings',
       `${dateWhere}${statusWhere}`
-        + `&select=booking_id,booking_reference,booking_date,hotel_name,city_name,country_code,room_type,room_count,guest_name,board_basis,`
+        + `&select=booking_id,booking_reference,supplier_reference,booking_date,hotel_name,hotel_code,city_name,country_code,room_type,room_count,guest_name,board_basis,`
         + `checkin,checkin_date,checkout,price_total,currency,supplier_code,cancel_by_date,status,`
-        + `raw_booking_status,raw_non_refundable`
+        + `raw_booking_status,raw_non_refundable,raw`
         + `&order=booking_date.desc&offset=${offset}&limit=${perPage}`,
       { 'Prefer': 'count=exact' }
     );
@@ -775,27 +775,47 @@ router.get('/bookings-list', async (req, res) => {
     res.json({
       page,
       perPage,
-      rows: rows.map((r) => ({
-        bookingId: r.booking_id,
-        bookingReference: r.booking_reference,
-        bookingDate: r.booking_date,
-        hotelName: r.hotel_name || 'Unknown',
-        city: r.city_name,
-        country: r.country_code,
-        roomType: r.room_type,
-        roomCount: r.room_count,
-        guestName: r.guest_name,
-        boardBasis: r.board_basis,
-        checkin: r.checkin_date || r.checkin,
-        checkout: r.checkout,
-        priceTotal: r.price_total !== null ? Number(r.price_total) : null,
-        currency: r.currency,
-        supplier: r.supplier_code,
-        lastCancellationDate: r.cancel_by_date,
-        status: r.status,
-        rawBookingStatus: r.raw_booking_status,
-        rawNonRefundable: r.raw_non_refundable,
-      })),
+      rows: rows.map((r) => {
+        const raw = r.raw || {};
+        const hotel = raw.hotel || {};
+        const item0 = hotel.booking_items?.[0] || {};
+        const paxes = hotel.paxes || [];
+        const adults = paxes.filter((p) => p.type === 'AD').length || null;
+        const children = paxes.filter((p) => p.type === 'CH');
+        const guests = paxes.map((p) => `${p.name || ''} ${p.surname || ''}`.trim()).filter(Boolean);
+        const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 }[r.currency];
+        const priceUsd = (r.price_total != null && usdRate) ? Math.round(Number(r.price_total) * usdRate) : null;
+        return {
+          bookingId: r.booking_id,
+          bookingReference: r.booking_reference,
+          supplierReference: r.supplier_reference,
+          bookingDate: r.booking_date,
+          hotelName: r.hotel_name || 'Unknown',
+          hotelCode: r.hotel_code,
+          address: hotel.address || null,
+          city: r.city_name,
+          country: r.country_code,
+          roomType: r.room_type,
+          roomCount: r.room_count,
+          guestName: r.guest_name,
+          guests,
+          adults,
+          childrenAges: children.map((c) => c.age).filter((a) => a != null),
+          childrenCount: children.length,
+          boardBasis: r.board_basis,
+          checkin: r.checkin_date || r.checkin,
+          checkout: r.checkout,
+          priceTotal: r.price_total !== null ? Number(r.price_total) : null,
+          priceUsd,
+          currency: r.currency,
+          supplier: r.supplier_code,
+          lastCancellationDate: r.cancel_by_date,
+          cancellationPolicy: item0.cancellation_policy?.details || null,
+          nonRefundable: item0.non_refundable ?? null,
+          status: r.status,
+          rawBookingStatus: r.raw_booking_status,
+        };
+      }),
       total: total ?? 0,
       totalAllStatuses,
       hasMore: offset + perPage < (total ?? 0),
