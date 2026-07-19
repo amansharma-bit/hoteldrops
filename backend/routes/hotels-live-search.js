@@ -745,13 +745,18 @@ router.get('/bookings-list', async (req, res) => {
   const statusWhere = statusFilter !== 'all' && STATUS_LABEL[statusFilter]
     ? `&status=eq.${encodeURIComponent(STATUS_LABEL[statusFilter])}`
     : '';
+  // City search — filters the WHOLE table, not just the current page.
+  const cityQuery = (req.query.city || '').trim();
+  const cityWhere = cityQuery
+    ? `&city_name=ilike.*${encodeURIComponent(cityQuery)}*`
+    : '';
 
   const offset = (page - 1) * perPage;
 
   try {
     const { rows, total } = await sbSelect(
       'grn_bookings',
-      `${dateWhere}${statusWhere}`
+      `${dateWhere}${statusWhere}${cityWhere}`
         + `&select=booking_id,booking_reference,supplier_reference,booking_date,hotel_name,hotel_code,city_name,country_code,room_type,room_count,guest_name,board_basis,`
         + `checkin,checkin_date,checkout,price_total,currency,supplier_code,cancel_by_date,status,`
         + `raw_booking_status,raw_non_refundable,raw`
