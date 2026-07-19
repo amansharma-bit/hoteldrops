@@ -6,7 +6,7 @@ import { authenticatedFetch } from '../../../lib/supabase-client';
 
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
-const BLUE = '#4589f0';
+const BLUE = '#0F52BA';
 const NAVY = '#0F172A';
 const SLATE = '#64748B';
 const MUTED = '#94A3B8';
