@@ -80,6 +80,8 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [authed, setAuthed] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
@@ -87,10 +89,18 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
         router.push('/business/login');
       } else {
         setAuthed(true);
+        const u = data.session.user;
+        const email = u?.email || '';
+        setUserEmail(email);
+        // Prefer a name from user metadata; else derive from the email handle.
+        const metaName = u?.user_metadata?.name || u?.user_metadata?.full_name;
+        setUserName(metaName || (email ? email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : 'Account'));
       }
       setCheckingAuth(false);
     });
   }, [router]);
+
+  const initials = (userName || userEmail || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
   if (checkingAuth) {
     return (
@@ -149,11 +159,11 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
         <div className="px-6 py-6 border-t border-white/15">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-semibold text-white flex-shrink-0">
-              GN
+              {initials}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm text-white truncate">GRN Connect</p>
-              <p className="text-xs text-white/60 truncate">deepak.narula@grnconnect.com</p>
+              <p className="text-sm text-white truncate">{userName || 'Account'}</p>
+              <p className="text-xs text-white/60 truncate">{userEmail}</p>
             </div>
           </div>
           <button
