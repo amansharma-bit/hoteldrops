@@ -1,133 +1,146 @@
-import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
+'use client';
 
-const rebookings = [
-  { hotel: 'COMO Metropolitan Singapore', city: 'Singapore', room: 'Standard Twin Room', checkin: '27 Jul 2026', original: '$810.00', rebooked: '$772.00', saved: '$38.00', supplier: 'smyrooms_grn', status: 'Confirmed' },
-  { hotel: 'Hilton Garden Inn Al Muraqabat', city: 'Dubai', room: 'Deluxe King Room', checkin: '27 Jul 2026', original: '$555.00', rebooked: '$526.00', saved: '$29.00', supplier: 'tbo_grn_intl', status: 'Confirmed' },
-  { hotel: 'Novotel Bangkok Sukhumvit', city: 'Bangkok', room: 'Superior Room', checkin: '02 Aug 2026', original: '$292.52', rebooked: '$272.37', saved: '$20.15', supplier: 'dotw', status: 'Confirmed' },
-  { hotel: 'Anantara Riverside Resort', city: 'Bangkok', room: 'Riverside Room', checkin: '19 Aug 2026', original: '$772.66', rebooked: '$715.71', saved: '$56.95', supplier: 'fitruums_dubai_vat', status: 'Pending' },
-  { hotel: 'Taj Mahal Palace', city: 'New Delhi', room: 'Luxury Room', checkin: '08 Jul 2026', original: '₹22,420', rebooked: '₹18,980', saved: '₹3,440', supplier: 'grn', status: 'Confirmed' },
+import { useState, useEffect } from 'react';
+import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
+import { authenticatedFetch } from '../../../lib/supabase-client';
+
+const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
+
+const SAPPHIRE = '#0F52BA';
+const NAVY = '#0F172A';
+const SLATE = '#64748B';
+const MUTED = '#94A3B8';
+const LINE = '#E7ECF3';
+const BG = '#F6F8FB';
+const GREEN = '#16A34A';
+const RED = '#DC2626';
+const AMBER = '#D97706';
+
+function fmtDate(d: string | null, withYear = false) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return '—';
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(withYear ? { year: 'numeric' } : {}) });
+}
+
+const TABS = [
+  { key: 'successful', label: 'Successful' },
+  { key: 'errors', label: 'Errors' },
+  { key: 'all', label: 'All attempts' },
 ];
 
-const statusStyles: Record<string, string> = {
-  Confirmed: 'text-emerald-700 bg-emerald-50',
-  Pending: 'text-amber-700 bg-amber-50',
-  Error: 'text-red-700 bg-red-50',
-};
-
 export default function RebookingsPage() {
+  const [tab, setTab] = useState('successful');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<any>(null);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    authenticatedFetch(`${API_BASE}/api/live-search/repricing/rebookings?status=${tab}&page=${page}&_t=${Date.now()}`)
+      .then((r: Response) => r.json())
+      .then((d: any) => { if (!cancelled) { d.error ? setError(d.error) : setData(d); } })
+      .catch((e: any) => { if (!cancelled) setError('Could not load rebookings: ' + e.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [tab, page]);
+
+  const rows = data?.rows || [];
+  const counts = data?.counts || { successful: 0, errors: 0, all: 0 };
+  const hasMore = data?.hasMore ?? false;
+
   return (
     <BusinessSidebarWrapper>
-      <div className="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between">
-        <div>
-          <h1 className="font-bold text-2xl text-[#0F172A]" style={{ fontFamily: 'Sora, sans-serif' }}>
-            Rebookings
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Every booking we've moved to a cheaper, verified rate.
-          </p>
-        </div>
-        <span className="text-xs font-medium text-slate-400 bg-slate-100 px-3 py-1.5 rounded-md">
-          Sample data
-        </span>
-      </div>
+      <div style={{ minHeight: '100vh', background: BG, fontFamily: "'Inter',sans-serif" }}>
+        <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-      <div className="px-8 py-8">
-
-        <div className="flex items-center gap-1 border-b border-slate-200 mb-6">
-          <button className="text-sm font-semibold text-[#0F172A] px-4 py-3 border-b-2 border-[#1447b8] -mb-px">
-            Successful
-          </button>
-          <button className="text-sm font-medium text-slate-400 hover:text-[#0F172A] px-4 py-3 transition-colors">
-            Errors <span className="ml-1 text-xs bg-red-50 text-red-500 px-1.5 py-0.5 rounded">3</span>
-          </button>
-          <button className="text-sm font-medium text-slate-400 hover:text-[#0F172A] px-4 py-3 transition-colors">
-            All attempts
-          </button>
+        {/* Header */}
+        <div style={{ padding: '26px 32px 0' }}>
+          <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 23, fontWeight: 800, color: NAVY, margin: 0 }}>Rebookings</h1>
+          <p style={{ fontSize: 13, color: SLATE, marginTop: 3 }}>Every rebooking rebuq has completed — original price, rebooked price, and what it saved.</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 mb-5">
-          <input
-            type="text"
-            placeholder="Search booking reference"
-            className="text-sm border border-slate-200 rounded-md px-3 py-2 w-56 focus:border-[#1447b8] outline-none"
-          />
-          <select className="text-sm border border-slate-200 rounded-md px-3 py-2 text-slate-600 focus:border-[#1447b8] outline-none">
-            <option>All suppliers</option>
-            <option>smyrooms_grn</option>
-            <option>tbo_grn_intl</option>
-            <option>dotw</option>
-          </select>
-          <select className="text-sm border border-slate-200 rounded-md px-3 py-2 text-slate-600 focus:border-[#1447b8] outline-none">
-            <option>Last 30 days</option>
-            <option>Last 7 days</option>
-          </select>
-          <button className="text-sm font-medium text-[#1447b8] px-3 py-2 hover:underline ml-auto">
-            Export CSV
-          </button>
+        {/* Tabs */}
+        <div style={{ padding: '20px 32px 0', display: 'flex', gap: 4, borderBottom: `1px solid ${LINE}`, marginBottom: 0 }}>
+          {TABS.map((t) => {
+            const active = tab === t.key;
+            const count = t.key === 'all' ? counts.all : t.key === 'successful' ? counts.successful : counts.errors;
+            return (
+              <button key={t.key} onClick={() => { setTab(t.key); setPage(1); }} style={{
+                border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13.5, fontWeight: 600,
+                padding: '10px 16px', color: active ? SAPPHIRE : SLATE, borderBottom: active ? `2px solid ${SAPPHIRE}` : '2px solid transparent',
+                marginBottom: -1, display: 'flex', alignItems: 'center', gap: 7,
+              }}>
+                {t.label}
+                <span style={{ fontSize: 11, fontWeight: 700, background: active ? '#E6F0FB' : '#F1F5F9', color: active ? SAPPHIRE : MUTED, padding: '1px 8px', borderRadius: 20 }}>{count}</span>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">Hotel</th>
-                  <th className="text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">Room</th>
-                  <th className="text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">Check-in</th>
-                  <th className="text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3 text-right">Original</th>
-                  <th className="text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3 text-right">Rebooked</th>
-                  <th className="text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3 text-right">Saved</th>
-                  <th className="text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">Supplier</th>
-                  <th className="text-xs font-semibold text-slate-500 uppercase tracking-wide px-5 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {rebookings.map((r, i) => (
-                  <tr key={i} className="hover:bg-slate-50 transition-colors cursor-pointer">
-                    <td className="px-5 py-4">
-                      <p className="text-sm font-medium text-[#0F172A]">{r.hotel}</p>
-                      <p className="text-xs text-slate-400">{r.city}</p>
-                    </td>
-                    <td className="px-5 py-4 text-sm text-slate-600">{r.room}</td>
-                    <td className="px-5 py-4 text-sm text-slate-500">{r.checkin}</td>
-                    <td className="px-5 py-4 text-sm text-slate-400 text-right tabular-nums" style={{ fontFamily: 'IBM Plex Mono, monospace' }}>
-                      {r.original}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-[#0F172A] font-medium text-right tabular-nums" style={{ fontFamily: 'IBM Plex Mono, monospace' }}>
-                      {r.rebooked}
-                    </td>
-                    <td className="px-5 py-4 text-sm font-semibold text-right tabular-nums" style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#B8860B' }}>
-                      {r.saved}
-                    </td>
-                    <td className="px-5 py-4 text-xs text-slate-500">{r.supplier}</td>
-                    <td className="px-5 py-4">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusStyles[r.status]}`}>
-                        {r.status}
-                      </span>
-                    </td>
-                  </tr>
+        {error && (
+          <div style={{ margin: '18px 32px 0', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: RED }}>{error}</div>
+        )}
+
+        {/* Content */}
+        <div style={{ padding: '24px 32px 40px' }}>
+          {loading ? (
+            <div style={{ padding: '70px 0', textAlign: 'center', color: MUTED, fontSize: 14 }}>Loading…</div>
+          ) : rows.length === 0 ? (
+            <EmptyState tab={tab} />
+          ) : (
+            <div style={{ background: '#fff', border: `0.5px solid ${LINE}`, borderRadius: 14, overflow: 'hidden' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) 110px 110px 110px 110px 120px', gap: 14, padding: '13px 20px', borderBottom: `0.5px solid ${LINE}`, background: '#FBFCFE' }}>
+                {['Booking', 'Check-in', 'Original', 'Rebooked', 'Saved', 'Status'].map((h, i) => (
+                  <div key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: MUTED, textAlign: (i >= 2 && i <= 4) ? 'right' : 'left' }}>{h}</div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100">
-            <p className="text-xs text-slate-400">Showing 5 of 187 rebookings</p>
-            <div className="flex items-center gap-2">
-              <button className="text-xs font-medium text-slate-400 px-3 py-1.5 rounded-md border border-slate-200 cursor-not-allowed">
-                Previous
-              </button>
-              <button className="text-xs font-medium text-[#0F172A] px-3 py-1.5 rounded-md border border-slate-200 hover:border-[#1447b8] transition-colors">
-                Next
-              </button>
+              </div>
+              {rows.map((r: any) => (
+                <div key={r.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) 110px 110px 110px 110px 120px', gap: 14, padding: '14px 20px', alignItems: 'center', borderBottom: `0.5px solid ${LINE}` }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.hotel}</div>
+                    <div style={{ fontSize: 12, color: SLATE, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[r.city, r.room].filter(Boolean).join(' · ') || '—'}</div>
+                  </div>
+                  <div style={{ fontSize: 13, color: NAVY }}>{fmtDate(r.checkin)}</div>
+                  <div style={{ textAlign: 'right', fontSize: 13, color: NAVY, fontFamily: 'monospace' }}>{r.originalUsd != null ? `$${r.originalUsd.toLocaleString()}` : '—'}</div>
+                  <div style={{ textAlign: 'right', fontSize: 13, color: NAVY, fontFamily: 'monospace' }}>{r.rebookedUsd != null ? `$${r.rebookedUsd.toLocaleString()}` : '—'}</div>
+                  <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 700, color: GREEN }}>{r.savedUsd != null ? `−$${r.savedUsd.toLocaleString()}` : '—'}</div>
+                  <div>
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: r.status === 'confirmed' || r.status === 'success' ? '#DCFCE7' : '#FEF2F2', color: r.status === 'confirmed' || r.status === 'success' ? GREEN : RED }}>{r.status}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
+
+          {!loading && rows.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
+              <span style={{ fontSize: 13, color: SLATE }}>Page {page}</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: page === 1 ? '#CBD5E1' : NAVY, cursor: page === 1 ? 'not-allowed' : 'pointer' }}>Previous</button>
+                <button onClick={() => setPage((p) => p + 1)} disabled={!hasMore} style={{ border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: !hasMore ? '#E2E8F0' : SAPPHIRE, color: !hasMore ? MUTED : '#fff', cursor: !hasMore ? 'not-allowed' : 'pointer' }}>Next</button>
+              </div>
+            </div>
+          )}
         </div>
-
-        <p className="text-xs text-slate-400 mt-4">
-          Click any row to see the Original vs. Rebooked comparison and full pipeline log. (Coming next.)
-        </p>
-
       </div>
     </BusinessSidebarWrapper>
+  );
+}
+
+function EmptyState({ tab }: { tab: string }) {
+  return (
+    <div style={{ background: '#fff', border: `0.5px solid ${LINE}`, borderRadius: 14, padding: '64px 32px', textAlign: 'center' }}>
+      <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#E6F0FB', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={SAPPHIRE} strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      </div>
+      <h3 style={{ fontFamily: "'Sora',sans-serif", fontSize: 17, fontWeight: 700, color: NAVY, margin: 0 }}>No rebookings yet</h3>
+      <p style={{ fontSize: 13.5, color: SLATE, marginTop: 8, maxWidth: 420, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.6 }}>
+        When a price check finds a genuine like-for-like saving and it's rebooked, it'll appear here with the original price, the rebooked price, and the margin captured. Start by checking prices on the Repricing page.
+      </p>
+    </div>
   );
 }
