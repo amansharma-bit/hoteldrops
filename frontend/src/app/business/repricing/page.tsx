@@ -206,7 +206,10 @@ export default function RepricingPage() {
                           <div>
                             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: BLUE, marginBottom: 10 }}>Original vs live</div>
                             {result?.live ? (
-                              <Compare original={result.original} live={result.live} match={result.match} />
+                              <>
+                                <MatchBadge basis={result.matchBasis} />
+                                <Compare original={result.original} live={result.live} match={result.match} />
+                              </>
                             ) : (
                               <div style={{ fontSize: 12.5, color: SLATE, lineHeight: 1.8 }}>
                                 <div>Room: {r.room || '—'}</div>
@@ -255,6 +258,18 @@ export default function RepricingPage() {
         </div>
       </div>
     </BusinessSidebarWrapper>
+  );
+}
+
+function MatchBadge({ basis }: { basis?: string }) {
+  if (!basis) return null;
+  let label, bg, fg;
+  if (basis === 'room_code') { label = 'Exact room match'; bg = '#DCFCE7'; fg = GREEN; }
+  else if (basis === 'room_name') { label = 'Matched by room name'; bg = '#DBEAFE'; fg = '#1E50A8'; }
+  else if (basis === 'cheapest_fallback') { label = 'Different room — cheapest available'; bg = '#FEF3C7'; fg = AMBER; }
+  else { label = 'No comparable room'; bg = '#F1F5F9'; fg = SLATE; }
+  return (
+    <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, background: bg, color: fg, marginBottom: 10 }}>{label}</div>
   );
 }
 
