@@ -787,8 +787,8 @@ router.get('/bookings-list', async (req, res) => {
         const priceUsd = (r.price_total != null && usdRate) ? Math.round(Number(r.price_total) * usdRate) : null;
         return {
           bookingId: r.booking_id,
-          bookingReference: r.booking_reference,
-          supplierReference: r.supplier_reference,
+          bookingReference: r.booking_reference || raw.booking_reference || null,
+          supplierReference: r.supplier_reference || raw.supplier_reference || raw.hotel?.hotel_confirmation_number || null,
           bookingDate: r.booking_date,
           hotelName: r.hotel_name || 'Unknown',
           hotelCode: r.hotel_code,
