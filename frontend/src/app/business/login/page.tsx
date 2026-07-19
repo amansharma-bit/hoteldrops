@@ -1,8 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabase-client';
+
+const KEYFRAMES = `
+@keyframes rebuqFlow {
+  0%   { transform: translate(-10%, -10%) rotate(0deg)   scale(1.2); }
+  33%  { transform: translate(8%, 5%)     rotate(120deg) scale(1.35); }
+  66%  { transform: translate(-5%, 8%)    rotate(240deg) scale(1.25); }
+  100% { transform: translate(-10%, -10%) rotate(360deg) scale(1.2); }
+}
+@keyframes rebuqFlow2 {
+  0%   { transform: translate(10%, 10%)   rotate(0deg)   scale(1.3); }
+  50%  { transform: translate(-8%, -6%)   rotate(180deg) scale(1.15); }
+  100% { transform: translate(10%, 10%)   rotate(360deg) scale(1.3); }
+}
+@keyframes rebuqRise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+`;
 
 export default function BusinessLoginPage() {
   const router = useRouter();
@@ -10,6 +28,15 @@ export default function BusinessLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Inject keyframes at runtime — cannot be stripped by the Next build.
+  useEffect(() => {
+    if (document.getElementById('rebuq-login-keyframes')) return;
+    const el = document.createElement('style');
+    el.id = 'rebuq-login-keyframes';
+    el.textContent = KEYFRAMES;
+    document.head.appendChild(el);
+  }, []);
 
   async function handleSignIn() {
     setError(null);
@@ -25,35 +52,17 @@ export default function BusinessLoginPage() {
     }
   }
 
+  const blobBase: React.CSSProperties = { position: 'absolute', borderRadius: '50%', filter: 'blur(70px)', willChange: 'transform' };
+
   return (
     <div style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter',sans-serif", background: '#0a1a3f' }}>
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-      {/* Animated gradient background */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes rebuqFlow {
-          0%   { transform: translate(-10%, -10%) rotate(0deg)   scale(1.2); }
-          33%  { transform: translate(8%, 5%)     rotate(120deg) scale(1.35); }
-          66%  { transform: translate(-5%, 8%)    rotate(240deg) scale(1.25); }
-          100% { transform: translate(-10%, -10%) rotate(360deg) scale(1.2); }
-        }
-        @keyframes rebuqFlow2 {
-          0%   { transform: translate(10%, 10%)   rotate(0deg)   scale(1.3); }
-          50%  { transform: translate(-8%, -6%)   rotate(180deg) scale(1.15); }
-          100% { transform: translate(10%, 10%)   rotate(360deg) scale(1.3); }
-        }
-        @keyframes rebuqRise {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .rebuq-blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.55; will-change: transform; }
-      `}} />
-
-      {/* flowing color blobs */}
-      <div className="rebuq-blob" style={{ width: '55vw', height: '55vw', top: '-15%', left: '-10%', background: 'radial-gradient(circle, #1560c9 0%, #0F52BA 45%, transparent 70%)', animation: 'rebuqFlow 22s ease-in-out infinite' }} />
-      <div className="rebuq-blob" style={{ width: '50vw', height: '50vw', bottom: '-15%', right: '-10%', background: 'radial-gradient(circle, #3b3bdb 0%, #2a2a9c 45%, transparent 70%)', animation: 'rebuqFlow2 26s ease-in-out infinite' }} />
-      <div className="rebuq-blob" style={{ width: '35vw', height: '35vw', top: '40%', left: '55%', background: 'radial-gradient(circle, #FCD34D 0%, #d9a616 40%, transparent 68%)', opacity: 0.28, animation: 'rebuqFlow 30s ease-in-out infinite reverse' }} />
-      <div className="rebuq-blob" style={{ width: '40vw', height: '40vw', top: '10%', left: '30%', background: 'radial-gradient(circle, #0F52BA 0%, transparent 68%)', opacity: 0.4, animation: 'rebuqFlow2 20s ease-in-out infinite' }} />
+      {/* flowing color blobs — keyframes injected at runtime via useEffect */}
+      <div style={{ ...blobBase, width: '55vw', height: '55vw', top: '-15%', left: '-10%', opacity: 0.55, background: 'radial-gradient(circle, #1560c9 0%, #0F52BA 45%, transparent 70%)', animation: 'rebuqFlow 22s ease-in-out infinite' }} />
+      <div style={{ ...blobBase, width: '50vw', height: '50vw', bottom: '-15%', right: '-10%', opacity: 0.55, background: 'radial-gradient(circle, #3b3bdb 0%, #2a2a9c 45%, transparent 70%)', animation: 'rebuqFlow2 26s ease-in-out infinite' }} />
+      <div style={{ ...blobBase, width: '35vw', height: '35vw', top: '40%', left: '55%', opacity: 0.28, background: 'radial-gradient(circle, #FCD34D 0%, #d9a616 40%, transparent 68%)', animation: 'rebuqFlow 30s ease-in-out infinite reverse' }} />
+      <div style={{ ...blobBase, width: '40vw', height: '40vw', top: '10%', left: '30%', opacity: 0.4, background: 'radial-gradient(circle, #0F52BA 0%, transparent 68%)', animation: 'rebuqFlow2 20s ease-in-out infinite' }} />
 
       {/* subtle dark vignette for card contrast */}
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 30%, rgba(6,16,45,0.55) 100%)' }} />
