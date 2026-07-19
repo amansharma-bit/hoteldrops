@@ -1343,21 +1343,42 @@ router.post('/repricing/check', async (req, res) => {
       source: 'manual',
     }], 'id');
 
+    // Build the full rate list for the UI — every room GRN returned, so a
+    // human can eyeball all options, not just the auto-matched one.
+    const usdOf = (amt, cur) => (amt != null && usdRate[cur]) ? Math.round(Number(amt) * usdRate[cur]) : null;
+    const allRatesOut = allRates.map((rt) => {
+      const rm = rt?.rooms?.[0] || {};
+      const local = rt?.price != null ? Number(rt.price) : null;
+      const cur = rt?.currency || origCur;
+      const usd = usdOf(local, cur);
+      const isMatch = origRoomCode && rateRoomCode(rt) && norm(rateRoomCode(rt)) === norm(origRoomCode);
+      return {
+        roomType: rm.room_type || rm.description || rt.room_type || '—',
+        board: rateBoard(rt) || '—',
+        local, currency: cur, usd,
+        refundable: rt?.non_refundable === false,
+        cancelBy: rt?.cancellation_policy?.cancel_by_date || null,
+        vsOriginalUsd: (usd != null && origUsd != null) ? Math.round(origUsd - usd) : null,
+        isMatch: !!isMatch,
+      };
+    }).sort((a, b) => (a.usd ?? 1e12) - (b.usd ?? 1e12));
+
     // 6. Return the result for the UI.
     res.json({
       bookingId,
       checkedAt: new Date().toISOString(),
-      original: { local: origLocal, currency: origCur, usd: origUsd != null ? Math.round(origUsd) : null, room: b.room_type, board: b.board_basis, checkin, checkout },
+      original: { local: origLocal, currency: origCur, usd: origUsd != null ? Math.round(origUsd) : null, room: origRoomType, board: origBoard, checkin, checkout },
       live: liveLocal != null
         ? { local: liveLocal, currency: liveCur, usd: liveUsd != null ? Math.round(liveUsd) : null,
             room: liveRoom?.room_type || liveRoom?.description || null,
-            board: minRate?.boarding_details?.join(', ') || null,
+            board: rateBoard(minRate) || null,
             cancelBy: minRate?.cancellation_policy?.cancel_by_date || null }
         : null,
       available: liveLocal != null,
       dropped, gapUsd, gapPct,
       matchBasis,
       match: { room: roomMatch, board: boardMatch, dates: datesMatch },
+      allRates: allRatesOut,
     });
   } catch (err) {
     res.status(500).json({ error: 'Price check failed', message: String(err.message || err) });
