@@ -1454,4 +1454,59 @@ router.get('/repricing/searches', async (req, res) => {
   }
 });
 
+// GET /repricing/rebookings — real completed rebookings (from grn_rebookings).
+// Empty until the rebook action runs. Honest, real data — no sample rows.
+router.get('/repricing/rebookings', async (req, res) => {
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  const page = parseInt(req.query.page, 10) || 1;
+  const perPage = 25;
+  const offset = (page - 1) * perPage;
+  const status = (req.query.status || 'all').toLowerCase(); // all | successful | errors
+
+  try {
+    // Try the B2B grn_rebookings table first; if it doesn't exist yet, return empty honestly.
+    let where = '';
+    if (status === 'successful') where = 'status=in.(confirmed,success)';
+    else if (status === 'errors') where = 'status=in.(error,failed)';
+
+    let rows = [], total = 0;
+    try {
+      const q = (where ? where + '&' : '') + `select=*&order=created_at.desc&offset=${offset}&limit=${perPage}`;
+      const r = await sbSelect('grn_rebookings', q, { 'Prefer': 'count=exact' });
+      rows = r.rows; total = r.total ?? 0;
+    } catch {
+      rows = []; total = 0; // table not present yet — honest empty
+    }
+
+    // Summary counts
+    let counts = { successful: 0, errors: 0, all: 0 };
+    try {
+      counts.all = await sbCount('grn_rebookings', '');
+      counts.successful = await sbCount('grn_rebookings', 'status=in.(confirmed,success)');
+      counts.errors = await sbCount('grn_rebookings', 'status=in.(error,failed)');
+    } catch { /* empty */ }
+
+    res.json({
+      page, perPage, total, hasMore: offset + perPage < total,
+      counts,
+      rows: rows.map((r) => ({
+        id: r.id,
+        bookingId: r.booking_id,
+        hotel: r.hotel_name,
+        city: r.city_name || r.city,
+        room: r.room_type,
+        checkin: r.checkin_date || r.checkin,
+        originalUsd: r.original_usd,
+        rebookedUsd: r.rebooked_usd,
+        savedUsd: r.saved_usd,
+        supplier: r.supplier_code || r.supplier,
+        status: r.status,
+        createdAt: r.created_at,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
