@@ -6,267 +6,263 @@ import { authenticatedFetch } from '../../../lib/supabase-client';
 
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
+const BLUE = '#4589f0';
+const NAVY = '#0F172A';
+const GOLD = '#F5B833';
+const SLATE = '#64748B';
+const LINE = '#E7ECF3';
+const BG = '#F6F8FB';
+const RED = '#DC2626';
+const AMBER = '#D97706';
+
+function fmtDate(d: string | null, withYear = true) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return '—';
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(withYear ? { year: 'numeric' } : {}) });
+}
+function daysUntil(d: string | null) {
+  if (!d) return null;
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return null;
+  return Math.ceil((dt.getTime() - Date.now()) / 86400000);
+}
+function money(amount: number | null, currency: string | null) {
+  if (amount == null) return '—';
+  return `${currency || ''} ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`.trim();
+}
+
 export default function BookingsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
-  const [statusFilter, setStatusFilter] = useState('all');
   const [period, setPeriod] = useState('MTD');
-  const [customStart, setCustomStart] = useState('');
-  const [customEnd, setCustomEnd] = useState('');
-  const [pendingStart, setPendingStart] = useState('');
-  const [pendingEnd, setPendingEnd] = useState('');
-  const [showCustom, setShowCustom] = useState(false);
-
-  // -------------------------------------------------------------------------
-  // Sync control.
-  //
-  // The sync can't be triggered from the browser address bar: /api/live-search/*
-  // sits behind this app's auth middleware, and a URL typed into the address
-  // bar carries no login token — it just returns "Not authenticated."
-  //
-  // authenticatedFetch attaches the Supabase session token, so triggering it
-  // from this page (where you're already signed in) works, and needs no
-  // separate secret.
-  // -------------------------------------------------------------------------
-  const [syncMsg, setSyncMsg] = useState<string | null>(null);
-  const [syncBusy, setSyncBusy] = useState(false);
-  const [syncState, setSyncState] = useState<any>(null);
-
-  async function startSync() {
-    setSyncBusy(true);
-    setSyncMsg('Starting sync…');
-    try {
-      const r = await authenticatedFetch(`${API_BASE}/api/live-search/sync-run?from=2026-04-15`);
-      const d = await r.json();
-      if (d.error) {
-        setSyncMsg(`Error: ${d.error}${d.missing ? ' — missing: ' + d.missing.join(', ') : ''}${d.hint ? ' — ' + d.hint : ''}`);
-      } else {
-        setSyncMsg(d.started ? 'Sync started. It runs in the background — this can take 10–15 minutes.' : d.message);
-      }
-    } catch (e: any) {
-      setSyncMsg('Could not start sync: ' + e.message);
-    } finally {
-      setSyncBusy(false);
-    }
-  }
-
-  async function checkSync() {
-    try {
-      const r = await authenticatedFetch(`${API_BASE}/api/live-search/sync-status?_t=${Date.now()}`);
-      const d = await r.json();
-      setSyncState(d);
-      if (d.error) setSyncMsg(`Error: ${d.error}`);
-    } catch (e: any) {
-      setSyncMsg('Could not read sync status: ' + e.message);
-    }
-  }
-
-  // While a sync is running, poll every 5s so progress is visible.
-  useEffect(() => {
-    if (!syncState?.running) return;
-    const id = setInterval(checkSync, 5000);
-    return () => clearInterval(id);
-  }, [syncState?.running]);
-
-  // -------------------------------------------------------------------------
-  // THE OFF-BY-ONE-DAY BUG.
-  //
-  // Old code:  d.toISOString().slice(0, 10)
-  //
-  // toISOString() converts to UTC. We're at UTC+5:30, so a Date built from
-  // LOCAL parts — new Date(2026, 6, 1) = Jul 1 00:00 IST — becomes
-  // "2026-06-30T18:30:00Z", and slicing gives "2026-06-30". Every preset
-  // queried from the day before; "Today" queried yesterday. It's why MTD
-  // showed rows booked Jun 30.
-  //
-  // Fix: format from the LOCAL calendar fields. No UTC conversion.
-  // -------------------------------------------------------------------------
-  const fmtLocalDate = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [citySearch, setCitySearch] = useState('');
 
   function getDateRange(p: string) {
     const now = new Date();
     let start = new Date(now);
-    if (p === 'Today') { /* start = today */ }
+    if (p === 'Today') { /* today */ }
     else if (p === 'WTD') { start.setDate(now.getDate() - now.getDay()); }
     else if (p === 'MTD') { start = new Date(now.getFullYear(), now.getMonth(), 1); }
     else if (p === 'YTD') { start = new Date(now.getFullYear(), 0, 1); }
-    return { start: fmtLocalDate(start) + ' 00:00:00', end: fmtLocalDate(now) + ' 23:59:59' };
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return { start: fmt(start) + ' 00:00:00', end: fmt(now) + ' 23:59:59' };
   }
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    setData(null);
-    const range = showCustom && customStart && customEnd
-      ? { start: customStart + ' 00:00:00', end: customEnd + ' 23:59:59' }
-      : getDateRange(period);
-    authenticatedFetch(`${API_BASE}/api/live-search/bookings-list?page=${page}&status=${statusFilter}&start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}&_t=${Date.now()}`)
+    const range = getDateRange(period);
+    authenticatedFetch(`${API_BASE}/api/live-search/bookings-list?page=${page}&status=all&start=${encodeURIComponent(range.start)}&end=${encodeURIComponent(range.end)}&_t=${Date.now()}`)
       .then((r: Response) => r.json())
-      .then((d: any) => {
-        if (cancelled) return;
-        if (d.error) setError(d.error + (d.hint ? ` — ${d.hint}` : ''));
-        else setData(d);
-      })
+      .then((d: any) => { if (!cancelled) { d.error ? setError(d.error) : setData(d); } })
       .catch((e: any) => { if (!cancelled) setError('Could not load bookings: ' + e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [page, period, customStart, customEnd, showCustom, statusFilter]);
+  }, [page, period]);
 
-  const rows = data?.rows || [];
-  const diag = data?.diagnostics;
+  const allRows = data?.rows || [];
+  const rows = citySearch.trim()
+    ? allRows.filter((r: any) => (r.city || '').toLowerCase().includes(citySearch.trim().toLowerCase()))
+    : allRows;
   const hasMore = data?.hasMore ?? false;
-
-  const fmtSynced = (v: string | null) =>
-    v ? new Date(v).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null;
 
   return (
     <BusinessSidebarWrapper>
-      <div style={{ minHeight: '100vh', background: '#F8FAFC', fontFamily: "'Inter', sans-serif" }}>
-        <link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      <div style={{ minHeight: '100vh', background: BG, fontFamily: "'Inter',sans-serif" }}>
+        <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-        <div style={{ background: '#fff', borderBottom: '1px solid #E2E8F0', padding: '24px 32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Header */}
+        <div style={{ padding: '26px 32px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 22, fontWeight: 800, color: '#0F172A' }}>Bookings</h1>
-              <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>All bookings across your GRN book — search, filter, and track cancellation windows.</p>
+              <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 23, fontWeight: 800, color: NAVY, margin: 0 }}>Bookings</h1>
+              <p style={{ fontSize: 13, color: SLATE, marginTop: 3 }}>Every booking on your GRN book — click any row for full details.</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <button onClick={startSync} disabled={syncBusy} style={{ border: '1px solid #1447b8', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, background: syncBusy ? '#E2E8F0' : '#1447b8', color: syncBusy ? '#94A3B8' : '#fff', cursor: syncBusy ? 'not-allowed' : 'pointer' }}>
-                {syncBusy ? 'Starting…' : 'Sync now'}
-              </button>
-              <button onClick={checkSync} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#fff', color: '#334155', cursor: 'pointer' }}>
-                Check status
-              </button>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', background: loading ? '#F1F5F9' : error ? '#FEF2F2' : '#F0FDF4', color: loading ? '#64748B' : error ? '#DC2626' : '#16A34A', padding: '5px 12px', borderRadius: 20, border: `1px solid ${loading ? '#E2E8F0' : error ? '#FECACA' : '#BBF7D0'}` }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: loading ? '#94A3B8' : error ? '#DC2626' : '#16A34A' }} />
-                {loading ? 'Loading' : error ? 'Error' : 'Synced'}
-              </span>
-            </div>
+            {data?.diagnostics?.syncedThrough && (
+              <span style={{ fontSize: 12, color: SLATE }}>Synced through <strong style={{ color: NAVY }}>{fmtDate(data.diagnostics.syncedThrough)}, {new Date(data.diagnostics.syncedThrough).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</strong></span>
+            )}
           </div>
         </div>
 
-        <div style={{ padding: '24px 32px' }}>
-          {/* Data freshness. This page no longer pretends to be "live" — it
-              shows our own synced copy, and says exactly how fresh it is.
-              An honest timestamp beats a "Live" badge over stale numbers. */}
-          {diag?.syncedThrough && (
-            <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#1E40AF' }}>
-              Data synced through <strong>{fmtSynced(diag.syncedThrough)}</strong>
-              {diag.lastSyncStatus === 'running' && <> · <span style={{ color: '#B45309' }}>sync in progress: {diag.lastSyncProgress}</span></>}
-              {diag.lastSyncStatus === 'error' && <> · <span style={{ color: '#B91C1C' }}>last sync failed</span></>}
-            </div>
-          )}
+        {/* Filter bar */}
+        <div style={{ padding: '20px 32px 0', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', background: '#fff', border: `1px solid ${LINE}`, borderRadius: 10, padding: 3 }}>
+            {['Today', 'WTD', 'MTD', 'YTD'].map((p) => (
+              <button key={p} onClick={() => { setPeriod(p); setPage(1); setExpanded(null); }} style={{
+                border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: '7px 16px', borderRadius: 7,
+                background: period === p ? BLUE : 'transparent', color: period === p ? '#fff' : SLATE, transition: 'background 0.15s',
+              }}>{p}</button>
+            ))}
+          </div>
+          <div style={{ position: 'relative', flex: '0 1 260px' }}>
+            <input
+              value={citySearch}
+              onChange={(e) => setCitySearch(e.target.value)}
+              placeholder="Search city…"
+              style={{ width: '100%', border: `1px solid ${LINE}`, borderRadius: 9, padding: '8px 12px 8px 32px', fontSize: 13, color: NAVY, background: '#fff', outline: 'none', fontFamily: 'inherit' }}
+            />
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={SLATE} strokeWidth={2} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+          </div>
+          <div style={{ flex: 1 }} />
+          <span style={{ fontSize: 13, color: SLATE }}>{loading ? 'Loading…' : `${rows.length} shown · ${data?.total ?? 0} total`}</span>
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 12px', fontSize: 13, background: '#fff', color: '#334155' }}>
-                <option value="all">All bookings</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="refundable">Refundable</option>
-                <option value="non-refundable">Non-Refundable</option>
-                <option value="unknown">Unclassified</option>
-              </select>
-              <div style={{ display: 'flex', background: '#fff', border: '1px solid #E2E8F0', borderRadius: 8, padding: 3 }}>
-                {['Today', 'WTD', 'MTD', 'YTD'].map((p) => (
-                  <button key={p} onClick={() => { setPeriod(p); setShowCustom(false); setPage(1); }} style={{ border: 'none', background: !showCustom && period === p ? '#1447b8' : 'transparent', color: !showCustom && period === p ? '#fff' : '#64748B', fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 6, cursor: 'pointer' }}>{p}</button>
-                ))}
-              </div>
-              <button onClick={() => setShowCustom(!showCustom)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, background: showCustom ? '#1447b8' : '#fff', color: showCustom ? '#fff' : '#64748B', cursor: 'pointer' }}>Custom range</button>
-              {showCustom && (
-                <>
-                  <input type="date" value={pendingStart} onChange={(e) => { setPendingStart(e.target.value); document.getElementById('bookingsEndDateInput')?.focus(); }} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }} />
-                  <span style={{ color: '#94A3B8', fontSize: 12 }}>to</span>
-                  <input id="bookingsEndDateInput" type="date" value={pendingEnd} onChange={(e) => setPendingEnd(e.target.value)} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '7px 10px', fontSize: 12 }} />
-                  <button onClick={() => { if (pendingStart && pendingEnd) { setCustomStart(pendingStart); setCustomEnd(pendingEnd); setPage(1); } }} disabled={!pendingStart || !pendingEnd} style={{ border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 12, fontWeight: 600, background: pendingStart && pendingEnd ? '#1447b8' : '#E2E8F0', color: pendingStart && pendingEnd ? '#fff' : '#94A3B8', cursor: pendingStart && pendingEnd ? 'pointer' : 'not-allowed' }}>Apply</button>
-                </>
-              )}
+        {error && (
+          <div style={{ margin: '18px 32px 0', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: RED }}>{error}</div>
+        )}
+
+        {/* Table */}
+        <div style={{ padding: '18px 32px 40px' }}>
+          <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, overflow: 'hidden' }}>
+            {/* Column header */}
+            <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 150px 130px 90px 30px', gap: 16, padding: '13px 20px', borderBottom: `1px solid ${LINE}`, background: '#FBFCFE' }}>
+              {['Booked', 'Hotel', 'Supplier', 'Amount', 'Rebook by', ''].map((h, i) => (
+                <div key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#94A3B8', textAlign: i === 3 ? 'right' : 'left' }}>{h}</div>
+              ))}
             </div>
-            <button style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: '#334155', cursor: 'pointer' }}>Export CSV</button>
+
+            {loading ? (
+              <div style={{ padding: '50px 0', textAlign: 'center', color: '#94A3B8', fontSize: 14 }}>Loading bookings…</div>
+            ) : rows.length === 0 ? (
+              <div style={{ padding: '50px 0', textAlign: 'center', color: '#94A3B8', fontSize: 14 }}>No bookings match.</div>
+            ) : (
+              rows.map((r: any) => {
+                const isOpen = expanded === r.bookingId;
+                const dLeft = daysUntil(r.lastCancellationDate);
+                const deadlineColor = dLeft == null ? SLATE : dLeft <= 3 ? RED : dLeft <= 7 ? AMBER : NAVY;
+                return (
+                  <div key={r.bookingId} style={{ borderBottom: `1px solid ${LINE}` }}>
+                    {/* Summary row */}
+                    <div
+                      onClick={() => setExpanded(isOpen ? null : r.bookingId)}
+                      style={{ display: 'grid', gridTemplateColumns: '110px 1fr 150px 130px 90px 30px', gap: 16, padding: '14px 20px', cursor: 'pointer', alignItems: 'center', background: isOpen ? '#F7FAFF' : '#fff', transition: 'background 0.15s' }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 12, color: NAVY, fontWeight: 600 }}>{fmtDate(r.bookingDate, false)}</div>
+                        <div style={{ fontSize: 10, color: '#94A3B8', fontFamily: 'monospace', marginTop: 2 }}>{r.bookingId}</div>
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.hotelName}</div>
+                        <div style={{ fontSize: 12, color: SLATE, marginTop: 1 }}>{r.city || '—'}</div>
+                      </div>
+                      <div style={{ fontSize: 12, color: SLATE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.supplier || '—'}</div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, fontFamily: 'monospace' }}>{money(r.priceTotal, r.currency)}</div>
+                        {r.priceUsd != null && r.currency !== 'USD' && <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 1 }}>${r.priceUsd.toLocaleString()}</div>}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: deadlineColor }}>{fmtDate(r.lastCancellationDate, false)}</div>
+                        {dLeft != null && dLeft >= 0 && <div style={{ fontSize: 10, color: deadlineColor, marginTop: 1 }}>{dLeft === 0 ? 'today' : `${dLeft}d left`}</div>}
+                      </div>
+                      <div style={{ textAlign: 'center', color: '#94A3B8', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                      </div>
+                    </div>
+
+                    {/* Inline detail — animated */}
+                    <div style={{ maxHeight: isOpen ? 600 : 0, overflow: 'hidden', transition: 'max-height 0.32s ease', background: '#F7FAFF' }}>
+                      <div style={{ padding: isOpen ? '4px 20px 22px' : '0 20px', borderTop: isOpen ? `1px solid ${LINE}` : 'none' }}>
+                        <DetailGrid r={r} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
 
-          {/* The real status distribution in this window. This is the answer to
-              "why is the dropdown empty?" — either there genuinely are none, or
-              they're all landing in Unclassified because GRN never sent the
-              field. Remove this box once the data is trusted. */}
-          {diag?.statusBreakdown && (
-            <div style={{ background: '#F1F5F9', border: '1px solid #E2E8F0', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>
-              in this window: {Object.entries(diag.statusBreakdown).map(([k, v]) => `${k}=${v}`).join('  ')} · total={data?.totalAllStatuses ?? 0}
-            </div>
-          )}
-
-          {error && (
-            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#DC2626' }}>{error}</div>
-          )}
-
-          <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, overflow: 'hidden' }}>
-            <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                  {['Booking ID', 'Hotel', 'Room', 'Stay', 'Price', 'Supplier', 'Status'].map((h) => (
-                    <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#94A3B8' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>Loading…</td></tr>
-                ) : rows.length === 0 ? (
-                  <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94A3B8' }}>
-                    No bookings match this filter.
-                    {data && data.totalAllStatuses === 0 && <div style={{ marginTop: 8, fontSize: 12 }}>The table is empty for this window — has the sync run yet?</div>}
-                  </td></tr>
-                ) : (
-                  rows.map((r: any) => (
-                    <tr key={r.bookingId} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                        <div style={{ fontFamily: 'monospace', fontSize: 11, color: '#64748B' }}>{r.bookingId}</div>
-                        <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>{r.bookingDate ? new Date(r.bookingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</div>
-                      </td>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                        <div style={{ fontWeight: 600, color: '#0F172A' }}>{r.hotelName}</div>
-                        <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>{r.city || '—'}</div>
-                      </td>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                        <div style={{ color: '#334155' }}>{r.roomType || '—'}</div>
-                        <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>{r.boardBasis || '—'}</div>
-                      </td>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                        <div style={{ color: '#334155' }}>{r.checkin ? new Date(r.checkin).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'} → {r.checkout ? new Date(r.checkout).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</div>
-                        <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>Cancel by {r.lastCancellationDate ? new Date(r.lastCancellationDate).toLocaleDateString() : '—'}</div>
-                      </td>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                        <div style={{ fontFamily: 'monospace', fontWeight: 600, color: '#0F172A' }}>{r.currency} {r.priceTotal?.toFixed(2) ?? '—'}</div>
-                      </td>
-                      <td style={{ padding: '12px 16px', color: '#64748B', fontSize: 12, verticalAlign: 'top' }}>{r.supplier || '—'}</td>
-                      <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
-                        <span title={`GRN sent: booking_status=${r.rawBookingStatus ?? 'null'}, non_refundable=${String(r.rawNonRefundable)}`} style={{
-                          fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20,
-                          background: r.status === 'Refundable' ? '#FCD34D' : r.status === 'Cancelled' ? '#FEE2E2' : r.status === 'Unknown' ? '#FEF3C7' : '#E2E8F0',
-                          color: r.status === 'Refundable' ? '#78350F' : r.status === 'Cancelled' ? '#B91C1C' : r.status === 'Unknown' ? '#92400E' : '#475569',
-                        }}>{r.status === 'Unknown' ? 'Unclassified' : r.status}</span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
+          {/* Pagination */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
-            <span style={{ fontSize: 13, color: '#64748B' }}>
-              {loading ? 'Loading…' : `Showing ${rows.length} of ${data?.total ?? 0} matching bookings`}
-            </span>
+            <span style={{ fontSize: 13, color: SLATE }}>{loading ? '' : `Page ${page}`}</span>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1 || loading} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: page === 1 ? '#CBD5E1' : '#334155', cursor: page === 1 ? 'not-allowed' : 'pointer' }}>Previous</button>
-              <button onClick={() => setPage((p) => p + 1)} disabled={loading || !hasMore} style={{ border: '1px solid #E2E8F0', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: !hasMore ? '#E2E8F0' : '#1447b8', color: !hasMore ? '#94A3B8' : '#fff', cursor: !hasMore ? 'not-allowed' : 'pointer' }}>Next</button>
+              <button onClick={() => { setPage((p) => Math.max(1, p - 1)); setExpanded(null); }} disabled={page === 1 || loading} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: page === 1 ? '#CBD5E1' : NAVY, cursor: page === 1 ? 'not-allowed' : 'pointer' }}>Previous</button>
+              <button onClick={() => { setPage((p) => p + 1); setExpanded(null); }} disabled={loading || !hasMore} style={{ border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: !hasMore ? '#E2E8F0' : BLUE, color: !hasMore ? '#94A3B8' : '#fff', cursor: !hasMore ? 'not-allowed' : 'pointer' }}>Next</button>
             </div>
           </div>
         </div>
       </div>
     </BusinessSidebarWrapper>
+  );
+}
+
+function DetailGrid({ r }: { r: any }) {
+  const nights = (() => {
+    if (!r.checkin || !r.checkout) return null;
+    const a = new Date(r.checkin), b = new Date(r.checkout);
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return null;
+    return Math.round((b.getTime() - a.getTime()) / 86400000);
+  })();
+  const dToCheckin = daysUntil(r.checkin);
+  const dToDeadline = daysUntil(r.lastCancellationDate);
+  const guestList = (r.guests && r.guests.length) ? r.guests.join(', ') : (r.guestName || '—');
+  const childText = r.childrenCount ? `${r.childrenCount}${r.childrenAges?.length ? ` (ages ${r.childrenAges.join(', ')})` : ''}` : '0';
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px 40px', paddingTop: 16 }}>
+      <Section title="Stay">
+        <Field label="Check-in" value={`${fmtDate(r.checkin)}${dToCheckin != null && dToCheckin >= 0 ? ` · in ${dToCheckin}d` : ''}`} />
+        <Field label="Check-out" value={fmtDate(r.checkout)} />
+        <Field label="Nights" value={nights != null ? String(nights) : '—'} />
+        <Field label="Room type" value={r.roomType || '—'} />
+        <Field label="Board basis" value={r.boardBasis || '—'} />
+      </Section>
+
+      <Section title="Hotel">
+        <Field label="Name" value={r.hotelName} />
+        <Field label="Address" value={r.address || '—'} />
+        <Field label="City" value={[r.city, r.country].filter(Boolean).join(', ') || '—'} />
+        <Field label="Hotel code" value={r.hotelCode || '—'} mono />
+      </Section>
+
+      <Section title="Guests">
+        <Field label="Names" value={guestList} />
+        <Field label="Adults" value={r.adults != null ? String(r.adults) : '—'} />
+        <Field label="Children" value={childText} />
+        <Field label="Rooms" value={r.roomCount != null ? String(r.roomCount) : '—'} />
+      </Section>
+
+      <Section title="Price">
+        <Field label="Local" value={money(r.priceTotal, r.currency)} mono />
+        <Field label="USD" value={r.priceUsd != null ? `$${r.priceUsd.toLocaleString()}` : '—'} mono />
+      </Section>
+
+      <Section title="Cancellation">
+        <Field label="Rebook by" value={`${fmtDate(r.lastCancellationDate)}${dToDeadline != null && dToDeadline >= 0 ? ` · ${dToDeadline}d left` : ''}`} />
+        <Field label="Refundable" value={r.nonRefundable === false ? 'Yes' : r.nonRefundable === true ? 'No' : '—'} />
+        {r.cancellationPolicy && r.cancellationPolicy[0] && (
+          <Field label="Policy" value={`Fee ${r.cancellationPolicy[0].currency || ''} ${r.cancellationPolicy[0].flat_fee || '—'} from ${fmtDate(r.cancellationPolicy[0].from)}`} />
+        )}
+      </Section>
+
+      <Section title="References">
+        <Field label="GRN booking ID" value={r.bookingId} mono />
+        <Field label="Booking ref" value={r.bookingReference || '—'} mono />
+        <Field label="Supplier" value={r.supplier || '—'} />
+        <Field label="Supplier ref" value={r.supplierReference || '—'} mono />
+      </Section>
+    </div>
+  );
+}
+
+function Section({ title, children }: any) {
+  return (
+    <div>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: BLUE, marginBottom: 8 }}>{title}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{children}</div>
+    </div>
+  );
+}
+
+function Field({ label, value, mono }: any) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
+      <span style={{ color: SLATE, flexShrink: 0 }}>{label}</span>
+      <span style={{ color: NAVY, fontWeight: 500, textAlign: 'right', fontFamily: mono ? 'monospace' : 'inherit', fontSize: mono ? 11.5 : 12.5, wordBreak: 'break-word' }}>{value}</span>
+    </div>
   );
 }
