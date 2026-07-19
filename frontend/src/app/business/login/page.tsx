@@ -5,194 +5,111 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabase-client';
 
 export default function BusinessLoginPage() {
-  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSignIn() {
     setError(null);
+    if (!email || !password) { setError('Enter your email and password.'); return; }
     setLoading(true);
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-    if (authError) {
-      setError('Incorrect email or password.');
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) { setError(error.message || 'Sign-in failed. Check your details.'); setLoading(false); return; }
+      router.push('/business/overview');
+    } catch (e: any) {
+      setError(e.message || 'Something went wrong.');
       setLoading(false);
-      return;
     }
-    router.push('/business/overview');
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
+    <div style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter',sans-serif", background: '#0a1a3f' }}>
+      <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-      {/* LEFT: brand panel */}
-      <div
-        className="relative flex flex-col justify-between px-10 lg:px-14 py-12 min-h-[320px] lg:min-h-screen overflow-hidden"
-        style={{
-          background: 'linear-gradient(155deg, #0b1440 0%, #12379b 30%, #1447b8 70%, #2e5fe0 100%)',
-        }}
-      >
-        {/* Subtle grid texture, same pattern used on the cover deck slides */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-40"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-            backgroundSize: '48px 48px',
-          }}
+      {/* Animated gradient background */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes rebuqFlow {
+          0%   { transform: translate(-10%, -10%) rotate(0deg)   scale(1.2); }
+          33%  { transform: translate(8%, 5%)     rotate(120deg) scale(1.35); }
+          66%  { transform: translate(-5%, 8%)    rotate(240deg) scale(1.25); }
+          100% { transform: translate(-10%, -10%) rotate(360deg) scale(1.2); }
+        }
+        @keyframes rebuqFlow2 {
+          0%   { transform: translate(10%, 10%)   rotate(0deg)   scale(1.3); }
+          50%  { transform: translate(-8%, -6%)   rotate(180deg) scale(1.15); }
+          100% { transform: translate(10%, 10%)   rotate(360deg) scale(1.3); }
+        }
+        @keyframes rebuqRise {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .rebuq-blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.55; will-change: transform; }
+      `}} />
+
+      {/* flowing color blobs */}
+      <div className="rebuq-blob" style={{ width: '55vw', height: '55vw', top: '-15%', left: '-10%', background: 'radial-gradient(circle, #1560c9 0%, #0F52BA 45%, transparent 70%)', animation: 'rebuqFlow 22s ease-in-out infinite' }} />
+      <div className="rebuq-blob" style={{ width: '50vw', height: '50vw', bottom: '-15%', right: '-10%', background: 'radial-gradient(circle, #3b3bdb 0%, #2a2a9c 45%, transparent 70%)', animation: 'rebuqFlow2 26s ease-in-out infinite' }} />
+      <div className="rebuq-blob" style={{ width: '35vw', height: '35vw', top: '40%', left: '55%', background: 'radial-gradient(circle, #FCD34D 0%, #d9a616 40%, transparent 68%)', opacity: 0.28, animation: 'rebuqFlow 30s ease-in-out infinite reverse' }} />
+      <div className="rebuq-blob" style={{ width: '40vw', height: '40vw', top: '10%', left: '30%', background: 'radial-gradient(circle, #0F52BA 0%, transparent 68%)', opacity: 0.4, animation: 'rebuqFlow2 20s ease-in-out infinite' }} />
+
+      {/* subtle dark vignette for card contrast */}
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 30%, rgba(6,16,45,0.55) 100%)' }} />
+
+      {/* Login card */}
+      <div style={{
+        position: 'relative', zIndex: 2, width: 'min(92vw, 400px)',
+        background: 'rgba(255,255,255,0.98)', borderRadius: 18,
+        boxShadow: '0 24px 70px rgba(6,16,45,0.45), 0 2px 8px rgba(6,16,45,0.2)',
+        padding: '40px 36px', animation: 'rebuqRise 0.6s ease both',
+      }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+          <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 26, fontWeight: 800, color: '#0F172A' }}>rebuq<span style={{ color: '#FCD34D' }}>.</span></span>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94A3B8' }}>Business</span>
+        </div>
+        <p style={{ fontSize: 14, color: '#64748B', marginTop: 6, marginBottom: 28 }}>Sign in to your rebooking console.</p>
+
+        {/* Email */}
+        <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>Email</label>
+        <input
+          type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}
+          placeholder="you@company.com"
+          style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #E2E8F0', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: '#0F172A', outline: 'none', marginBottom: 18, fontFamily: 'inherit', transition: 'border 0.15s' }}
+          onFocus={(e) => (e.currentTarget.style.border = '1px solid #0F52BA')}
+          onBlur={(e) => (e.currentTarget.style.border = '1px solid #E2E8F0')}
         />
 
-        <div className="relative z-10">
-          <a href="/business" className="flex items-baseline gap-2 mb-1">
-            <span className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
-              rebuq<span className="text-[#FCD34D]">.</span>
-            </span>
-          </a>
-          <p className="text-xs font-semibold tracking-widest text-white/50 uppercase mb-14">
-            Business Console
-          </p>
+        {/* Password */}
+        <label style={{ fontSize: 12, fontWeight: 600, color: '#334155', display: 'block', marginBottom: 6 }}>Password</label>
+        <input
+          type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSignIn()}
+          placeholder="••••••••"
+          style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #E2E8F0', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: '#0F172A', outline: 'none', marginBottom: 20, fontFamily: 'inherit', transition: 'border 0.15s' }}
+          onFocus={(e) => (e.currentTarget.style.border = '1px solid #0F52BA')}
+          onBlur={(e) => (e.currentTarget.style.border = '1px solid #E2E8F0')}
+        />
 
-          <h1
-            className="font-extrabold text-4xl lg:text-[2.8rem] leading-[1.12] text-white mb-6 max-w-xl"
-            style={{ fontFamily: 'Sora, sans-serif', letterSpacing: '-0.02em' }}
-          >
-            Real bookings.
-            <br />
-            <span style={{ color: '#FCD34D' }}>Real savings.</span>
-            <br />
-            Live, right now.
-          </h1>
-          <p className="text-white/70 leading-relaxed max-w-sm mb-10">
-            Direct access to your GRN booking book — real-time rates, live
-            repricing, and every saving found, backed by a real API
-            connection, not a spreadsheet.
-          </p>
+        {error && (
+          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 9, padding: '9px 12px', fontSize: 12.5, color: '#DC2626', marginBottom: 16 }}>{error}</div>
+        )}
 
-          {/* Real, live-feeling stat row instead of a generic bullet list */}
-          <div className="grid grid-cols-3 gap-6 border-t border-white/10 pt-6 max-w-md">
-            <div>
-              <div className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>80K+</div>
-              <div className="text-xs text-white/50 mt-1">Live bookings tracked</div>
-            </div>
-            <div>
-              <div className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Real-time</div>
-              <div className="text-xs text-white/50 mt-1">GRN API connection</div>
-            </div>
-            <div>
-              <div className="font-extrabold text-2xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>Secured</div>
-              <div className="text-xs text-white/50 mt-1">Invite-only access</div>
-            </div>
-          </div>
-        </div>
+        {/* Sign in */}
+        <button
+          onClick={handleSignIn} disabled={loading}
+          style={{ width: '100%', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, color: '#fff', cursor: loading ? 'wait' : 'pointer', background: loading ? '#3b6fb0' : '#0F52BA', transition: 'background 0.15s', fontFamily: 'inherit' }}
+          onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#0c449c')}
+          onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#0F52BA')}
+        >
+          {loading ? 'Signing in…' : 'Sign in'}
+        </button>
 
-        <p className="relative z-10 text-xs text-white/40">© 2026 rebuq. Business partners only.</p>
+        <p style={{ fontSize: 11.5, color: '#94A3B8', textAlign: 'center', marginTop: 20 }}>Access is limited to approved GRN partners.</p>
       </div>
-
-      {/* RIGHT: form */}
-      <div className="flex items-center justify-center px-6 py-16 bg-white">
-        <div className="w-full max-w-sm">
-
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="font-extrabold text-2xl text-[#0F172A]" style={{ fontFamily: 'Sora, sans-serif' }}>
-              Welcome back
-            </h2>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#FCD34D]" />
-          </div>
-          <p className="text-sm text-slate-500 mb-8">Sign in to the rebuq business console</p>
-
-          {error && (
-            <div className="mb-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
-              {error}
-            </div>
-          )}
-
-          <form className="space-y-5" onSubmit={handleLogin}>
-            <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-[#0F172A] mb-2">
-                Company Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] focus:ring-2 focus:ring-[#1447b8]/10 outline-none transition-all"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-[#0F172A] mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••"
-                  className="w-full border border-slate-200 rounded-lg px-4 py-3 pr-11 text-sm text-[#0F172A] placeholder-slate-400 focus:border-[#1447b8] focus:ring-2 focus:ring-[#1447b8]/10 outline-none transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label="Toggle password visibility"
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  <EyeIcon />
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full font-semibold text-sm py-3.5 rounded-lg bg-[#1447b8] text-white hover:bg-[#0f3a94] transition-colors mt-2 disabled:opacity-60 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  Signing in…
-                </>
-              ) : (
-                <>Access Business Console →</>
-              )}
-            </button>
-          </form>
-
-          <div className="flex items-center justify-between mt-8">
-            <a href="/business" className="text-sm text-slate-500 hover:text-[#0F172A] transition-colors">
-              ← Back to home
-            </a>
-            <a
-              href="mailto:business@rebuq.com"
-              className="text-sm font-medium text-[#1447b8] hover:text-[#1447b8]/80 transition-colors"
-            >
-              Request access →
-            </a>
-          </div>
-        </div>
-      </div>
-
     </div>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-      />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
   );
 }
