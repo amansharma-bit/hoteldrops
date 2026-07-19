@@ -1385,4 +1385,73 @@ router.post('/repricing/check', async (req, res) => {
   }
 });
 
+// GET /repricing/searches — the conversion story for Rebookings.
+// Reads the real check log (grn_price_checks). Shows searches made, drops
+// found, and how many were actionable (like-for-like on the matching room).
+router.get('/repricing/searches', async (req, res) => {
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  const page = parseInt(req.query.page, 10) || 1;
+  const perPage = 25;
+  const offset = (page - 1) * perPage;
+
+  try {
+    // Recent checks (most recent first), joined with booking detail from grn_bookings.
+    const { rows: checks, total } = await sbSelect('grn_price_checks',
+      `select=id,booking_id,checked_at,original_usd,live_usd,dropped,gap_usd,gap_pct,room_match,board_match,dates_match`
+      + `&order=checked_at.desc&offset=${offset}&limit=${perPage}`,
+      { 'Prefer': 'count=exact' });
+
+    // Enrich with hotel/city/room from grn_bookings (one lookup for the page's ids).
+    const ids = [...new Set(checks.map((c) => c.booking_id))];
+    const info = {};
+    if (ids.length) {
+      const inList = ids.map((i) => `"${i}"`).join(',');
+      const { rows: bk } = await sbSelect('grn_bookings',
+        `booking_id=in.(${encodeURIComponent(inList)})&select=booking_id,hotel_name,city_name,room_type,currency`);
+      for (const b of bk) info[b.booking_id] = b;
+    }
+
+    // Funnel totals across the WHOLE log (not just this page).
+    const summaryRows = await sbSelect('grn_price_check_summary', 'select=*').then((r) => r.rows).catch(() => []);
+    const summary = summaryRows[0] || {};
+    // Actionable drops = dropped AND room_match true AND dates_match true.
+    const { total: actionableDrops } = await sbSelect('grn_price_checks',
+      `dropped=eq.true&room_match=eq.true&dates_match=eq.true&select=id`, { 'Prefer': 'count=exact' });
+
+    res.json({
+      page, perPage, total: total ?? 0,
+      hasMore: offset + perPage < (total ?? 0),
+      funnel: {
+        totalChecks: Number(summary.total_checks || 0),
+        bookingsChecked: Number(summary.bookings_checked || 0),
+        dropsFound: Number(summary.drops_found || 0),
+        actionableDrops: actionableDrops ?? 0,
+        totalGapUsd: Math.round(Number(summary.total_gap_usd || 0)),
+      },
+      rows: checks.map((c) => {
+        const b = info[c.booking_id] || {};
+        const actionable = c.dropped && c.room_match === true && c.dates_match === true;
+        return {
+          id: c.id,
+          bookingId: c.booking_id,
+          hotel: b.hotel_name || c.booking_id,
+          city: b.city_name || null,
+          room: b.room_type || null,
+          checkedAt: c.checked_at,
+          originalUsd: c.original_usd,
+          liveUsd: c.live_usd,
+          dropped: c.dropped,
+          gapUsd: c.gap_usd,
+          gapPct: c.gap_pct,
+          roomMatch: c.room_match,
+          actionable,
+          result: c.live_usd == null ? 'sold_out' : c.dropped ? (actionable ? 'drop_actionable' : 'drop_different_room') : (c.gap_usd != null && c.gap_usd < 0 ? 'higher' : 'no_drop'),
+        };
+      }),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
