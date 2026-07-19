@@ -186,11 +186,15 @@ export default function RepricingPage() {
                       </div>
                       {/* Action */}
                       <div style={{ textAlign: 'right' }}>
-                        {dropped ? (
-                          <button style={{ border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, background: GREEN, color: '#fff', cursor: 'pointer' }}>Rebook</button>
-                        ) : (
-                          <button onClick={() => checkPrice(r.bookingId)} disabled={isChecking} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, background: '#fff', color: isChecking ? MUTED : NAVY, cursor: isChecking ? 'wait' : 'pointer' }}>{isChecking ? 'Checking…' : checkedAt ? 'Re-check' : 'Check price'}</button>
-                        )}
+                        {(() => {
+                          const trueMatch = dropped && result && result.match?.room === true && result.match?.board !== false && result.match?.dates === true;
+                          if (trueMatch) {
+                            return <button style={{ border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, background: GREEN, color: '#fff', cursor: 'pointer' }}>Rebook</button>;
+                          }
+                          return (
+                            <button onClick={() => checkPrice(r.bookingId)} disabled={isChecking} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, background: '#fff', color: isChecking ? MUTED : NAVY, cursor: isChecking ? 'wait' : 'pointer' }}>{isChecking ? 'Checking…' : checkedAt ? 'Re-check' : 'Check price'}</button>
+                          );
+                        })()}
                       </div>
                       {/* Chevron */}
                       <div onClick={() => toggleExpand(r.bookingId)} style={{ textAlign: 'center', color: MUTED, cursor: 'pointer', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>
@@ -237,6 +241,10 @@ export default function RepricingPage() {
                             )}
                           </div>
                         </div>
+                        {/* Full live rate list */}
+                        {result?.allRates && result.allRates.length > 0 && (
+                          <AllRates rates={result.allRates} origUsd={r.origUsd} />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -258,6 +266,44 @@ export default function RepricingPage() {
         </div>
       </div>
     </BusinessSidebarWrapper>
+  );
+}
+
+function AllRates({ rates, origUsd }: { rates: any[]; origUsd: number | null }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginTop: 18, borderTop: `0.5px solid ${LINE}`, paddingTop: 14 }}>
+      <button onClick={() => setOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: BLUE, padding: 0 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+        All live rates ({rates.length})
+      </button>
+      {open && (
+        <div style={{ marginTop: 12, border: `0.5px solid ${LINE}`, borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) 130px 110px 120px 110px', gap: 12, padding: '9px 14px', background: '#FBFCFE', borderBottom: `0.5px solid ${LINE}` }}>
+            {['Room', 'Board', 'Price', 'vs yours', 'Cancel by'].map((h, i) => (
+              <div key={i} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: MUTED, textAlign: i === 2 || i === 3 ? 'right' : 'left' }}>{h}</div>
+            ))}
+          </div>
+          {rates.map((rt, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) 130px 110px 120px 110px', gap: 12, padding: '10px 14px', alignItems: 'center', borderBottom: i < rates.length - 1 ? `0.5px solid ${LINE}` : 'none', background: rt.isMatch ? '#F0FDF4' : '#fff' }}>
+              <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rt.roomType}</span>
+                {rt.isMatch && <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, color: GREEN, background: '#DCFCE7', padding: '2px 6px', borderRadius: 10 }}>YOUR ROOM</span>}
+              </div>
+              <div style={{ fontSize: 12, color: SLATE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rt.board}</div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>{rt.usd != null ? `$${rt.usd.toLocaleString()}` : '—'}</div>
+                <div style={{ fontSize: 10, color: MUTED, fontFamily: 'monospace' }}>{rt.currency} {rt.local?.toLocaleString('en-US', { maximumFractionDigits: 0 })}</div>
+              </div>
+              <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 600, color: rt.vsOriginalUsd > 0 ? GREEN : rt.vsOriginalUsd < 0 ? RED : SLATE }}>
+                {rt.vsOriginalUsd == null ? '—' : rt.vsOriginalUsd > 0 ? `−$${rt.vsOriginalUsd}` : rt.vsOriginalUsd < 0 ? `+$${Math.abs(rt.vsOriginalUsd)}` : 'same'}
+              </div>
+              <div style={{ fontSize: 11, color: rt.refundable ? SLATE : AMBER }}>{rt.cancelBy ? fmtDate(rt.cancelBy) : (rt.refundable ? 'refundable' : 'non-ref')}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
