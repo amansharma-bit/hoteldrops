@@ -1240,10 +1240,20 @@ router.post('/repricing/check', async (req, res) => {
     const roomReq = { adults };
     if (childAges.length) roomReq.children_ages = childAges;
 
-    // 2. ONE GRN availability call for THIS hotel + dates.
+    // Original room identifiers, from the booking's raw JSON — match on CODE,
+    // not fuzzy names. room_code identifies the room product; board + occupancy
+    // confirm it. (rate_key is a stale per-search token, so we don't match on it.)
+    const origItem = b.raw?.hotel?.booking_items?.[0] || {};
+    const origRoomCode = origItem.room_code || null;
+    const origRoomType = origItem.room_type || b.room_type || null;
+    const origBoard = (origItem.boarding_details && origItem.boarding_details.join(', ')) || b.board_basis || null;
+
+    // 2. ONE GRN availability call for THIS hotel + dates. COMPREHENSIVE so we
+    // get the full room list (not just the single cheapest min_rate), letting
+    // us find the room that actually matches the original booking.
     const payload = {
       rooms: [roomReq],
-      rates: 'concise',
+      rates: 'comprehensive',
       hotel_codes: [String(b.hotel_code)],
       currency: b.currency || 'USD',
       client_nationality: 'US',
@@ -1257,10 +1267,48 @@ router.post('/repricing/check', async (req, res) => {
     const data = await resp.json();
     if (!resp.ok) return res.status(resp.status).json({ error: 'GRN availability error', details: data });
 
-    // 3. Extract the live min-rate for this hotel.
+    // 3. Find the matching room across ALL returned rates.
+    // GRN comprehensive returns hotel.rates[] (each a bookable rate with rooms).
+    // We look for the rate whose room_code matches the original; if none, we
+    // fall back to the cheapest rate and flag it as a different room.
+    const norm = (s) => String(s || '').trim().toLowerCase();
     const hotel = (data.hotels || [])[0];
-    const minRate = hotel?.min_rate || null;
-    const liveRoom = minRate?.rooms?.[0];
+
+    // Collect all candidate rates (support a few response shapes).
+    let allRates = [];
+    if (hotel) {
+      if (Array.isArray(hotel.rates)) allRates = hotel.rates;
+      else if (hotel.min_rate) allRates = [hotel.min_rate];
+    }
+
+    function rateRoomCode(rate) {
+      return rate?.rooms?.[0]?.room_code || rate?.room_code || null;
+    }
+    function rateRoomType(rate) {
+      return rate?.rooms?.[0]?.room_type || rate?.rooms?.[0]?.description || null;
+    }
+    function rateBoard(rate) {
+      return rate?.boarding_details ? rate.boarding_details.join(', ') : null;
+    }
+
+    // Prefer exact room_code match; else exact room-name match; else cheapest.
+    let chosen = null, matchBasis = 'none';
+    if (origRoomCode) {
+      chosen = allRates.find((r) => rateRoomCode(r) && norm(rateRoomCode(r)) === norm(origRoomCode)) || null;
+      if (chosen) matchBasis = 'room_code';
+    }
+    if (!chosen && origRoomType) {
+      chosen = allRates.find((r) => rateRoomType(r) && norm(rateRoomType(r)) === norm(origRoomType)) || null;
+      if (chosen) matchBasis = 'room_name';
+    }
+    if (!chosen && allRates.length) {
+      // cheapest available as fallback
+      chosen = [...allRates].sort((a, b2) => (Number(a.price) || 1e12) - (Number(b2.price) || 1e12))[0];
+      matchBasis = 'cheapest_fallback';
+    }
+
+    const minRate = chosen; // the rate we're comparing against
+    const liveRoom = minRate?.rooms?.[0] || null;
 
     const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 };
     const origLocal = b.price_total != null ? Number(b.price_total) : null;
@@ -1271,10 +1319,12 @@ router.post('/repricing/check', async (req, res) => {
     const liveCur = minRate?.currency || origCur;
     const liveUsd = (liveLocal != null && usdRate[liveCur]) ? liveLocal * usdRate[liveCur] : null;
 
-    // 4. Like-for-like checks.
-    const norm = (s) => String(s || '').trim().toLowerCase();
-    const roomMatch = liveRoom ? norm(liveRoom.room_type || liveRoom.description) === norm(b.room_type) : null;
-    const boardMatch = minRate?.boarding_details ? norm(minRate.boarding_details.join(', ')) === norm(b.board_basis) : null;
+    // 4. Like-for-like verification. Room match now reflects the code/name
+    // match we actually found; board and dates confirmed independently.
+    const roomMatch = matchBasis === 'room_code' ? true
+      : matchBasis === 'room_name' ? true
+      : (liveRoom ? norm(liveRoom.room_type || liveRoom.description) === norm(origRoomType) : null);
+    const boardMatch = rateBoard(minRate) ? norm(rateBoard(minRate)) === norm(origBoard) : null;
     const datesMatch = (data.checkin?.slice(0,10) === checkin && data.checkout?.slice(0,10) === checkout);
 
     const gapUsd = (origUsd != null && liveUsd != null) ? Math.round((origUsd - liveUsd) * 100) / 100 : null;
@@ -1289,7 +1339,7 @@ router.post('/repricing/check', async (req, res) => {
       live_price: liveLocal, live_currency: liveCur, live_usd: liveUsd != null ? Math.round(liveUsd) : null,
       dropped, gap_usd: gapUsd, gap_pct: gapPct,
       room_match: roomMatch, board_match: boardMatch, dates_match: datesMatch,
-      raw: minRate || { note: 'no availability returned' },
+      raw: minRate ? { ...minRate, _match_basis: matchBasis, _rooms_returned: allRates.length } : { note: 'no availability returned' },
       source: 'manual',
     }], 'id');
 
@@ -1306,6 +1356,7 @@ router.post('/repricing/check', async (req, res) => {
         : null,
       available: liveLocal != null,
       dropped, gapUsd, gapPct,
+      matchBasis,
       match: { room: roomMatch, board: boardMatch, dates: datesMatch },
     });
   } catch (err) {
