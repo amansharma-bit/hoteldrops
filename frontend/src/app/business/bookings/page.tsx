@@ -120,8 +120,8 @@ export default function BookingsPage() {
         <div style={{ padding: '18px 32px 40px' }}>
           <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, overflow: 'hidden' }}>
             {/* Column header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr 150px 130px 90px 30px', gap: 16, padding: '13px 20px', borderBottom: `1px solid ${LINE}`, background: '#FBFCFE' }}>
-              {['Booked', 'Hotel', 'Supplier', 'Amount', 'Rebook by', ''].map((h, i) => (
+            <div style={{ display: 'grid', gridTemplateColumns: '96px minmax(0,1fr) 130px 120px 96px 100px 28px', gap: 14, padding: '13px 20px', borderBottom: `1px solid ${LINE}`, background: '#FBFCFE' }}>
+              {['Booked', 'Hotel', 'Supplier', 'Amount', 'Rebook by', 'Status', ''].map((h, i) => (
                 <div key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#94A3B8', textAlign: i === 3 ? 'right' : 'left' }}>{h}</div>
               ))}
             </div>
@@ -140,7 +140,7 @@ export default function BookingsPage() {
                     {/* Summary row */}
                     <div
                       onClick={() => setExpanded(isOpen ? null : r.bookingId)}
-                      style={{ display: 'grid', gridTemplateColumns: '110px 1fr 150px 130px 90px 30px', gap: 16, padding: '14px 20px', cursor: 'pointer', alignItems: 'center', background: isOpen ? '#F7FAFF' : '#fff', transition: 'background 0.15s' }}
+                      style={{ display: 'grid', gridTemplateColumns: '96px minmax(0,1fr) 130px 120px 96px 100px 28px', gap: 14, padding: '14px 20px', cursor: 'pointer', alignItems: 'center', background: isOpen ? '#F7FAFF' : '#fff', transition: 'background 0.15s' }}
                     >
                       <div>
                         <div style={{ fontSize: 12, color: NAVY, fontWeight: 600 }}>{fmtDate(r.bookingDate, false)}</div>
@@ -148,7 +148,7 @@ export default function BookingsPage() {
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.hotelName}</div>
-                        <div style={{ fontSize: 12, color: SLATE, marginTop: 1 }}>{r.city || '—'}</div>
+                        <div style={{ fontSize: 12, color: SLATE, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.city || '—'}</div>
                       </div>
                       <div style={{ fontSize: 12, color: SLATE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.supplier || '—'}</div>
                       <div style={{ textAlign: 'right' }}>
@@ -158,6 +158,9 @@ export default function BookingsPage() {
                       <div>
                         <div style={{ fontSize: 12, fontWeight: 600, color: deadlineColor }}>{fmtDate(r.lastCancellationDate, false)}</div>
                         {dLeft != null && dLeft >= 0 && <div style={{ fontSize: 10, color: deadlineColor, marginTop: 1 }}>{dLeft === 0 ? 'today' : `${dLeft}d left`}</div>}
+                      </div>
+                      <div>
+                        <UrgencyPill days={dLeft} />
                       </div>
                       <div style={{ textAlign: 'center', color: '#94A3B8', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
@@ -187,6 +190,18 @@ export default function BookingsPage() {
         </div>
       </div>
     </BusinessSidebarWrapper>
+  );
+}
+
+function UrgencyPill({ days }: { days: number | null }) {
+  if (days == null || days < 0) return null;
+  let label, bg, fg;
+  if (days <= 3) { label = 'Closing soon'; bg = '#FEE2E2'; fg = '#B91C1C'; }
+  else if (days <= 7) { label = 'This week'; bg = '#FEF3C7'; fg = '#92400E'; }
+  else if (days <= 14) { label = '2 weeks'; bg = '#E0EDFF'; fg = '#1E50A8'; }
+  else return null;
+  return (
+    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.02em', padding: '3px 9px', borderRadius: 20, background: bg, color: fg, whiteSpace: 'nowrap' }}>{label}</span>
   );
 }
 
