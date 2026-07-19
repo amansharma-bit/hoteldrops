@@ -1,373 +1,278 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-export default function BusinessLandingPage() {
+const NAVY = '#081633';
+const SAPPHIRE = '#0F52BA';
+const SAPPHIRE_LT = '#3b82f6';
+const GOLD = '#FCD34D';
+const MINT = '#34D399';
+const INK = '#0F172A';
+const SLATE = '#64748B';
+const CLOUD = '#F8FAFC';
+const LINE = '#E7ECF3';
+
+/* ---- Hero animation: cities across India, prices dropping & being caught ---- */
+const CITIES = [
+  { name: 'Mumbai', x: 0.30, y: 0.62 }, { name: 'Delhi', x: 0.42, y: 0.28 },
+  { name: 'Bengaluru', x: 0.42, y: 0.80 }, { name: 'Goa', x: 0.30, y: 0.72 },
+  { name: 'Chennai', x: 0.50, y: 0.82 }, { name: 'Kolkata', x: 0.66, y: 0.50 },
+  { name: 'Jaipur', x: 0.36, y: 0.34 }, { name: 'Hyderabad', x: 0.46, y: 0.68 },
+  { name: 'Dubai', x: 0.08, y: 0.44 }, { name: 'Bangkok', x: 0.86, y: 0.66 },
+  { name: 'Singapore', x: 0.84, y: 0.86 }, { name: 'London', x: 0.02, y: 0.10 },
+];
+
+function HeroCanvas() {
+  const ref = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let raf = 0;
+    let w = 0, h = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const pulses: { cx: number; cy: number; t: number; amount: number }[] = [];
+    let lastSpawn = 0;
+
+    function resize() {
+      const parent = canvas.parentElement!;
+      w = parent.clientWidth; h = parent.clientHeight;
+      canvas.width = w * dpr; canvas.height = h * dpr;
+      canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const pad = 0.12;
+    const px = (nx: number) => (pad + nx * (1 - pad * 2)) * w;
+    const py = (ny: number) => (0.08 + ny * 0.84) * h;
+
+    function spawn(now: number) {
+      const c = CITIES[Math.floor(Math.random() * CITIES.length)];
+      pulses.push({ cx: px(c.x), cy: py(c.y), t: now, amount: Math.floor(20 + Math.random() * 380) });
+      if (pulses.length > 14) pulses.shift();
+    }
+
+    function frame(now: number) {
+      ctx.clearRect(0, 0, w, h);
+
+      // faint connection lines between nearby cities
+      ctx.strokeStyle = 'rgba(96,140,220,0.10)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < CITIES.length; i++) {
+        for (let j = i + 1; j < CITIES.length; j++) {
+          const dx = CITIES[i].x - CITIES[j].x, dy = CITIES[i].y - CITIES[j].y;
+          if (Math.hypot(dx, dy) < 0.26) {
+            ctx.beginPath();
+            ctx.moveTo(px(CITIES[i].x), py(CITIES[i].y));
+            ctx.lineTo(px(CITIES[j].x), py(CITIES[j].y));
+            ctx.stroke();
+          }
+        }
+      }
+
+      // base city dots
+      for (const c of CITIES) {
+        ctx.beginPath();
+        ctx.arc(px(c.x), py(c.y), 2.4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(150,185,240,0.5)';
+        ctx.fill();
+      }
+
+      if (now - lastSpawn > 900) { spawn(now); lastSpawn = now; }
+
+      // pulses = a price caught
+      for (const p of pulses) {
+        const age = (now - p.t) / 1800;
+        if (age > 1) continue;
+        const r = 3 + age * 26;
+        ctx.beginPath();
+        ctx.arc(p.cx, p.cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(52,211,153,${(1 - age) * 0.7})`;
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+        // bright core
+        ctx.beginPath();
+        ctx.arc(p.cx, p.cy, 3.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(252,211,77,${1 - age * 0.6})`;
+        ctx.fill();
+        // rising saved amount
+        if (age < 0.85) {
+          ctx.font = '600 12px Inter, sans-serif';
+          ctx.fillStyle = `rgba(52,211,153,${1 - age})`;
+          ctx.textAlign = 'center';
+          ctx.fillText(`−$${p.amount}`, p.cx, p.cy - 12 - age * 26);
+        }
+      }
+
+      raf = requestAnimationFrame(frame);
+    }
+    raf = requestAnimationFrame(frame);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+  }, []);
+
+  return <canvas ref={ref} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} aria-hidden="true" />;
+}
+
+/* ---- Animated counter ---- */
+function Counter({ target, prefix = '', suffix = '', duration = 1800 }: { target: number; prefix?: string; suffix?: string; duration?: number }) {
+  const [val, setVal] = useState(0);
+  const ref = useRef<HTMLSpanElement | null>(null);
+  const started = useRef(false);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !started.current) {
+        started.current = true;
+        const t0 = performance.now();
+        const tick = (now: number) => {
+          const p = Math.min((now - t0) / duration, 1);
+          const eased = 1 - Math.pow(1 - p, 3);
+          setVal(target * eased);
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+    }, { threshold: 0.4 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [target, duration]);
+  const display = target >= 1000000 ? (val / 1000000).toFixed(1) + 'M' : Math.round(val).toLocaleString();
+  return <span ref={ref}>{prefix}{display}{suffix}</span>;
+}
+
+export default function BusinessHome() {
+  const router = useRouter();
+
   return (
-    <div className="bg-white text-[#0F172A] antialiased">
+    <div style={{ fontFamily: "'Inter',sans-serif", color: INK, background: '#fff', overflowX: 'hidden' }}>
+      <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-      {/* NAV + HERO (blue gradient) */}
-      <section
-        style={{ background: 'linear-gradient(155deg, #0b1440 0%, #12379b 30%, #1447b8 70%, #2e5fe0 100%)' }}
-      >
-        <header className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
-          <a href="#" className="font-extrabold text-xl text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
-            rebuq<span className="text-[#FCD34D]">.AI</span>
-          </a>
-          <nav className="hidden md:flex items-center gap-8 text-sm text-white/80">
-            <a href="#capabilities" className="hover:text-white transition-colors">Features</a>
-            <a href="#process" className="hover:text-white transition-colors">How It Works</a>
-            <a href="#technology" className="hover:text-white transition-colors">Technology</a>
-            <a href="#demo" className="hover:text-white transition-colors">Contact</a>
-          </nav>
-          <a href="#demo" className="font-semibold text-sm px-5 py-2.5 rounded-full bg-white text-[#1447b8] hover:bg-white/90 transition-colors">
-            Get a Demo →
-          </a>
-        </header>
+      {/* NAV */}
+      <nav style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px clamp(20px, 5vw, 56px)' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+          <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 24, fontWeight: 800, color: '#fff' }}>rebuq<span style={{ color: GOLD }}>.</span></span>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Business</span>
+        </div>
+        <button onClick={() => router.push('/business/login')} style={{ border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.08)', color: '#fff', borderRadius: 9, padding: '9px 20px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Sign in</button>
+      </nav>
 
-        <div className="max-w-7xl mx-auto px-6 pt-10 pb-20 grid lg:grid-cols-2 gap-14 items-center">
-          <div>
-            <span className="inline-block text-xs font-bold tracking-widest text-white uppercase bg-white/10 border border-white/25 rounded-full px-4 py-2 mb-7">
-              Built &amp; validated on real production data
-            </span>
-            <h1
-              className="font-extrabold text-5xl leading-[1.08] mb-6 text-white"
-              style={{ fontFamily: 'Sora, sans-serif' }}
-            >
-              Maximize Hotel
-              <br />
-              Booking Margins
-              <br />
-              <span className="text-[#FCD34D]">Automatically.</span>
-            </h1>
-            <p className="text-white/85 text-lg leading-relaxed mb-9 max-w-md">
-              rebuq.AI monitors rates across your existing suppliers post-booking, matches the exact same
-              room at a lower price, and captures the margin — without the traveler ever noticing a thing.
-            </p>
-            <div className="flex flex-wrap gap-4 mb-10">
-              <a href="#demo" className="font-semibold text-sm px-7 py-3.5 rounded-full bg-white text-[#1447b8] hover:bg-white/90 transition-colors">
-                Request a Demo →
-              </a>
-              <a href="#process" className="font-semibold text-sm px-7 py-3.5 rounded-full border border-white/30 text-white hover:bg-white/10 transition-colors">
-                See How It Works
-              </a>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <span className="text-xs font-medium text-white/90 border border-white/25 rounded-full px-3.5 py-2">✓ Enterprise-grade API</span>
-              <span className="text-xs font-medium text-white/90 border border-white/25 rounded-full px-3.5 py-2">✓ Zero traveler disruption</span>
-              <span className="text-xs font-medium text-white/90 border border-white/25 rounded-full px-3.5 py-2">✓ Fully automated</span>
-            </div>
+      {/* HERO */}
+      <header style={{ position: 'relative', background: `linear-gradient(165deg, ${NAVY} 0%, #0a1f4d 55%, #0c2f6e 100%)`, color: '#fff', minHeight: '92vh', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0 }}><HeroCanvas /></div>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 30% 40%, transparent 40%, rgba(5,12,35,0.5) 100%)' }} />
+
+        <div style={{ position: 'relative', zIndex: 10, padding: '0 clamp(20px, 5vw, 56px)', maxWidth: 1180, margin: '0 auto', width: '100%' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(252,211,77,0.12)', border: '1px solid rgba(252,211,77,0.3)', borderRadius: 30, padding: '6px 14px', fontSize: 12.5, fontWeight: 600, color: GOLD, marginBottom: 28 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: MINT }} /> India's first post-booking repricing engine
           </div>
-
-          <div className="bg-white rounded-2xl shadow-2xl p-6 text-[#0F172A]">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wide">Live Repricing Engine</p>
-                <p className="font-bold text-lg" style={{ fontFamily: 'Sora, sans-serif' }}>Validated Performance</p>
-              </div>
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> LIVE ON GRN
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="rounded-xl p-4" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-                <p className="text-2xl font-bold" style={{ fontFamily: 'IBM Plex Mono, monospace' }}>98.86%</p>
-                <p className="text-xs text-slate-500 mt-1">System reliability</p>
-              </div>
-              <div className="rounded-xl p-4" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-                <p className="text-2xl font-bold" style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#B8860B' }}>~7%</p>
-                <p className="text-xs text-slate-500 mt-1">Avg. saving per rebooking</p>
-              </div>
-              <div className="rounded-xl p-4" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-                <p className="text-2xl font-bold" style={{ fontFamily: 'IBM Plex Mono, monospace' }}>98.6%</p>
-                <p className="text-xs text-slate-500 mt-1">Same-supplier match rate</p>
-              </div>
-              <div className="rounded-xl p-4" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-                <p className="text-2xl font-bold" style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#B8860B' }}>10.7%</p>
-                <p className="text-xs text-slate-500 mt-1">Conversion, scaling to 15%</p>
-              </div>
-            </div>
-            <p className="text-xs text-slate-400 uppercase tracking-wide mb-3">A real rebooking</p>
-            <div className="rounded-xl p-4 flex items-center justify-between" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-              <div>
-                <p className="text-sm font-semibold">COMO Metropolitan Singapore</p>
-                <p className="text-xs text-slate-500">Standard Twin Room · $810 → $772</p>
-              </div>
-              <span className="text-sm font-bold text-emerald-600" style={{ fontFamily: 'IBM Plex Mono, monospace' }}>−$38</span>
-            </div>
+          <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 'clamp(38px, 6vw, 68px)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em', margin: 0, maxWidth: 780 }}>
+            The price dropped<br />after you booked.<br /><span style={{ color: GOLD }}>We caught it.</span>
+          </h1>
+          <p style={{ fontSize: 'clamp(15px, 2vw, 19px)', lineHeight: 1.6, color: 'rgba(255,255,255,0.78)', marginTop: 26, maxWidth: 520 }}>
+            rebuq watches every booking after it's confirmed. When the same room gets cheaper, our AI catches the drop and turns it into savings — before the window closes.
+          </p>
+          <div style={{ display: 'flex', gap: 14, marginTop: 36, flexWrap: 'wrap' }}>
+            <button onClick={() => router.push('/business/login')} style={{ border: 'none', background: GOLD, color: NAVY, borderRadius: 11, padding: '14px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Access the console →</button>
+            <a href="#how" style={{ border: '1px solid rgba(255,255,255,0.28)', background: 'transparent', color: '#fff', borderRadius: 11, padding: '14px 28px', fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>See how it works</a>
           </div>
+        </div>
+      </header>
+
+      {/* PROOF STRIP */}
+      <section style={{ background: '#fff', borderBottom: `1px solid ${LINE}`, padding: 'clamp(36px, 6vw, 60px) clamp(20px, 5vw, 56px)' }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'clamp(24px, 4vw, 56px)' }}>
+          <Stat value={<Counter prefix="$" target={14800000} />} label="Rebookable value being watched" />
+          <Stat value={<Counter target={21087} />} label="Live bookings under watch" />
+          <Stat value={<span>Real-time</span>} label="Direct supplier price connection" />
+          <Stat value={<span>Catches<span style={{ color: MINT }}>.</span></span>} label="What passive automation misses" />
         </div>
       </section>
 
-      {/* STATS BAR */}
-      <section className="bg-slate-50 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          <div>
-            <p className="font-extrabold text-4xl" style={{ fontFamily: 'Sora, sans-serif', color: '#B8860B' }}>~7%</p>
-            <p className="text-sm text-slate-500 mt-2">Average saving per rebooking</p>
-          </div>
-          <div>
-            <p className="font-extrabold text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>98.86%</p>
-            <p className="text-sm text-slate-500 mt-2">System reliability</p>
-          </div>
-          <div>
-            <p className="font-extrabold text-4xl" style={{ fontFamily: 'Sora, sans-serif' }}>98.6%</p>
-            <p className="text-sm text-slate-500 mt-2">Same-supplier match rate</p>
-          </div>
-          <div>
-            <p className="font-extrabold text-4xl" style={{ fontFamily: 'Sora, sans-serif', color: '#B8860B' }}>10.7%</p>
-            <p className="text-sm text-slate-500 mt-2">Current conversion, scaling to 15%</p>
-          </div>
-        </div>
-      </section>
-
-      {/* CORE CAPABILITIES */}
-      <section id="capabilities" className="max-w-7xl mx-auto px-6 py-24">
-        <span className="inline-block text-xs font-bold tracking-widest text-[#1447b8] uppercase bg-[#1447b8]/5 border border-[#1447b8]/20 rounded-full px-4 py-2 mb-6">
-          Core Capabilities
-        </span>
-        <h2 className="font-extrabold text-4xl mb-14 max-w-xl" style={{ fontFamily: 'Sora, sans-serif' }}>
-          Every lever for maximum margin.
-        </h2>
-
-        <div className="grid md:grid-cols-2 gap-5">
-          <div className="rounded-2xl p-8 md:col-span-2" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-            <h3 className="font-bold text-xl mb-3" style={{ fontFamily: 'Sora, sans-serif' }}>Same-Supplier Rate Matching</h3>
-            <p className="text-slate-600 leading-relaxed max-w-2xl">
-              Rechecks rates against the exact same supplier the booking was made with — never a downgrade,
-              never a guessed substitution. This is the matching rule validated against real GRN production
-              data, holding at a 98.6% same-supplier rate in practice.
-            </p>
-          </div>
-          <div className="rounded-2xl p-8" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-            <h3 className="font-bold text-xl mb-3" style={{ fontFamily: 'Sora, sans-serif' }}>Expanded Post-Booking Savings</h3>
-            <p className="text-slate-600 leading-relaxed">Rechecks rates across your existing supplier relationships to find the same room at a lower price, automatically, post-confirmation.</p>
-          </div>
-          <div className="rounded-2xl p-8" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-            <h3 className="font-bold text-xl mb-3" style={{ fontFamily: 'Sora, sans-serif' }}>Verified Match Guarantee</h3>
-            <p className="text-slate-600 leading-relaxed">Matches identical room type and board basis before ever proposing a swap. If it isn&apos;t a genuine like-for-like match, it&apos;s skipped — never a downgrade.</p>
-          </div>
-          <div className="rounded-2xl p-8" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-            <h3 className="font-bold text-xl mb-3" style={{ fontFamily: 'Sora, sans-serif' }}>Safety-First Cancellation Logic</h3>
-            <p className="text-slate-600 leading-relaxed">Only refundable, in-window bookings are ever touched. Cancellation terms are never made worse to chase a saving.</p>
-          </div>
-          <div className="rounded-2xl p-8" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-            <h3 className="font-bold text-xl mb-3" style={{ fontFamily: 'Sora, sans-serif' }}>Full Audit Trail</h3>
-            <p className="text-slate-600 leading-relaxed">Every stage — search, match, recheck, rebook, confirm, cancel — logged and auditable, with the same rigor as an enterprise finance tool.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* PROCESS */}
-      <section id="process" className="bg-slate-50 border-y border-slate-200">
-        <div className="max-w-7xl mx-auto px-6 py-24">
-          <div
-            className="rounded-2xl p-8 flex items-center justify-between flex-wrap gap-6 mb-16"
-            style={{ background: 'linear-gradient(155deg, #0b1440 0%, #12379b 30%, #1447b8 70%, #2e5fe0 100%)' }}
-          >
-            <p className="font-bold text-2xl max-w-lg text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
-              Fully automated margin expansion — powered by <span className="text-[#FCD34D]">real, validated logic.</span>
-            </p>
-            <a href="#demo" className="font-semibold text-sm px-6 py-3 rounded-full bg-white text-[#1447b8] whitespace-nowrap">
-              Get a Demo →
-            </a>
-          </div>
-
-          <span className="inline-block text-xs font-bold tracking-widest text-[#1447b8] uppercase mb-4">The Process</span>
-          <h2 className="font-extrabold text-4xl mb-14" style={{ fontFamily: 'Sora, sans-serif' }}>
-            From booking to profit
-            <br />
-            <span className="text-slate-400">in six steps.</span>
+      {/* HOW IT WORKS — a real 3-beat sequence, so numbering earns its place */}
+      <section id="how" style={{ background: CLOUD, padding: 'clamp(56px, 9vw, 110px) clamp(20px, 5vw, 56px)' }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: SAPPHIRE, margin: 0 }}>How rebuq works</p>
+          <h2 style={{ fontFamily: "'Sora',sans-serif", fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 800, letterSpacing: '-0.02em', margin: '10px 0 0', maxWidth: 640, lineHeight: 1.1 }}>
+            Three steps, running quietly in the background.
           </h2>
-
-          <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-5">
-            {[
-              { n: '01', t: 'Search', d: 'Re-shops every eligible booking against live rates.', gold: false },
-              { n: '02', t: 'Match', d: 'Same supplier, same room, same board basis.', gold: false },
-              { n: '03', t: 'Verify', d: 'Rechecks the rate live — never acts on stale prices.', gold: false },
-              { n: '04', t: 'Rebook', d: 'Moves the reservation to the lower rate instantly.', gold: true },
-              { n: '05', t: 'Confirm', d: 'Locks in the new booking before anything else moves.', gold: true },
-              { n: '06', t: 'Release', d: 'Cancels the original — free, inside its window.', gold: true },
-            ].map((step) => (
-              <div key={step.n} className="bg-white rounded-xl border border-slate-200 p-5">
-                <p
-                  className="text-xl font-bold mb-3"
-                  style={{ fontFamily: 'IBM Plex Mono, monospace', color: step.gold ? '#B8860B' : '#1447b8' }}
-                >
-                  {step.n}
-                </p>
-                <h3 className="font-bold mb-2" style={{ fontFamily: 'Sora, sans-serif' }}>{step.t}</h3>
-                <p className="text-sm text-slate-500">{step.d}</p>
-              </div>
-            ))}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24, marginTop: 52 }}>
+            <Step n="01" title="Book stays confirmed" body="Your booking is made and confirmed as normal. Nothing changes for the guest. rebuq simply starts watching it." tint="#E6F0FB" />
+            <Step n="02" title="AI watches the price" body="Our engine re-checks the live rate for the exact same room and dates — again and again — hunting for a genuine drop the automated tools miss." tint="#FEF3C7" />
+            <Step n="03" title="The saving is caught" body="When a real like-for-like drop appears, rebuq flags it and captures the difference as margin — before the cancellation window closes." tint="#DCFCE7" />
           </div>
         </div>
       </section>
 
-      {/* TECHNOLOGY */}
-      <section id="technology" className="max-w-7xl mx-auto px-6 py-24">
-        <div className="grid lg:grid-cols-2 gap-14 items-start">
+      {/* THE DIFFERENCE — first in India */}
+      <section style={{ background: '#fff', padding: 'clamp(56px, 9vw, 110px) clamp(20px, 5vw, 56px)' }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'clamp(32px, 5vw, 72px)', alignItems: 'center' }}>
           <div>
-            <span
-              className="inline-block text-xs font-bold tracking-widest uppercase rounded-full px-4 py-2 mb-6"
-              style={{ color: '#B8860B', background: '#FEF3C7', border: '1px solid #FDE68A' }}
-            >
-              Enterprise Technology
-            </span>
-            <h2 className="font-extrabold text-4xl mb-6" style={{ fontFamily: 'Sora, sans-serif' }}>
-              Built on real infrastructure.
-              <br />
-              <span style={{ color: '#B8860B' }}>Not a slide deck.</span>
+            <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: SAPPHIRE, margin: 0 }}>Why it's different</p>
+            <h2 style={{ fontFamily: "'Sora',sans-serif", fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 800, letterSpacing: '-0.02em', margin: '10px 0 20px', lineHeight: 1.12 }}>
+              Nobody in India has done repricing. We're the first.
             </h2>
-            <p className="text-slate-600 leading-relaxed mb-8 max-w-md">
-              rebuq.AI is built on GRN Connect&apos;s hotel API — the same production system used by India&apos;s
-              second-largest hotel wholesaler. Every endpoint, every match, every rebooking in this deck is
-              real, not simulated.
+            <p style={{ fontSize: 16, lineHeight: 1.7, color: SLATE, marginBottom: 16 }}>
+              Passive automation only catches the obvious. It leaves whole cities — and the savings inside them — completely untouched.
             </p>
-            <div className="space-y-4">
-              <div className="rounded-xl p-5 flex items-center gap-4" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-                <div className="w-10 h-10 rounded-lg bg-[#1447b8]/10 flex items-center justify-center text-lg">🔗</div>
-                <div>
-                  <p className="font-semibold">Real Supplier Integration</p>
-                  <p className="text-sm text-slate-500">Live on GRN Connect&apos;s production booking API</p>
-                </div>
-              </div>
-              <div className="rounded-xl p-5 flex items-center gap-4" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-                <div className="w-10 h-10 rounded-lg bg-[#1447b8]/10 flex items-center justify-center text-lg">🛡️</div>
-                <div>
-                  <p className="font-semibold">Safety-Gated Automation</p>
-                  <p className="text-sm text-slate-500">Dry-run validation before any live action, every time</p>
-                </div>
-              </div>
-              <div className="rounded-xl p-5 flex items-center gap-4" style={{ background: '#F5F8FF', border: '1px solid #E2E8F0' }}>
-                <div className="w-10 h-10 rounded-lg bg-[#1447b8]/10 flex items-center justify-center text-lg">📊</div>
-                <div>
-                  <p className="font-semibold">Transparent Reporting</p>
-                  <p className="text-sm text-slate-500">Full audit trails and margin attribution dashboards</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="rounded-2xl p-6"
-            style={{ background: 'linear-gradient(155deg, #0b1440 0%, #12379b 30%, #1447b8 70%, #2e5fe0 100%)' }}
-          >
-            <div className="flex items-center gap-2 mb-5">
-              <span className="w-3 h-3 rounded-full bg-red-400/70" />
-              <span className="w-3 h-3 rounded-full bg-yellow-400/70" />
-              <span className="w-3 h-3 rounded-full bg-emerald-400/70" />
-              <span className="ml-3 text-xs text-white/50" style={{ fontFamily: 'IBM Plex Mono, monospace' }}>GRN production pipeline</span>
-            </div>
-            <div className="text-sm leading-relaxed text-white/90 space-y-1" style={{ fontFamily: 'IBM Plex Mono, monospace' }}>
-              <p><span className="text-[#FCD34D]">POST</span> /hotels/availability</p>
-              <p className="text-white/50 pl-4">→ search live rates, same hotel/dates</p>
-              <p><span className="text-[#FCD34D]">POST</span> /hotels/rebookings/{'{ref}'}</p>
-              <p className="text-white/50 pl-4">→ tie new rate to existing booking</p>
-              <p><span className="text-[#FCD34D]">DELETE</span> /hotels/bookings/{'{ref}'}</p>
-              <p className="text-white/50 pl-4">→ cancel original, $0 charge</p>
-              <p className="mt-4 text-emerald-300">// Real result</p>
-              <p>{'{ '}<span className="text-[#FCD34D]">&quot;saving&quot;</span>: 38.00, <span className="text-[#FCD34D]">&quot;pct&quot;</span>: 4.69{' }'}</p>
-            </div>
-            <div className="grid grid-cols-3 gap-3 mt-6">
-              <div className="bg-white/10 rounded-lg p-3 text-center">
-                <p className="font-bold text-lg text-white" style={{ fontFamily: 'IBM Plex Mono, monospace' }}>98.86%</p>
-                <p className="text-xs text-white/60">Reliability</p>
-              </div>
-              <div className="bg-white/10 rounded-lg p-3 text-center">
-                <p className="font-bold text-lg text-white" style={{ fontFamily: 'IBM Plex Mono, monospace' }}>6</p>
-                <p className="text-xs text-white/60">Pipeline stages</p>
-              </div>
-              <div className="bg-white/10 rounded-lg p-3 text-center">
-                <p className="font-bold text-lg text-[#FCD34D]" style={{ fontFamily: 'IBM Plex Mono, monospace' }}>$0</p>
-                <p className="text-xs text-white/60">Cancellation cost</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* WHO WE SERVE */}
-      <section className="bg-slate-50 border-t border-slate-200">
-        <div className="max-w-7xl mx-auto px-6 py-24">
-          <span className="inline-block text-xs font-bold tracking-widest text-[#1447b8] uppercase mb-6">Who We Serve</span>
-          <div className="flex flex-wrap items-start justify-between gap-8 mb-14">
-            <h2 className="font-extrabold text-4xl max-w-lg" style={{ fontFamily: 'Sora, sans-serif' }}>
-              Built for hotel wholesalers and travel platforms.
-            </h2>
-            <p className="text-slate-500 max-w-sm">rebuq.AI integrates directly into your existing GRN-connected booking flow — no new supplier relationships needed.</p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
-            {[
-              { icon: '✈️', t: 'Online Travel Agencies', s: 'OTAs' },
-              { icon: '🏨', t: 'Hotel Wholesalers', s: 'Bed Banks' },
-              { icon: '💼', t: 'Travel Management', s: 'TMCs' },
-              { icon: '🗺️', t: 'Tour Operators', s: 'Tour Ops' },
-              { icon: '🌐', t: 'Travel Agencies', s: 'Agencies' },
-              { icon: '📍', t: 'DMCs', s: 'Destination Mgmt.' },
-            ].map((seg) => (
-              <div key={seg.t} className="bg-white rounded-2xl border border-slate-200 p-6 text-center">
-                <div className="text-3xl mb-3">{seg.icon}</div>
-                <p className="font-semibold">{seg.t}</p>
-                <p className="text-xs text-slate-400 mt-1">{seg.s}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* DEMO CTA */}
-      <section
-        id="demo"
-        style={{ background: 'linear-gradient(155deg, #0b1440 0%, #12379b 30%, #1447b8 70%, #2e5fe0 100%)' }}
-      >
-        <div className="max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-10">
-          <div>
-            <span className="inline-block text-xs font-bold tracking-widest text-white uppercase bg-white/10 border border-white/25 rounded-full px-4 py-2 mb-7">
-              Get Started
-            </span>
-            <h2 className="font-extrabold text-4xl mb-6 text-white" style={{ fontFamily: 'Sora, sans-serif' }}>
-              See it work on
-              <br />
-              <span className="text-[#FCD34D]">your own bookings.</span>
-            </h2>
-            <p className="text-white/80 leading-relaxed mb-8">
-              Leave your details and we&apos;ll walk you through exactly how rebuq.AI performs on real GRN
-              production data — no fabricated numbers, no simulated demo.
+            <p style={{ fontSize: 16, lineHeight: 1.7, color: SLATE }}>
+              rebuq is built to go where automation gives up: checking real live rates, matching the exact room, and catching the drops others never see.
             </p>
-            <div className="space-y-3">
-              <p className="flex items-center gap-2 text-sm text-white/85"><span className="text-[#FCD34D]">✓</span> No setup fees</p>
-              <p className="flex items-center gap-2 text-sm text-white/85"><span className="text-[#FCD34D]">✓</span> See real validated data, not a mockup</p>
-              <p className="flex items-center gap-2 text-sm text-white/85"><span className="text-[#FCD34D]">✓</span> Dedicated onboarding</p>
-            </div>
           </div>
-
-          <div className="bg-white rounded-2xl p-10 text-[#0F172A]">
-            <h3 className="font-extrabold text-2xl mb-6" style={{ fontFamily: 'Sora, sans-serif' }}>Request a Demo</h3>
-            <form
-              className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                // TODO: wire up to real lead-capture endpoint
-              }}
-            >
-              <input type="text" placeholder="Full Name *" className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-[#1447b8] outline-none" />
-              <input type="email" placeholder="Work Email *" className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-[#1447b8] outline-none" />
-              <input type="text" placeholder="Company Name *" className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-[#1447b8] outline-none" />
-              <input type="text" placeholder="Type of Company" className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-[#1447b8] outline-none" />
-              <textarea placeholder="Tell us about your booking volume and goals (optional)" rows={3} className="w-full border border-slate-200 rounded-lg px-4 py-3 text-sm focus:border-[#1447b8] outline-none" />
-              <button type="submit" className="w-full font-semibold text-sm py-3.5 rounded-lg bg-[#1447b8] text-white hover:bg-[#1447b8]/90 transition-colors">
-                Request Demo →
-              </button>
-            </form>
+          <div style={{ background: `linear-gradient(160deg, ${SAPPHIRE} 0%, #0c449c 100%)`, borderRadius: 20, padding: 'clamp(28px, 4vw, 44px)', color: '#fff' }}>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginBottom: 8 }}>A booking rebuq caught</div>
+            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 20 }}>Clayton Hotel Dublin Airport · Deluxe Room</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 6 }}>
+              <span style={{ fontSize: 20, color: 'rgba(255,255,255,0.55)', textDecoration: 'line-through' }}>$2,581</span>
+              <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 40, fontWeight: 800, color: '#fff' }}>$2,302</span>
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(52,211,153,0.2)', border: '1px solid rgba(52,211,153,0.4)', borderRadius: 30, padding: '6px 14px', fontSize: 13.5, fontWeight: 700, color: MINT, marginTop: 10 }}>
+              −$279 caught · 11% cheaper
+            </div>
           </div>
         </div>
       </section>
 
-      <footer className="py-8 bg-white">
-        <div className="max-w-7xl mx-auto px-6 text-center text-xs text-slate-400">© 2026 rebuq.AI</div>
+      {/* CTA */}
+      <section style={{ background: `linear-gradient(160deg, ${NAVY} 0%, #0c2f6e 100%)`, color: '#fff', padding: 'clamp(60px, 9vw, 120px) clamp(20px, 5vw, 56px)', textAlign: 'center' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          <h2 style={{ fontFamily: "'Sora',sans-serif", fontSize: 'clamp(30px, 5vw, 52px)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.08, margin: 0 }}>
+            The savings are already there.<br /><span style={{ color: GOLD }}>Start catching them.</span>
+          </h2>
+          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.75)', marginTop: 20, lineHeight: 1.6 }}>
+            Access the rebuq console and see what your book is leaving on the table.
+          </p>
+          <button onClick={() => router.push('/business/login')} style={{ border: 'none', background: GOLD, color: NAVY, borderRadius: 12, padding: '15px 34px', fontSize: 16, fontWeight: 700, cursor: 'pointer', marginTop: 32, fontFamily: 'inherit' }}>Access the console →</button>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{ background: '#060f24', color: 'rgba(255,255,255,0.55)', padding: '32px clamp(20px, 5vw, 56px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, color: '#fff' }}>rebuq<span style={{ color: GOLD }}>.</span></span>
+        <span style={{ fontSize: 12.5 }}>© {new Date().getFullYear()} rebuq · Post-booking price intelligence</span>
       </footer>
+    </div>
+  );
+}
 
+function Stat({ value, label }: { value: React.ReactNode; label: string }) {
+  return (
+    <div>
+      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, color: INK, letterSpacing: '-0.02em' }}>{value}</div>
+      <div style={{ fontSize: 13.5, color: SLATE, marginTop: 6, lineHeight: 1.4 }}>{label}</div>
+    </div>
+  );
+}
+
+function Step({ n, title, body, tint }: { n: string; title: string; body: string; tint: string }) {
+  return (
+    <div style={{ background: '#fff', border: `0.5px solid ${LINE}`, borderRadius: 16, padding: '28px 26px' }}>
+      <div style={{ width: 46, height: 46, borderRadius: 12, background: tint, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 800, color: INK, marginBottom: 18 }}>{n}</div>
+      <h3 style={{ fontFamily: "'Sora',sans-serif", fontSize: 19, fontWeight: 700, color: INK, margin: '0 0 8px' }}>{title}</h3>
+      <p style={{ fontSize: 14.5, lineHeight: 1.6, color: SLATE, margin: 0 }}>{body}</p>
     </div>
   );
 }
