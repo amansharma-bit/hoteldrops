@@ -11,6 +11,8 @@ const MIST = '#FAFAFA';
 const MINT = '#16A34A';
 const RED = '#DC2626';
 const SAPPHIRE = '#0F52BA';
+const SAPPHIRE_DEEP = '#0c449c';
+const GOLD = '#E0A400';
 
 function Reveal({ children, delay = 0, style = {} }: any) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -64,14 +66,14 @@ export default function BusinessHome() {
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, background: scrolled ? 'rgba(255,255,255,0.82)' : 'transparent', backdropFilter: scrolled ? 'saturate(180%) blur(20px)' : 'none', borderBottom: `1px solid ${scrolled ? HAIR : 'transparent'}`, transition: 'all 0.3s' }}>
         <div style={{ ...WRAP, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 21, fontWeight: 800, color: INK }}>rebuq<span style={{ color: MINT }}>.</span></span>
+            <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 21, fontWeight: 800, color: INK }}>rebuq<span style={{ color: SAPPHIRE }}>.</span></span>
             <span style={{ fontSize: 11, fontFamily: 'monospace', color: FAINT, border: `1px solid ${HAIR}`, borderRadius: 5, padding: '1px 6px' }}>v1.0</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 26 }}>
             <a href="#spec" style={{ fontSize: 13.5, color: GREY, textDecoration: 'none', fontWeight: 500 }}>Engine</a>
             <a href="#compare" style={{ fontSize: 13.5, color: GREY, textDecoration: 'none', fontWeight: 500 }}>Compare</a>
             <a href="#cases" style={{ fontSize: 13.5, color: GREY, textDecoration: 'none', fontWeight: 500 }}>Use cases</a>
-            <button onClick={() => router.push('/business/login')} style={{ border: 'none', background: INK, color: '#fff', borderRadius: 8, padding: '9px 18px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Sign in</button>
+            <button onClick={() => router.push('/business/login')} style={{ border: 'none', background: SAPPHIRE, color: '#fff', borderRadius: 8, padding: '9px 18px', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Sign in</button>
           </div>
         </div>
       </nav>
@@ -90,7 +92,7 @@ export default function BusinessHome() {
           </Reveal>
           <Reveal delay={0.06}>
             <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 'clamp(40px, 7vw, 82px)', fontWeight: 800, lineHeight: 1.03, letterSpacing: '-0.04em', margin: 0, maxWidth: 820 }}>
-              The price dropped after you booked.<span style={{ color: MINT }}>_</span>
+              The price dropped after you booked.<span style={{ color: GOLD }}>_</span>
             </h1>
           </Reveal>
           <Reveal delay={0.12}>
@@ -100,7 +102,7 @@ export default function BusinessHome() {
           </Reveal>
           <Reveal delay={0.18}>
             <div style={{ marginTop: 34, display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-              <button onClick={() => router.push('/business/login')} style={{ border: 'none', background: INK, color: '#fff', borderRadius: 10, padding: '13px 26px', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Access the console →</button>
+              <button onClick={() => router.push('/business/login')} style={{ border: 'none', background: SAPPHIRE, color: '#fff', borderRadius: 10, padding: '13px 26px', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Access the console →</button>
               <a href="#spec" style={{ color: SAPPHIRE, fontSize: 15, fontWeight: 600, textDecoration: 'none' }}>See the engine</a>
             </div>
           </Reveal>
@@ -120,7 +122,7 @@ export default function BusinessHome() {
           {Array(2).fill(0).map((_, k) => (
             <span key={k} style={{ display: 'flex', gap: 40 }}>
               {['Live GRN price checks', 'Exact-room matching', 'Like-for-like verification', 'Cancellation-window aware', 'Real-time currency', 'Every check logged', 'Conversion tracking', 'Zero guest disruption'].map((t) => (
-                <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 40 }}>{t} <span style={{ color: MINT }}>·</span></span>
+                <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 40 }}>{t} <span style={{ color: SAPPHIRE }}>·</span></span>
               ))}
             </span>
           ))}
@@ -171,7 +173,7 @@ export default function BusinessHome() {
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${HAIR}` }}>
                     <th style={{ textAlign: 'left', padding: '16px 20px', fontSize: 13, fontWeight: 600, color: FAINT }}>Capability</th>
-                    <th style={{ textAlign: 'center', padding: '16px 16px', fontSize: 13, fontWeight: 700, color: MINT }}>rebuq</th>
+                    <th style={{ textAlign: 'center', padding: '16px 16px', fontSize: 13, fontWeight: 700, color: SAPPHIRE }}>rebuq</th>
                     <th style={{ textAlign: 'center', padding: '16px 16px', fontSize: 13, fontWeight: 500, color: FAINT }}>Passive automation</th>
                     <th style={{ textAlign: 'center', padding: '16px 16px', fontSize: 13, fontWeight: 500, color: FAINT }}>Doing nothing</th>
                   </tr>
@@ -268,7 +270,7 @@ export default function BusinessHome() {
               The savings are already there.
             </h2>
             <p style={{ fontSize: 'clamp(17px, 2.2vw, 22px)', color: GREY, margin: '20px auto 0', maxWidth: 480, lineHeight: 1.45 }}>rebuq is how you finally catch them.</p>
-            <button onClick={() => router.push('/business/login')} style={{ border: 'none', background: INK, color: '#fff', borderRadius: 10, padding: '15px 34px', fontSize: 16, fontWeight: 600, cursor: 'pointer', marginTop: 36, fontFamily: 'inherit' }}>Access the console →</button>
+            <button onClick={() => router.push('/business/login')} style={{ border: 'none', background: SAPPHIRE, color: '#fff', borderRadius: 10, padding: '15px 34px', fontSize: 16, fontWeight: 600, cursor: 'pointer', marginTop: 36, fontFamily: 'inherit' }}>Access the console →</button>
           </Reveal>
         </div>
       </section>
@@ -276,7 +278,7 @@ export default function BusinessHome() {
       {/* FOOTER */}
       <footer style={{ borderTop: `1px solid ${HAIR}`, padding: '30px 0' }}>
         <div style={{ ...WRAP, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 17, fontWeight: 800, color: INK }}>rebuq<span style={{ color: MINT }}>.</span></span>
+          <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 17, fontWeight: 800, color: INK }}>rebuq<span style={{ color: SAPPHIRE }}>.</span></span>
           <span style={{ fontSize: 12.5, color: FAINT }}>© {new Date().getFullYear()} rebuq · Post-booking price intelligence · India</span>
         </div>
       </footer>
