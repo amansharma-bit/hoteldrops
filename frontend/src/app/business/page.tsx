@@ -8,8 +8,8 @@ const HEADING = '#111111';
 const TEXT = '#545454';
 const FAINT = '#989898';
 const BORDER = '#EAE9E7';
-const BG = '#FBFAF9';
-const ALT = '#FFFFFF';
+const BG = '#FFFFFF';
+const ALT = '#FAFAFA';
 const SAPPHIRE = '#0F52BA';   // rebuq brand accent (replaces their #5051F9)
 
 const KEYFRAMES = `
@@ -81,7 +81,8 @@ export default function BusinessHero() {
 
         {/* Subline */}
         <p style={{ fontSize: 'clamp(16px, 1.9vw, 21px)', color: TEXT, margin: '26px auto 0', maxWidth: 660, lineHeight: 1.55, fontWeight: 400, ...anim(0.42) }}>
-          rebuq's AI watches every booking after it's confirmed, catches the price drops others miss, and turns them into margin — automatically.
+          rebuq's AI watches every booking after it's confirmed, catches the price<br />
+          drops others miss, and turns them into margin — automatically.
         </p>
 
         {/* Buttons */}
