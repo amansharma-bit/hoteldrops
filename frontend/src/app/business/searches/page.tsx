@@ -30,11 +30,18 @@ const RESULT_META: Record<string, { label: string; bg: string; fg: string }> = {
   sold_out:             { label: 'Sold out',         bg: '#FEF3C7', fg: AMBER },
 };
 
+const MATCH_BASIS_LABEL: Record<string, string> = {
+  room_code: 'Exact room match',
+  room_name: 'Matched by room name',
+  cheapest_fallback: 'Different room — cheapest available',
+};
+
 export default function SearchesMadePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
   const [page, setPage] = useState(1);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +59,10 @@ export default function SearchesMadePage() {
   const rows = data?.rows || [];
   const hasMore = data?.hasMore ?? false;
   const convRate = f && f.totalChecks ? Math.round((f.actionableDrops / f.totalChecks) * 100) : 0;
+
+  function toggleExpand(id: string) {
+    setExpanded((e) => (e === id ? null : id));
+  }
 
   return (
     <BusinessSidebarWrapper>
@@ -80,8 +91,8 @@ export default function SearchesMadePage() {
         {/* List */}
         <div style={{ padding: '20px 32px 40px' }}>
           <div style={{ background: '#fff', border: `0.5px solid ${LINE}`, borderRadius: 14, overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) 150px 110px 110px 110px 130px', gap: 14, padding: '13px 20px', borderBottom: `0.5px solid ${LINE}`, background: '#FBFCFE' }}>
-              {['Booking', 'Result', 'Original', 'Live', 'Gap', 'Checked'].map((h, i) => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) 150px 110px 110px 110px 130px 28px', gap: 14, padding: '13px 20px', borderBottom: `0.5px solid ${LINE}`, background: '#FBFCFE' }}>
+              {['Booking', 'Result', 'Original', 'Live', 'Gap', 'Checked', ''].map((h, i) => (
                 <div key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: MUTED, textAlign: (i === 2 || i === 3 || i === 4) ? 'right' : 'left' }}>{h}</div>
               ))}
             </div>
@@ -93,19 +104,46 @@ export default function SearchesMadePage() {
             ) : (
               rows.map((r: any) => {
                 const meta = RESULT_META[r.result] || RESULT_META.no_drop;
+                const isOpen = expanded === r.id;
                 return (
-                  <div key={r.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) 150px 110px 110px 110px 130px', gap: 14, padding: '13px 20px', alignItems: 'center', borderBottom: `0.5px solid ${LINE}` }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.hotel}</div>
-                      <div style={{ fontSize: 11.5, color: SLATE, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[r.city, r.room].filter(Boolean).join(' · ') || '—'}</div>
+                  <div key={r.id} style={{ borderBottom: `0.5px solid ${LINE}` }}>
+                    <div
+                      onClick={() => toggleExpand(r.id)}
+                      style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) 150px 110px 110px 110px 130px 28px', gap: 14, padding: '13px 20px', alignItems: 'center', cursor: 'pointer' }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.hotel}</div>
+                        <div style={{ fontSize: 11.5, color: SLATE, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[r.city, r.room].filter(Boolean).join(' · ') || '—'}</div>
+                      </div>
+                      <div><span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: meta.bg, color: meta.fg, whiteSpace: 'nowrap' }}>{meta.label}</span></div>
+                      <div style={{ textAlign: 'right', fontSize: 13, color: NAVY, fontFamily: 'monospace' }}>{r.originalUsd != null ? `$${r.originalUsd.toLocaleString()}` : '—'}</div>
+                      <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 600, color: r.dropped ? GREEN : NAVY, fontFamily: 'monospace' }}>{r.liveUsd != null ? `$${r.liveUsd.toLocaleString()}` : '—'}</div>
+                      <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 600, color: r.dropped ? GREEN : MUTED }}>
+                        {r.dropped && r.gapUsd != null ? `−$${Math.round(r.gapUsd)}` : '—'}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: SLATE }}>{fmtTime(r.checkedAt)}</div>
+                      <div style={{ textAlign: 'center', color: MUTED, transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                      </div>
                     </div>
-                    <div><span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: meta.bg, color: meta.fg, whiteSpace: 'nowrap' }}>{meta.label}</span></div>
-                    <div style={{ textAlign: 'right', fontSize: 13, color: NAVY, fontFamily: 'monospace' }}>{r.originalUsd != null ? `$${r.originalUsd.toLocaleString()}` : '—'}</div>
-                    <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 600, color: r.dropped ? GREEN : NAVY, fontFamily: 'monospace' }}>{r.liveUsd != null ? `$${r.liveUsd.toLocaleString()}` : '—'}</div>
-                    <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 600, color: r.dropped ? GREEN : MUTED }}>
-                      {r.dropped && r.gapUsd != null ? `−$${Math.round(r.gapUsd)}` : '—'}
+
+                    {/*
+                      Expanded detail — real data, one atomic check, no invented
+                      pipeline stages. This mirrors the same Original-vs-Live
+                      comparison already used on the Repricing page, using the
+                      match fields the backend already computes and stores
+                      (room_match / board_match / dates_match / match basis).
+                    */}
+                    <div style={{ maxHeight: isOpen ? 900 : 0, overflow: 'hidden', transition: 'max-height 0.3s ease', background: '#FBFCFE' }}>
+                      {isOpen && (
+                        <div style={{ padding: '18px 20px 22px', borderTop: `0.5px solid ${LINE}` }}>
+                          {r.matchBasis && MATCH_BASIS_LABEL[r.matchBasis] && (
+                            <MatchBadge basis={r.matchBasis} />
+                          )}
+                          <Compare r={r} />
+                        </div>
+                      )}
                     </div>
-                    <div style={{ fontSize: 11.5, color: SLATE }}>{fmtTime(r.checkedAt)}</div>
                   </div>
                 );
               })
@@ -116,14 +154,54 @@ export default function SearchesMadePage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
               <span style={{ fontSize: 13, color: SLATE }}>Page {page} · {data?.total ?? 0} checks</span>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: page === 1 ? '#CBD5E1' : NAVY, cursor: page === 1 ? 'not-allowed' : 'pointer' }}>Previous</button>
-                <button onClick={() => setPage((p) => p + 1)} disabled={!hasMore} style={{ border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: !hasMore ? '#E2E8F0' : BLUE, color: !hasMore ? MUTED : '#fff', cursor: !hasMore ? 'not-allowed' : 'pointer' }}>Next</button>
+                <button onClick={() => { setPage((p) => Math.max(1, p - 1)); setExpanded(null); }} disabled={page === 1} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: '#fff', color: page === 1 ? '#CBD5E1' : NAVY, cursor: page === 1 ? 'not-allowed' : 'pointer' }}>Previous</button>
+                <button onClick={() => { setPage((p) => p + 1); setExpanded(null); }} disabled={!hasMore} style={{ border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, background: !hasMore ? '#E2E8F0' : BLUE, color: !hasMore ? MUTED : '#fff', cursor: !hasMore ? 'not-allowed' : 'pointer' }}>Next</button>
               </div>
             </div>
           )}
         </div>
       </div>
     </BusinessSidebarWrapper>
+  );
+}
+
+function MatchBadge({ basis }: { basis: string }) {
+  const label = MATCH_BASIS_LABEL[basis];
+  if (!label) return null;
+  let bg = '#F1F5F9', fg = SLATE;
+  if (basis === 'room_code') { bg = '#DCFCE7'; fg = GREEN; }
+  else if (basis === 'room_name') { bg = '#DBEAFE'; fg = '#1E50A8'; }
+  else if (basis === 'cheapest_fallback') { bg = '#FEF3C7'; fg = AMBER; }
+  return <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, background: bg, color: fg, marginBottom: 12 }}>{label}</div>;
+}
+
+function Compare({ r }: { r: any }) {
+  const Row = ({ label, o, l, ok }: any) => (
+    <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr', gap: 12, fontSize: 12.5, padding: '6px 0', borderBottom: `0.5px solid ${LINE}`, alignItems: 'center' }}>
+      <span style={{ color: SLATE }}>{label}</span>
+      <span style={{ color: NAVY }}>{o}</span>
+      <span style={{ color: NAVY, display: 'flex', alignItems: 'center', gap: 5 }}>
+        {l}
+        {ok === true && <span style={{ color: GREEN, fontSize: 13 }}>✓</span>}
+        {ok === false && <span style={{ color: AMBER, fontSize: 13 }}>≠</span>}
+      </span>
+    </div>
+  );
+  return (
+    <div style={{ maxWidth: 560 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr', gap: 12, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: MUTED, paddingBottom: 4 }}>
+        <span></span><span>Original</span><span>Live</span>
+      </div>
+      <Row
+        label="Price"
+        o={r.originalUsd != null ? `$${r.originalUsd.toLocaleString()}${r.originalLocal ? ` (${r.originalCurrency} ${r.originalLocal.toLocaleString()})` : ''}` : '—'}
+        l={r.liveUsd != null ? `$${r.liveUsd.toLocaleString()}${r.liveLocal ? ` (${r.liveCurrency} ${r.liveLocal.toLocaleString()})` : ''}` : (r.result === 'sold_out' ? 'Sold out' : '—')}
+      />
+      <Row label="Room" o={r.room || '—'} l={r.liveRoom || '—'} ok={r.roomMatch} />
+      <Row label="Board" o="—" l={r.liveBoard || '—'} ok={r.boardMatch} />
+      <Row label="Dates" o="same" l={r.datesMatch ? 'confirmed same' : 'differs'} ok={r.datesMatch} />
+      <div style={{ fontSize: 11, color: MUTED, marginTop: 10 }}>Checked {fmtTime(r.checkedAt)}</div>
+    </div>
   );
 }
 
