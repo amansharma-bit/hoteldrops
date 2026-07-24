@@ -202,8 +202,18 @@ export default function RepricingPage() {
                       </div>
                     </div>
 
-                    {/* Expanded: comparison + history */}
-                    <div style={{ maxHeight: isOpen ? 520 : 0, overflow: 'hidden', transition: 'max-height 0.32s ease', background: '#FBFCFE' }}>
+                    {/*
+                      FIX 1 of 2: the old cap of maxHeight: 520 clipped the whole
+                      expanded section (comparison + history + the full rates
+                      table) with overflow:hidden and NO way to scroll past it.
+                      That's what made "All live rates (122)" look like it only
+                      had a few rows. Raised the cap well above any realistic
+                      content height so nothing outside gets silently cut off.
+                      The rates table itself now scrolls internally — see FIX 2
+                      in AllRates below — so this outer cap is just a safety
+                      ceiling for the open/close animation, not a real limit.
+                    */}
+                    <div style={{ maxHeight: isOpen ? 3000 : 0, overflow: 'hidden', transition: 'max-height 0.32s ease', background: '#FBFCFE' }}>
                       <div style={{ padding: isOpen ? '18px 20px 22px' : '0 20px', borderTop: isOpen ? `0.5px solid ${LINE}` : 'none' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 32 }}>
                           {/* Original vs Live comparison */}
@@ -284,23 +294,34 @@ function AllRates({ rates, origUsd }: { rates: any[]; origUsd: number | null }) 
               <div key={i} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: MUTED, textAlign: i === 2 || i === 3 ? 'right' : 'left' }}>{h}</div>
             ))}
           </div>
-          {rates.map((rt, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) 130px 110px 120px 110px', gap: 12, padding: '10px 14px', alignItems: 'center', borderBottom: i < rates.length - 1 ? `0.5px solid ${LINE}` : 'none', background: rt.isMatch ? '#F0FDF4' : '#fff' }}>
-              <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rt.roomType}</span>
-                {rt.isMatch && <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, color: GREEN, background: '#DCFCE7', padding: '2px 6px', borderRadius: 10 }}>YOUR ROOM</span>}
+          {/*
+            FIX 2 of 2: previously the rows rendered directly here with no
+            height limit or overflow rule of their own — they only "worked"
+            because the outer wrapper cut everything off at 520px. Now that
+            the outer cap is raised (see FIX 1 above), this container needs
+            its own explicit scroll box so a 122-row table doesn't just push
+            the whole page down. maxHeight + overflowY:auto below gives a
+            real, visible scrollbar for however many rates come back.
+          */}
+          <div style={{ maxHeight: 420, overflowY: 'auto' }}>
+            {rates.map((rt, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) 130px 110px 120px 110px', gap: 12, padding: '10px 14px', alignItems: 'center', borderBottom: i < rates.length - 1 ? `0.5px solid ${LINE}` : 'none', background: rt.isMatch ? '#F0FDF4' : '#fff' }}>
+                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 13, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rt.roomType}</span>
+                  {rt.isMatch && <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, color: GREEN, background: '#DCFCE7', padding: '2px 6px', borderRadius: 10 }}>YOUR ROOM</span>}
+                </div>
+                <div style={{ fontSize: 12, color: SLATE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rt.board}</div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>{rt.usd != null ? `$${rt.usd.toLocaleString()}` : '—'}</div>
+                  <div style={{ fontSize: 10, color: MUTED, fontFamily: 'monospace' }}>{rt.currency} {rt.local?.toLocaleString('en-US', { maximumFractionDigits: 0 })}</div>
+                </div>
+                <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 600, color: rt.vsOriginalUsd > 0 ? GREEN : rt.vsOriginalUsd < 0 ? RED : SLATE }}>
+                  {rt.vsOriginalUsd == null ? '—' : rt.vsOriginalUsd > 0 ? `−$${rt.vsOriginalUsd}` : rt.vsOriginalUsd < 0 ? `+$${Math.abs(rt.vsOriginalUsd)}` : 'same'}
+                </div>
+                <div style={{ fontSize: 11, color: rt.refundable ? SLATE : AMBER }}>{rt.cancelBy ? fmtDate(rt.cancelBy) : (rt.refundable ? 'refundable' : 'non-ref')}</div>
               </div>
-              <div style={{ fontSize: 12, color: SLATE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rt.board}</div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>{rt.usd != null ? `$${rt.usd.toLocaleString()}` : '—'}</div>
-                <div style={{ fontSize: 10, color: MUTED, fontFamily: 'monospace' }}>{rt.currency} {rt.local?.toLocaleString('en-US', { maximumFractionDigits: 0 })}</div>
-              </div>
-              <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 600, color: rt.vsOriginalUsd > 0 ? GREEN : rt.vsOriginalUsd < 0 ? RED : SLATE }}>
-                {rt.vsOriginalUsd == null ? '—' : rt.vsOriginalUsd > 0 ? `−$${rt.vsOriginalUsd}` : rt.vsOriginalUsd < 0 ? `+$${Math.abs(rt.vsOriginalUsd)}` : 'same'}
-              </div>
-              <div style={{ fontSize: 11, color: rt.refundable ? SLATE : AMBER }}>{rt.cancelBy ? fmtDate(rt.cancelBy) : (rt.refundable ? 'refundable' : 'non-ref')}</div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>
