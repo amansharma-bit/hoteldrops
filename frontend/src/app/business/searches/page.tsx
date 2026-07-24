@@ -21,6 +21,11 @@ function fmtTime(d: string | null) {
   const dt = new Date(d);
   return dt.toLocaleString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
+function fmtTimeFull(d: string | null) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
 
 const RESULT_META: Record<string, { label: string; bg: string; fg: string }> = {
   drop_actionable:      { label: 'Drop · same room', bg: '#DCFCE7', fg: GREEN },
@@ -127,20 +132,15 @@ export default function SearchesMadePage() {
                       </div>
                     </div>
 
-                    {/*
-                      Expanded detail — real data, one atomic check, no invented
-                      pipeline stages. This mirrors the same Original-vs-Live
-                      comparison already used on the Repricing page, using the
-                      match fields the backend already computes and stores
-                      (room_match / board_match / dates_match / match basis).
-                    */}
-                    <div style={{ maxHeight: isOpen ? 900 : 0, overflow: 'hidden', transition: 'max-height 0.3s ease', background: '#FBFCFE' }}>
+                    {/* Expanded detail — comparison + raw log, Mize-style */}
+                    <div style={{ maxHeight: isOpen ? 3000 : 0, overflow: 'hidden', transition: 'max-height 0.3s ease', background: '#FBFCFE' }}>
                       {isOpen && (
                         <div style={{ padding: '18px 20px 22px', borderTop: `0.5px solid ${LINE}` }}>
                           {r.matchBasis && MATCH_BASIS_LABEL[r.matchBasis] && (
                             <MatchBadge basis={r.matchBasis} />
                           )}
                           <Compare r={r} />
+                          <RawLog r={r} />
                         </div>
                       )}
                     </div>
@@ -201,6 +201,83 @@ function Compare({ r }: { r: any }) {
       <Row label="Board" o="—" l={r.liveBoard || '—'} ok={r.boardMatch} />
       <Row label="Dates" o="same" l={r.datesMatch ? 'confirmed same' : 'differs'} ok={r.datesMatch} />
       <div style={{ fontSize: 11, color: MUTED, marginTop: 10 }}>Checked {fmtTime(r.checkedAt)}</div>
+    </div>
+  );
+}
+
+// Mize-style raw log block. We genuinely have ONE stage today — the search/
+// match/compare call — so that's the only entry that's ever populated. The
+// other five (Recheck, Pull source, Rebook, Confirm, Cancel original) render
+// as plainly blank/greyed rows so the shape is recognisable without
+// pretending steps ran that didn't. As those actions get built, they slot
+// into this same list — no redesign needed later.
+const LOG_STAGES = ['Search', 'Recheck', 'Pull source', 'Rebook', 'Confirm rebook', 'Cancel original booking'];
+
+function RawLog({ r }: { r: any }) {
+  const [open, setOpen] = useState(false);
+
+  // Reconstruct a readable request/response block from what we actually
+  // stored. This isn't the literal wire payload (we don't persist that),
+  // it's a faithful summary of the same call: what we asked GRN for the
+  // and what we matched back — in the same spirit as the Mize dump.
+  const requestSummary = {
+    hotel: r.hotel,
+    booking_id: r.bookingId,
+    original_room: r.room,
+  };
+  const responseSummary = {
+    match_basis: r.matchBasis || null,
+    live_room: r.liveRoom || null,
+    live_board: r.liveBoard || null,
+    live_price: r.liveLocal != null ? `${r.liveCurrency} ${r.liveLocal}` : null,
+    live_usd: r.liveUsd,
+    room_match: r.roomMatch,
+    board_match: r.boardMatch,
+    dates_match: r.datesMatch,
+    dropped: r.dropped,
+    gap_usd: r.gapUsd,
+  };
+
+  return (
+    <div style={{ marginTop: 20, borderTop: `0.5px solid ${LINE}`, paddingTop: 16 }}>
+      <button onClick={() => setOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: BLUE, padding: 0, marginBottom: open ? 10 : 0 }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+        Raw log
+      </button>
+
+      {open && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {LOG_STAGES.map((stage, i) => {
+            const isSearch = i === 0;
+            return (
+              <div key={stage} style={{ border: `1px solid ${LINE}`, borderRadius: 8, overflow: 'hidden', opacity: isSearch ? 1 : 0.55 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px', background: isSearch ? '#F8FAFC' : '#FBFCFE', borderBottom: isSearch ? `0.5px solid ${LINE}` : 'none' }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: isSearch ? NAVY : MUTED, minWidth: 150 }}>{stage}</span>
+                  <span style={{ fontSize: 11, color: MUTED }}>{isSearch ? fmtTimeFull(r.checkedAt) : '—'}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 10.5, fontWeight: 600, color: isSearch ? GREEN : MUTED }}>
+                    {isSearch ? 'LOGGED' : 'NOT YET ENABLED'}
+                  </span>
+                </div>
+                {isSearch && (
+                  <div style={{ padding: '10px 12px', background: '#0F172A' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#7C93C4', marginBottom: 4 }}>Request</div>
+                    <pre style={{ margin: 0, fontSize: 11, lineHeight: 1.5, color: '#D6E0F5', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+{JSON.stringify(requestSummary, null, 2)}
+                    </pre>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#7C93C4', margin: '12px 0 4px' }}>Response</div>
+                    <pre style={{ margin: 0, fontSize: 11, lineHeight: 1.5, color: '#D6E0F5', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+{JSON.stringify(responseSummary, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <div style={{ fontSize: 10.5, color: MUTED, fontStyle: 'italic', marginTop: 2 }}>
+            This is a summary of the stored check, not the literal wire payload — the raw GRN response isn't persisted verbatim yet. Later stages will populate here as they're built, same format.
+          </div>
+        </div>
+      )}
     </div>
   );
 }
