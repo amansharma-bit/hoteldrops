@@ -366,7 +366,18 @@ function evaluateRate(rate, orig) {
   const blockers = [];
   if (!orig.roomCode) blockers.push('The original booking has no room code stored, so the room cannot be verified.');
   else if (!liveRoomCode) blockers.push('This live rate carries no room code, so the room cannot be verified.');
-  else if (!roomMatch) blockers.push(`Different room — booked ${orig.roomDescription || orig.roomType || 'room'}, this rate is ${rateRoomDescription(rate) || rateRoomType(rate) || 'another room'}.`);
+  else if (!roomMatch) {
+    const origName = orig.roomDescription || orig.roomType || null;
+    const liveName = rateRoomDescription(rate) || rateRoomType(rate) || null;
+    // When the two rooms share an identical name, saying "booked X, this rate
+    // is X" reads as nonsense. Show the codes instead — that is the actual
+    // difference, and it is what the gate compared.
+    if (origName && liveName && norm(origName) === norm(liveName)) {
+      blockers.push(`Different room — same name ("${origName}") but a different room code (booked ${String(orig.roomCode).slice(0, 12)}…, this rate ${String(liveRoomCode).slice(0, 12)}…).`);
+    } else {
+      blockers.push(`Different room — booked ${origName || 'room'}, this rate is ${liveName || 'another room'}.`);
+    }
+  }
 
   if (!boardMatch) blockers.push(`Different board — booked "${orig.board || 'unknown'}", this rate is "${liveBoard || 'unknown'}".`);
 
@@ -1288,7 +1299,8 @@ router.get('/repricing/candidates', async (req, res) => {
           country: r.country_code,
           room: r.room_type,
           roomDescription: room0.description || null,
-          roomCount: r.room_count,
+          roomCode: item0.room_code || null,
+          roomCount: r.room_count || (hotel.booking_items || []).length || null,
           board: r.board_basis,
           nonRefundable: cancellation.nonRefundable,
           cancellation,
