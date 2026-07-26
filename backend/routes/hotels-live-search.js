@@ -1242,10 +1242,12 @@ router.get('/repricing/candidates', async (req, res) => {
   const minDays = Math.max(0, parseInt(req.query.min_days, 10) || 0);
   const minCancelBy = new Date(Date.now() + minDays * 86400000).toISOString();
 
-  // Sort: most runway first by default, so the workable bookings lead. Pass
-  // sort=urgent to get the old soonest-expiring order when chasing deadlines.
-  const sortUrgent = req.query.sort === 'urgent';
-  const order = sortUrgent ? 'cancel_by_date.asc' : 'cancel_by_date.desc';
+  // Sort. Default is soonest deadline FIRST among the bookings that pass the
+  // runway filter — that is the working order: enough time to act, most
+  // urgent at the top. Sorting by most runway first surfaced bookings a year
+  // out, which qualify but are not what anyone is trying to work through.
+  const sortRunway = req.query.sort === 'runway';
+  const order = sortRunway ? 'cancel_by_date.desc' : 'cancel_by_date.asc';
 
   const where =
     `cancel_by_date=gt.${encodeURIComponent(minDays > 0 ? minCancelBy : nowIso)}` +
@@ -1274,7 +1276,7 @@ router.get('/repricing/candidates', async (req, res) => {
 
     res.json({
       page, perPage, total: total ?? 0,
-      minDays, sort: sortUrgent ? 'urgent' : 'runway',
+      minDays, sort: sortRunway ? 'runway' : 'deadline',
       hasMore: offset + perPage < (total ?? 0),
       rows: rows.map((r) => {
         const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 }[r.currency];
