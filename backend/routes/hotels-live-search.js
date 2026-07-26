@@ -329,12 +329,28 @@ function rateForbidsRebooking(rate) {
 // A cheaper rate for fewer people is not the same booking.
 function occupancyMatches(orig, live) {
   if (!orig || !live) return false;
+  // Docs: no_of_adults is not always returned — when it is absent the rate
+  // carries max_room_occupancy instead. Treating a missing value as 0 made
+  // every such rate fail on occupancy even when the room was correct, so an
+  // unstated occupancy is checked against the room's stated maximum instead.
+  if (live.adults == null && live.maxOccupancy) {
+    const totalOrig = Number(orig.adults || 0) + Number(orig.children || 0);
+    const m = live.maxOccupancy;
+    if (m.max_pax != null && totalOrig > Number(m.max_pax)) return false;
+    if (m.max_adults != null && Number(orig.adults || 0) > Number(m.max_adults)) return false;
+    if (m.max_children != null && Number(orig.children || 0) > Number(m.max_children)) return false;
+    return true;
+  }
   if (Number(orig.adults || 0) !== Number(live.adults || 0)) return false;
   if (Number(orig.children || 0) !== Number(live.children || 0)) return false;
   const a = [...(orig.childAges || [])].map(Number).sort((x, y) => x - y);
   const b = [...(live.childAges || [])].map(Number).sort((x, y) => x - y);
-  if (a.length !== b.length) return false;
-  return a.every((v, i) => v === b[i]);
+  // children_ages is not always echoed on the rate. Only compare when present.
+  if (a.length && b.length) {
+    if (a.length !== b.length) return false;
+    return a.every((v, i) => v === b[i]);
+  }
+  return true;
 }
 
 function rateOccupancy(rate) {
@@ -343,6 +359,7 @@ function rateOccupancy(rate) {
     adults: r.no_of_adults ?? null,
     children: r.no_of_children ?? 0,
     childAges: r.children_ages || [],
+    maxOccupancy: r.max_room_occupancy || null,
   };
 }
 
@@ -1348,8 +1365,11 @@ router.get('/repricing/candidates', async (req, res) => {
           cancelBy: cp.cancel_by_date || r.cancel_by_date || null,
           details: typeof cp.details === 'string' ? cp.details : null,
           policies: Array.isArray(cp.policies) ? cp.policies : (Array.isArray(cp.details) ? cp.details : []),
+          underCancellation: cp.under_cancellation ?? null,
           remarks: item0.rate_comments?.remarks || null,
         };
+        const supportsCancellation = raw.supports_cancellation ?? null;
+        const supportsAmendment = raw.supports_amendment ?? null;
 
         return {
           bookingId: r.booking_id,
@@ -1369,6 +1389,8 @@ router.get('/repricing/candidates', async (req, res) => {
           board: r.board_basis,
           nonRefundable: cancellation.nonRefundable,
           cancellation,
+          supportsCancellation,
+          supportsAmendment,
           leadGuest: r.guest_name
             || (raw.holder ? `${raw.holder.name || ''} ${raw.holder.surname || ''}`.trim() : null)
             || null,
@@ -1468,12 +1490,21 @@ router.post('/repricing/check', async (req, res) => {
       },
     };
 
+    // Nationality materially affects both pricing and availability in GRN, and
+    // it is a REQUIRED search field. This was hardcoded to 'US', which meant we
+    // were pricing every booking as if the guest were American. The Osaka
+    // booking is Italian ("IT"), so we were comparing against a different rate
+    // set than the one the booking was made under — which would both distort
+    // the gap and suppress genuine matches.
+    const bookingNationality =
+      (b.raw?.nationality || b.raw?.holder?.client_nationality || 'US').toString().slice(0, 2).toUpperCase();
+
     const payload = {
       rooms: [roomReq],
       rates: 'comprehensive',
       hotel_codes: [String(b.hotel_code)],
       currency: b.currency || 'USD',
-      client_nationality: 'US',
+      client_nationality: bookingNationality,
       checkin,
       checkout,
       purpose_of_travel: 1,
@@ -1629,89 +1660,287 @@ router.post('/repricing/check', async (req, res) => {
 // GRN rebooking chain — pull source, recheck, place, confirm, cancel original.
 // ---------------------------------------------------------------------------
 
-async function grnPullSourceBooking({ bookingId }) {
+// Fetch the live booking straight from GRN.
+//
+// The documented endpoint (API v3 docs, Hotels > Fetch Booking) is keyed on
+// the booking REFERENCE, not the booking id:
+//     GET api/v3/hotels/bookings/<booking_reference>?type=GRN
+//
+// This code previously called /hotels/bookingdetail?booking_id=..., which does
+// not appear anywhere in the v3 documentation. That call sits at step -1 of
+// the rebook chain and has never actually executed, so a deprecated endpoint
+// there would abort every rebook at the first step. We now try the documented
+// route first and fall back to the old one, reporting which worked.
+//
+// Also returns the flags the docs expose but we were ignoring:
+// supports_cancellation, supports_amendment, and cancellation_policy's
+// under_cancellation. A booking that cannot be cancelled cannot be rebooked,
+// since the chain ends in a DELETE.
+async function grnPullSourceBooking({ bookingId, bookingReference }) {
+  const shape = (booking, via) => {
+    const items = booking.hotel?.booking_items || [];
+    const underCancellation = items.some((it) => it.cancellation_policy?.under_cancellation === true);
+    return {
+      via,
+      status: booking.booking_status || null,
+      bookingType: booking.booking_type || null,          // 'B' booking, 'C' cancellation
+      bookingReference: booking.booking_reference || null,
+      supportsCancellation: booking.supports_cancellation ?? null,
+      supportsAmendment: booking.supports_amendment ?? null,
+      underCancellation,
+      paymentStatus: booking.payment_status || null,
+      raw: booking,
+    };
+  };
+
+  // Documented route first.
+  if (bookingReference) {
+    try {
+      const resp = await fetch(
+        `${GRN_API_BASE_URL}/hotels/bookings/${encodeURIComponent(bookingReference)}?type=GRN`,
+        { method: 'GET', headers: GRN_HEADERS() }
+      );
+      const data = await resp.json();
+      // Docs: HTTP 200 with error_code 2002 means invalid booking reference.
+      const booking = data.booking || (data.bookings && data.bookings[0]) || null;
+      if (resp.ok && booking && !data.error_code) {
+        return shape(booking, 'bookings/<reference>');
+      }
+    } catch { /* fall through to the legacy call */ }
+  }
+
   const resp = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${encodeURIComponent(bookingId)}`, {
     method: 'GET',
     headers: GRN_HEADERS(),
   });
   const data = await resp.json();
   if (!resp.ok || data.error) {
-    throw new Error(`GRN pull-source failed (${resp.status}): ${JSON.stringify(data).slice(0, 300)}`);
+    throw new Error(`GRN pull-source failed on both routes (${resp.status}): ${JSON.stringify(data).slice(0, 300)}`);
   }
-  const booking = data.booking || {};
-  return {
-    status: booking.booking_status || null,     // e.g. "Confirmed", "Cancelled"
-    bookingReference: booking.booking_reference || null,  // freshest reference, preferred over our cached copy
-    raw: booking,
-  };
+  return shape(data.booking || {}, 'bookingdetail?booking_id');
 }
 
-async function grnRecheckRate({ searchId, rateKey }) {
+// Rate Recheck — POST api/v3/hotels/availability/<sid>/rates/?action=recheck
+//
+// Docs (Refetch page): payload REQUIRES both rate_key AND group_code, both
+// taken from the search response. The previous implementation sent only
+// rate_key and tried to read group_code OUT of the recheck response, which is
+// backwards — group_code is an input, from search.
+//
+// Response shape is hotel.rate (a single object), not hotel.rates[]. Flags are
+// price_changed and cp_changed. cp_changed matters as much as price: it means
+// the cancellation policy moved between search and recheck, which is exactly
+// the downgrade the gate exists to prevent.
+//
+// Docs also state the recheck response is the FINAL word before booking, and
+// that rate_key / room_code / room_reference must be re-taken from it.
+async function grnRecheckRate({ searchId, rateKey, groupCode }) {
   const resp = await fetch(
     `${GRN_API_BASE_URL}/hotels/availability/${encodeURIComponent(searchId)}/rates/?action=recheck`,
     {
       method: 'POST',
       headers: GRN_HEADERS(),
-      body: JSON.stringify({ hotel_info: true, rate_key: rateKey }),
+      body: JSON.stringify({ rate_key: rateKey, group_code: groupCode }),
     }
   );
   const data = await resp.json();
-  if (!resp.ok || data.error) {
+  if (!resp.ok || data.error || data.error_code) {
     throw new Error(`GRN recheck failed (${resp.status}): ${JSON.stringify(data).slice(0, 300)}`);
   }
-  const rechkRate = data.hotel?.rates?.[0] || data.rates?.[0] || null;
+  const rate = data.hotel?.rate || null;
+  if (!rate) {
+    throw new Error(`GRN recheck returned no hotel.rate: ${JSON.stringify(data).slice(0, 300)}`);
+  }
   return {
-    groupCode: data.group_code || data.hotel?.group_code || rechkRate?.group_code || null,
-    priceChanged: data.grn_recheck_price_changed ?? null,
-    newPrice: rechkRate?.price ?? data.rooms?.[0]?.price ?? null,
-    rate: rechkRate,
+    priceChanged: data.price_changed ?? null,
+    cpChanged: data.cp_changed ?? null,
+    searchId: data.search_id || searchId,
+    // Everything below must be carried into the booking request, per docs.
+    rateKey: rate.rate_key || rateKey,
+    groupCode: rate.group_code || groupCode,
+    roomCode: rate.room_code || null,
+    roomReference: rate.rooms?.[0]?.room_reference || null,
+    rateType: rate.rate_type || null,
+    price: rate.price ?? null,
+    currency: rate.currency || null,
+    nonRefundable: typeof rate.non_refundable === 'boolean' ? rate.non_refundable : null,
+    cancelBy: rate.cancellation_policy?.cancel_by_date || null,
+    supportsCancellation: rate.supports_cancellation ?? null,
+    rate,
     raw: data,
   };
 }
 
-async function grnPlaceRebooking({ originalBookingReference, searchId, hotelCode, cityCode, groupCode, checkin, checkout, rateKey, roomCode }) {
-  const resp = await fetch(`${GRN_API_BASE_URL}/hotels/rebookings/${encodeURIComponent(originalBookingReference)}`, {
-    method: 'POST',
-    headers: GRN_HEADERS(),
-    body: JSON.stringify({
-      search_id: searchId,
-      hotel_code: hotelCode,
-      city_code: cityCode,
-      group_code: groupCode,
-      checkin, checkout,
-      payment_type: 'AT_WEB',
-      booking_items: [{ rate_key: rateKey, room_code: roomCode }],
-    }),
-  });
-  const data = await resp.json();
-  if (!resp.ok || data.error) {
-    throw new Error(`GRN rebooking placement failed (${resp.status}): ${JSON.stringify(data).slice(0, 300)}`);
-  }
-  return { newBookingId: data.booking_id, newBookingReference: data.booking_reference, raw: data };
+// ---------------------------------------------------------------------------
+// Booking payload builder.
+//
+// A rebooking is a Booking plus a Cancellation — there is no rebooking
+// endpoint in the v3 documentation. So the new reservation goes through
+// POST api/v3/hotels/bookings with the full documented payload, rebuilt from
+// the ORIGINAL booking so the guest ends up with the same reservation at a
+// lower price.
+//
+// Two documented requirements the old code did not meet:
+//
+// 1. Every pax needs title, name, surname, type (and age if CH). Guest names
+//    must be unique. GRN does not return `title` in the Fetch Booking
+//    response even though the Booking Response schema lists it, so titles
+//    cannot always be reconstructed — where they are missing this builder
+//    reports it rather than guessing. Guessing "Mr." risks a wrong salutation
+//    on a guest record and, worse, a holder/pax title mismatch.
+//
+// 2. Changelog 1st Feb 2026: the holder MUST also appear in the paxes array of
+//    the room they occupy, matched on name + surname (+ title), or the booking
+//    fails with HOLDER_NOT_IN_PAX_LIST.
+// ---------------------------------------------------------------------------
+const VALID_TITLES = ['Mr.', 'Ms.', 'Mrs.', 'Mstr.'];
+
+function normaliseTitle(t) {
+  if (!t) return null;
+  const s = String(t).trim().replace(/\.$/, '').toLowerCase();
+  const map = { mr: 'Mr.', ms: 'Ms.', miss: 'Ms.', mrs: 'Mrs.', mstr: 'Mstr.', master: 'Mstr.' };
+  return map[s] || (VALID_TITLES.includes(String(t).trim()) ? String(t).trim() : null);
 }
 
-async function grnConfirmRebooking({ newBookingReference }) {
-  const resp = await fetch(`${GRN_API_BASE_URL}/hotels/rebookings/confirm/${encodeURIComponent(newBookingReference)}`, {
-    method: 'POST',
-    headers: GRN_HEADERS(),
+const cleanName = (s) => String(s || '').replace(/[^A-Za-z \-']/g, '').trim();
+
+function buildBookingPayload({ booking, recheck, searchId }) {
+  const missing = [];
+  const raw = booking.raw || {};
+  const hotel = raw.hotel || {};
+  const item0 = hotel.booking_items?.[0] || {};
+  const paxes = hotel.paxes || [];
+  const holderSrc = raw.holder || {};
+
+  // --- Holder ---
+  const holderTitle = normaliseTitle(holderSrc.title);
+  const holder = {
+    title: holderTitle,
+    name: cleanName(holderSrc.name),
+    surname: cleanName(holderSrc.surname),
+    email: holderSrc.email || null,
+    phone_number: holderSrc.phone_number || null,
+    client_nationality: (raw.nationality || holderSrc.client_nationality || '').toUpperCase() || null,
+  };
+  if (!holder.title) missing.push('holder.title (GRN does not return pax/holder titles on fetch)');
+  if (!holder.name) missing.push('holder.name');
+  if (!holder.surname) missing.push('holder.surname');
+  if (!holder.email) missing.push('holder.email');
+  if (!holder.phone_number) missing.push('holder.phone_number');
+  if (!holder.client_nationality) missing.push('holder.client_nationality');
+
+  // --- Paxes for the room ---
+  const outPaxes = paxes.map((p, i) => {
+    const title = normaliseTitle(p.title);
+    if (!title) missing.push(`paxes[${i}].title (${cleanName(p.name)} ${cleanName(p.surname)})`.trim());
+    const pax = { title, name: cleanName(p.name), surname: cleanName(p.surname), type: p.type };
+    if (!pax.name) missing.push(`paxes[${i}].name`);
+    if (!pax.surname) missing.push(`paxes[${i}].surname`);
+    if (p.type !== 'AD' && p.type !== 'CH') missing.push(`paxes[${i}].type must be AD or CH (got ${p.type})`);
+    if (p.type === 'CH') {
+      if (p.age == null) missing.push(`paxes[${i}].age required for child`);
+      else pax.age = Number(p.age);
+    }
+    return pax;
   });
-  const data = await resp.json();
-  if (!resp.ok || data.error) {
-    throw new Error(`GRN rebooking confirmation failed (${resp.status}): ${JSON.stringify(data).slice(0, 300)}`);
+
+  // Changelog 1-Feb-2026: holder must be present in the room's pax list.
+  const holderInPaxes = outPaxes.some((p) =>
+    norm(p.name) === norm(holder.name) && norm(p.surname) === norm(holder.surname));
+  if (!holderInPaxes && holder.name && holder.surname) {
+    outPaxes.unshift({ title: holder.title, name: holder.name, surname: holder.surname, type: 'AD' });
   }
-  return { confirmed: true, message: data.message };
+
+  if (!outPaxes.some((p) => p.type === 'AD')) missing.push('at least one adult pax is required in the room');
+
+  // Duplicate names are rejected by GRN ("Guest names must be unique").
+  const seen = new Set();
+  for (const p of outPaxes) {
+    const key = `${norm(p.name)}|${norm(p.surname)}`;
+    if (seen.has(key)) missing.push(`duplicate guest name: ${p.name} ${p.surname}`);
+    seen.add(key);
+  }
+
+  const payload = {
+    search_id: searchId,
+    hotel_code: String(booking.hotel_code),
+    city_code: String(booking.city_code || hotel.city_code || ''),
+    booking_name: `rebuq rebook ${booking.booking_id}`,
+    group_code: recheck.groupCode,
+    checkin: booking.checkin_date || booking.checkin,
+    checkout: booking.checkout,
+    payment_type: 'AT_WEB',
+    purpose_of_travel: 1,
+    agent_reference: `RQ-${String(booking.booking_id).replace(/[^A-Za-z0-9-_]/g, '')}`.slice(0, 40),
+    booking_comments: `Rebooked by rebuq at a lower rate. Replaces ${booking.booking_id}.`,
+    holder,
+    booking_items: [{
+      rate_key: recheck.rateKey,
+      room_code: recheck.roomCode,
+      rooms: [{
+        room_reference: recheck.roomReference,
+        paxes: outPaxes,
+      }],
+    }],
+  };
+
+  if (!payload.city_code) missing.push('city_code');
+  if (!payload.group_code) missing.push('group_code (from recheck)');
+  if (!payload.booking_items[0].rate_key) missing.push('rate_key (from recheck)');
+  if (!payload.booking_items[0].room_code) missing.push('room_code (from recheck)');
+  if (!payload.booking_items[0].rooms[0].room_reference) missing.push('room_reference (from recheck)');
+
+  // pan_required applies to Indian agents; docs say PAN must match the holder.
+  if (recheck.rate?.pan_required === true) {
+    missing.push('holder.pan_number (rate has pan_required = true)');
+  }
+
+  return { payload, missing: [...new Set(missing)] };
 }
 
-async function grnCancelOriginalBooking({ originalBookingReference }) {
-  const resp = await fetch(`${GRN_API_BASE_URL}/hotels/rebookings/${encodeURIComponent(originalBookingReference)}`, {
+// POST api/v3/hotels/bookings — the documented booking endpoint.
+async function grnCreateBooking(payload) {
+  const resp = await fetch(`${GRN_API_BASE_URL}/hotels/bookings`, {
+    method: 'POST',
+    headers: GRN_HEADERS(),
+    body: JSON.stringify(payload),
+  });
+  const data = await resp.json();
+  // GRN returns application errors as HTTP 200 with an error_code.
+  if (!resp.ok || data.error || data.error_code) {
+    throw new Error(`GRN booking failed (${resp.status}${data.error_code ? ` / ${data.error_code}` : ''}): ${JSON.stringify(data).slice(0, 400)}`);
+  }
+  return {
+    status: data.status || null,            // confirmed | failed | rejected | pending
+    bookingId: data.booking_id || null,
+    bookingReference: data.booking_reference || null,
+    price: data.price?.total ?? null,
+    currency: data.currency || null,
+    nonRefundable: data.non_refundable ?? null,
+    supportsCancellation: data.supports_cancellation ?? null,
+    raw: data,
+  };
+}
+
+// DELETE api/v3/hotels/bookings/<bref> — documented cancellation.
+// reason 1 = "Found lower price on the Internet", which is precisely this flow.
+async function grnCancelBooking({ bookingReference, comments, reason = 1 }) {
+  const resp = await fetch(`${GRN_API_BASE_URL}/hotels/bookings/${encodeURIComponent(bookingReference)}`, {
     method: 'DELETE',
     headers: GRN_HEADERS(),
+    body: JSON.stringify({ comments: comments || 'Rebooked at a lower rate by rebuq.', reason }),
   });
   const data = await resp.json();
-  if (!resp.ok || data.error) {
-    throw new Error(`GRN cancellation failed (${resp.status}): ${JSON.stringify(data).slice(0, 300)}`);
+  if (!resp.ok || data.error || data.error_code) {
+    throw new Error(`GRN cancellation failed (${resp.status}${data.error_code ? ` / ${data.error_code}` : ''}): ${JSON.stringify(data).slice(0, 400)}`);
   }
-  return { cancelled: true, cancellationReference: data.cancellation_reference, charges: data.cancellation_charges };
+  return {
+    status: data.status || null,            // confirmed | failed | rejected | pending
+    cancellationReference: data.cancellation_reference || null,
+    charges: data.cancellation_charges || null,
+    bookingPrice: data.booking_price || null,
+    raw: data,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1760,10 +1989,14 @@ router.post('/repricing/rebook', async (req, res) => {
       });
     }
 
-    // Guard against acting on a stale check.
+    // Guard against acting on a stale check. The docs state search_id is valid
+    // for 30 minutes; the recheck and the booking both need it, so anything
+    // close to that window is unusable. 20 minutes leaves room for the chain.
     const checkAgeMin = (Date.now() - new Date(check.checked_at).getTime()) / 60000;
-    if (checkAgeMin > 60) {
-      return res.status(409).json({ error: `This price check is ${Math.round(checkAgeMin)} minutes old. Re-check before rebooking.` });
+    if (checkAgeMin > 20) {
+      return res.status(409).json({
+        error: `This price check is ${Math.round(checkAgeMin)} minutes old and its search_id expires at 30 minutes. Re-check before rebooking.`,
+      });
     }
 
     const { rows: bkRows } = await sbSelect('grn_bookings',
@@ -1776,10 +2009,10 @@ router.post('/repricing/rebook', async (req, res) => {
 
   const matchedRate = check.raw || {};
   const rateKey = matchedRate.rate_key || matchedRate.rooms?.[0]?.rate_key;
-  const roomCode = matchedRate.room_code || matchedRate.rooms?.[0]?.room_code;
+  const groupCode = matchedRate.group_code || null;
   const searchId = matchedRate._search_id;
   if (!rateKey) return res.status(400).json({ error: 'No rate_key on the stored check — re-check the price first.' });
-  if (!roomCode) return res.status(400).json({ error: 'No room_code on the stored check — re-check the price first.' });
+  if (!groupCode) return res.status(400).json({ error: 'No group_code on the stored check — re-check the price first. Recheck requires it.' });
   if (!searchId) return res.status(400).json({ error: 'No search_id on the stored check — re-check the price first.' });
 
   try {
@@ -1799,45 +2032,62 @@ router.post('/repricing/rebook', async (req, res) => {
   try {
     // STEP -1 — Pull source. Verify the booking is STILL ACTIVE right now,
     // live from GRN, not from our possibly-stale synced copy.
-    const source = await grnPullSourceBooking({ bookingId: booking_id });
+    const cachedRef = booking.booking_reference || booking.raw?.booking_reference || null;
+    const source = await grnPullSourceBooking({ bookingId: booking_id, bookingReference: cachedRef });
+
+    const abort = async (stage, reason, status, extra = {}) => {
+      await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
+        status: 'error', failure_stage: stage, failure_reason: reason,
+        updated_at: new Date().toISOString(),
+      }).catch(() => {});
+      return res.status(status).json({ error: reason, rebookingId: tracked.id, pulledVia: source.via, ...extra });
+    };
+
     if (!source.status || !/^confirmed$/i.test(source.status)) {
-      await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
-        status: 'error', failure_stage: 'pull_source',
-        failure_reason: `Booking is not active (status: ${source.status || 'unknown'}) — aborted before any action.`,
-        updated_at: new Date().toISOString(),
-      });
-      return res.status(409).json({
-        error: `Booking is no longer active (current status: ${source.status || 'unknown'}). No action taken.`,
-        rebookingId: tracked.id,
-      });
+      return abort('pull_source',
+        `Booking is no longer active (current status: ${source.status || 'unknown'}). No action taken.`, 409);
+    }
+    if (source.bookingType === 'C') {
+      return abort('pull_source', 'GRN reports this record as a cancellation, not a live booking. No action taken.', 409);
+    }
+    // The chain ends in a DELETE against the original. If GRN says the booking
+    // does not support cancellation, the rebook cannot complete — and we would
+    // discover that only AFTER confirming a second booking.
+    if (source.supportsCancellation === false) {
+      return abort('pull_source', 'GRN reports this booking does not support cancellation, so it cannot be rebooked.', 409);
+    }
+    if (source.underCancellation === true) {
+      return abort('pull_source', 'A cancellation is already in progress on this booking. No action taken.', 409);
     }
 
-    const originalRef = source.bookingReference || booking.booking_reference || booking.raw?.booking_reference;
+    const originalRef = source.bookingReference || cachedRef;
     if (!originalRef) {
-      await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
-        status: 'error', failure_stage: 'pull_source',
-        failure_reason: 'Booking is active but no booking_reference was returned — cannot proceed.',
-        updated_at: new Date().toISOString(),
-      });
-      return res.status(400).json({ error: 'Booking is active but has no booking_reference — cannot rebook without it.', rebookingId: tracked.id });
+      return abort('pull_source', 'Booking is active but has no booking_reference — cannot rebook without it.', 400);
     }
 
-    // STEP 0 — Recheck. Never book off a possibly-stale price check.
-    const rechecked = await grnRecheckRate({ searchId, rateKey });
+    // STEP 0 — Rate Recheck. Mandatory when rate_type is "recheck", and the
+    // docs state the recheck response is the final word before booking.
+    // group_code is a REQUIRED input here, taken from the search response.
+    const rechecked = await grnRecheckRate({ searchId, rateKey, groupCode });
+
     if (rechecked.priceChanged === true) {
-      await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
-        status: 'error', failure_stage: 'recheck', failure_reason: 'Price changed since last check — aborted before booking.',
-        updated_at: new Date().toISOString(),
-      });
-      return res.status(409).json({ error: 'Price changed since this booking was checked. Please re-check before rebooking.', rebookingId: tracked.id });
+      return abort('recheck', 'Price changed between the check and the recheck. Nothing was booked — re-check before rebooking.', 409);
+    }
+    // cp_changed means the cancellation policy moved. That is the downgrade the
+    // gate exists to prevent, so it stops the chain just like a price change.
+    if (rechecked.cpChanged === true) {
+      return abort('recheck', 'The cancellation policy changed between the check and the recheck. Nothing was booked.', 409);
+    }
+    if (rechecked.supportsCancellation === false) {
+      return abort('recheck', 'The replacement rate cannot be cancelled through the API. Not moving the guest onto it.', 409);
     }
 
-    // SECOND GATE PASS — the recheck response is the last word on what will
-    // actually be booked. If the terms moved between search and recheck, stop.
-    if (rechecked.rate) {
+    // SECOND GATE PASS — re-evaluate against what the recheck actually returned,
+    // not what search promised.
+    {
       const item0 = booking.raw?.hotel?.booking_items?.[0] || {};
       const room0 = item0.rooms?.[0] || {};
-      const paxes = booking.raw?.hotel?.paxes || [];
+      const bkPaxes = booking.raw?.hotel?.paxes || [];
       const origAgain = {
         roomCode: item0.room_code || null,
         roomType: room0.room_type || booking.room_type || null,
@@ -1847,83 +2097,113 @@ router.post('/repricing/rebook', async (req, res) => {
         nonRefundable: typeof item0.non_refundable === 'boolean' ? item0.non_refundable : null,
         cancelBy: item0.cancellation_policy?.cancel_by_date || booking.cancel_by_date || null,
         occupancy: {
-          adults: room0.no_of_adults ?? paxes.filter((p) => p.type === 'AD').length,
-          children: room0.no_of_children ?? paxes.filter((p) => p.type === 'CH').length,
-          childAges: paxes.filter((p) => p.type === 'CH').map((p) => p.age).filter((a) => a != null),
+          adults: room0.no_of_adults ?? bkPaxes.filter((p) => p.type === 'AD').length,
+          children: room0.no_of_children ?? bkPaxes.filter((p) => p.type === 'CH').length,
+          childAges: bkPaxes.filter((p) => p.type === 'CH').map((p) => p.age).filter((a) => a != null),
         },
       };
       const v2 = evaluateRate(rechecked.rate, origAgain);
       if (!v2.eligible) {
-        await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
-          status: 'error', failure_stage: 'recheck_gate',
-          failure_reason: `Terms changed at recheck: ${v2.blockers.join(' ')}`,
-          updated_at: new Date().toISOString(),
-        });
-        return res.status(409).json({
-          error: 'The rate changed between the price check and the recheck, and no longer matches the original booking. Nothing was booked.',
-          blockers: v2.blockers, rebookingId: tracked.id,
-        });
+        return abort('recheck_gate',
+          `The rate no longer matches the original booking at recheck: ${v2.blockers.join(' ')} Nothing was booked.`, 409,
+          { blockers: v2.blockers });
       }
     }
 
-    if (!rechecked.groupCode) {
-      throw new Error('Recheck succeeded but returned no group_code — cannot proceed to booking.');
-    }
-
-    await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, { status: 'booking', updated_at: new Date().toISOString() });
-
-    // STEP 1 — Place the new booking (hold).
-    const placed = await grnPlaceRebooking({
-      originalBookingReference: originalRef, searchId, hotelCode: booking.hotel_code,
-      cityCode: booking.city_code, groupCode: rechecked.groupCode,
-      checkin: booking.checkin_date, checkout: booking.checkout, rateKey, roomCode,
+    // STEP 1 — Build the documented booking payload from the ORIGINAL booking.
+    // A rebooking is a Booking plus a Cancellation; there is no rebooking
+    // endpoint. rate_key, room_code and room_reference all come from the
+    // recheck response, per the Booking Request docs.
+    const { payload, missing } = buildBookingPayload({
+      booking, recheck: rechecked, searchId: rechecked.searchId,
     });
+    if (missing.length) {
+      return abort('build_payload',
+        `Cannot build a complete booking request — missing required fields. Nothing was booked.`, 422,
+        { missing });
+    }
 
     await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
-      status: 'booked', new_booking_id: placed.newBookingId, updated_at: new Date().toISOString(),
+      status: 'booking', updated_at: new Date().toISOString(),
     });
 
-    // STEP 2 — Confirm it. Original still untouched.
-    try {
-      await grnConfirmRebooking({ newBookingReference: placed.newBookingReference });
-    } catch (confirmErr) {
-      await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
-        status: 'error', failure_stage: 'confirm_rebooking',
-        failure_reason: String(confirmErr.message || confirmErr), updated_at: new Date().toISOString(),
-      });
-      return res.status(500).json({
-        error: 'New booking was placed but could not be confirmed. Original booking is untouched.',
-        newBookingId: placed.newBookingId, detail: String(confirmErr.message || confirmErr),
-      });
+    // STEP 2 — Create the new booking. Original still untouched.
+    const created = await grnCreateBooking(payload);
+
+    let newStatus = created.status;
+    let newRef = created.bookingReference;
+
+    // Docs: status "pending" REQUIRES a Fetch Booking to resolve the real
+    // outcome. Same if the call had returned a 5xx.
+    if (/^pending$/i.test(String(newStatus)) && newRef) {
+      await sleep(3000);
+      const fetched = await grnPullSourceBooking({ bookingId: created.bookingId, bookingReference: newRef });
+      newStatus = fetched.status || newStatus;
     }
 
-    // STEP 3 — Only now, cancel the original.
+    await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
+      status: 'booked', new_booking_id: created.bookingId, updated_at: new Date().toISOString(),
+    });
+
+    if (!/^confirmed$/i.test(String(newStatus))) {
+      return abort('create_booking',
+        `The replacement booking came back as "${newStatus || 'unknown'}", not confirmed. The original booking is untouched and still live.`,
+        500, { newBookingId: created.bookingId, newBookingReference: newRef });
+    }
+
+    // STEP 3 — Only now, cancel the original. reason 1 = found a lower price.
     try {
       await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, { status: 'cancelling', updated_at: new Date().toISOString() });
-      const cancelled = await grnCancelOriginalBooking({ originalBookingReference: originalRef });
+      const cancelled = await grnCancelBooking({
+        bookingReference: originalRef,
+        comments: `Rebooked at a lower rate. Replacement booking ${created.bookingId}.`,
+        reason: 1,
+      });
+
+      if (!/^confirmed$/i.test(String(cancelled.status))) {
+        await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
+          status: 'error', failure_stage: 'cancel_original',
+          failure_reason: `Cancellation returned status "${cancelled.status}".`,
+          updated_at: new Date().toISOString(),
+        }).catch(() => {});
+        return res.status(207).json({
+          status: 'partial',
+          warning: `The replacement is confirmed but cancelling the ORIGINAL returned "${cancelled.status}". Both bookings may be live — cancel the original manually to avoid double-billing.`,
+          rebookingId: tracked.id, newBookingId: created.bookingId,
+          originalBookingReference: originalRef,
+        });
+      }
 
       await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, { status: 'confirmed', updated_at: new Date().toISOString() });
       return res.json({
-        status: 'confirmed', rebookingId: tracked.id, newBookingId: placed.newBookingId,
-        savedUsd: check.gap_usd, cancellationReference: cancelled.cancellationReference,
+        status: 'confirmed',
+        rebookingId: tracked.id,
+        newBookingId: created.bookingId,
+        newBookingReference: newRef,
+        savedUsd: check.gap_usd,
+        cancellationReference: cancelled.cancellationReference,
+        cancellationCharges: cancelled.charges,
+        pulledVia: source.via,
       });
     } catch (cancelErr) {
       await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
         status: 'error', failure_stage: 'cancel_original',
         failure_reason: String(cancelErr.message || cancelErr), updated_at: new Date().toISOString(),
-      });
+      }).catch(() => {});
       return res.status(207).json({
         status: 'partial',
-        warning: 'New booking is confirmed, but the ORIGINAL could not be cancelled — manual cancellation needed to avoid double-billing.',
-        rebookingId: tracked.id, newBookingId: placed.newBookingId,
+        warning: 'The replacement booking is confirmed, but the ORIGINAL could not be cancelled. Both are live — cancel the original manually to avoid double-billing.',
+        rebookingId: tracked.id, newBookingId: created.bookingId,
+        originalBookingReference: originalRef,
+        detail: String(cancelErr.message || cancelErr),
       });
     }
   } catch (err) {
     await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
-      status: 'error', failure_stage: 'recheck_or_place',
+      status: 'error', failure_stage: 'recheck_or_book',
       failure_reason: String(err.message || err), updated_at: new Date().toISOString(),
     }).catch(() => {});
-    return res.status(500).json({ error: 'Rebooking failed before any booking was placed — original is untouched and safe.', detail: String(err.message || err) });
+    return res.status(500).json({ error: 'Rebooking failed before the original was cancelled — the original booking is untouched and safe.', detail: String(err.message || err) });
   }
 });
 
@@ -2062,7 +2342,8 @@ router.get('/repricing/debug-availability', async (req, res) => {
       method: 'POST', headers: GRN_HEADERS(),
       body: JSON.stringify({
         rooms: [roomReq], rates: 'comprehensive', hotel_codes: [String(b.hotel_code)],
-        currency: b.currency || 'USD', client_nationality: 'US',
+        currency: b.currency || 'USD',
+          client_nationality: (b.raw?.nationality || b.raw?.holder?.client_nationality || 'US').toString().slice(0,2).toUpperCase(),
         checkin, checkout, purpose_of_travel: 1,
       }),
     });
@@ -2144,6 +2425,160 @@ router.get('/repricing/debug-availability', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Diagnostic failed', message: String(err.message || err) });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /repricing/rebook-preview?booking_id=...
+//
+// Builds the exact booking payload that a rebook would send, and reports any
+// required field that cannot be filled. Makes NO booking, NO cancellation, and
+// no recheck call.
+//
+// Caveat shown in the response: rate_key, room_code and room_reference here are
+// the values from the stored price check. The real chain replaces all three
+// with the values returned by Rate Recheck, exactly as the Booking Request docs
+// require. Everything else — holder, paxes, dates, codes — is final.
+// ---------------------------------------------------------------------------
+router.get('/repricing/rebook-preview', async (req, res) => {
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  const bookingId = req.query.booking_id;
+  if (!bookingId) return res.status(400).json({ error: 'booking_id required' });
+
+  try {
+    const { rows: bkRows } = await sbSelect('grn_bookings',
+      `booking_id=eq.${encodeURIComponent(bookingId)}&select=*&limit=1`);
+    const booking = bkRows[0];
+    if (!booking) return res.status(404).json({ error: 'Booking not found in synced table' });
+
+    const { rows: checks } = await sbSelect('grn_price_checks',
+      `booking_id=eq.${encodeURIComponent(bookingId)}&select=*&order=checked_at.desc&limit=1`);
+    const check = checks[0] || null;
+    const matched = check?.raw || {};
+
+    const pseudoRecheck = {
+      rateKey: matched.rate_key || null,
+      groupCode: matched.group_code || null,
+      roomCode: matched.room_code || null,
+      roomReference: matched.rooms?.[0]?.room_reference || null,
+      rate: matched,
+    };
+
+    const { payload, missing } = buildBookingPayload({
+      booking, recheck: pseudoRecheck, searchId: matched._search_id || null,
+    });
+
+    res.json({
+      bookingId,
+      readyToRebook: missing.length === 0,
+      missing,
+      lastCheckedAt: check?.checked_at || null,
+      note: 'Nothing was booked, cancelled, or rechecked. rate_key, room_code and room_reference shown here come from the stored search; the real chain replaces them with Rate Recheck values before booking, as the docs require.',
+      payload,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Preview failed', message: String(err.message || err) });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /repricing/debug-roomcode-stability?booking_id=...
+//
+// Runs the SAME availability search twice and compares the room_code values.
+//
+// Settles whether room_code is a stable identifier or a per-search token. The
+// docs already imply the latter — the Booking Request page says to take
+// room_code "from the Refetch/Recheck response" when the rate type is
+// Refetch/Recheck, which only makes sense if it changes — but this measures it
+// directly rather than relying on a reading.
+//
+// Two availability calls. Books nothing, writes nothing.
+// ---------------------------------------------------------------------------
+router.get('/repricing/debug-roomcode-stability', async (req, res) => {
+  if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  const bookingId = req.query.booking_id;
+  if (!bookingId) return res.status(400).json({ error: 'booking_id required' });
+
+  try {
+    const { rows } = await sbSelect('grn_bookings',
+      `booking_id=eq.${encodeURIComponent(bookingId)}&select=hotel_code,checkin,checkin_date,checkout,currency,raw&limit=1`);
+    const b = rows[0];
+    if (!b) return res.status(404).json({ error: 'Booking not found' });
+
+    const checkin = (b.checkin_date || b.checkin || '').slice(0, 10);
+    const checkout = (b.checkout || '').slice(0, 10);
+    const paxes = b.raw?.hotel?.paxes || [];
+    const adults = paxes.filter((p) => p.type === 'AD').length || 2;
+    const childAges = paxes.filter((p) => p.type === 'CH').map((p) => p.age).filter((a) => a != null);
+    const roomReq = { adults };
+    if (childAges.length) roomReq.children_ages = childAges;
+
+    const runSearch = async () => {
+      const resp = await fetch(`${GRN_API_BASE_URL}/hotels/availability`, {
+        method: 'POST', headers: GRN_HEADERS(),
+        body: JSON.stringify({
+          rooms: [roomReq], rates: 'comprehensive', hotel_codes: [String(b.hotel_code)],
+          currency: b.currency || 'USD',
+          client_nationality: (b.raw?.nationality || b.raw?.holder?.client_nationality || 'US').toString().slice(0,2).toUpperCase(),
+          checkin, checkout, purpose_of_travel: 1,
+        }),
+      });
+      const data = await resp.json();
+      const hotel = (data.hotels || [])[0] || {};
+      const rates = Array.isArray(hotel.rates) ? hotel.rates : (hotel.min_rate ? [hotel.min_rate] : []);
+      return {
+        searchId: data.search_id || null,
+        moreResults: data.more_results ?? null,
+        rateCount: rates.length,
+        byDescription: rates.reduce((acc, rt) => {
+          const d = rt?.rooms?.[0]?.description || rt?.rooms?.[0]?.room_type || '(none)';
+          if (!acc[d]) acc[d] = [];
+          acc[d].push({ room_code: rt.room_code || null, room_reference: rt.rooms?.[0]?.room_reference || null, price: rt.price ?? null });
+          return acc;
+        }, {}),
+      };
+    };
+
+    const first = await runSearch();
+    await sleep(2500);
+    const second = await runSearch();
+
+    // Compare room_code per room description across the two searches.
+    const comparison = [];
+    for (const desc of Object.keys(first.byDescription)) {
+      const a = first.byDescription[desc] || [];
+      const c = second.byDescription[desc] || [];
+      const aCodes = [...new Set(a.map((x) => x.room_code).filter(Boolean))];
+      const cCodes = [...new Set(c.map((x) => x.room_code).filter(Boolean))];
+      comparison.push({
+        description: desc,
+        firstSearchCodes: aCodes,
+        secondSearchCodes: cCodes,
+        identical: aCodes.length > 0 && aCodes.length === cCodes.length && aCodes.every((x) => cCodes.includes(x)),
+      });
+    }
+    const compared = comparison.filter((c) => c.firstSearchCodes.length && c.secondSearchCodes.length);
+    const stable = compared.length > 0 && compared.every((c) => c.identical);
+
+    res.json({
+      bookingId,
+      bookedRoomCode: b.raw?.hotel?.booking_items?.[0]?.room_code || null,
+      bookedDescription: b.raw?.hotel?.booking_items?.[0]?.rooms?.[0]?.description || null,
+      firstSearch: { searchId: first.searchId, rateCount: first.rateCount, moreResults: first.moreResults },
+      secondSearch: { searchId: second.searchId, rateCount: second.rateCount, moreResults: second.moreResults },
+      roomsCompared: compared.length,
+      roomCodeStableAcrossSearches: stable,
+      verdict: compared.length === 0
+        ? 'Could not compare — no room appeared in both searches with a room_code.'
+        : stable
+          ? 'room_code is IDENTICAL across two searches. It is deterministic per search criteria, so the booking-side mismatch needs a different explanation.'
+          : 'room_code DIFFERS between two identical searches. It is a per-search token and cannot be used to match a booking to a live rate.',
+      comparison,
+      note: 'Read-only. Two availability calls. Nothing booked, cancelled, or written.',
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Stability test failed', message: String(err.message || err) });
   }
 });
 
