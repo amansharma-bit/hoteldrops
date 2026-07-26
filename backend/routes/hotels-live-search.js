@@ -347,9 +347,46 @@ function rateOccupancy(rate) {
 }
 
 // --- The gate itself -------------------------------------------------------
-// Returns every leg separately plus a plain-language list of blockers, so the
-// UI can explain WHY something is not rebookable instead of just hiding a
-// button. `eligible` is the only thing that authorises a rebook.
+// MATCHING RULE (26 Jul 2026, decided with Aman):
+//
+// We match on the EXACT room name, not the room code.
+//
+// Why not room_code: across 4 bookings, 4 suppliers and 251 live rates, the
+// room_code stored on a booking has never once matched a room_code returned
+// by a later availability search. GRN appears to mint them per search.
+// Requiring it means nothing is ever rebookable.
+//
+// Why not supplier_code: the availability response carries no supplier field
+// at any level — verified with the debug-availability diagnostic across the
+// whole response, hotel and all 193 rates. There is nothing to filter on.
+//
+// Why exact name works: suppliers describe the same room differently. GRN
+// wrote one Barcelo room as "Deluxe - Room Only" on the booking and
+// ",Deluxe : Room Only" in search — almost certainly two different suppliers.
+// So an EXACT name match is, in practice, a same-supplier match. That is the
+// property we want, obtained without a supplier field.
+//
+// This is deliberately NOT fuzzy. No punctuation stripping, no token
+// matching, no similarity scoring. Loosening the comparison would let one
+// supplier's room pass as another's, which is the exact risk this rule
+// exists to prevent. Case and surrounding whitespace are ignored; nothing
+// else is.
+function roomNamesMatchExactly(orig, rate) {
+  const cmp = (a, b) => {
+    if (!a || !b) return false;
+    return String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+  };
+  const liveDesc = rateRoomDescription(rate);
+  const liveType = rate?.rooms?.[0]?.room_type || rate?.room_type || null;
+
+  // Prefer description — it is the more specific field. Glen Eyrie proved
+  // room_type alone is not enough: "Standard 2 Queen Lodge" covered both the
+  // Big Horn and Oaks lodge buildings.
+  if (orig.roomDescription && liveDesc) return cmp(orig.roomDescription, liveDesc);
+  if (orig.roomType && liveType) return cmp(orig.roomType, liveType);
+  return false;
+}
+
 function evaluateRate(rate, orig) {
   const liveRoomCode = rateRoomCode(rate);
   const liveBoard = rateBoard(rate);
@@ -358,25 +395,17 @@ function evaluateRate(rate, orig) {
   const liveOcc = rateOccupancy(rate);
   const prohibition = rateForbidsRebooking(rate);
 
-  const roomMatch = Boolean(orig.roomCode && liveRoomCode && norm(orig.roomCode) === norm(liveRoomCode));
+  const roomMatch = roomNamesMatchExactly(orig, rate);
+  const codeMatch = Boolean(orig.roomCode && liveRoomCode && norm(orig.roomCode) === norm(liveRoomCode));
   const boardMatch = Boolean(orig.board && liveBoard && norm(orig.board) === norm(liveBoard));
   const policyMatch = policyIsEqualOrBetter(orig.nonRefundable, liveNonRef, orig.cancelBy, liveCancelBy);
   const occMatch = occupancyMatches(orig.occupancy, liveOcc);
 
   const blockers = [];
-  if (!orig.roomCode) blockers.push('The original booking has no room code stored, so the room cannot be verified.');
-  else if (!liveRoomCode) blockers.push('This live rate carries no room code, so the room cannot be verified.');
-  else if (!roomMatch) {
-    const origName = orig.roomDescription || orig.roomType || null;
-    const liveName = rateRoomDescription(rate) || rateRoomType(rate) || null;
-    // When the two rooms share an identical name, saying "booked X, this rate
-    // is X" reads as nonsense. Show the codes instead — that is the actual
-    // difference, and it is what the gate compared.
-    if (origName && liveName && norm(origName) === norm(liveName)) {
-      blockers.push(`Different room — same name ("${origName}") but a different room code (booked ${String(orig.roomCode).slice(0, 12)}…, this rate ${String(liveRoomCode).slice(0, 12)}…).`);
-    } else {
-      blockers.push(`Different room — booked ${origName || 'room'}, this rate is ${liveName || 'another room'}.`);
-    }
+  if (!roomMatch) {
+    const origName = orig.roomDescription || orig.roomType || 'the booked room';
+    const liveName = rateRoomDescription(rate) || rateRoomType(rate) || 'this rate';
+    blockers.push(`Different room — booked "${origName}", this rate is "${liveName}".`);
   }
 
   if (!boardMatch) blockers.push(`Different board — booked "${orig.board || 'unknown'}", this rate is "${liveBoard || 'unknown'}".`);
@@ -393,7 +422,7 @@ function evaluateRate(rate, orig) {
 
   return {
     eligible: roomMatch && boardMatch && policyMatch && occMatch && !prohibition.forbidden,
-    roomMatch, boardMatch, policyMatch, occMatch,
+    roomMatch, codeMatch, boardMatch, policyMatch, occMatch,
     forbidsRebooking: prohibition.forbidden,
     prohibitionEvidence: prohibition.evidence,
     liveRoomCode, liveBoard, liveNonRef, liveCancelBy,
@@ -1460,15 +1489,14 @@ router.post('/repricing/check', async (req, res) => {
     eligible.sort((a, b2) => a.usd - b2.usd);
 
     let chosenEntry = eligible[0] || null;
-    let matchBasis = 'room_code';
+    let matchBasis = chosenEntry?.verdict.codeMatch ? 'room_code' : 'room_name_exact';
 
     if (!chosenEntry) {
       // Nothing rebookable. Pick the most informative row to SHOW — never to act on.
-      const byRoomCode = evaluated.find((e) => orig.roomCode && e.verdict.liveRoomCode && norm(e.verdict.liveRoomCode) === norm(orig.roomCode));
-      const byName = evaluated.find((e) => orig.roomType && rateRoomType(e.rate) && norm(rateRoomType(e.rate)) === norm(orig.roomType));
+      const byName = evaluated.find((e) => e.verdict.roomMatch);
       const cheapest = [...evaluated].filter((e) => e.usd != null).sort((a, b2) => a.usd - b2.usd)[0];
-      chosenEntry = byRoomCode || byName || cheapest || null;
-      matchBasis = byRoomCode ? 'room_code_ineligible' : byName ? 'room_name' : cheapest ? 'cheapest_fallback' : 'none';
+      chosenEntry = byName || cheapest || null;
+      matchBasis = byName ? 'room_name_blocked' : cheapest ? 'no_room_match' : 'none';
     }
 
     const minRate = chosenEntry?.rate || null;
@@ -1689,7 +1717,9 @@ router.post('/repricing/rebook', async (req, res) => {
 
     // ---- THE GATE ----
     const failed = [];
-    if (check.match_basis !== 'room_code') failed.push('The matched rate is not an exact room-code match.');
+    if (check.match_basis !== 'room_code' && check.match_basis !== 'room_name_exact') {
+      failed.push('The matched rate is not an exact room match.');
+    }
     if (check.room_match !== true) failed.push('Room does not match the original booking.');
     if (check.board_match !== true) failed.push('Board basis does not match the original booking.');
     if (check.policy_match !== true) failed.push('Cancellation terms are not equal to or better than the original.');
@@ -1903,7 +1933,7 @@ router.get('/repricing/searches', async (req, res) => {
 
     // Actionable now means the FULL gate, not room+dates.
     const { total: actionableDrops } = await sbSelect('grn_price_checks',
-      `dropped=eq.true&room_match=eq.true&board_match=eq.true&policy_match=eq.true&dates_match=eq.true&match_basis=eq.room_code&select=id`,
+      `dropped=eq.true&room_match=eq.true&board_match=eq.true&policy_match=eq.true&dates_match=eq.true&match_basis=in.(room_code,room_name_exact)&select=id`,
       { 'Prefer': 'count=exact' });
 
     res.json({
@@ -1921,7 +1951,8 @@ router.get('/repricing/searches', async (req, res) => {
         const matchedRate = c.raw || {};
         const actionable = Boolean(
           c.dropped && c.room_match === true && c.board_match === true &&
-          c.policy_match === true && c.dates_match === true && c.match_basis === 'room_code'
+          c.policy_match === true && c.dates_match === true &&
+          (c.match_basis === 'room_code' || c.match_basis === 'room_name_exact')
         );
         return {
           id: c.id,
