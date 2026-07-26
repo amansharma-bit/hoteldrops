@@ -1337,7 +1337,7 @@ router.get('/repricing/rebookings', async (req, res) => {
     let rows = [], total = 0;
     try {
       const q = (where ? where + '&' : '') + `select=*&order=created_at.desc&offset=${offset}&limit=${perPage}`;
-      const r = await sbSelect('grn_rebookings', q, { 'Prefer': 'count=exact' });
+      const r = await sbSelect('grn_rebooking_attempts', q, { 'Prefer': 'count=exact' });
       rows = r.rows; total = r.total ?? 0;
     } catch {
       rows = []; total = 0;
@@ -1345,9 +1345,9 @@ router.get('/repricing/rebookings', async (req, res) => {
 
     let counts = { successful: 0, errors: 0, all: 0 };
     try {
-      counts.all = await sbCount('grn_rebookings', '');
-      counts.successful = await sbCount('grn_rebookings', 'status=in.(confirmed,success)');
-      counts.errors = await sbCount('grn_rebookings', 'status=in.(error,failed)');
+      counts.all = await sbCount('grn_rebooking_attempts', '');
+      counts.successful = await sbCount('grn_rebooking_attempts', 'status=in.(confirmed,success)');
+      counts.errors = await sbCount('grn_rebooking_attempts', 'status=in.(error,failed)');
     } catch { /* empty */ }
 
     res.json({
