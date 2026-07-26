@@ -1229,7 +1229,8 @@ router.get('/repricing/candidates', async (req, res) => {
   try {
     const { rows, total } = await sbSelect(
       'grn_bookings',
-      `${where}&select=booking_id,hotel_name,hotel_code,city_name,country_code,room_type,room_count,`
+      `${where}&select=booking_id,booking_reference,supplier_reference,booking_date,hotel_name,hotel_code,`
+        + `city_name,country_code,room_type,room_count,guest_name,`
         + `board_basis,checkin,checkin_date,checkout,price_total,currency,supplier_code,cancel_by_date,raw`
         + `&order=cancel_by_date.asc&offset=${offset}&limit=${perPage}`,
       { 'Prefer': 'count=exact' }
@@ -1251,16 +1252,58 @@ router.get('/repricing/candidates', async (req, res) => {
         const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 }[r.currency];
         const origUsd = (r.price_total != null && usdRate) ? Math.round(Number(r.price_total) * usdRate) : null;
         const last = lastChecks[r.booking_id] || null;
-        const item0 = r.raw?.hotel?.booking_items?.[0] || {};
+        const raw = r.raw || {};
+        const hotel = raw.hotel || {};
+        const item0 = hotel.booking_items?.[0] || {};
+        const room0 = item0.rooms?.[0] || {};
+        const paxes = hotel.paxes || [];
+        const adultPaxes = paxes.filter((p) => p.type === 'AD');
+        const childPaxes = paxes.filter((p) => p.type === 'CH');
+        const nightsMs = (r.checkout && (r.checkin_date || r.checkin))
+          ? new Date(r.checkout).getTime() - new Date(r.checkin_date || r.checkin).getTime()
+          : null;
+
+        // Cancellation terms as the supplier stated them. Shape varies by
+        // supplier, so we pass through what exists rather than forcing one
+        // schema — the UI renders whichever fields came back.
+        const cp = item0.cancellation_policy || {};
+        const cancellation = {
+          nonRefundable: typeof item0.non_refundable === 'boolean' ? item0.non_refundable : null,
+          cancelBy: cp.cancel_by_date || r.cancel_by_date || null,
+          details: typeof cp.details === 'string' ? cp.details : null,
+          policies: Array.isArray(cp.policies) ? cp.policies : (Array.isArray(cp.details) ? cp.details : []),
+          remarks: item0.rate_comments?.remarks || null,
+        };
+
         return {
           bookingId: r.booking_id,
+          bookingReference: r.booking_reference || raw.booking_reference || null,
+          supplierReference: r.supplier_reference || raw.supplier_reference || hotel.hotel_confirmation_number || null,
+          bookingDate: r.booking_date || raw.booking_date || null,
+          bookingStatus: raw.booking_status || null,
           hotel: r.hotel_name,
           hotelCode: r.hotel_code,
+          hotelAddress: hotel.address || null,
           city: r.city_name,
+          country: r.country_code,
           room: r.room_type,
-          roomDescription: item0.rooms?.[0]?.description || null,
+          roomDescription: room0.description || null,
+          roomCount: r.room_count,
           board: r.board_basis,
-          nonRefundable: typeof item0.non_refundable === 'boolean' ? item0.non_refundable : null,
+          nonRefundable: cancellation.nonRefundable,
+          cancellation,
+          leadGuest: r.guest_name
+            || (raw.holder ? `${raw.holder.name || ''} ${raw.holder.surname || ''}`.trim() : null)
+            || null,
+          guests: paxes.map((p) => ({
+            name: `${p.name || ''} ${p.surname || ''}`.trim() || null,
+            type: p.type || null,
+            age: p.age ?? null,
+          })).filter((g) => g.name || g.age != null),
+          adults: adultPaxes.length || room0.no_of_adults || null,
+          children: childPaxes.length || room0.no_of_children || 0,
+          childrenAges: childPaxes.map((p) => p.age).filter((a) => a != null),
+          nights: nightsMs != null ? Math.round(nightsMs / 86400000) : null,
           checkin: r.checkin_date || r.checkin,
           checkout: r.checkout,
           origLocal: r.price_total != null ? Number(r.price_total) : null,
