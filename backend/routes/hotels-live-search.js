@@ -403,9 +403,11 @@ function evaluateRate(rate, orig) {
 
   const blockers = [];
   if (!roomMatch) {
-    const origName = orig.roomDescription || orig.roomType || 'the booked room';
-    const liveName = rateRoomDescription(rate) || rateRoomType(rate) || 'this rate';
-    blockers.push(`Different room — booked "${origName}", this rate is "${liveName}".`);
+    const liveName = rateRoomDescription(rate) || rateRoomType(rate) || 'unnamed';
+    // Only name THIS rate. The booked room is already shown above the list;
+    // repeating it on every row made the page look full of matches under
+    // Ctrl+F when it was just this message echoed hundreds of times.
+    blockers.push(`Different room — this rate is "${liveName}".`);
   }
 
   if (!boardMatch) blockers.push(`Different board — booked "${orig.board || 'unknown'}", this rate is "${liveBoard || 'unknown'}".`);
@@ -418,15 +420,30 @@ function evaluateRate(rate, orig) {
 
   if (!occMatch) blockers.push('Guest numbers or child ages differ from the original booking.');
 
-  if (prohibition.forbidden) blockers.push(`Supplier terms forbid rebooking on this rate: "${prohibition.evidence}"`);
+  // Supplier rebooking clause — RECORDED, NOT BLOCKING.
+  //
+  // Many GRN rates carry wording like "Cancelled and rebooked reservations
+  // will be rejected". It appears across expedia_rapid_pkg, dida_direct and
+  // others, which points to boilerplate passed through broadly rather than a
+  // property-specific condition. Mize rebooks at volume through the same
+  // supply (9,056 rebookings), so in practice it is not enforced.
+  //
+  // Treated as a warning on Aman's call (26 Jul 2026): surfaced to the
+  // operator and stored on the check for audit, but it does not stop a
+  // rebook. If a supplier ever does reject a rebooking, the warning on that
+  // check is the trail back to why.
+  const warnings = [];
+  if (prohibition.forbidden) {
+    warnings.push(`Supplier rate conditions mention rebooking: "${prohibition.evidence}"`);
+  }
 
   return {
-    eligible: roomMatch && boardMatch && policyMatch && occMatch && !prohibition.forbidden,
+    eligible: roomMatch && boardMatch && policyMatch && occMatch,
     roomMatch, codeMatch, boardMatch, policyMatch, occMatch,
     forbidsRebooking: prohibition.forbidden,
     prohibitionEvidence: prohibition.evidence,
     liveRoomCode, liveBoard, liveNonRef, liveCancelBy,
-    blockers,
+    blockers, warnings,
   };
 }
 
@@ -1530,6 +1547,8 @@ router.post('/repricing/check', async (req, res) => {
     if (!dropped && verdict?.eligible) blockers.push('No price drop on the matching rate.');
     if (!minRate) blockers.push('No availability returned for these dates.');
 
+    const warnings = verdict?.warnings || [];
+
     await sbUpsert('grn_price_checks', [{
       booking_id: bookingId,
       checked_at: new Date().toISOString(),
@@ -1545,7 +1564,8 @@ router.post('/repricing/check', async (req, res) => {
       live_cancel_by: verdict ? verdict.liveCancelBy : null,
       raw: minRate
         ? { ...minRate, _match_basis: matchBasis, _search_id: searchId, _rooms_returned: allRates.length,
-            _eligible: Boolean(verdict?.eligible), _blockers: verdict?.blockers || [] }
+            _eligible: Boolean(verdict?.eligible), _blockers: verdict?.blockers || [],
+            _warnings: verdict?.warnings || [] }
         : { note: 'no availability returned', _search_id: searchId, _match_basis: 'none' },
       source: 'manual',
     }], 'id');
@@ -1566,6 +1586,7 @@ router.post('/repricing/check', async (req, res) => {
         isMatch: v.roomMatch,
         eligible: v.eligible,
         blockers: v.blockers,
+        warnings: v.warnings || [],
       };
     }).sort((a, b2) => (a.usd ?? 1e12) - (b2.usd ?? 1e12));
 
@@ -1575,12 +1596,15 @@ router.post('/repricing/check', async (req, res) => {
       original: {
         local: origLocal, currency: origCur, usd: origUsd != null ? Math.round(origUsd) : null,
         room: orig.roomType, roomDescription: orig.roomDescription, board: orig.board,
+        roomTypeRaw: orig.roomType, roomDescriptionRaw: orig.roomDescription,
         nonRefundable: orig.nonRefundable, cancelBy: orig.cancelBy,
         checkin, checkout,
       },
       live: liveLocal != null
         ? { local: liveLocal, currency: liveCur, usd: liveUsd != null ? Math.round(liveUsd) : null,
             room: liveRoom?.room_type || liveRoom?.description || null,
+            roomTypeRaw: liveRoom?.room_type || minRate?.room_type || null,
+            roomDescriptionRaw: liveRoom?.description || null,
             roomDescription: liveRoom?.description || null,
             board: rateBoard(minRate) || null,
             nonRefundable: verdict ? verdict.liveNonRef : null,
@@ -1593,6 +1617,7 @@ router.post('/repricing/check', async (req, res) => {
       rebookEligible,
       eligibleRateCount: eligible.length,
       blockers,
+      warnings,
       allRates: allRatesOut,
     });
   } catch (err) {
@@ -1725,8 +1750,8 @@ router.post('/repricing/rebook', async (req, res) => {
     if (check.policy_match !== true) failed.push('Cancellation terms are not equal to or better than the original.');
     if (check.dates_match !== true) failed.push('Stay dates do not match the original booking.');
     if (!check.dropped) failed.push('There is no price drop on the matching rate.');
-    if (Array.isArray(check.raw?._blockers) && check.raw._blockers.length) failed.push(...check.raw._blockers);
     if (check.raw?._eligible === false) failed.push('The stored check was recorded as not rebookable.');
+    if (Array.isArray(check.raw?._blockers) && check.raw._blockers.length) failed.push(...check.raw._blockers);
 
     if (failed.length) {
       return res.status(400).json({
