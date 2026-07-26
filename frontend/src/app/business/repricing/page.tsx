@@ -9,7 +9,7 @@ const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 // Bump this string on every deploy of this file. It renders next to the page
 // title, so "did my deploy actually land?" is answered by looking at the page
 // instead of guessing at Vercel and browser caches.
-const BUILD = 'v5 · runway filter';
+const BUILD = 'v6 · deadline sort';
 
 const BLUE = '#0F52BA';
 const NAVY = '#0F172A';
@@ -53,7 +53,7 @@ export default function RepricingPage() {
   const [citySearch, setCitySearch] = useState('');
   const [cityQuery, setCityQuery] = useState('');
   const [minDays, setMinDays] = useState(7);
-  const [sortMode, setSortMode] = useState<'runway' | 'urgent'>('runway');
+  const [sortMode, setSortMode] = useState<'runway' | 'deadline'>('deadline');
   const [checking, setChecking] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, any>>({}); // live check results this session
@@ -171,9 +171,9 @@ export default function RepricingPage() {
               </button>
             ))}
           </div>
-          <button onClick={() => { setSortMode((s) => (s === 'runway' ? 'urgent' : 'runway')); setPage(1); setExpanded(null); }}
+          <button onClick={() => { setSortMode((s) => (s === 'deadline' ? 'runway' : 'deadline')); setPage(1); setExpanded(null); }}
             style={{ border: `1px solid ${LINE}`, borderRadius: 7, padding: '6px 10px', fontSize: 12, fontWeight: 600, background: '#fff', color: NAVY, cursor: 'pointer' }}>
-            {sortMode === 'runway' ? 'Most runway first' : 'Expiring first'}
+            {sortMode === 'deadline' ? 'Deadline soonest' : 'Furthest out'}
           </button>
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: 13, color: SLATE }}>{loading ? 'Loading…' : `${total.toLocaleString()} ${minDays ? `with ${minDays}d+ left` : 'rebookable'}${cityQuery ? ` in "${cityQuery}"` : ''}`}</span>
