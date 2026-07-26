@@ -1860,6 +1860,10 @@ router.post('/repricing/check', async (req, res) => {
         refundable: v.liveNonRef === false,
         cancelBy: v.liveCancelBy,
         vsOriginalUsd: (usd != null && origUsd != null) ? Math.round(origUsd - usd) : null,
+        // Identifiers the operator's selection needs in order to be bookable.
+        // Without these the rate list is read-only.
+        rateKey: rt.rate_key || null,
+        groupCode: rt.group_code || null,
         isMatch: v.roomMatch,
         eligible: v.eligible,
         blockers: v.blockers,
