@@ -29,6 +29,27 @@ const router = express.Router();
 // NO NEW DEPENDENCIES. Supabase is called over its REST API with plain
 // fetch(), exactly like GRN. Nothing to npm install. Nothing in server.js
 // to change — this file is already mounted at /api/live-search.
+//
+// ---------------------------------------------------------------------------
+// 26 Jul 2026 — REBOOK SAFETY GATE
+//
+// A real check on GRN-202605-2506790 (Glen Eyrie Castle) showed the old
+// matcher marking room/board/dates all green on a rate that was:
+//   - a DIFFERENT physical room (booking = "Big Horn Lodge",
+//     live = "Oaks Lodge" — both share the room_type "Standard 2 Queen
+//     Lodge", so name matching passed),
+//   - NON-REFUNDABLE where the original was REFUNDABLE, and
+//   - carrying a supplier condition reading "Cancelled and rebooked
+//     reservations will be rejected, regardless of the source reported
+//     to the hotel."
+//
+// Only the price going UP kept the Rebook button hidden. Had it dropped,
+// the old gate (dropped && room_match && dates_match) would have passed it.
+//
+// The gate is now: room_code exact, board equal, cancellation terms equal
+// or better, occupancy equal, supplier terms silent on rebooking, and a
+// real drop. Room NAME matching is display-only and can never authorise a
+// rebook. Enforcement is server-side — hiding the button is not the control.
 // ===========================================================================
 
 const GRN_API_BASE_URL = process.env.GRN_API_BASE_URL || 'https://v4-api.grnconnect.com/api/v3';
@@ -126,6 +147,23 @@ async function sbPatch(table, query, patch) {
   }
 }
 
+// Declared here (not at the bottom) so it is defined before the rebook route
+// calls it. Function declarations hoist, but keeping it near its siblings
+// makes the dependency obvious to the next person reading this file.
+async function sbInsertReturning(table, row) {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: sbHeaders({ 'Prefer': 'return=representation' }),
+    body: JSON.stringify([row]),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Supabase insert into ${table} failed (${resp.status}): ${text}`);
+  }
+  const rows = await resp.json();
+  return { rows };
+}
+
 // ---------------------------------------------------------------------------
 // City code -> name.
 //
@@ -185,6 +223,172 @@ async function mapWithConcurrency(items, limit, deadlineTs, fn) {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ===========================================================================
+// REBOOK SAFETY GATE — shared helpers
+//
+// Everything here is pure: no I/O, no side effects. That is deliberate. The
+// same functions decide what /repricing/check STORES and what
+// /repricing/rebook TRUSTS, so the two can never drift apart.
+// ===========================================================================
+
+const norm = (s) => String(s == null ? '' : s).trim().toLowerCase().replace(/\s+/g, ' ');
+
+// --- Room identity ---------------------------------------------------------
+// The booking side carries room_code on the booking_item. The live rate
+// carries room_code at the RATE level (NOT inside rooms[] — rooms[0] has
+// room_reference, which is a different identifier and must not be used).
+// Verified against GRN-202605-2506790:
+//   booking room_code : 4dfflkrr4qqc7u2yvwjg4fg75hn2ps5cs3ljs
+//   live    room_code : 4dfvdkrt4aus7wsrusnwohow4djk3s5cs3ljs
+// Same 37-char format, same namespace, correctly different — two different
+// lodge buildings sharing one room_type name.
+function rateRoomCode(rate) {
+  return rate?.room_code || null;
+}
+function rateRoomType(rate) {
+  return rate?.rooms?.[0]?.room_type || rate?.rooms?.[0]?.description || rate?.room_type || null;
+}
+function rateRoomDescription(rate) {
+  return rate?.rooms?.[0]?.description || null;
+}
+
+// --- Board -----------------------------------------------------------------
+// GRN gives NO board code. Only free text: boarding_details[] on the rate and
+// rate_comments.mealplan. So board is matched on normalised text — weaker
+// than room matching by necessity, not by choice.
+function rateBoard(rate) {
+  if (Array.isArray(rate?.boarding_details) && rate.boarding_details.length) {
+    return rate.boarding_details.join(', ');
+  }
+  return rate?.rate_comments?.mealplan || null;
+}
+
+// --- Cancellation terms ----------------------------------------------------
+// The rate object carries `non_refundable` (boolean). A cancellation_policy
+// object with cancel_by_date is NOT always present — on the Glen Eyrie rate
+// it was absent entirely — so cancel_by is treated as optional extra
+// evidence, never as a required field.
+function rateNonRefundable(rate) {
+  return typeof rate?.non_refundable === 'boolean' ? rate.non_refundable : null;
+}
+function rateCancelBy(rate) {
+  return rate?.cancellation_policy?.cancel_by_date || null;
+}
+
+// Equal or better, never worse.
+//   original refundable  -> live MUST be refundable
+//   original non-refund. -> live may be either (same, or an upgrade)
+// Unknown live refundability is treated as a FAIL, not a pass. We do not
+// guess on the guest's cancellation rights.
+function policyIsEqualOrBetter(origNonRef, liveNonRef, origCancelBy, liveCancelBy) {
+  if (liveNonRef === null) return false;
+  if (origNonRef === false) {
+    if (liveNonRef !== false) return false;
+    // Both refundable. If both carry a deadline, the new one must not be
+    // earlier — a shorter window to cancel is a downgrade.
+    if (origCancelBy && liveCancelBy) {
+      if (new Date(liveCancelBy).getTime() < new Date(origCancelBy).getTime()) return false;
+    }
+    return true;
+  }
+  // Original was non-refundable (or unknown): anything is same-or-better,
+  // but only once we actually know what the live rate is.
+  return true;
+}
+
+// --- Supplier terms --------------------------------------------------------
+// Some GRN rates carry an explicit prohibition on exactly this mechanic.
+// Real example from the Glen Eyrie rate:
+//   "Cancelled and rebooked reservations will be rejected, regardless of
+//    the source reported to the hotel."
+// Rebooking against such a rate risks the supplier voiding the NEW booking
+// after the ORIGINAL has already been cancelled. Hard block.
+const REBOOK_PROHIBITION_PATTERNS = [
+  /cancell?ed\s+and\s+re-?\s?book(ed|ing)?[^.]{0,80}(reject|void|cancel|not\s+honou?r)/i,
+  /re-?\s?book(ing|ed|ings)?[^.]{0,40}(will\s+be\s+rejected|not\s+permitted|not\s+allowed|prohibited)/i,
+  /no\s+re-?\s?book(ing|ings)?\s+(permitted|allowed)/i,
+];
+
+function rateForbidsRebooking(rate) {
+  const text = [
+    rate?.rate_comments?.remarks,
+    rate?.rate_comments?.pax_comments,
+    rate?.rate_comments?.hotel_comments,
+    Array.isArray(rate?.rate_conditions) ? rate.rate_conditions.join(' ') : null,
+  ].filter(Boolean).join(' \n ');
+  if (!text) return { forbidden: false, evidence: null };
+  for (const re of REBOOK_PROHIBITION_PATTERNS) {
+    const m = text.match(re);
+    if (m) return { forbidden: true, evidence: m[0].trim().slice(0, 200) };
+  }
+  return { forbidden: false, evidence: null };
+}
+
+// --- Occupancy -------------------------------------------------------------
+// A cheaper rate for fewer people is not the same booking.
+function occupancyMatches(orig, live) {
+  if (!orig || !live) return false;
+  if (Number(orig.adults || 0) !== Number(live.adults || 0)) return false;
+  if (Number(orig.children || 0) !== Number(live.children || 0)) return false;
+  const a = [...(orig.childAges || [])].map(Number).sort((x, y) => x - y);
+  const b = [...(live.childAges || [])].map(Number).sort((x, y) => x - y);
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
+
+function rateOccupancy(rate) {
+  const r = rate?.rooms?.[0] || {};
+  return {
+    adults: r.no_of_adults ?? null,
+    children: r.no_of_children ?? 0,
+    childAges: r.children_ages || [],
+  };
+}
+
+// --- The gate itself -------------------------------------------------------
+// Returns every leg separately plus a plain-language list of blockers, so the
+// UI can explain WHY something is not rebookable instead of just hiding a
+// button. `eligible` is the only thing that authorises a rebook.
+function evaluateRate(rate, orig) {
+  const liveRoomCode = rateRoomCode(rate);
+  const liveBoard = rateBoard(rate);
+  const liveNonRef = rateNonRefundable(rate);
+  const liveCancelBy = rateCancelBy(rate);
+  const liveOcc = rateOccupancy(rate);
+  const prohibition = rateForbidsRebooking(rate);
+
+  const roomMatch = Boolean(orig.roomCode && liveRoomCode && norm(orig.roomCode) === norm(liveRoomCode));
+  const boardMatch = Boolean(orig.board && liveBoard && norm(orig.board) === norm(liveBoard));
+  const policyMatch = policyIsEqualOrBetter(orig.nonRefundable, liveNonRef, orig.cancelBy, liveCancelBy);
+  const occMatch = occupancyMatches(orig.occupancy, liveOcc);
+
+  const blockers = [];
+  if (!orig.roomCode) blockers.push('The original booking has no room code stored, so the room cannot be verified.');
+  else if (!liveRoomCode) blockers.push('This live rate carries no room code, so the room cannot be verified.');
+  else if (!roomMatch) blockers.push(`Different room — booked ${orig.roomDescription || orig.roomType || 'room'}, this rate is ${rateRoomDescription(rate) || rateRoomType(rate) || 'another room'}.`);
+
+  if (!boardMatch) blockers.push(`Different board — booked "${orig.board || 'unknown'}", this rate is "${liveBoard || 'unknown'}".`);
+
+  if (!policyMatch) {
+    if (liveNonRef === null) blockers.push('This rate does not state its cancellation terms.');
+    else if (orig.nonRefundable === false && liveNonRef === true) blockers.push('Original is refundable, this rate is non-refundable — worse terms for the guest.');
+    else blockers.push('Cancellation terms are worse than the original.');
+  }
+
+  if (!occMatch) blockers.push('Guest numbers or child ages differ from the original booking.');
+
+  if (prohibition.forbidden) blockers.push(`Supplier terms forbid rebooking on this rate: "${prohibition.evidence}"`);
+
+  return {
+    eligible: roomMatch && boardMatch && policyMatch && occMatch && !prohibition.forbidden,
+    roomMatch, boardMatch, policyMatch, occMatch,
+    forbidsRebooking: prohibition.forbidden,
+    prohibitionEvidence: prohibition.evidence,
+    liveRoomCode, liveBoard, liveNonRef, liveCancelBy,
+    blockers,
+  };
+}
 
 // ===========================================================================
 // THE SYNC ENGINE
@@ -540,6 +744,9 @@ router.post('/live-search', async (req, res) => {
         nationality: req.body.nationality || null,
         rooms: roomList.map((r) => ({
           room_type: r.room_type || r.description,
+          // NOTE: this is room_reference, NOT room_code. Kept as-is because
+          // the B2C search UI already consumes this shape. The rebook gate
+          // deliberately does not use this field — see rateRoomCode().
           room_code: r.room_reference || null,
           adults: r.no_of_adults,
           children: r.no_of_children,
@@ -773,8 +980,6 @@ router.get('/bookings-list', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-
 
 // ===========================================================================
 // DASHBOARD DATA — all tiles, real, USD-converted
@@ -1035,7 +1240,7 @@ router.get('/repricing/candidates', async (req, res) => {
     if (ids.length) {
       const inList = ids.map((i) => `"${i}"`).join(',');
       const { rows: checks } = await sbSelect('grn_price_checks',
-        `booking_id=in.(${encodeURIComponent(inList)})&select=booking_id,checked_at,live_usd,dropped,gap_usd,gap_pct&order=checked_at.desc`);
+        `booking_id=in.(${encodeURIComponent(inList)})&select=booking_id,checked_at,live_usd,dropped,gap_usd,gap_pct,room_match,board_match,policy_match,match_basis&order=checked_at.desc`);
       for (const c of checks) if (!lastChecks[c.booking_id]) lastChecks[c.booking_id] = c;
     }
 
@@ -1046,13 +1251,16 @@ router.get('/repricing/candidates', async (req, res) => {
         const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 }[r.currency];
         const origUsd = (r.price_total != null && usdRate) ? Math.round(Number(r.price_total) * usdRate) : null;
         const last = lastChecks[r.booking_id] || null;
+        const item0 = r.raw?.hotel?.booking_items?.[0] || {};
         return {
           bookingId: r.booking_id,
           hotel: r.hotel_name,
           hotelCode: r.hotel_code,
           city: r.city_name,
           room: r.room_type,
+          roomDescription: item0.rooms?.[0]?.description || null,
           board: r.board_basis,
+          nonRefundable: typeof item0.non_refundable === 'boolean' ? item0.non_refundable : null,
           checkin: r.checkin_date || r.checkin,
           checkout: r.checkout,
           origLocal: r.price_total != null ? Number(r.price_total) : null,
@@ -1063,6 +1271,8 @@ router.get('/repricing/candidates', async (req, res) => {
           lastCheck: last ? {
             checkedAt: last.checked_at, liveUsd: last.live_usd, dropped: last.dropped,
             gapUsd: last.gap_usd, gapPct: last.gap_pct,
+            roomMatch: last.room_match, boardMatch: last.board_match,
+            policyMatch: last.policy_match, matchBasis: last.match_basis,
           } : null,
         };
       }),
@@ -1078,13 +1288,23 @@ router.get('/repricing/history', async (req, res) => {
   if (!bookingId) return res.status(400).json({ error: 'booking_id required' });
   try {
     const { rows } = await sbSelect('grn_price_checks',
-      `booking_id=eq.${encodeURIComponent(bookingId)}&select=checked_at,live_usd,live_price,live_currency,dropped,gap_usd,gap_pct,room_match,board_match,dates_match&order=checked_at.desc&limit=50`);
+      `booking_id=eq.${encodeURIComponent(bookingId)}&select=checked_at,live_usd,live_price,live_currency,dropped,gap_usd,gap_pct,room_match,board_match,dates_match,policy_match,match_basis&order=checked_at.desc&limit=50`);
     res.json({ bookingId, checks: rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// ---------------------------------------------------------------------------
+// POST /repricing/check
+//
+// Selection changed. Previously: find the first rate whose room NAME matched,
+// else the cheapest of anything. Now: evaluate EVERY rate against the full
+// gate, keep only those that pass, and take the cheapest survivor. If nothing
+// survives we still return a best-effort comparison row for the UI, clearly
+// marked ineligible with the reasons — the operator sees what came back and
+// why it cannot be actioned, rather than an empty screen.
+// ---------------------------------------------------------------------------
 router.post('/repricing/check', async (req, res) => {
   if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set' });
   if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
@@ -1094,7 +1314,7 @@ router.post('/repricing/check', async (req, res) => {
 
   try {
     const { rows } = await sbSelect('grn_bookings',
-      `booking_id=eq.${encodeURIComponent(bookingId)}&select=booking_id,hotel_code,city_code,checkin,checkin_date,checkout,room_type,board_basis,price_total,currency,raw&limit=1`);
+      `booking_id=eq.${encodeURIComponent(bookingId)}&select=booking_id,hotel_code,city_code,checkin,checkin_date,checkout,room_type,board_basis,price_total,currency,cancel_by_date,raw&limit=1`);
     const b = rows[0];
     if (!b) return res.status(404).json({ error: 'Booking not found in synced table' });
     if (!b.hotel_code) return res.status(400).json({ error: 'Booking has no hotel_code — cannot reprice' });
@@ -1103,17 +1323,30 @@ router.post('/repricing/check', async (req, res) => {
     const checkout = (b.checkout || '').slice(0, 10);
     if (!checkin || !checkout) return res.status(400).json({ error: 'Booking missing check-in/out dates' });
 
-    const item0 = b.raw?.hotel?.booking_items?.[0];
     const paxes = b.raw?.hotel?.paxes || [];
     const adults = paxes.filter((p) => p.type === 'AD').length || 2;
     const childAges = paxes.filter((p) => p.type === 'CH').map((p) => p.age).filter((a) => a != null);
     const roomReq = { adults };
     if (childAges.length) roomReq.children_ages = childAges;
 
+    // ---- The original, as the gate will compare it ----
     const origItem = b.raw?.hotel?.booking_items?.[0] || {};
-    const origRoomCode = origItem.room_code || null;
-    const origRoomType = origItem.room_type || b.room_type || null;
-    const origBoard = (origItem.boarding_details && origItem.boarding_details.join(', ')) || b.board_basis || null;
+    const origRoom0 = origItem.rooms?.[0] || {};
+    const orig = {
+      roomCode: origItem.room_code || null,
+      roomType: origRoom0.room_type || b.room_type || null,
+      roomDescription: origRoom0.description || null,
+      board: (Array.isArray(origItem.boarding_details) && origItem.boarding_details.length)
+        ? origItem.boarding_details.join(', ')
+        : (b.board_basis || null),
+      nonRefundable: typeof origItem.non_refundable === 'boolean' ? origItem.non_refundable : null,
+      cancelBy: origItem.cancellation_policy?.cancel_by_date || b.cancel_by_date || null,
+      occupancy: {
+        adults: origRoom0.no_of_adults ?? adults,
+        children: origRoom0.no_of_children ?? childAges.length,
+        childAges,
+      },
+    };
 
     const payload = {
       rooms: [roomReq],
@@ -1131,10 +1364,7 @@ router.post('/repricing/check', async (req, res) => {
     const data = await resp.json();
     if (!resp.ok) return res.status(resp.status).json({ error: 'GRN availability error', details: data });
 
-    // ---- NEW: capture the search_id from this response ----
     const searchId = data.search_id || null;
-
-    const norm = (s) => String(s || '').trim().toLowerCase();
     const hotel = (data.hotels || [])[0];
 
     let allRates = [];
@@ -1143,45 +1373,60 @@ router.post('/repricing/check', async (req, res) => {
       else if (hotel.min_rate) allRates = [hotel.min_rate];
     }
 
-    function rateRoomCode(rate) { return rate?.rooms?.[0]?.room_code || rate?.room_code || null; }
-    function rateRoomType(rate) { return rate?.rooms?.[0]?.room_type || rate?.rooms?.[0]?.description || null; }
-    function rateBoard(rate) { return rate?.boarding_details ? rate.boarding_details.join(', ') : null; }
+    const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 };
+    const priceUsdOf = (rt) => {
+      const local = rt?.price != null ? Number(rt.price) : null;
+      const cur = rt?.currency || b.currency || 'USD';
+      return (local != null && usdRate[cur]) ? local * usdRate[cur] : null;
+    };
 
-    let chosen = null, matchBasis = 'none';
-    if (origRoomCode) {
-      chosen = allRates.find((r) => rateRoomCode(r) && norm(rateRoomCode(r)) === norm(origRoomCode)) || null;
-      if (chosen) matchBasis = 'room_code';
-    }
-    if (!chosen && origRoomType) {
-      chosen = allRates.find((r) => rateRoomType(r) && norm(rateRoomType(r)) === norm(origRoomType)) || null;
-      if (chosen) matchBasis = 'room_name';
-    }
-    if (!chosen && allRates.length) {
-      chosen = [...allRates].sort((a, b2) => (Number(a.price) || 1e12) - (Number(b2.price) || 1e12))[0];
-      matchBasis = 'cheapest_fallback';
+    // ---- Evaluate every rate, then choose ----
+    const evaluated = allRates.map((rt) => ({ rate: rt, verdict: evaluateRate(rt, orig), usd: priceUsdOf(rt) }));
+    const eligible = evaluated.filter((e) => e.verdict.eligible && e.usd != null);
+    eligible.sort((a, b2) => a.usd - b2.usd);
+
+    let chosenEntry = eligible[0] || null;
+    let matchBasis = 'room_code';
+
+    if (!chosenEntry) {
+      // Nothing rebookable. Pick the most informative row to SHOW — never to act on.
+      const byRoomCode = evaluated.find((e) => orig.roomCode && e.verdict.liveRoomCode && norm(e.verdict.liveRoomCode) === norm(orig.roomCode));
+      const byName = evaluated.find((e) => orig.roomType && rateRoomType(e.rate) && norm(rateRoomType(e.rate)) === norm(orig.roomType));
+      const cheapest = [...evaluated].filter((e) => e.usd != null).sort((a, b2) => a.usd - b2.usd)[0];
+      chosenEntry = byRoomCode || byName || cheapest || null;
+      matchBasis = byRoomCode ? 'room_code_ineligible' : byName ? 'room_name' : cheapest ? 'cheapest_fallback' : 'none';
     }
 
-    const minRate = chosen;
+    const minRate = chosenEntry?.rate || null;
+    const verdict = chosenEntry?.verdict || null;
     const liveRoom = minRate?.rooms?.[0] || null;
 
-    const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 };
     const origLocal = b.price_total != null ? Number(b.price_total) : null;
     const origCur = b.currency || 'USD';
     const origUsd = (origLocal != null && usdRate[origCur]) ? origLocal * usdRate[origCur] : null;
 
     const liveLocal = minRate?.price != null ? Number(minRate.price) : null;
     const liveCur = minRate?.currency || origCur;
-    const liveUsd = (liveLocal != null && usdRate[liveCur]) ? liveLocal * usdRate[liveCur] : null;
+    const liveUsd = chosenEntry?.usd ?? null;
 
-    const roomMatch = matchBasis === 'room_code' ? true
-      : matchBasis === 'room_name' ? true
-      : (liveRoom ? norm(liveRoom.room_type || liveRoom.description) === norm(origRoomType) : null);
-    const boardMatch = rateBoard(minRate) ? norm(rateBoard(minRate)) === norm(origBoard) : null;
-    const datesMatch = (data.checkin?.slice(0,10) === checkin && data.checkout?.slice(0,10) === checkout);
+    const roomMatch = verdict ? verdict.roomMatch : null;
+    const boardMatch = verdict ? verdict.boardMatch : null;
+    const policyMatch = verdict ? verdict.policyMatch : null;
+    const datesMatch = (data.checkin?.slice(0, 10) === checkin && data.checkout?.slice(0, 10) === checkout);
 
     const gapUsd = (origUsd != null && liveUsd != null) ? Math.round((origUsd - liveUsd) * 100) / 100 : null;
     const gapPct = (gapUsd != null && origUsd) ? Math.round((gapUsd / origUsd) * 100) : null;
     const dropped = gapUsd != null ? gapUsd > 0 : false;
+
+    // A rebook is authorised only if the chosen rate passed every leg AND the
+    // price actually dropped. Both conditions are persisted, and the rebook
+    // route re-reads them from the table rather than trusting the client.
+    const rebookEligible = Boolean(verdict?.eligible && dropped);
+
+    const blockers = [];
+    if (verdict) blockers.push(...verdict.blockers);
+    if (!dropped && verdict?.eligible) blockers.push('No price drop on the matching rate.');
+    if (!minRate) blockers.push('No availability returned for these dates.');
 
     await sbUpsert('grn_price_checks', [{
       booking_id: bookingId,
@@ -1190,43 +1435,62 @@ router.post('/repricing/check', async (req, res) => {
       live_price: liveLocal, live_currency: liveCur, live_usd: liveUsd != null ? Math.round(liveUsd) : null,
       dropped, gap_usd: gapUsd, gap_pct: gapPct,
       room_match: roomMatch, board_match: boardMatch, dates_match: datesMatch,
-      // ---- NEW: _search_id added alongside the existing _match_basis ----
-      raw: minRate ? { ...minRate, _match_basis: matchBasis, _search_id: searchId, _rooms_returned: allRates.length } : { note: 'no availability returned', _search_id: searchId },
+      match_basis: matchBasis,
+      policy_match: policyMatch,
+      original_non_refundable: orig.nonRefundable,
+      original_cancel_by: orig.cancelBy,
+      live_non_refundable: verdict ? verdict.liveNonRef : null,
+      live_cancel_by: verdict ? verdict.liveCancelBy : null,
+      raw: minRate
+        ? { ...minRate, _match_basis: matchBasis, _search_id: searchId, _rooms_returned: allRates.length,
+            _eligible: Boolean(verdict?.eligible), _blockers: verdict?.blockers || [] }
+        : { note: 'no availability returned', _search_id: searchId, _match_basis: 'none' },
       source: 'manual',
     }], 'id');
 
     const usdOf = (amt, cur) => (amt != null && usdRate[cur]) ? Math.round(Number(amt) * usdRate[cur]) : null;
-    const allRatesOut = allRates.map((rt) => {
+    const allRatesOut = evaluated.map(({ rate: rt, verdict: v, usd }) => {
       const rm = rt?.rooms?.[0] || {};
       const local = rt?.price != null ? Number(rt.price) : null;
       const cur = rt?.currency || origCur;
-      const usd = usdOf(local, cur);
-      const isMatch = origRoomCode && rateRoomCode(rt) && norm(rateRoomCode(rt)) === norm(origRoomCode);
       return {
-        roomType: rm.room_type || rm.description || rt.room_type || '—',
+        roomType: rm.room_type || rt.room_type || '—',
+        roomDescription: rm.description || null,
         board: rateBoard(rt) || '—',
-        local, currency: cur, usd,
-        refundable: rt?.non_refundable === false,
-        cancelBy: rt?.cancellation_policy?.cancel_by_date || null,
+        local, currency: cur, usd: usd != null ? Math.round(usd) : null,
+        refundable: v.liveNonRef === false,
+        cancelBy: v.liveCancelBy,
         vsOriginalUsd: (usd != null && origUsd != null) ? Math.round(origUsd - usd) : null,
-        isMatch: !!isMatch,
+        isMatch: v.roomMatch,
+        eligible: v.eligible,
+        blockers: v.blockers,
       };
-    }).sort((a, b) => (a.usd ?? 1e12) - (b.usd ?? 1e12));
+    }).sort((a, b2) => (a.usd ?? 1e12) - (b2.usd ?? 1e12));
 
     res.json({
       bookingId,
       checkedAt: new Date().toISOString(),
-      original: { local: origLocal, currency: origCur, usd: origUsd != null ? Math.round(origUsd) : null, room: origRoomType, board: origBoard, checkin, checkout },
+      original: {
+        local: origLocal, currency: origCur, usd: origUsd != null ? Math.round(origUsd) : null,
+        room: orig.roomType, roomDescription: orig.roomDescription, board: orig.board,
+        nonRefundable: orig.nonRefundable, cancelBy: orig.cancelBy,
+        checkin, checkout,
+      },
       live: liveLocal != null
         ? { local: liveLocal, currency: liveCur, usd: liveUsd != null ? Math.round(liveUsd) : null,
             room: liveRoom?.room_type || liveRoom?.description || null,
+            roomDescription: liveRoom?.description || null,
             board: rateBoard(minRate) || null,
-            cancelBy: minRate?.cancellation_policy?.cancel_by_date || null }
+            nonRefundable: verdict ? verdict.liveNonRef : null,
+            cancelBy: verdict ? verdict.liveCancelBy : null }
         : null,
       available: liveLocal != null,
       dropped, gapUsd, gapPct,
       matchBasis,
-      match: { room: roomMatch, board: boardMatch, dates: datesMatch },
+      match: { room: roomMatch, board: boardMatch, dates: datesMatch, policy: policyMatch },
+      rebookEligible,
+      eligibleRateCount: eligible.length,
+      blockers,
       allRates: allRatesOut,
     });
   } catch (err) {
@@ -1234,6 +1498,9 @@ router.post('/repricing/check', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GRN rebooking chain — pull source, recheck, place, confirm, cancel original.
+// ---------------------------------------------------------------------------
 
 async function grnPullSourceBooking({ bookingId }) {
   const resp = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${encodeURIComponent(bookingId)}`, {
@@ -1265,11 +1532,12 @@ async function grnRecheckRate({ searchId, rateKey }) {
   if (!resp.ok || data.error) {
     throw new Error(`GRN recheck failed (${resp.status}): ${JSON.stringify(data).slice(0, 300)}`);
   }
-  // Real response includes group_code, and the (possibly updated) rate/price.
+  const rechkRate = data.hotel?.rates?.[0] || data.rates?.[0] || null;
   return {
-    groupCode: data.group_code || data.hotel?.group_code || null,
+    groupCode: data.group_code || data.hotel?.group_code || rechkRate?.group_code || null,
     priceChanged: data.grn_recheck_price_changed ?? null,
-    newPrice: data.hotel?.rates?.[0]?.price ?? data.rooms?.[0]?.price ?? null,
+    newPrice: rechkRate?.price ?? data.rooms?.[0]?.price ?? null,
+    rate: rechkRate,
     raw: data,
   };
 }
@@ -1319,6 +1587,15 @@ async function grnCancelOriginalBooking({ originalBookingReference }) {
   return { cancelled: true, cancellationReference: data.cancellation_reference, charges: data.cancellation_charges };
 }
 
+// ---------------------------------------------------------------------------
+// POST /repricing/rebook
+//
+// The gate lives HERE, not in the browser. The frontend hiding a button is a
+// convenience; this endpoint is directly callable and must refuse on its own.
+// Every leg is re-read from the stored check, and the winning rate is
+// re-evaluated a second time against the recheck response before anything is
+// placed.
+// ---------------------------------------------------------------------------
 router.post('/repricing/rebook', async (req, res) => {
   if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set' });
   if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
@@ -1326,42 +1603,73 @@ router.post('/repricing/rebook', async (req, res) => {
   const { booking_id } = req.body || {};
   if (!booking_id) return res.status(400).json({ error: 'booking_id required' });
 
-  const { rows: checks } = await sbSelect('grn_price_checks',
-    `booking_id=eq.${encodeURIComponent(booking_id)}&select=*&order=checked_at.desc&limit=1`);
-  const check = checks[0];
-  if (!check) return res.status(400).json({ error: 'No price check on record for this booking — run a check first.' });
-  if (!check.dropped || check.room_match !== true || check.dates_match !== true) {
-    return res.status(400).json({ error: 'This check is not an actionable drop (must be dropped=true, room and dates matched).' });
-  }
+  let check, booking, tracked;
 
-  const { rows: bkRows } = await sbSelect('grn_bookings',
-    `booking_id=eq.${encodeURIComponent(booking_id)}&select=*&limit=1`);
-  const booking = bkRows[0];
-  if (!booking) return res.status(404).json({ error: 'Original booking not found in synced table' });
+  // --- Preflight. Wrapped: a Supabase failure here used to reject outside any
+  // try block, which Express 4 does not catch — the request just hung.
+  try {
+    const { rows: checks } = await sbSelect('grn_price_checks',
+      `booking_id=eq.${encodeURIComponent(booking_id)}&select=*&order=checked_at.desc&limit=1`);
+    check = checks[0];
+    if (!check) return res.status(400).json({ error: 'No price check on record for this booking — run a check first.' });
+
+    // ---- THE GATE ----
+    const failed = [];
+    if (check.match_basis !== 'room_code') failed.push('The matched rate is not an exact room-code match.');
+    if (check.room_match !== true) failed.push('Room does not match the original booking.');
+    if (check.board_match !== true) failed.push('Board basis does not match the original booking.');
+    if (check.policy_match !== true) failed.push('Cancellation terms are not equal to or better than the original.');
+    if (check.dates_match !== true) failed.push('Stay dates do not match the original booking.');
+    if (!check.dropped) failed.push('There is no price drop on the matching rate.');
+    if (Array.isArray(check.raw?._blockers) && check.raw._blockers.length) failed.push(...check.raw._blockers);
+    if (check.raw?._eligible === false) failed.push('The stored check was recorded as not rebookable.');
+
+    if (failed.length) {
+      return res.status(400).json({
+        error: 'This booking is not rebookable.',
+        blockers: [...new Set(failed)],
+      });
+    }
+
+    // Guard against acting on a stale check.
+    const checkAgeMin = (Date.now() - new Date(check.checked_at).getTime()) / 60000;
+    if (checkAgeMin > 60) {
+      return res.status(409).json({ error: `This price check is ${Math.round(checkAgeMin)} minutes old. Re-check before rebooking.` });
+    }
+
+    const { rows: bkRows } = await sbSelect('grn_bookings',
+      `booking_id=eq.${encodeURIComponent(booking_id)}&select=*&limit=1`);
+    booking = bkRows[0];
+    if (!booking) return res.status(404).json({ error: 'Original booking not found in synced table' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Could not load the booking or its price check.', detail: String(err.message || err) });
+  }
 
   const matchedRate = check.raw || {};
   const rateKey = matchedRate.rate_key || matchedRate.rooms?.[0]?.rate_key;
-  const roomCode = matchedRate.rooms?.[0]?.room_code || matchedRate.room_code;
+  const roomCode = matchedRate.room_code || matchedRate.rooms?.[0]?.room_code;
   const searchId = matchedRate._search_id;
   if (!rateKey) return res.status(400).json({ error: 'No rate_key on the stored check — re-check the price first.' });
-  if (!searchId) return res.status(400).json({ error: 'No search_id on the stored check — re-check the price first (this check predates search_id capture).' });
+  if (!roomCode) return res.status(400).json({ error: 'No room_code on the stored check — re-check the price first.' });
+  if (!searchId) return res.status(400).json({ error: 'No search_id on the stored check — re-check the price first.' });
 
-  const { rows: [tracked] } = await sbInsertReturning('grn_rebooking_attempts', {
-    booking_id, hotel_name: booking.hotel_name, city_name: booking.city_name,
-    room_type: booking.room_type, checkin_date: booking.checkin_date,
-    supplier_code: booking.supplier_code,
-    original_usd: check.original_usd, rebooked_usd: check.live_usd,
-    saved_usd: check.gap_usd, status: 'pending',
-    source_check_id: check.id, triggered_by: 'manual',
-  });
+  try {
+    const { rows: [row] } = await sbInsertReturning('grn_rebooking_attempts', {
+      booking_id, hotel_name: booking.hotel_name, city_name: booking.city_name,
+      room_type: booking.room_type, checkin_date: booking.checkin_date,
+      supplier_code: booking.supplier_code,
+      original_usd: check.original_usd, rebooked_usd: check.live_usd,
+      saved_usd: check.gap_usd, status: 'pending',
+      source_check_id: check.id, triggered_by: 'manual',
+    });
+    tracked = row;
+  } catch (err) {
+    return res.status(500).json({ error: 'Could not open a rebooking attempt record — nothing was actioned.', detail: String(err.message || err) });
+  }
 
   try {
     // STEP -1 — Pull source. Verify the booking is STILL ACTIVE right now,
-    // live from GRN, not from our possibly-stale synced copy. This is the
-    // exact "is this booking active" check Mize's own flow runs first,
-    // before ever touching recheck/rebook/cancel. If the agent already
-    // cancelled it, or it's no longer confirmed, we stop here — nothing
-    // downstream ever runs against a booking that isn't genuinely live.
+    // live from GRN, not from our possibly-stale synced copy.
     const source = await grnPullSourceBooking({ bookingId: booking_id });
     if (!source.status || !/^confirmed$/i.test(source.status)) {
       await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
@@ -1374,8 +1682,7 @@ router.post('/repricing/rebook', async (req, res) => {
         rebookingId: tracked.id,
       });
     }
-    // Prefer the FRESH reference from this live call over our cached copy —
-    // it's the most trustworthy value we can get, straight from GRN right now.
+
     const originalRef = source.bookingReference || booking.booking_reference || booking.raw?.booking_reference;
     if (!originalRef) {
       await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
@@ -1395,6 +1702,41 @@ router.post('/repricing/rebook', async (req, res) => {
       });
       return res.status(409).json({ error: 'Price changed since this booking was checked. Please re-check before rebooking.', rebookingId: tracked.id });
     }
+
+    // SECOND GATE PASS — the recheck response is the last word on what will
+    // actually be booked. If the terms moved between search and recheck, stop.
+    if (rechecked.rate) {
+      const item0 = booking.raw?.hotel?.booking_items?.[0] || {};
+      const room0 = item0.rooms?.[0] || {};
+      const paxes = booking.raw?.hotel?.paxes || [];
+      const origAgain = {
+        roomCode: item0.room_code || null,
+        roomType: room0.room_type || booking.room_type || null,
+        roomDescription: room0.description || null,
+        board: (Array.isArray(item0.boarding_details) && item0.boarding_details.length)
+          ? item0.boarding_details.join(', ') : (booking.board_basis || null),
+        nonRefundable: typeof item0.non_refundable === 'boolean' ? item0.non_refundable : null,
+        cancelBy: item0.cancellation_policy?.cancel_by_date || booking.cancel_by_date || null,
+        occupancy: {
+          adults: room0.no_of_adults ?? paxes.filter((p) => p.type === 'AD').length,
+          children: room0.no_of_children ?? paxes.filter((p) => p.type === 'CH').length,
+          childAges: paxes.filter((p) => p.type === 'CH').map((p) => p.age).filter((a) => a != null),
+        },
+      };
+      const v2 = evaluateRate(rechecked.rate, origAgain);
+      if (!v2.eligible) {
+        await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
+          status: 'error', failure_stage: 'recheck_gate',
+          failure_reason: `Terms changed at recheck: ${v2.blockers.join(' ')}`,
+          updated_at: new Date().toISOString(),
+        });
+        return res.status(409).json({
+          error: 'The rate changed between the price check and the recheck, and no longer matches the original booking. Nothing was booked.',
+          blockers: v2.blockers, rebookingId: tracked.id,
+        });
+      }
+    }
+
     if (!rechecked.groupCode) {
       throw new Error('Recheck succeeded but returned no group_code — cannot proceed to booking.');
     }
@@ -1451,34 +1793,14 @@ router.post('/repricing/rebook', async (req, res) => {
     await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
       status: 'error', failure_stage: 'recheck_or_place',
       failure_reason: String(err.message || err), updated_at: new Date().toISOString(),
-    });
+    }).catch(() => {});
     return res.status(500).json({ error: 'Rebooking failed before any booking was placed — original is untouched and safe.', detail: String(err.message || err) });
   }
 });
 
-async function sbInsertReturning(table, row) {
-  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: sbHeaders({ 'Prefer': 'return=representation' }),
-    body: JSON.stringify([row]),
-  });
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Supabase insert into ${table} failed (${resp.status}): ${text}`);
-  }
-  const rows = await resp.json();
-  return { rows };
-}
-
-
 // GET /repricing/searches — the conversion story for Rebookings.
 // Reads the real check log (grn_price_checks). Shows searches made, drops
-// found, and how many were actionable (like-for-like on the matching room).
-//
-// UPDATED: now also selects original_price/currency, live_price/currency,
-// and raw (the matched rate + _match_basis, stored at check time), so the
-// Searches Made page can render a full Original-vs-Live comparison with
-// room/board/dates match ticks — not just USD summary numbers.
+// found, and how many were actionable under the full gate.
 router.get('/repricing/searches', async (req, res) => {
   if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
   const page = parseInt(req.query.page, 10) || 1;
@@ -1488,7 +1810,8 @@ router.get('/repricing/searches', async (req, res) => {
   try {
     const { rows: checks, total } = await sbSelect('grn_price_checks',
       `select=id,booking_id,checked_at,original_price,original_currency,original_usd,`
-      + `live_price,live_currency,live_usd,dropped,gap_usd,gap_pct,room_match,board_match,dates_match,raw`
+      + `live_price,live_currency,live_usd,dropped,gap_usd,gap_pct,room_match,board_match,dates_match,`
+      + `policy_match,match_basis,original_non_refundable,live_non_refundable,raw`
       + `&order=checked_at.desc&offset=${offset}&limit=${perPage}`,
       { 'Prefer': 'count=exact' });
 
@@ -1503,8 +1826,11 @@ router.get('/repricing/searches', async (req, res) => {
 
     const summaryRows = await sbSelect('grn_price_check_summary', 'select=*').then((r) => r.rows).catch(() => []);
     const summary = summaryRows[0] || {};
+
+    // Actionable now means the FULL gate, not room+dates.
     const { total: actionableDrops } = await sbSelect('grn_price_checks',
-      `dropped=eq.true&room_match=eq.true&dates_match=eq.true&select=id`, { 'Prefer': 'count=exact' });
+      `dropped=eq.true&room_match=eq.true&board_match=eq.true&policy_match=eq.true&dates_match=eq.true&match_basis=eq.room_code&select=id`,
+      { 'Prefer': 'count=exact' });
 
     res.json({
       page, perPage, total: total ?? 0,
@@ -1518,8 +1844,11 @@ router.get('/repricing/searches', async (req, res) => {
       },
       rows: checks.map((c) => {
         const b = info[c.booking_id] || {};
-        const actionable = c.dropped && c.room_match === true && c.dates_match === true;
         const matchedRate = c.raw || {};
+        const actionable = Boolean(
+          c.dropped && c.room_match === true && c.board_match === true &&
+          c.policy_match === true && c.dates_match === true && c.match_basis === 'room_code'
+        );
         return {
           id: c.id,
           bookingId: c.booking_id,
@@ -1545,10 +1874,16 @@ router.get('/repricing/searches', async (req, res) => {
           roomMatch: c.room_match,
           boardMatch: c.board_match,
           datesMatch: c.dates_match,
-          matchBasis: matchedRate?._match_basis || null,
+          policyMatch: c.policy_match,
+          originalNonRefundable: c.original_non_refundable,
+          liveNonRefundable: c.live_non_refundable,
+          matchBasis: c.match_basis || matchedRate?._match_basis || null,
+          blockers: matchedRate?._blockers || [],
 
           actionable,
-          result: c.live_usd == null ? 'sold_out' : c.dropped ? (actionable ? 'drop_actionable' : 'drop_different_room') : (c.gap_usd != null && c.gap_usd < 0 ? 'higher' : 'no_drop'),
+          result: c.live_usd == null ? 'sold_out'
+            : c.dropped ? (actionable ? 'drop_actionable' : 'drop_blocked')
+            : (c.gap_usd != null && c.gap_usd < 0 ? 'higher' : 'no_drop'),
         };
       }),
     });
@@ -1600,6 +1935,8 @@ router.get('/repricing/rebookings', async (req, res) => {
         savedUsd: r.saved_usd,
         supplier: r.supplier_code || r.supplier,
         status: r.status,
+        failureStage: r.failure_stage || null,
+        failureReason: r.failure_reason || null,
         createdAt: r.created_at,
       })),
     });
