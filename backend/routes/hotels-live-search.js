@@ -1094,7 +1094,7 @@ router.post('/repricing/check', async (req, res) => {
 
   try {
     const { rows } = await sbSelect('grn_bookings',
-      `booking_id=eq.${encodeURIComponent(bookingId)}&select=booking_id,hotel_code,checkin,checkin_date,checkout,room_type,board_basis,price_total,currency,raw&limit=1`);
+      `booking_id=eq.${encodeURIComponent(bookingId)}&select=booking_id,hotel_code,city_code,checkin,checkin_date,checkout,room_type,board_basis,price_total,currency,raw&limit=1`);
     const b = rows[0];
     if (!b) return res.status(404).json({ error: 'Booking not found in synced table' });
     if (!b.hotel_code) return res.status(400).json({ error: 'Booking has no hotel_code — cannot reprice' });
@@ -1131,6 +1131,9 @@ router.post('/repricing/check', async (req, res) => {
     const data = await resp.json();
     if (!resp.ok) return res.status(resp.status).json({ error: 'GRN availability error', details: data });
 
+    // ---- NEW: capture the search_id from this response ----
+    const searchId = data.search_id || null;
+
     const norm = (s) => String(s || '').trim().toLowerCase();
     const hotel = (data.hotels || [])[0];
 
@@ -1140,15 +1143,9 @@ router.post('/repricing/check', async (req, res) => {
       else if (hotel.min_rate) allRates = [hotel.min_rate];
     }
 
-    function rateRoomCode(rate) {
-      return rate?.rooms?.[0]?.room_code || rate?.room_code || null;
-    }
-    function rateRoomType(rate) {
-      return rate?.rooms?.[0]?.room_type || rate?.rooms?.[0]?.description || null;
-    }
-    function rateBoard(rate) {
-      return rate?.boarding_details ? rate.boarding_details.join(', ') : null;
-    }
+    function rateRoomCode(rate) { return rate?.rooms?.[0]?.room_code || rate?.room_code || null; }
+    function rateRoomType(rate) { return rate?.rooms?.[0]?.room_type || rate?.rooms?.[0]?.description || null; }
+    function rateBoard(rate) { return rate?.boarding_details ? rate.boarding_details.join(', ') : null; }
 
     let chosen = null, matchBasis = 'none';
     if (origRoomCode) {
@@ -1193,7 +1190,8 @@ router.post('/repricing/check', async (req, res) => {
       live_price: liveLocal, live_currency: liveCur, live_usd: liveUsd != null ? Math.round(liveUsd) : null,
       dropped, gap_usd: gapUsd, gap_pct: gapPct,
       room_match: roomMatch, board_match: boardMatch, dates_match: datesMatch,
-      raw: minRate ? { ...minRate, _match_basis: matchBasis, _rooms_returned: allRates.length } : { note: 'no availability returned' },
+      // ---- NEW: _search_id added alongside the existing _match_basis ----
+      raw: minRate ? { ...minRate, _match_basis: matchBasis, _search_id: searchId, _rooms_returned: allRates.length } : { note: 'no availability returned', _search_id: searchId },
       source: 'manual',
     }], 'id');
 
@@ -1235,6 +1233,243 @@ router.post('/repricing/check', async (req, res) => {
     res.status(500).json({ error: 'Price check failed', message: String(err.message || err) });
   }
 });
+
+
+async function grnPullSourceBooking({ bookingId }) {
+  const resp = await fetch(`${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${encodeURIComponent(bookingId)}`, {
+    method: 'GET',
+    headers: GRN_HEADERS(),
+  });
+  const data = await resp.json();
+  if (!resp.ok || data.error) {
+    throw new Error(`GRN pull-source failed (${resp.status}): ${JSON.stringify(data).slice(0, 300)}`);
+  }
+  const booking = data.booking || {};
+  return {
+    status: booking.booking_status || null,     // e.g. "Confirmed", "Cancelled"
+    bookingReference: booking.booking_reference || null,  // freshest reference, preferred over our cached copy
+    raw: booking,
+  };
+}
+
+async function grnRecheckRate({ searchId, rateKey }) {
+  const resp = await fetch(
+    `${GRN_API_BASE_URL}/hotels/availability/${encodeURIComponent(searchId)}/rates/?action=recheck`,
+    {
+      method: 'POST',
+      headers: GRN_HEADERS(),
+      body: JSON.stringify({ hotel_info: true, rate_key: rateKey }),
+    }
+  );
+  const data = await resp.json();
+  if (!resp.ok || data.error) {
+    throw new Error(`GRN recheck failed (${resp.status}): ${JSON.stringify(data).slice(0, 300)}`);
+  }
+  // Real response includes group_code, and the (possibly updated) rate/price.
+  return {
+    groupCode: data.group_code || data.hotel?.group_code || null,
+    priceChanged: data.grn_recheck_price_changed ?? null,
+    newPrice: data.hotel?.rates?.[0]?.price ?? data.rooms?.[0]?.price ?? null,
+    raw: data,
+  };
+}
+
+async function grnPlaceRebooking({ originalBookingReference, searchId, hotelCode, cityCode, groupCode, checkin, checkout, rateKey, roomCode }) {
+  const resp = await fetch(`${GRN_API_BASE_URL}/hotels/rebookings/${encodeURIComponent(originalBookingReference)}`, {
+    method: 'POST',
+    headers: GRN_HEADERS(),
+    body: JSON.stringify({
+      search_id: searchId,
+      hotel_code: hotelCode,
+      city_code: cityCode,
+      group_code: groupCode,
+      checkin, checkout,
+      payment_type: 'AT_WEB',
+      booking_items: [{ rate_key: rateKey, room_code: roomCode }],
+    }),
+  });
+  const data = await resp.json();
+  if (!resp.ok || data.error) {
+    throw new Error(`GRN rebooking placement failed (${resp.status}): ${JSON.stringify(data).slice(0, 300)}`);
+  }
+  return { newBookingId: data.booking_id, newBookingReference: data.booking_reference, raw: data };
+}
+
+async function grnConfirmRebooking({ newBookingReference }) {
+  const resp = await fetch(`${GRN_API_BASE_URL}/hotels/rebookings/confirm/${encodeURIComponent(newBookingReference)}`, {
+    method: 'POST',
+    headers: GRN_HEADERS(),
+  });
+  const data = await resp.json();
+  if (!resp.ok || data.error) {
+    throw new Error(`GRN rebooking confirmation failed (${resp.status}): ${JSON.stringify(data).slice(0, 300)}`);
+  }
+  return { confirmed: true, message: data.message };
+}
+
+async function grnCancelOriginalBooking({ originalBookingReference }) {
+  const resp = await fetch(`${GRN_API_BASE_URL}/hotels/rebookings/${encodeURIComponent(originalBookingReference)}`, {
+    method: 'DELETE',
+    headers: GRN_HEADERS(),
+  });
+  const data = await resp.json();
+  if (!resp.ok || data.error) {
+    throw new Error(`GRN cancellation failed (${resp.status}): ${JSON.stringify(data).slice(0, 300)}`);
+  }
+  return { cancelled: true, cancellationReference: data.cancellation_reference, charges: data.cancellation_charges };
+}
+
+router.post('/repricing/rebook', async (req, res) => {
+  if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+
+  const { booking_id } = req.body || {};
+  if (!booking_id) return res.status(400).json({ error: 'booking_id required' });
+
+  const { rows: checks } = await sbSelect('grn_price_checks',
+    `booking_id=eq.${encodeURIComponent(booking_id)}&select=*&order=checked_at.desc&limit=1`);
+  const check = checks[0];
+  if (!check) return res.status(400).json({ error: 'No price check on record for this booking — run a check first.' });
+  if (!check.dropped || check.room_match !== true || check.dates_match !== true) {
+    return res.status(400).json({ error: 'This check is not an actionable drop (must be dropped=true, room and dates matched).' });
+  }
+
+  const { rows: bkRows } = await sbSelect('grn_bookings',
+    `booking_id=eq.${encodeURIComponent(booking_id)}&select=*&limit=1`);
+  const booking = bkRows[0];
+  if (!booking) return res.status(404).json({ error: 'Original booking not found in synced table' });
+
+  const matchedRate = check.raw || {};
+  const rateKey = matchedRate.rate_key || matchedRate.rooms?.[0]?.rate_key;
+  const roomCode = matchedRate.rooms?.[0]?.room_code || matchedRate.room_code;
+  const searchId = matchedRate._search_id;
+  if (!rateKey) return res.status(400).json({ error: 'No rate_key on the stored check — re-check the price first.' });
+  if (!searchId) return res.status(400).json({ error: 'No search_id on the stored check — re-check the price first (this check predates search_id capture).' });
+
+  const { rows: [tracked] } = await sbInsertReturning('grn_rebooking_attempts', {
+    booking_id, hotel_name: booking.hotel_name, city_name: booking.city_name,
+    room_type: booking.room_type, checkin_date: booking.checkin_date,
+    supplier_code: booking.supplier_code,
+    original_usd: check.original_usd, rebooked_usd: check.live_usd,
+    saved_usd: check.gap_usd, status: 'pending',
+    source_check_id: check.id, triggered_by: 'manual',
+  });
+
+  try {
+    // STEP -1 — Pull source. Verify the booking is STILL ACTIVE right now,
+    // live from GRN, not from our possibly-stale synced copy. This is the
+    // exact "is this booking active" check Mize's own flow runs first,
+    // before ever touching recheck/rebook/cancel. If the agent already
+    // cancelled it, or it's no longer confirmed, we stop here — nothing
+    // downstream ever runs against a booking that isn't genuinely live.
+    const source = await grnPullSourceBooking({ bookingId: booking_id });
+    if (!source.status || !/^confirmed$/i.test(source.status)) {
+      await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
+        status: 'error', failure_stage: 'pull_source',
+        failure_reason: `Booking is not active (status: ${source.status || 'unknown'}) — aborted before any action.`,
+        updated_at: new Date().toISOString(),
+      });
+      return res.status(409).json({
+        error: `Booking is no longer active (current status: ${source.status || 'unknown'}). No action taken.`,
+        rebookingId: tracked.id,
+      });
+    }
+    // Prefer the FRESH reference from this live call over our cached copy —
+    // it's the most trustworthy value we can get, straight from GRN right now.
+    const originalRef = source.bookingReference || booking.booking_reference || booking.raw?.booking_reference;
+    if (!originalRef) {
+      await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
+        status: 'error', failure_stage: 'pull_source',
+        failure_reason: 'Booking is active but no booking_reference was returned — cannot proceed.',
+        updated_at: new Date().toISOString(),
+      });
+      return res.status(400).json({ error: 'Booking is active but has no booking_reference — cannot rebook without it.', rebookingId: tracked.id });
+    }
+
+    // STEP 0 — Recheck. Never book off a possibly-stale price check.
+    const rechecked = await grnRecheckRate({ searchId, rateKey });
+    if (rechecked.priceChanged === true) {
+      await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
+        status: 'error', failure_stage: 'recheck', failure_reason: 'Price changed since last check — aborted before booking.',
+        updated_at: new Date().toISOString(),
+      });
+      return res.status(409).json({ error: 'Price changed since this booking was checked. Please re-check before rebooking.', rebookingId: tracked.id });
+    }
+    if (!rechecked.groupCode) {
+      throw new Error('Recheck succeeded but returned no group_code — cannot proceed to booking.');
+    }
+
+    await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, { status: 'booking', updated_at: new Date().toISOString() });
+
+    // STEP 1 — Place the new booking (hold).
+    const placed = await grnPlaceRebooking({
+      originalBookingReference: originalRef, searchId, hotelCode: booking.hotel_code,
+      cityCode: booking.city_code, groupCode: rechecked.groupCode,
+      checkin: booking.checkin_date, checkout: booking.checkout, rateKey, roomCode,
+    });
+
+    await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
+      status: 'booked', new_booking_id: placed.newBookingId, updated_at: new Date().toISOString(),
+    });
+
+    // STEP 2 — Confirm it. Original still untouched.
+    try {
+      await grnConfirmRebooking({ newBookingReference: placed.newBookingReference });
+    } catch (confirmErr) {
+      await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
+        status: 'error', failure_stage: 'confirm_rebooking',
+        failure_reason: String(confirmErr.message || confirmErr), updated_at: new Date().toISOString(),
+      });
+      return res.status(500).json({
+        error: 'New booking was placed but could not be confirmed. Original booking is untouched.',
+        newBookingId: placed.newBookingId, detail: String(confirmErr.message || confirmErr),
+      });
+    }
+
+    // STEP 3 — Only now, cancel the original.
+    try {
+      await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, { status: 'cancelling', updated_at: new Date().toISOString() });
+      const cancelled = await grnCancelOriginalBooking({ originalBookingReference: originalRef });
+
+      await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, { status: 'confirmed', updated_at: new Date().toISOString() });
+      return res.json({
+        status: 'confirmed', rebookingId: tracked.id, newBookingId: placed.newBookingId,
+        savedUsd: check.gap_usd, cancellationReference: cancelled.cancellationReference,
+      });
+    } catch (cancelErr) {
+      await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
+        status: 'error', failure_stage: 'cancel_original',
+        failure_reason: String(cancelErr.message || cancelErr), updated_at: new Date().toISOString(),
+      });
+      return res.status(207).json({
+        status: 'partial',
+        warning: 'New booking is confirmed, but the ORIGINAL could not be cancelled — manual cancellation needed to avoid double-billing.',
+        rebookingId: tracked.id, newBookingId: placed.newBookingId,
+      });
+    }
+  } catch (err) {
+    await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
+      status: 'error', failure_stage: 'recheck_or_place',
+      failure_reason: String(err.message || err), updated_at: new Date().toISOString(),
+    });
+    return res.status(500).json({ error: 'Rebooking failed before any booking was placed — original is untouched and safe.', detail: String(err.message || err) });
+  }
+});
+
+async function sbInsertReturning(table, row) {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: sbHeaders({ 'Prefer': 'return=representation' }),
+    body: JSON.stringify([row]),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Supabase insert into ${table} failed (${resp.status}): ${text}`);
+  }
+  const rows = await resp.json();
+  return { rows };
+}
+
 
 // GET /repricing/searches — the conversion story for Rebookings.
 // Reads the real check log (grn_price_checks). Shows searches made, drops
