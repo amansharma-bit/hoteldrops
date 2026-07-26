@@ -9,7 +9,7 @@ const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 // Bump this string on every deploy of this file. It renders next to the page
 // title, so "did my deploy actually land?" is answered by looking at the page
 // instead of guessing at Vercel and browser caches.
-const BUILD = 'v3 · gate + booking detail';
+const BUILD = 'v4 · room codes + list IDs';
 
 const BLUE = '#0F52BA';
 const NAVY = '#0F172A';
@@ -198,6 +198,9 @@ export default function RepricingPage() {
                       <div style={{ minWidth: 0, cursor: 'pointer' }} onClick={() => toggleExpand(r.bookingId)}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.hotel}</div>
                         <div style={{ fontSize: 12, color: SLATE, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[r.city, r.roomDescription || r.room, `${fmtDate(r.checkin)}→${fmtDate(r.checkout)}`].filter(Boolean).join(' · ')}</div>
+                        <div style={{ fontSize: 10.5, color: MUTED, marginTop: 2, fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {r.bookingId}{r.hotelCode ? ` · hotel ${r.hotelCode}` : ''}{r.supplier ? ` · ${r.supplier}` : ''}
+                        </div>
                       </div>
                       {/* Rebook by */}
                       <div><div style={{ fontSize: 13, fontWeight: 600, color: deadlineColor }}>{dLeft != null ? `${dLeft}d` : '—'}</div><div style={{ fontSize: 10, color: MUTED }}>left</div></div>
@@ -380,6 +383,7 @@ function BookingDetail({ r }: { r: any }) {
         <Field label="Nights" value={r.nights} />
         <Field label="Rooms" value={r.roomCount} />
         <Field label="Room" value={r.roomDescription || r.room} />
+        <Field label="Room code" value={r.roomCode} mono />
         <Field label="Board" value={r.board} />
       </div>
 
