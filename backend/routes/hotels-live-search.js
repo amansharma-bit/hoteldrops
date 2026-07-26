@@ -391,6 +391,28 @@ function describeGrnError(errorCode, body, text) {
 
 const norm = (s) => String(s == null ? '' : s).trim().toLowerCase().replace(/\s+/g, ' ');
 
+// GRN returns cancel_by_date in INDIAN time with no timezone marker on the
+// string — "2026-08-02T23:59:59" means 23:59:59 IST, not UTC. Reading it as
+// UTC shifts every cancellation deadline by 5.5 hours, which showed up as the
+// same date being displayed in two places as Aug 2 and Aug 3, and as identical
+// terms being flagged as different.
+//
+// Harmless at 300 days out. Not harmless at one day out, where it can make a
+// closed window look open.
+function parseGrnDate(v) {
+  if (!v) return null;
+  const s = String(v).trim();
+  // Already carries an offset or a Z — trust it.
+  if (/[Zz]$/.test(s) || /[+-]\d{2}:?\d{2}$/.test(s)) return new Date(s);
+  const iso = s.replace(' ', 'T');
+  const d = new Date(`${iso}+05:30`);
+  return isNaN(d.getTime()) ? null : d;
+}
+function grnDateMs(v) {
+  const d = parseGrnDate(v);
+  return d ? d.getTime() : null;
+}
+
 // --- Room identity ---------------------------------------------------------
 // The booking side carries room_code on the booking_item. The live rate
 // carries room_code at the RATE level (NOT inside rooms[] — rooms[0] has
@@ -443,14 +465,15 @@ function policyIsEqualOrBetter(origNonRef, liveNonRef, origCancelBy, liveCancelB
   if (origNonRef === false) {
     if (liveNonRef !== false) return false;
     // Both refundable. If both carry a deadline, the new one must not be
-    // earlier — a shorter window to cancel is a downgrade.
-    if (origCancelBy && liveCancelBy) {
-      if (new Date(liveCancelBy).getTime() < new Date(origCancelBy).getTime()) return false;
-    }
+    // earlier — a shorter window to cancel is a downgrade. Both sides are
+    // parsed as IST, which is what GRN sends.
+    const o = grnDateMs(origCancelBy);
+    const l = grnDateMs(liveCancelBy);
+    if (o != null && l != null && l < o) return false;
     return true;
   }
-  // Original was non-refundable (or unknown): anything is same-or-better,
-  // but only once we actually know what the live rate is.
+  // Original was non-refundable (or unknown): anything is same-or-better, but
+  // only once we actually know what the live rate is.
   return true;
 }
 
@@ -589,7 +612,20 @@ function evaluateRate(rate, orig) {
   if (!policyMatch) {
     if (liveNonRef === null) blockers.push('This rate does not state its cancellation terms.');
     else if (orig.nonRefundable === false && liveNonRef === true) blockers.push('Original is refundable, this rate is non-refundable — worse terms for the guest.');
-    else blockers.push('Cancellation terms are worse than the original.');
+    else {
+      // Say by how much. "Terms are worse" on two dates that both display as
+      // Aug 2 reads like a bug when the real difference is hours.
+      const o = grnDateMs(orig.cancelBy);
+      const l = grnDateMs(liveCancelBy);
+      if (o != null && l != null) {
+        const hrs = Math.round((o - l) / 3600000);
+        blockers.push(hrs >= 24
+          ? `Shorter cancellation window — ${Math.round(hrs / 24)} day(s) less than the original.`
+          : `Shorter cancellation window — ${hrs} hour(s) less than the original.`);
+      } else {
+        blockers.push('Cancellation terms are worse than the original.');
+      }
+    }
   }
 
   if (!occMatch) blockers.push('Guest numbers or child ages differ from the original booking.');
