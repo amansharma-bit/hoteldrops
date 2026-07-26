@@ -46,6 +46,8 @@ export default function RepricingPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, any>>({}); // live check results this session
   const [history, setHistory] = useState<Record<string, any[]>>({});
+  const [rebooking, setRebooking] = useState<string | null>(null);
+  const [rebookResult, setRebookResult] = useState<Record<string, any>>({});
 
   useEffect(() => {
     const id = setTimeout(() => { setCityQuery(citySearch.trim()); setPage(1); }, 350);
@@ -83,6 +85,27 @@ export default function RepricingPage() {
       setResults((p) => ({ ...p, [bookingId]: { error: e.message } }));
     } finally {
       setChecking(null);
+    }
+  }
+
+  async function doRebook(bookingId: string) {
+    const ok = window.confirm('This will book the new rate and cancel the original. Continue?');
+    if (!ok) return;
+    setRebooking(bookingId);
+    try {
+      const r = await authenticatedFetch(`${API_BASE}/api/live-search/repricing/rebook`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: bookingId }),
+      });
+      const d = await r.json();
+      setRebookResult((p) => ({ ...p, [bookingId]: d }));
+      if (d.status === 'confirmed' || r.status === 207) {
+        loadHistory(bookingId);
+      }
+    } catch (e: any) {
+      setRebookResult((p) => ({ ...p, [bookingId]: { error: e.message } }));
+    } finally {
+      setRebooking(null);
     }
   }
 
@@ -188,8 +211,21 @@ export default function RepricingPage() {
                       <div style={{ textAlign: 'right' }}>
                         {(() => {
                           const trueMatch = dropped && result && result.match?.room === true && result.match?.board !== false && result.match?.dates === true;
+                          const rr = rebookResult[r.bookingId];
+                          const isRebooking = rebooking === r.bookingId;
+                          if (rr?.status === 'confirmed') {
+                            return <span style={{ fontSize: 12, fontWeight: 600, color: GREEN }}>✓ Rebooked</span>;
+                          }
+                          if (rr?.status === 'partial') {
+                            return <span style={{ fontSize: 11, fontWeight: 600, color: AMBER }}>⚠ Needs review</span>;
+                          }
                           if (trueMatch) {
-                            return <button style={{ border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, background: GREEN, color: '#fff', cursor: 'pointer' }}>Rebook</button>;
+                            return (
+                              <button onClick={() => doRebook(r.bookingId)} disabled={isRebooking}
+                                style={{ border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, background: isRebooking ? MUTED : GREEN, color: '#fff', cursor: isRebooking ? 'wait' : 'pointer' }}>
+                                {isRebooking ? 'Booking…' : 'Rebook'}
+                              </button>
+                            );
                           }
                           return (
                             <button onClick={() => checkPrice(r.bookingId)} disabled={isChecking} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, background: '#fff', color: isChecking ? MUTED : NAVY, cursor: isChecking ? 'wait' : 'pointer' }}>{isChecking ? 'Checking…' : checkedAt ? 'Re-check' : 'Check price'}</button>
@@ -254,6 +290,17 @@ export default function RepricingPage() {
                         {/* Full live rate list */}
                         {result?.allRates && result.allRates.length > 0 && (
                           <AllRates rates={result.allRates} origUsd={r.origUsd} />
+                        )}
+                        {rebookResult[r.bookingId]?.error && (
+                          <div style={{ marginTop: 14, padding: '10px 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 12.5, color: RED }}>
+                            Rebook failed: {rebookResult[r.bookingId].error}
+                            {rebookResult[r.bookingId].detail && <div style={{ marginTop: 4, fontFamily: 'monospace', fontSize: 11, color: '#991B1B' }}>{rebookResult[r.bookingId].detail}</div>}
+                          </div>
+                        )}
+                        {rebookResult[r.bookingId]?.warning && (
+                          <div style={{ marginTop: 14, padding: '10px 14px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, fontSize: 12.5, color: AMBER }}>
+                            {rebookResult[r.bookingId].warning}
+                          </div>
                         )}
                       </div>
                     </div>
