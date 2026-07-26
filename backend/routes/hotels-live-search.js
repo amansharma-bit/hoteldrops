@@ -1617,9 +1617,20 @@ router.get('/repricing/candidates', async (req, res) => {
         // supplier, so we pass through what exists rather than forcing one
         // schema — the UI renders whichever fields came back.
         const cp = item0.cancellation_policy || {};
+        // The deadline exists in two places: the raw string GRN sent, and a
+        // grn_bookings column that was converted to UTC at sync time — which is
+        // wrong, because GRN sends IST. Reading them separately made the same
+        // deadline render as Aug 2 in one place and Aug 3 in another.
+        //
+        // Resolve it once, here, preferring the raw value, and send a single
+        // correct ISO timestamp the page can display without interpreting.
+        const rawCancelBy = cp.cancel_by_date || null;
+        const cancelByIso = rawCancelBy
+          ? (parseGrnDate(rawCancelBy)?.toISOString() || null)
+          : (r.cancel_by_date || null);
         const cancellation = {
           nonRefundable: typeof item0.non_refundable === 'boolean' ? item0.non_refundable : null,
-          cancelBy: cp.cancel_by_date || r.cancel_by_date || null,
+          cancelBy: cancelByIso,
           details: typeof cp.details === 'string' ? cp.details : null,
           policies: Array.isArray(cp.policies) ? cp.policies : (Array.isArray(cp.details) ? cp.details : []),
           underCancellation: cp.under_cancellation ?? null,
@@ -1667,7 +1678,7 @@ router.get('/repricing/candidates', async (req, res) => {
           origCur: r.currency,
           origUsd,
           supplier: r.supplier_code,
-          cancelBy: r.cancel_by_date,
+          cancelBy: cancelByIso,
           attempt: (() => {
             const a = lastAttempts[r.booking_id];
             if (!a) return null;
@@ -1894,7 +1905,7 @@ router.post('/repricing/check', async (req, res) => {
         board: rateBoard(rt) || '—',
         local, currency: cur, usd: usd != null ? Math.round(usd) : null,
         refundable: v.liveNonRef === false,
-        cancelBy: v.liveCancelBy,
+        cancelBy: v.liveCancelBy ? (parseGrnDate(v.liveCancelBy)?.toISOString() || v.liveCancelBy) : null,
         vsOriginalUsd: (usd != null && origUsd != null) ? Math.round(origUsd - usd) : null,
         // Identifiers the operator's selection needs in order to be bookable.
         // Without these the rate list is read-only.
@@ -1914,7 +1925,8 @@ router.post('/repricing/check', async (req, res) => {
         local: origLocal, currency: origCur, usd: origUsd != null ? Math.round(origUsd) : null,
         room: orig.roomType, roomDescription: orig.roomDescription, board: orig.board,
         roomTypeRaw: orig.roomType, roomDescriptionRaw: orig.roomDescription,
-        nonRefundable: orig.nonRefundable, cancelBy: orig.cancelBy,
+        nonRefundable: orig.nonRefundable,
+        cancelBy: orig.cancelBy ? (parseGrnDate(orig.cancelBy)?.toISOString() || orig.cancelBy) : null,
         checkin, checkout,
       },
       live: liveLocal != null
@@ -1925,7 +1937,7 @@ router.post('/repricing/check', async (req, res) => {
             roomDescription: liveRoom?.description || null,
             board: rateBoard(minRate) || null,
             nonRefundable: verdict ? verdict.liveNonRef : null,
-            cancelBy: verdict ? verdict.liveCancelBy : null }
+            cancelBy: verdict?.liveCancelBy ? (parseGrnDate(verdict.liveCancelBy)?.toISOString() || verdict.liveCancelBy) : null }
         : null,
       available: liveLocal != null,
       dropped, gapUsd, gapPct,
