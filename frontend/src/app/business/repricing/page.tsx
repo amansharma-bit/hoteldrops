@@ -9,7 +9,7 @@ const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 // Bump this string on every deploy of this file. It renders next to the page
 // title, so "did my deploy actually land?" is answered by looking at the page
 // instead of guessing at Vercel and browser caches.
-const BUILD = 'v7 · exact room name';
+const BUILD = 'v8 · clause is a warning';
 
 const BLUE = '#0F52BA';
 const NAVY = '#0F172A';
@@ -291,7 +291,7 @@ export default function RepricingPage() {
                               <>
                                 <MatchBadge basis={result.matchBasis} eligible={result.rebookEligible} />
                                 <Compare original={result.original} live={result.live} match={result.match} />
-                                <Blockers items={result.blockers} eligible={result.rebookEligible} count={result.eligibleRateCount} />
+                                <Blockers items={result.blockers} eligible={result.rebookEligible} count={result.eligibleRateCount} warnings={result.warnings} />
                               </>
                             ) : (
                               <div style={{ fontSize: 12.5, color: SLATE, lineHeight: 1.8 }}>
@@ -451,26 +451,41 @@ function BookingDetail({ r }: { r: any }) {
 
 // Why a rate cannot be actioned. An empty screen tells the operator nothing;
 // the reasons are the useful part.
-function Blockers({ items, eligible, count }: { items?: string[]; eligible?: boolean; count?: number }) {
+function Blockers({ items, eligible, count, warnings }: { items?: string[]; eligible?: boolean; count?: number; warnings?: string[] }) {
+  const warnBlock = (warnings && warnings.length > 0) ? (
+    <div style={{ marginTop: 8, padding: '8px 12px', background: '#F8FAFC', border: `1px solid ${LINE}`, borderRadius: 8 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: MUTED, marginBottom: 4 }}>Noted, not blocking</div>
+      {warnings.map((w, i) => (
+        <div key={i} style={{ fontSize: 11.5, color: SLATE, lineHeight: 1.45, marginTop: 2 }}>{w}</div>
+      ))}
+    </div>
+  ) : null;
+
   if (eligible) {
     return (
-      <div style={{ marginTop: 10, padding: '8px 12px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, fontSize: 12, color: '#166534' }}>
-        Exact same room name, same board, same or better cancellation terms. Rebook is available.
-      </div>
+      <>
+        <div style={{ marginTop: 10, padding: '8px 12px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, fontSize: 12, color: '#166534' }}>
+          Exact same room name, same board, same or better cancellation terms. Rebook is available.
+        </div>
+        {warnBlock}
+      </>
     );
   }
-  if (!items || items.length === 0) return null;
+  if (!items || items.length === 0) return warnBlock;
   return (
-    <div style={{ marginTop: 10, padding: '9px 12px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: AMBER, marginBottom: 5 }}>
-        Not rebookable{count === 0 ? ' — no matching rate available' : ''}
+    <>
+      <div style={{ marginTop: 10, padding: '9px 12px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: AMBER, marginBottom: 5 }}>
+          Not rebookable{count === 0 ? ' — no matching rate available' : ''}
+        </div>
+        <ul style={{ margin: 0, paddingLeft: 16 }}>
+          {items.map((b, i) => (
+            <li key={i} style={{ fontSize: 12, color: '#78350F', marginTop: 3, lineHeight: 1.45 }}>{b}</li>
+          ))}
+        </ul>
       </div>
-      <ul style={{ margin: 0, paddingLeft: 16 }}>
-        {items.map((b, i) => (
-          <li key={i} style={{ fontSize: 12, color: '#78350F', marginTop: 3, lineHeight: 1.45 }}>{b}</li>
-        ))}
-      </ul>
-    </div>
+      {warnBlock}
+    </>
   );
 }
 
@@ -552,10 +567,14 @@ function Compare({ original, live, match }: any) {
         <span></span><span>Original</span><span>Live</span>
       </div>
       <Row label="Price" o={original.usd != null ? `$${original.usd}` : '—'} l={live.usd != null ? `$${live.usd}` : '—'} ok={undefined} />
-      {/* Room now shows the DESCRIPTION (the actual room), with room_type as
-          the fallback. "Standard 2 Queen Lodge" was identical on two different
-          buildings at Glen Eyrie; "Big Horn Lodge" vs "Oaks Lodge" is not. */}
-      <Row label="Room" o={original.roomDescription || original.room || '—'} l={live.roomDescription || live.room || '—'} ok={match?.room} />
+      {/* Both room fields shown separately. GRN stores two: room_type and
+          description. On some suppliers one of them is a clean name and the
+          other is a composite of type + bed + board mashed together. Showing
+          both makes it obvious which field actually lines up. */}
+      {(original.roomTypeRaw || live.roomTypeRaw) && (original.roomTypeRaw !== original.roomDescriptionRaw) && (
+        <Row label="Room type" o={original.roomTypeRaw || '—'} l={live.roomTypeRaw || '—'} ok={undefined} />
+      )}
+      <Row label="Room" o={original.roomDescriptionRaw || original.room || '—'} l={live.roomDescriptionRaw || live.room || '—'} ok={match?.room} />
       <Row label="Board" o={original.board || '—'} l={live.board || '—'} ok={match?.board} />
       <Row label="Terms" o={policyLabel(original.nonRefundable, original.cancelBy)} l={policyLabel(live.nonRefundable, live.cancelBy)} ok={match?.policy} />
       <Row label="Dates" o={`${fmtDate(original.checkin)}→${fmtDate(original.checkout)}`} l={match?.dates ? 'same' : 'differs'} ok={match?.dates} />
