@@ -32,6 +32,11 @@ function daysUntil(d: string | null) {
   const dt = new Date(d);
   return Math.ceil((dt.getTime() - Date.now()) / 86400000);
 }
+function policyLabel(nonRef: boolean | null | undefined, cancelBy?: string | null) {
+  if (nonRef === true) return 'Non-refundable';
+  if (nonRef === false) return cancelBy ? `Refundable until ${fmtDate(cancelBy)}` : 'Refundable';
+  return 'Not stated';
+}
 
 export default function RepricingPage() {
   const [rows, setRows] = useState<any[]>([]);
@@ -184,7 +189,7 @@ export default function RepricingPage() {
                       {/* Booking */}
                       <div style={{ minWidth: 0, cursor: 'pointer' }} onClick={() => toggleExpand(r.bookingId)}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.hotel}</div>
-                        <div style={{ fontSize: 12, color: SLATE, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[r.city, r.room, `${fmtDate(r.checkin)}→${fmtDate(r.checkout)}`].filter(Boolean).join(' · ')}</div>
+                        <div style={{ fontSize: 12, color: SLATE, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[r.city, r.roomDescription || r.room, `${fmtDate(r.checkin)}→${fmtDate(r.checkout)}`].filter(Boolean).join(' · ')}</div>
                       </div>
                       {/* Rebook by */}
                       <div><div style={{ fontSize: 13, fontWeight: 600, color: deadlineColor }}>{dLeft != null ? `${dLeft}d` : '—'}</div><div style={{ fontSize: 10, color: MUTED }}>left</div></div>
@@ -207,10 +212,17 @@ export default function RepricingPage() {
                         ) : (checkedAt && !unavailable) ? <span style={{ fontSize: 12, color: MUTED }}>No drop</span>
                           : <span style={{ fontSize: 12, color: MUTED }}>—</span>}
                       </div>
-                      {/* Action */}
+                      {/*
+                        Action.
+
+                        CHANGED: the button no longer reconstructs the gate in
+                        the browser. It renders only when the SERVER says
+                        rebookEligible === true. The server applies the same
+                        rule again when the request arrives, so this is a
+                        convenience, not the control.
+                      */}
                       <div style={{ textAlign: 'right' }}>
                         {(() => {
-                          const trueMatch = dropped && result && result.match?.room === true && result.match?.board !== false && result.match?.dates === true;
                           const rr = rebookResult[r.bookingId];
                           const isRebooking = rebooking === r.bookingId;
                           if (rr?.status === 'confirmed') {
@@ -219,7 +231,7 @@ export default function RepricingPage() {
                           if (rr?.status === 'partial') {
                             return <span style={{ fontSize: 11, fontWeight: 600, color: AMBER }}>⚠ Needs review</span>;
                           }
-                          if (trueMatch) {
+                          if (result?.rebookEligible === true) {
                             return (
                               <button onClick={() => doRebook(r.bookingId)} disabled={isRebooking}
                                 style={{ border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, background: isRebooking ? MUTED : GREEN, color: '#fff', cursor: isRebooking ? 'wait' : 'pointer' }}>
@@ -238,17 +250,6 @@ export default function RepricingPage() {
                       </div>
                     </div>
 
-                    {/*
-                      FIX 1 of 2: the old cap of maxHeight: 520 clipped the whole
-                      expanded section (comparison + history + the full rates
-                      table) with overflow:hidden and NO way to scroll past it.
-                      That's what made "All live rates (122)" look like it only
-                      had a few rows. Raised the cap well above any realistic
-                      content height so nothing outside gets silently cut off.
-                      The rates table itself now scrolls internally — see FIX 2
-                      in AllRates below — so this outer cap is just a safety
-                      ceiling for the open/close animation, not a real limit.
-                    */}
                     <div style={{ maxHeight: isOpen ? 3000 : 0, overflow: 'hidden', transition: 'max-height 0.32s ease', background: '#FBFCFE' }}>
                       <div style={{ padding: isOpen ? '18px 20px 22px' : '0 20px', borderTop: isOpen ? `0.5px solid ${LINE}` : 'none' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 32 }}>
@@ -257,15 +258,17 @@ export default function RepricingPage() {
                             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: BLUE, marginBottom: 10 }}>Original vs live</div>
                             {result?.live ? (
                               <>
-                                <MatchBadge basis={result.matchBasis} />
+                                <MatchBadge basis={result.matchBasis} eligible={result.rebookEligible} />
                                 <Compare original={result.original} live={result.live} match={result.match} />
+                                <Blockers items={result.blockers} eligible={result.rebookEligible} count={result.eligibleRateCount} />
                               </>
                             ) : (
                               <div style={{ fontSize: 12.5, color: SLATE, lineHeight: 1.8 }}>
-                                <div>Room: {r.room || '—'}</div>
+                                <div>Room: {r.roomDescription || r.room || '—'}</div>
                                 <div>Board: {r.board || '—'}</div>
+                                <div>Terms: {policyLabel(r.nonRefundable, r.cancelBy)}</div>
                                 <div>Stay: {fmtDate(r.checkin, true)} → {fmtDate(r.checkout, true)}</div>
-                                <div style={{ marginTop: 8, color: MUTED, fontStyle: 'italic' }}>Click "Check price" to compare against GRN's live rate.</div>
+                                <div style={{ marginTop: 8, color: MUTED, fontStyle: 'italic' }}>Check the price to compare against GRN's live rates.</div>
                               </div>
                             )}
                           </div>
@@ -293,7 +296,12 @@ export default function RepricingPage() {
                         )}
                         {rebookResult[r.bookingId]?.error && (
                           <div style={{ marginTop: 14, padding: '10px 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 12.5, color: RED }}>
-                            Rebook failed: {rebookResult[r.bookingId].error}
+                            {rebookResult[r.bookingId].error}
+                            {Array.isArray(rebookResult[r.bookingId].blockers) && rebookResult[r.bookingId].blockers.length > 0 && (
+                              <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
+                                {rebookResult[r.bookingId].blockers.map((b: string, i: number) => <li key={i} style={{ marginTop: 2 }}>{b}</li>)}
+                              </ul>
+                            )}
                             {rebookResult[r.bookingId].detail && <div style={{ marginTop: 4, fontFamily: 'monospace', fontSize: 11, color: '#991B1B' }}>{rebookResult[r.bookingId].detail}</div>}
                           </div>
                         )}
@@ -319,20 +327,46 @@ export default function RepricingPage() {
               </div>
             </div>
           )}
-          <p style={{ fontSize: 12, color: MUTED, marginTop: 12 }}>Each check makes one live GRN call and is logged. This feeds the conversion story in Rebookings.</p>
+          <p style={{ fontSize: 12, color: MUTED, marginTop: 12 }}>Each check makes one live GRN call and is logged. Rebook appears only when the live rate is the same room code, same board, and same or better cancellation terms.</p>
         </div>
       </div>
     </BusinessSidebarWrapper>
   );
 }
 
+// Why a rate cannot be actioned. An empty screen tells the operator nothing;
+// the reasons are the useful part.
+function Blockers({ items, eligible, count }: { items?: string[]; eligible?: boolean; count?: number }) {
+  if (eligible) {
+    return (
+      <div style={{ marginTop: 10, padding: '8px 12px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, fontSize: 12, color: '#166534' }}>
+        Same room code, same board, same or better cancellation terms. Rebook is available.
+      </div>
+    );
+  }
+  if (!items || items.length === 0) return null;
+  return (
+    <div style={{ marginTop: 10, padding: '9px 12px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: AMBER, marginBottom: 5 }}>
+        Not rebookable{count === 0 ? ' — no matching rate available' : ''}
+      </div>
+      <ul style={{ margin: 0, paddingLeft: 16 }}>
+        {items.map((b, i) => (
+          <li key={i} style={{ fontSize: 12, color: '#78350F', marginTop: 3, lineHeight: 1.45 }}>{b}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function AllRates({ rates, origUsd }: { rates: any[]; origUsd: number | null }) {
   const [open, setOpen] = useState(false);
+  const eligibleCount = rates.filter((r) => r.eligible).length;
   return (
     <div style={{ marginTop: 18, borderTop: `0.5px solid ${LINE}`, paddingTop: 14 }}>
       <button onClick={() => setOpen((o) => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: BLUE, padding: 0 }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-        All live rates ({rates.length})
+        All live rates ({rates.length}) · {eligibleCount} rebookable
       </button>
       {open && (
         <div style={{ marginTop: 12, border: `0.5px solid ${LINE}`, borderRadius: 10, overflow: 'hidden' }}>
@@ -341,21 +375,18 @@ function AllRates({ rates, origUsd }: { rates: any[]; origUsd: number | null }) 
               <div key={i} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: MUTED, textAlign: i === 2 || i === 3 ? 'right' : 'left' }}>{h}</div>
             ))}
           </div>
-          {/*
-            FIX 2 of 2: previously the rows rendered directly here with no
-            height limit or overflow rule of their own — they only "worked"
-            because the outer wrapper cut everything off at 520px. Now that
-            the outer cap is raised (see FIX 1 above), this container needs
-            its own explicit scroll box so a 122-row table doesn't just push
-            the whole page down. maxHeight + overflowY:auto below gives a
-            real, visible scrollbar for however many rates come back.
-          */}
           <div style={{ maxHeight: 420, overflowY: 'auto' }}>
             {rates.map((rt, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) 130px 110px 120px 110px', gap: 12, padding: '10px 14px', alignItems: 'center', borderBottom: i < rates.length - 1 ? `0.5px solid ${LINE}` : 'none', background: rt.isMatch ? '#F0FDF4' : '#fff' }}>
-                <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rt.roomType}</span>
-                  {rt.isMatch && <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, color: GREEN, background: '#DCFCE7', padding: '2px 6px', borderRadius: 10 }}>YOUR ROOM</span>}
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) 130px 110px 120px 110px', gap: 12, padding: '10px 14px', alignItems: 'center', borderBottom: i < rates.length - 1 ? `0.5px solid ${LINE}` : 'none', background: rt.eligible ? '#F0FDF4' : '#fff' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 13, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rt.roomDescription || rt.roomType}</span>
+                    {rt.eligible && <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, color: GREEN, background: '#DCFCE7', padding: '2px 6px', borderRadius: 10 }}>REBOOKABLE</span>}
+                    {!rt.eligible && rt.isMatch && <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, color: AMBER, background: '#FEF3C7', padding: '2px 6px', borderRadius: 10 }}>YOUR ROOM</span>}
+                  </div>
+                  {!rt.eligible && rt.blockers?.length > 0 && (
+                    <div style={{ fontSize: 10.5, color: MUTED, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rt.blockers[0]}</div>
+                  )}
                 </div>
                 <div style={{ fontSize: 12, color: SLATE, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{rt.board}</div>
                 <div style={{ textAlign: 'right' }}>
@@ -375,12 +406,13 @@ function AllRates({ rates, origUsd }: { rates: any[]; origUsd: number | null }) 
   );
 }
 
-function MatchBadge({ basis }: { basis?: string }) {
+function MatchBadge({ basis, eligible }: { basis?: string; eligible?: boolean }) {
   if (!basis) return null;
   let label, bg, fg;
-  if (basis === 'room_code') { label = 'Exact room match'; bg = '#DCFCE7'; fg = GREEN; }
-  else if (basis === 'room_name') { label = 'Matched by room name'; bg = '#DBEAFE'; fg = '#1E50A8'; }
-  else if (basis === 'cheapest_fallback') { label = 'Different room — cheapest available'; bg = '#FEF3C7'; fg = AMBER; }
+  if (basis === 'room_code' && eligible) { label = 'Exact room match'; bg = '#DCFCE7'; fg = GREEN; }
+  else if (basis === 'room_code' || basis === 'room_code_ineligible') { label = 'Same room — blocked on other terms'; bg = '#FEF3C7'; fg = AMBER; }
+  else if (basis === 'room_name') { label = 'Same room name, different room — not rebookable'; bg = '#FEF3C7'; fg = AMBER; }
+  else if (basis === 'cheapest_fallback') { label = 'Different room — shown for reference only'; bg = '#FEF3C7'; fg = AMBER; }
   else { label = 'No comparable room'; bg = '#F1F5F9'; fg = SLATE; }
   return (
     <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, background: bg, color: fg, marginBottom: 10 }}>{label}</div>
@@ -405,8 +437,12 @@ function Compare({ original, live, match }: any) {
         <span></span><span>Original</span><span>Live</span>
       </div>
       <Row label="Price" o={original.usd != null ? `$${original.usd}` : '—'} l={live.usd != null ? `$${live.usd}` : '—'} ok={undefined} />
-      <Row label="Room" o={original.room || '—'} l={live.room || '—'} ok={match?.room} />
+      {/* Room now shows the DESCRIPTION (the actual room), with room_type as
+          the fallback. "Standard 2 Queen Lodge" was identical on two different
+          buildings at Glen Eyrie; "Big Horn Lodge" vs "Oaks Lodge" is not. */}
+      <Row label="Room" o={original.roomDescription || original.room || '—'} l={live.roomDescription || live.room || '—'} ok={match?.room} />
       <Row label="Board" o={original.board || '—'} l={live.board || '—'} ok={match?.board} />
+      <Row label="Terms" o={policyLabel(original.nonRefundable, original.cancelBy)} l={policyLabel(live.nonRefundable, live.cancelBy)} ok={match?.policy} />
       <Row label="Dates" o={`${fmtDate(original.checkin)}→${fmtDate(original.checkout)}`} l={match?.dates ? 'same' : 'differs'} ok={match?.dates} />
     </div>
   );
