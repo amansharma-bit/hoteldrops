@@ -9,7 +9,7 @@ const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 // Bump this string on every deploy of this file. It renders next to the page
 // title, so "did my deploy actually land?" is answered by looking at the page
 // instead of guessing at Vercel and browser caches.
-const BUILD = 'v4 · room codes + list IDs';
+const BUILD = 'v5 · runway filter';
 
 const BLUE = '#0F52BA';
 const NAVY = '#0F172A';
@@ -52,6 +52,8 @@ export default function RepricingPage() {
   const [total, setTotal] = useState(0);
   const [citySearch, setCitySearch] = useState('');
   const [cityQuery, setCityQuery] = useState('');
+  const [minDays, setMinDays] = useState(7);
+  const [sortMode, setSortMode] = useState<'runway' | 'urgent'>('runway');
   const [checking, setChecking] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, any>>({}); // live check results this session
@@ -69,7 +71,7 @@ export default function RepricingPage() {
     setLoading(true);
     setError(null);
     const cityParam = cityQuery ? `&city=${encodeURIComponent(cityQuery)}` : '';
-    authenticatedFetch(`${API_BASE}/api/live-search/repricing/candidates?page=${page}${cityParam}&_t=${Date.now()}`)
+    authenticatedFetch(`${API_BASE}/api/live-search/repricing/candidates?page=${page}${cityParam}&min_days=${minDays}&sort=${sortMode}&_t=${Date.now()}`)
       .then((r: Response) => r.json())
       .then((d: any) => {
         if (cancelled) return;
@@ -79,7 +81,7 @@ export default function RepricingPage() {
       .catch((e: any) => { if (!cancelled) setError('Could not load bookings: ' + e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [page, cityQuery]);
+  }, [page, cityQuery, minDays, sortMode]);
 
   async function checkPrice(bookingId: string) {
     setChecking(bookingId);
@@ -156,8 +158,25 @@ export default function RepricingPage() {
               style={{ width: '100%', border: `1px solid ${LINE}`, borderRadius: 9, padding: '8px 12px 8px 32px', fontSize: 13, color: NAVY, background: '#fff', outline: 'none', fontFamily: 'inherit' }} />
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={SLATE} strokeWidth={2} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, color: SLATE }}>Runway left</span>
+            {[0, 3, 7, 14, 30].map((d) => (
+              <button key={d} onClick={() => { setMinDays(d); setPage(1); setExpanded(null); }}
+                style={{
+                  border: `1px solid ${minDays === d ? BLUE : LINE}`, borderRadius: 7, padding: '6px 10px',
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  background: minDays === d ? BLUE : '#fff', color: minDays === d ? '#fff' : NAVY,
+                }}>
+                {d === 0 ? 'Any' : `${d}d+`}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => { setSortMode((s) => (s === 'runway' ? 'urgent' : 'runway')); setPage(1); setExpanded(null); }}
+            style={{ border: `1px solid ${LINE}`, borderRadius: 7, padding: '6px 10px', fontSize: 12, fontWeight: 600, background: '#fff', color: NAVY, cursor: 'pointer' }}>
+            {sortMode === 'runway' ? 'Most runway first' : 'Expiring first'}
+          </button>
           <div style={{ flex: 1 }} />
-          <span style={{ fontSize: 13, color: SLATE }}>{loading ? 'Loading…' : cityQuery ? `${total} rebookable in "${cityQuery}"` : `${total} rebookable`}</span>
+          <span style={{ fontSize: 13, color: SLATE }}>{loading ? 'Loading…' : `${total.toLocaleString()} ${minDays ? `with ${minDays}d+ left` : 'rebookable'}${cityQuery ? ` in "${cityQuery}"` : ''}`}</span>
         </div>
 
         {error && (
