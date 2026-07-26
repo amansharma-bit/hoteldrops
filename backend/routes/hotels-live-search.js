@@ -1966,6 +1966,131 @@ router.get('/repricing/searches', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /repricing/debug-availability?booking_id=...
+//
+// READ ONLY. Runs the same availability search that /repricing/check runs,
+// then reports the SHAPE of what came back rather than the matched rate.
+//
+// Why this exists: /repricing/check stores only the one rate it selected, so
+// we have never seen the rest of the response. The open question is whether
+// GRN tells us which supplier each rate belongs to — the one full rate we
+// have (Glen Eyrie) carried no supplier field, but that rate may not be
+// representative, and the field may live at hotel level instead.
+//
+// Books nothing, cancels nothing, writes nothing. One GRN call.
+// ---------------------------------------------------------------------------
+router.get('/repricing/debug-availability', async (req, res) => {
+  if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+
+  const bookingId = req.query.booking_id;
+  if (!bookingId) return res.status(400).json({ error: 'booking_id required, e.g. ?booking_id=GRN-202606-2592885' });
+
+  try {
+    const { rows } = await sbSelect('grn_bookings',
+      `booking_id=eq.${encodeURIComponent(bookingId)}&select=booking_id,hotel_code,city_code,checkin,checkin_date,checkout,room_type,board_basis,price_total,currency,supplier_code,raw&limit=1`);
+    const b = rows[0];
+    if (!b) return res.status(404).json({ error: 'Booking not found in synced table' });
+    if (!b.hotel_code) return res.status(400).json({ error: 'Booking has no hotel_code' });
+
+    const checkin = (b.checkin_date || b.checkin || '').slice(0, 10);
+    const checkout = (b.checkout || '').slice(0, 10);
+    const paxes = b.raw?.hotel?.paxes || [];
+    const adults = paxes.filter((p) => p.type === 'AD').length || 2;
+    const childAges = paxes.filter((p) => p.type === 'CH').map((p) => p.age).filter((a) => a != null);
+    const roomReq = { adults };
+    if (childAges.length) roomReq.children_ages = childAges;
+
+    const resp = await fetch(`${GRN_API_BASE_URL}/hotels/availability`, {
+      method: 'POST', headers: GRN_HEADERS(),
+      body: JSON.stringify({
+        rooms: [roomReq], rates: 'comprehensive', hotel_codes: [String(b.hotel_code)],
+        currency: b.currency || 'USD', client_nationality: 'US',
+        checkin, checkout, purpose_of_travel: 1,
+      }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) return res.status(resp.status).json({ error: 'GRN availability error', details: data });
+
+    const hotel = (data.hotels || [])[0] || {};
+    const rates = Array.isArray(hotel.rates) ? hotel.rates : (hotel.min_rate ? [hotel.min_rate] : []);
+
+    // Hunt for anything that could identify a supplier, at any nesting level.
+    const SUPPLIER_HINT = /suppl|provid|source|vendor|channel|partner|seller|merchant/i;
+    function findHintedKeys(obj, path = '', depth = 0, out = []) {
+      if (!obj || typeof obj !== 'object' || depth > 4) return out;
+      for (const [k, v] of Object.entries(obj)) {
+        const here = path ? `${path}.${k}` : k;
+        if (SUPPLIER_HINT.test(k)) {
+          out.push({ path: here, value: (v && typeof v === 'object') ? JSON.stringify(v).slice(0, 200) : v });
+        }
+        if (v && typeof v === 'object' && !Array.isArray(v)) findHintedKeys(v, here, depth + 1, out);
+        else if (Array.isArray(v) && v.length && typeof v[0] === 'object') findHintedKeys(v[0], `${here}[0]`, depth + 1, out);
+      }
+      return out;
+    }
+
+    // Distinct room descriptions, to see how much the supplier-filter idea
+    // would actually narrow things down.
+    const descriptions = {};
+    for (const rt of rates) {
+      const d = rt?.rooms?.[0]?.description || rt?.rooms?.[0]?.room_type || rt?.room_type || '(none)';
+      descriptions[d] = (descriptions[d] || 0) + 1;
+    }
+
+    const bookedItem = b.raw?.hotel?.booking_items?.[0] || {};
+    const bookedRoom = bookedItem.rooms?.[0] || {};
+
+    res.json({
+      bookingId,
+      booked: {
+        supplierCode: b.supplier_code || null,
+        roomCode: bookedItem.room_code || null,
+        roomType: bookedRoom.room_type || b.room_type || null,
+        description: bookedRoom.description || null,
+        board: bookedItem.boarding_details || b.board_basis || null,
+        nonRefundable: bookedItem.non_refundable ?? null,
+        bookingItemKeys: Object.keys(bookedItem),
+      },
+      response: {
+        topLevelKeys: Object.keys(data),
+        hotelLevelKeys: Object.keys(hotel),
+        rateCount: rates.length,
+      },
+      supplierHints: {
+        atResponseLevel: findHintedKeys(data).filter((h) => !h.path.startsWith('hotels')),
+        atHotelLevel: findHintedKeys(hotel, 'hotel'),
+        atRateLevel: rates.length ? findHintedKeys(rates[0], 'rate') : [],
+        anyRateHasHint: rates.some((rt) => findHintedKeys(rt).length > 0),
+      },
+      firstRate: rates[0] ? {
+        allKeys: Object.keys(rates[0]),
+        roomKeys: rates[0].rooms?.[0] ? Object.keys(rates[0].rooms[0]) : [],
+        sample: {
+          price: rates[0].price,
+          room_code: rates[0].room_code,
+          room_reference: rates[0].rooms?.[0]?.room_reference,
+          room_type: rates[0].rooms?.[0]?.room_type,
+          description: rates[0].rooms?.[0]?.description,
+          boarding_details: rates[0].boarding_details,
+          non_refundable: rates[0].non_refundable,
+          rate_type: rates[0].rate_type,
+        },
+      } : null,
+      distinctDescriptions: Object.entries(descriptions)
+        .sort((a, c) => c[1] - a[1])
+        .map(([description, count]) => ({ description, count })),
+      exactDescriptionMatches: bookedRoom.description
+        ? rates.filter((rt) => norm(rt?.rooms?.[0]?.description) === norm(bookedRoom.description)).length
+        : null,
+      note: 'Read-only diagnostic. One availability call. Nothing booked, cancelled, or written.',
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Diagnostic failed', message: String(err.message || err) });
+  }
+});
+
 router.get('/repricing/rebookings', async (req, res) => {
   if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
   const page = parseInt(req.query.page, 10) || 1;
