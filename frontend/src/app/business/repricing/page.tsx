@@ -9,7 +9,7 @@ const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 // Bump this string on every deploy of this file. It renders next to the page
 // title, so "did my deploy actually land?" is answered by looking at the page
 // instead of guessing at Vercel and browser caches.
-const BUILD = 'v6 · deadline sort';
+const BUILD = 'v7 · exact room name';
 
 const BLUE = '#0F52BA';
 const NAVY = '#0F172A';
@@ -455,7 +455,7 @@ function Blockers({ items, eligible, count }: { items?: string[]; eligible?: boo
   if (eligible) {
     return (
       <div style={{ marginTop: 10, padding: '8px 12px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, fontSize: 12, color: '#166534' }}>
-        Same room code, same board, same or better cancellation terms. Rebook is available.
+        Exact same room name, same board, same or better cancellation terms. Rebook is available.
       </div>
     );
   }
@@ -524,10 +524,10 @@ function AllRates({ rates, origUsd }: { rates: any[]; origUsd: number | null }) 
 function MatchBadge({ basis, eligible }: { basis?: string; eligible?: boolean }) {
   if (!basis) return null;
   let label, bg, fg;
-  if (basis === 'room_code' && eligible) { label = 'Exact room match'; bg = '#DCFCE7'; fg = GREEN; }
-  else if (basis === 'room_code' || basis === 'room_code_ineligible') { label = 'Same room — blocked on other terms'; bg = '#FEF3C7'; fg = AMBER; }
-  else if (basis === 'room_name') { label = 'Same room name, different room — not rebookable'; bg = '#FEF3C7'; fg = AMBER; }
-  else if (basis === 'cheapest_fallback') { label = 'Different room — shown for reference only'; bg = '#FEF3C7'; fg = AMBER; }
+  if (eligible && basis === 'room_code') { label = 'Exact match — room code and name'; bg = '#DCFCE7'; fg = GREEN; }
+  else if (eligible && basis === 'room_name_exact') { label = 'Exact room name match'; bg = '#DCFCE7'; fg = GREEN; }
+  else if (basis === 'room_name_blocked') { label = 'Same room — blocked on other terms'; bg = '#FEF3C7'; fg = AMBER; }
+  else if (basis === 'no_room_match') { label = 'No matching room in live rates'; bg = '#FEF3C7'; fg = AMBER; }
   else { label = 'No comparable room'; bg = '#F1F5F9'; fg = SLATE; }
   return (
     <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, background: bg, color: fg, marginBottom: 10 }}>{label}</div>
