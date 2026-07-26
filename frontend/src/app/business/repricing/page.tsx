@@ -6,6 +6,11 @@ import { authenticatedFetch } from '../../../lib/supabase-client';
 
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
+// Bump this string on every deploy of this file. It renders next to the page
+// title, so "did my deploy actually land?" is answered by looking at the page
+// instead of guessing at Vercel and browser caches.
+const BUILD = 'v3 · gate + booking detail';
+
 const BLUE = '#0F52BA';
 const NAVY = '#0F172A';
 const SLATE = '#64748B';
@@ -136,7 +141,10 @@ export default function RepricingPage() {
         {/* Header */}
         <div style={{ padding: '26px 32px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 23, fontWeight: 800, color: NAVY, margin: 0 }}>Repricing</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 23, fontWeight: 800, color: NAVY, margin: 0 }}>Repricing</h1>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', color: MUTED, background: '#EEF2F7', border: `1px solid ${LINE}`, borderRadius: 20, padding: '3px 9px' }}>{BUILD}</span>
+            </div>
             <p style={{ fontSize: 13, color: SLATE, marginTop: 3 }}>Check a booking's live price against what was paid. One booking at a time.</p>
           </div>
         </div>
@@ -252,6 +260,7 @@ export default function RepricingPage() {
 
                     <div style={{ maxHeight: isOpen ? 3000 : 0, overflow: 'hidden', transition: 'max-height 0.32s ease', background: '#FBFCFE' }}>
                       <div style={{ padding: isOpen ? '18px 20px 22px' : '0 20px', borderTop: isOpen ? `0.5px solid ${LINE}` : 'none' }}>
+                        <BookingDetail r={r} />
                         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 32 }}>
                           {/* Original vs Live comparison */}
                           <div>
@@ -331,6 +340,89 @@ export default function RepricingPage() {
         </div>
       </div>
     </BusinessSidebarWrapper>
+  );
+}
+
+// Everything known about the booking itself, before any live comparison.
+// This is the row an ops person needs when they pick up the phone about a
+// booking, so it sits at the top of the panel rather than buried.
+function BookingDetail({ r }: { r: any }) {
+  const Field = ({ label, value, mono }: { label: string; value: any; mono?: boolean }) => (
+    <div>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: MUTED, marginBottom: 3 }}>{label}</div>
+      <div style={{ fontSize: 12.5, color: NAVY, fontFamily: mono ? 'monospace' : 'inherit', wordBreak: 'break-word' }}>
+        {value == null || value === '' ? <span style={{ color: MUTED }}>—</span> : value}
+      </div>
+    </div>
+  );
+
+  const c = r.cancellation || {};
+  const guestList = (r.guests || []).filter((g: any) => g.name);
+
+  return (
+    <div style={{ marginBottom: 20, border: `0.5px solid ${LINE}`, borderRadius: 10, background: '#fff', overflow: 'hidden' }}>
+      <div style={{ padding: '9px 16px', background: '#FBFCFE', borderBottom: `0.5px solid ${LINE}`, fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: BLUE }}>
+        Booking detail
+      </div>
+
+      <div style={{ padding: '14px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '14px 20px' }}>
+        <Field label="GRN booking ID" value={r.bookingId} mono />
+        <Field label="Booking reference" value={r.bookingReference} mono />
+        <Field label="Supplier reference" value={r.supplierReference} mono />
+        <Field label="Booked on" value={r.bookingDate ? fmtTime(r.bookingDate) : null} />
+        <Field label="Supplier" value={r.supplier} />
+        <Field label="Hotel code" value={r.hotelCode} mono />
+      </div>
+
+      <div style={{ padding: '0 16px 14px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '14px 20px', borderTop: `0.5px solid ${LINE}`, paddingTop: 14 }}>
+        <Field label="Check-in" value={fmtDate(r.checkin, true)} />
+        <Field label="Check-out" value={fmtDate(r.checkout, true)} />
+        <Field label="Nights" value={r.nights} />
+        <Field label="Rooms" value={r.roomCount} />
+        <Field label="Room" value={r.roomDescription || r.room} />
+        <Field label="Board" value={r.board} />
+      </div>
+
+      <div style={{ padding: '0 16px 14px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '14px 20px', borderTop: `0.5px solid ${LINE}`, paddingTop: 14 }}>
+        <Field label="Adults" value={r.adults} />
+        <Field
+          label="Children"
+          value={r.children ? `${r.children} (ages ${r.childrenAges?.length ? r.childrenAges.join(', ') : 'not stated'})` : '0'}
+        />
+        <Field label="Lead guest" value={r.leadGuest} />
+        <Field
+          label="All guests"
+          value={guestList.length ? guestList.map((g: any) => g.name + (g.type === 'CH' ? ` (child${g.age != null ? `, ${g.age}` : ''})` : '')).join(' · ') : null}
+        />
+      </div>
+
+      {/* Cancellation terms as the supplier stated them — the leg the gate
+          checks, so it should be readable here without opening the raw JSON. */}
+      <div style={{ padding: '14px 16px', borderTop: `0.5px solid ${LINE}`, background: c.nonRefundable === true ? '#FFFBEB' : '#FBFCFE' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: MUTED, marginBottom: 5 }}>Cancellation terms</div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: c.nonRefundable === true ? AMBER : c.nonRefundable === false ? GREEN : SLATE }}>
+          {policyLabel(c.nonRefundable, c.cancelBy)}
+        </div>
+        {c.details && (
+          <div style={{ fontSize: 12, color: SLATE, marginTop: 6, lineHeight: 1.5 }}>{c.details}</div>
+        )}
+        {Array.isArray(c.policies) && c.policies.length > 0 && (
+          <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
+            {c.policies.map((p: any, i: number) => (
+              <li key={i} style={{ fontSize: 12, color: SLATE, marginTop: 2 }}>
+                {typeof p === 'string' ? p : [p.from_date && `From ${fmtDate(p.from_date, true)}`, p.charge != null && `charge ${p.charge}`, p.currency].filter(Boolean).join(' · ')}
+              </li>
+            ))}
+          </ul>
+        )}
+        {c.remarks && (
+          <details style={{ marginTop: 8 }}>
+            <summary style={{ fontSize: 11.5, color: BLUE, cursor: 'pointer', fontWeight: 600 }}>Supplier rate conditions</summary>
+            <div style={{ fontSize: 11.5, color: SLATE, marginTop: 5, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{c.remarks}</div>
+          </details>
+        )}
+      </div>
+    </div>
   );
 }
 
