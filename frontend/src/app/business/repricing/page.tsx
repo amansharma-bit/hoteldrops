@@ -9,7 +9,7 @@ const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 // Bump this string on every deploy of this file. It renders next to the page
 // title, so "did my deploy actually land?" is answered by looking at the page
 // instead of guessing at Vercel and browser caches.
-const BUILD = 'v8 · clause is a warning';
+const BUILD = 'v9 · badge + policy fixes';
 
 const BLUE = '#0F52BA';
 const NAVY = '#0F172A';
@@ -429,15 +429,26 @@ function BookingDetail({ r }: { r: any }) {
         {c.details && (
           <div style={{ fontSize: 12, color: SLATE, marginTop: 6, lineHeight: 1.5 }}>{c.details}</div>
         )}
-        {Array.isArray(c.policies) && c.policies.length > 0 && (
-          <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
-            {c.policies.map((p: any, i: number) => (
-              <li key={i} style={{ fontSize: 12, color: SLATE, marginTop: 2 }}>
-                {typeof p === 'string' ? p : [p.from_date && `From ${fmtDate(p.from_date, true)}`, p.charge != null && `charge ${p.charge}`, p.currency].filter(Boolean).join(' · ')}
-              </li>
-            ))}
-          </ul>
-        )}
+        {Array.isArray(c.policies) && c.policies.length > 0 && (() => {
+          // Some policy entries carry only a currency and no date or charge.
+          // Rendering those produced a bare "USD" line, sometimes twice.
+          const lines = c.policies.map((p: any) => {
+            if (typeof p === 'string') return p.trim();
+            const parts = [
+              p.from_date && `From ${fmtDate(p.from_date, true)}`,
+              p.charge != null && `charge ${p.charge}${p.currency ? ' ' + p.currency : ''}`,
+            ].filter(Boolean);
+            return parts.join(' · ');
+          }).filter((s: string) => s && s.length > 0);
+          if (!lines.length) return null;
+          return (
+            <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
+              {lines.map((line: string, i: number) => (
+                <li key={i} style={{ fontSize: 12, color: SLATE, marginTop: 2 }}>{line}</li>
+              ))}
+            </ul>
+          );
+        })()}
         {c.remarks && (
           <details style={{ marginTop: 8 }}>
             <summary style={{ fontSize: 11.5, color: BLUE, cursor: 'pointer', fontWeight: 600 }}>Supplier rate conditions</summary>
@@ -539,11 +550,22 @@ function AllRates({ rates, origUsd }: { rates: any[]; origUsd: number | null }) 
 function MatchBadge({ basis, eligible }: { basis?: string; eligible?: boolean }) {
   if (!basis) return null;
   let label, bg, fg;
-  if (eligible && basis === 'room_code') { label = 'Exact match — room code and name'; bg = '#DCFCE7'; fg = GREEN; }
-  else if (eligible && basis === 'room_name_exact') { label = 'Exact room name match'; bg = '#DCFCE7'; fg = GREEN; }
-  else if (basis === 'room_name_blocked') { label = 'Same room — blocked on other terms'; bg = '#FEF3C7'; fg = AMBER; }
-  else if (basis === 'no_room_match') { label = 'No matching room in live rates'; bg = '#FEF3C7'; fg = AMBER; }
-  else { label = 'No comparable room'; bg = '#F1F5F9'; fg = SLATE; }
+  // The room leg and the price leg are separate things. A matched room with
+  // no price drop is still a matched room — saying "no comparable room" there
+  // contradicted the green tick on the Room row.
+  if (basis === 'room_code') {
+    label = eligible ? 'Exact match — room code and name' : 'Exact room match — room code and name';
+    bg = '#DCFCE7'; fg = GREEN;
+  } else if (basis === 'room_name_exact') {
+    label = eligible ? 'Exact room match' : 'Exact room match — no drop yet';
+    bg = '#DCFCE7'; fg = GREEN;
+  } else if (basis === 'room_name_blocked') {
+    label = 'Same room — blocked on other terms'; bg = '#FEF3C7'; fg = AMBER;
+  } else if (basis === 'no_room_match') {
+    label = 'No matching room in live rates'; bg = '#FEF3C7'; fg = AMBER;
+  } else {
+    label = 'No comparable room'; bg = '#F1F5F9'; fg = SLATE;
+  }
   return (
     <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, background: bg, color: fg, marginBottom: 10 }}>{label}</div>
   );
