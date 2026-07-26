@@ -8,7 +8,7 @@ const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
 // Bump on every deploy of this file. Renders next to the page title so
 // "did my deploy land?" is answered by looking, not guessing.
-const BUILD = 'v11 · book + cancel';
+const BUILD = 'v12 · IST dates + safer button';
 
 const BLUE = '#0F52BA';
 const NAVY = '#0F172A';
@@ -106,9 +106,11 @@ export default function RepricingPage() {
       if (d.error) { setResults((p) => ({ ...p, [bookingId]: { error: d.error } })); }
       else {
         setResults((p) => ({ ...p, [bookingId]: d }));
-        // Default the selection to the rate the gate matched, if there is one.
-        const pick = (d.allRates || []).find((x: any) => x.eligible) || null;
+        // Pre-select only a clean match that actually saves money. Anything
+        // else the operator picks deliberately.
+        const pick = (d.allRates || []).find((x: any) => x.eligible && x.vsOriginalUsd > 0) || null;
         if (pick?.rateKey) setSelectedRate((p) => ({ ...p, [bookingId]: pick.rateKey }));
+        else setSelectedRate((p) => { const n = { ...p }; delete n[bookingId]; return n; });
         loadHistory(bookingId);
       }
     } catch (e: any) {
@@ -611,28 +613,37 @@ function RateChooser({ rates, selected, onSelect, onBook, booking, origUsd }: an
             </div>
           </div>
 
-          {/* One button. Books whichever row is selected. */}
-          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <button onClick={onBook} disabled={!chosen || booking}
-              style={{
-                border: 'none', borderRadius: 8, padding: '10px 18px', fontSize: 13, fontWeight: 700,
-                background: !chosen ? '#E2E8F0' : booking ? MUTED : GREEN, color: !chosen ? MUTED : '#fff',
-                cursor: !chosen || booking ? 'not-allowed' : 'pointer',
-              }}>
-              {booking ? 'Booking…' : 'Book replacement'}
-            </button>
-            {chosen ? (
-              <span style={{ fontSize: 12.5, color: SLATE }}>
-                {chosen.roomDescription || chosen.roomType} · {chosen.board} · ${chosen.usd}
-                {chosen.vsOriginalUsd > 0
-                  ? <strong style={{ color: GREEN }}> · saves ${chosen.vsOriginalUsd}</strong>
-                  : <strong style={{ color: RED }}> · not cheaper</strong>}
-                {chosen.blockers?.length ? <span style={{ color: AMBER }}> · {chosen.blockers.length} difference{chosen.blockers.length > 1 ? 's' : ''} accepted</span> : null}
-              </span>
-            ) : (
-              <span style={{ fontSize: 12.5, color: MUTED }}>Select a rate above.</span>
-            )}
-          </div>
+          {/* One button. Books whichever row is selected.
+              Green only when the choice actually saves money — a green button
+              on a rate that costs more reads as "go" when it should read as
+              "are you sure?". */}
+          {(() => {
+            const saves = chosen && chosen.vsOriginalUsd > 0;
+            const bg = !chosen ? '#E2E8F0' : booking ? MUTED : saves ? GREEN : AMBER;
+            return (
+              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <button onClick={onBook} disabled={!chosen || booking}
+                  style={{
+                    border: 'none', borderRadius: 8, padding: '10px 18px', fontSize: 13, fontWeight: 700,
+                    background: bg, color: !chosen ? MUTED : '#fff',
+                    cursor: !chosen || booking ? 'not-allowed' : 'pointer',
+                  }}>
+                  {booking ? 'Booking…' : saves ? 'Book replacement' : 'Book anyway'}
+                </button>
+                {chosen ? (
+                  <span style={{ fontSize: 12.5, color: SLATE }}>
+                    {chosen.roomDescription || chosen.roomType} · {chosen.board} · ${chosen.usd}
+                    {saves
+                      ? <strong style={{ color: GREEN }}> · saves ${chosen.vsOriginalUsd}</strong>
+                      : <strong style={{ color: RED }}> · costs ${Math.abs(chosen.vsOriginalUsd || 0)} more</strong>}
+                    {chosen.blockers?.length ? <span style={{ color: AMBER }}> · {chosen.blockers.length} difference{chosen.blockers.length > 1 ? 's' : ''} accepted</span> : null}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 12.5, color: MUTED }}>Select a rate above.</span>
+                )}
+              </div>
+            );
+          })()}
           <div style={{ fontSize: 11.5, color: MUTED, marginTop: 6 }}>
             Books the replacement only. The original stays live until you cancel it.
           </div>
