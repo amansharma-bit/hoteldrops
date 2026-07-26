@@ -1231,8 +1231,24 @@ router.get('/repricing/candidates', async (req, res) => {
   const cityQuery = (req.query.city || '').trim();
   const cityWhere = cityQuery ? `&city_name=ilike.*${encodeURIComponent(cityQuery)}*` : '';
 
+  // Minimum days of cancellation runway left.
+  //
+  // WHY THIS EXISTS: the list used to sort cancel_by_date ascending, so page 1
+  // was always the bookings expiring today. Those are the worst rebooking
+  // candidates — inside the cancellation window suppliers stop returning
+  // refundable rates almost entirely, so every check comes back blocked on
+  // policy regardless of how good the room match is. Testing and day-to-day
+  // work both need bookings with real runway.
+  const minDays = Math.max(0, parseInt(req.query.min_days, 10) || 0);
+  const minCancelBy = new Date(Date.now() + minDays * 86400000).toISOString();
+
+  // Sort: most runway first by default, so the workable bookings lead. Pass
+  // sort=urgent to get the old soonest-expiring order when chasing deadlines.
+  const sortUrgent = req.query.sort === 'urgent';
+  const order = sortUrgent ? 'cancel_by_date.asc' : 'cancel_by_date.desc';
+
   const where =
-    `cancel_by_date=gt.${encodeURIComponent(nowIso)}` +
+    `cancel_by_date=gt.${encodeURIComponent(minDays > 0 ? minCancelBy : nowIso)}` +
     `&checkin_date=gte.${todayIso}` +
     `&raw_booking_status=not.ilike.cancel*` +
     cityWhere;
@@ -1243,7 +1259,7 @@ router.get('/repricing/candidates', async (req, res) => {
       `${where}&select=booking_id,booking_reference,supplier_reference,booking_date,hotel_name,hotel_code,`
         + `city_name,country_code,room_type,room_count,guest_name,`
         + `board_basis,checkin,checkin_date,checkout,price_total,currency,supplier_code,cancel_by_date,raw`
-        + `&order=cancel_by_date.asc&offset=${offset}&limit=${perPage}`,
+        + `&order=${order}&offset=${offset}&limit=${perPage}`,
       { 'Prefer': 'count=exact' }
     );
 
@@ -1258,6 +1274,7 @@ router.get('/repricing/candidates', async (req, res) => {
 
     res.json({
       page, perPage, total: total ?? 0,
+      minDays, sort: sortUrgent ? 'urgent' : 'runway',
       hasMore: offset + perPage < (total ?? 0),
       rows: rows.map((r) => {
         const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 }[r.currency];
