@@ -1441,6 +1441,19 @@ router.get('/dashboard-refresh', async (req, res) => {
 // REPRICING — manual, one-booking-at-a-time price checks.
 // ===========================================================================
 
+// Counts for the view dropdown. pendingCancel is the one that matters: a
+// confirmed replacement whose original is still live means two bookings are
+// being paid for until someone acts.
+async function attemptCounts() {
+  const out = { pendingCancel: 0, needsReview: 0, rebooked: 0 };
+  try {
+    out.pendingCancel = await sbCount('grn_rebooking_attempts', 'status=in.(awaiting_cancel,booked)');
+    out.needsReview = await sbCount('grn_rebooking_attempts', 'status=in.(needs_review,error)');
+    out.rebooked = await sbCount('grn_rebooking_attempts', 'status=eq.confirmed');
+  } catch { /* table may not exist yet */ }
+  return out;
+}
+
 router.get('/repricing/candidates', async (req, res) => {
   if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
   const page = parseInt(req.query.page, 10) || 1;
@@ -1462,6 +1475,32 @@ router.get('/repricing/candidates', async (req, res) => {
   const minDays = Math.max(0, parseInt(req.query.min_days, 10) || 0);
   const minCancelBy = new Date(Date.now() + minDays * 86400000).toISOString();
 
+  // view filter: which slice of the book to show.
+  //   all             everything rebookable
+  //   pending_cancel  replacement confirmed, ORIGINAL STILL LIVE — money at risk
+  //   needs_review    an attempt in an unresolved state
+  //   rebooked        completed rebookings
+  // Attempt state lives in a separate table, so for anything other than 'all'
+  // we resolve the booking_ids first and constrain the candidate query to them.
+  const view = String(req.query.view || 'all');
+  const VIEW_STATUSES = {
+    pending_cancel: ['awaiting_cancel', 'booked'],
+    needs_review: ['needs_review', 'error'],
+    rebooked: ['confirmed'],
+  };
+  let viewIds = null;
+  if (VIEW_STATUSES[view]) {
+    try {
+      const list = VIEW_STATUSES[view].join(',');
+      const { rows: at } = await sbSelect('grn_rebooking_attempts',
+        `status=in.(${encodeURIComponent(list)})&select=booking_id&order=updated_at.desc&limit=500`);
+      viewIds = [...new Set(at.map((a) => a.booking_id))];
+      if (!viewIds.length) {
+        return res.json({ page, perPage, total: 0, minDays, view, hasMore: false, rows: [], viewCounts: await attemptCounts() });
+      }
+    } catch { viewIds = null; }
+  }
+
   // Sort. Default is soonest deadline FIRST among the bookings that pass the
   // runway filter — that is the working order: enough time to act, most
   // urgent at the top. Sorting by most runway first surfaced bookings a year
@@ -1469,11 +1508,17 @@ router.get('/repricing/candidates', async (req, res) => {
   const sortRunway = req.query.sort === 'runway';
   const order = sortRunway ? 'cancel_by_date.desc' : 'cancel_by_date.asc';
 
-  const where =
-    `cancel_by_date=gt.${encodeURIComponent(minDays > 0 ? minCancelBy : nowIso)}` +
-    `&checkin_date=gte.${todayIso}` +
-    `&raw_booking_status=not.ilike.cancel*` +
-    cityWhere;
+  // A booking whose original is still live after a confirmed replacement must
+  // always be reachable, even if it no longer satisfies the runway filter or
+  // the cancellation window has since closed. Losing sight of that state is how
+  // you end up paying for two rooms.
+  const inList = viewIds ? `&booking_id=in.(${encodeURIComponent(viewIds.map((i) => `"${i}"`).join(','))})` : '';
+  const where = viewIds
+    ? `booking_id=not.is.null${inList}${cityWhere}`
+    : `cancel_by_date=gt.${encodeURIComponent(minDays > 0 ? minCancelBy : nowIso)}` +
+      `&checkin_date=gte.${todayIso}` +
+      `&raw_booking_status=not.ilike.cancel*` +
+      cityWhere;
 
   try {
     const { rows, total } = await sbSelect(
@@ -1494,9 +1539,28 @@ router.get('/repricing/candidates', async (req, res) => {
       for (const c of checks) if (!lastChecks[c.booking_id]) lastChecks[c.booking_id] = c;
     }
 
+    // Latest rebooking attempt per booking, so the row can show its state —
+    // and so an original still live behind a confirmed replacement shows red.
+    const lastAttempts = {};
+    if (ids.length) {
+      try {
+        const inList = ids.map((i) => `"${i}"`).join(',');
+        const { rows: at } = await sbSelect('grn_rebooking_attempts',
+          `booking_id=in.(${encodeURIComponent(inList)})&select=id,booking_id,status,failure_stage,failure_reason,new_booking_id,new_booking_reference,cancellation_reference,saved_usd,gross_profit,created_at,updated_at&order=updated_at.desc`);
+        for (const a of at) if (!lastAttempts[a.booking_id]) lastAttempts[a.booking_id] = a;
+      } catch { /* table may not exist yet */ }
+    }
+
+    const viewCounts = await attemptCounts();
+    // Rows whose original is still live behind a confirmed replacement sort to
+    // the top of whatever slice is displayed, so the state cannot hide on page 3.
+    const atRisk = new Set(Object.values(lastAttempts)
+      .filter((a) => a.status === 'awaiting_cancel' || a.status === 'booked')
+      .map((a) => a.booking_id));
+    rows.sort((a, b) => (atRisk.has(b.booking_id) ? 1 : 0) - (atRisk.has(a.booking_id) ? 1 : 0));
     res.json({
       page, perPage, total: total ?? 0,
-      minDays, sort: sortRunway ? 'runway' : 'deadline',
+      minDays, view, viewCounts, sort: sortRunway ? 'runway' : 'deadline',
       hasMore: offset + perPage < (total ?? 0),
       rows: rows.map((r) => {
         const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 }[r.currency];
@@ -1568,6 +1632,20 @@ router.get('/repricing/candidates', async (req, res) => {
           origUsd,
           supplier: r.supplier_code,
           cancelBy: r.cancel_by_date,
+          attempt: (() => {
+            const a = lastAttempts[r.booking_id];
+            if (!a) return null;
+            return {
+              id: a.id, status: a.status,
+              failureStage: a.failure_stage, failureReason: a.failure_reason,
+              newBookingId: a.new_booking_id, newBookingReference: a.new_booking_reference,
+              cancellationReference: a.cancellation_reference,
+              savedUsd: a.saved_usd, grossProfit: a.gross_profit,
+              createdAt: a.created_at, updatedAt: a.updated_at,
+              // The dangerous state: replacement confirmed, original still live.
+              awaitingCancel: a.status === 'awaiting_cancel' || a.status === 'booked',
+            };
+          })(),
           lastCheck: last ? {
             checkedAt: last.checked_at, liveUsd: last.live_usd, dropped: last.dropped,
             gapUsd: last.gap_usd, gapPct: last.gap_pct,
@@ -2134,26 +2212,49 @@ function actorFrom(req) {
   };
 }
 
-// Shared preflight: load the booking and its latest check, re-apply the gate
-// server-side, and confirm the search_id is still inside its 30-minute life.
-async function loadForRebook(bookingId) {
+// Shared preflight: load the booking and its latest check.
+//
+// The gate is ADVISORY when an operator has explicitly chosen a rate.
+//
+// Why: the operator is looking at every live rate on screen, with the room,
+// board, terms and price difference spelled out on each row. Blocking them from
+// booking a rate they can see and have judged worth taking is the software
+// second-guessing the person with more context. The gate's job is to highlight
+// the safe default, not to lock the rest.
+//
+// Two things stay HARD blocks, because they are correctness rather than
+// judgement:
+//   - dates must match the original stay
+//   - occupancy must match (you cannot put two guests in a single-occupancy rate)
+//
+// Everything else — different room, different board, worse cancellation terms —
+// is surfaced as a warning, recorded against the attempt, and left to the
+// operator.
+async function loadForRebook(bookingId, { chosenRateKey = null } = {}) {
   const { rows: checks } = await sbSelect('grn_price_checks',
     `booking_id=eq.${encodeURIComponent(bookingId)}&select=*&order=checked_at.desc&limit=1`);
   const check = checks[0];
   if (!check) return { error: 'No price check on record for this booking — run a check first.', status: 400 };
 
-  const failed = [];
-  if (check.match_basis !== 'room_code' && check.match_basis !== 'room_name_exact') {
-    failed.push('The matched rate is not an exact room match.');
+  // Only enforce the full gate when nobody picked a rate (the automatic path).
+  if (!chosenRateKey) {
+    const failed = [];
+    if (check.match_basis !== 'room_code' && check.match_basis !== 'room_name_exact') {
+      failed.push('The matched rate is not an exact room match.');
+    }
+    if (check.room_match !== true) failed.push('Room does not match the original booking.');
+    if (check.board_match !== true) failed.push('Board basis does not match the original booking.');
+    if (check.policy_match !== true) failed.push('Cancellation terms are not equal to or better than the original.');
+    if (check.dates_match !== true) failed.push('Stay dates do not match the original booking.');
+    if (!check.dropped) failed.push('There is no price drop on the matching rate.');
+    if (Array.isArray(check.raw?._blockers) && check.raw._blockers.length) failed.push(...check.raw._blockers);
+    if (failed.length) return { error: 'This booking is not rebookable automatically. Pick a rate from the list to book it manually.', blockers: [...new Set(failed)], status: 400 };
+  } else {
+    // Even on a manual choice, dates are non-negotiable.
+    if (check.dates_match !== true) {
+      return { error: 'The live search did not return the same stay dates as the original booking. Re-check before rebooking.', status: 409 };
+    }
   }
-  if (check.room_match !== true) failed.push('Room does not match the original booking.');
-  if (check.board_match !== true) failed.push('Board basis does not match the original booking.');
-  if (check.policy_match !== true) failed.push('Cancellation terms are not equal to or better than the original.');
-  if (check.dates_match !== true) failed.push('Stay dates do not match the original booking.');
-  if (!check.dropped) failed.push('There is no price drop on the matching rate.');
-  if (check.raw?._eligible === false) failed.push('The stored check was recorded as not rebookable.');
-  if (Array.isArray(check.raw?._blockers) && check.raw._blockers.length) failed.push(...check.raw._blockers);
-  if (failed.length) return { error: 'This booking is not rebookable.', blockers: [...new Set(failed)], status: 400 };
 
   // search_id is valid for 30 minutes and both recheck and rebook need it.
   const ageMin = (Date.now() - new Date(check.checked_at).getTime()) / 60000;
@@ -2169,7 +2270,7 @@ async function loadForRebook(bookingId) {
   const matched = check.raw || {};
   return {
     check, booking,
-    rateKey: matched.rate_key || null,
+    rateKey: chosenRateKey || matched.rate_key || null,
     groupCode: matched.group_code || null,
     searchId: matched._search_id || null,
   };
@@ -2183,21 +2284,27 @@ router.post('/repricing/book-replacement', async (req, res) => {
   if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set' });
   if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
 
-  const { booking_id, acknowledge_comment } = req.body || {};
+  // rate_key / group_code optional: when the operator picks a row from the live
+  // rate list, that is the rate we book. When absent we use the rate the gate
+  // matched automatically.
+  const { booking_id, acknowledge_comment, rate_key, group_code } = req.body || {};
   if (!booking_id) return res.status(400).json({ error: 'booking_id required' });
   const actor = actorFrom(req);
 
   let pre;
   try {
-    pre = await loadForRebook(booking_id);
+    pre = await loadForRebook(booking_id, { chosenRateKey: rate_key || null });
   } catch (err) {
     return res.status(500).json({ error: 'Could not load the booking or its price check.', detail: String(err.message || err) });
   }
   if (pre.error) return res.status(pre.status).json({ error: pre.error, blockers: pre.blockers });
 
-  const { check, booking, rateKey, groupCode, searchId } = pre;
-  if (!rateKey) return res.status(400).json({ error: 'No rate_key on the stored check — re-check first.' });
-  if (!groupCode) return res.status(400).json({ error: 'No group_code on the stored check — recheck requires it. Re-check first.' });
+  const { check, booking, searchId } = pre;
+  const rateKey = rate_key || pre.rateKey;
+  const groupCode = group_code || pre.groupCode;
+  const operatorChose = Boolean(rate_key);
+  if (!rateKey) return res.status(400).json({ error: 'No rate_key — pick a rate from the list, or re-check first.' });
+  if (!groupCode) return res.status(400).json({ error: 'No group_code — recheck requires it. Re-check first.' });
   if (!searchId) return res.status(400).json({ error: 'No search_id on the stored check — re-check first.' });
 
   // Refuse if this booking already has an attempt sitting mid-flight.
@@ -2228,6 +2335,7 @@ router.post('/repricing/book-replacement', async (req, res) => {
   }
 
   const ctx = { bookingId: booking_id, attemptId: tracked.id, ...actor };
+  let acceptedDifferences = [];
   const fail = async (stage, reason, status, extra = {}) => {
     await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
       status: 'error', failure_stage: stage, failure_reason: String(reason).slice(0, 1000),
@@ -2309,9 +2417,20 @@ router.post('/repricing/book-replacement', async (req, res) => {
       };
       const v2 = evaluateRate(rechecked.rate, origAgain);
       if (!v2.eligible) {
-        return fail('recheck_gate',
-          `The rate no longer matches the original booking at recheck: ${v2.blockers.join(' ')} Nothing was booked.`,
-          409, { blockers: v2.blockers });
+        // On the automatic path this is a hard stop. When the operator picked
+        // the row themselves — having read the whole rate list, including what
+        // it gives up — we proceed and record what was accepted, rather than
+        // second-guessing a decision that has already been made deliberately.
+        if (!operatorChose) {
+          return fail('recheck_gate',
+            `The rate no longer matches the original booking at recheck: ${v2.blockers.join(' ')} Nothing was booked.`,
+            409, { blockers: v2.blockers });
+        }
+        acceptedDifferences = v2.blockers;
+        await sbPatch('grn_rebooking_attempts', `id=eq.${tracked.id}`, {
+          failure_reason: `Operator-selected rate. Accepted differences: ${v2.blockers.join(' ')}`,
+          updated_at: new Date().toISOString(),
+        }).catch(() => {});
       }
     }
 
@@ -2401,6 +2520,8 @@ router.post('/repricing/book-replacement', async (req, res) => {
       currency: booked.currency,
       grossProfit: booked.grossProfit,
       savedUsd: check.gap_usd,
+      operatorChose,
+      acceptedDifferences,
       pulledVia: source.via,
     });
   } catch (err) {
