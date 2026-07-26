@@ -8,7 +8,7 @@ const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
 // Bump on every deploy of this file. Renders next to the page title so
 // "did my deploy land?" is answered by looking, not guessing.
-const BUILD = 'v12 · IST dates + safer button';
+const BUILD = 'v13 · one correct deadline';
 
 const BLUE = '#0F52BA';
 const NAVY = '#0F172A';
