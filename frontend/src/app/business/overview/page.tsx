@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
 import { authenticatedFetch } from '../../../lib/supabase-client';
+import RebookingsPerDay from './RebookingsPerDay';
 
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
-const BLUE = '#0F52BA';
+const BLUE = '#0093FF';
 const NAVY = '#0F172A';
 const GOLD = '#F5B833';
-const GREEN = '#16A34A';
 const SLATE = '#64748B';
 const LINE = '#E7ECF3';
 const BG = '#F6F8FB';
@@ -64,7 +64,7 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div>
             <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 23, fontWeight: 800, color: NAVY, margin: 0 }}>Dashboard</h1>
-            <p style={{ fontSize: 13, color: SLATE, marginTop: 3 }}>All live rebookable inventory on your GRN book — and what's closing soon.</p>
+            <p style={{ fontSize: 13, color: SLATE, marginTop: 3 }}>Every live booking still open to a better rate — and what&apos;s closing before you can act.</p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
             <button
@@ -104,9 +104,9 @@ export default function DashboardPage() {
 
         {/* CLOSING SOON — the wedge */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
             <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY }}>Closing soon</span>
-            <span style={{ fontSize: 12, color: SLATE }}>rebookable value by cancellation deadline — money that expires if left unworked</span>
+            <span style={{ fontSize: 12, color: SLATE }}>Rebookable value grouped by how soon its free-cancellation window closes. Once that window passes, the rate is locked and the saving is gone.</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
             <ClosingCard label="Next 7 days" win={c?.d7} loading={loading} accent={GOLD} />
@@ -116,41 +116,22 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* REBOOKINGS SCOREBOARD — the achievement story (fills once live) */}
+        {/* REBOOKINGS — the achievement story (fills once live) */}
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
             <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY }}>Rebookings</span>
-            <span style={{ fontSize: 12, color: SLATE }}>what we've captured against the opportunity above</span>
+            <span style={{ fontSize: 12, color: SLATE }}>How much of the value above you&apos;ve actually moved to a lower rate.</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-            <ScoreBlock
-              label="Rebooked"
-              value={loading ? '—' : num(t?.caughtThisMonth?.count ?? 0)}
-              sub="bookings moved to a lower rate"
-              bg={`linear-gradient(135deg, ${BLUE} 0%, #3576dd 100%)`}
-              fg="#fff"
-            />
-            <ScoreBlock
-              label="Revenue"
-              value={loading ? '—' : usd(t?.caughtThisMonth?.savedUsd ?? 0)}
-              sub="extra margin generated"
-              bg={`linear-gradient(135deg, ${GREEN} 0%, #12833e 100%)`}
-              fg="#fff"
-            />
-            <ScoreBlock
-              label="Rebooked GMV"
-              value={loading ? '—' : usdShort(0)}
-              sub={`of ${loading ? '—' : usdShort(t?.liveRebookable?.valueUsd)} rebookable`}
-              bg={`linear-gradient(135deg, ${NAVY} 0%, #1E293B 100%)`}
-              fg="#fff"
-            />
-            <ScoreBlock
-              label="Conversion"
-              value={loading ? '—' : '0%'}
-              sub="rebooked ÷ opportunity"
-              bg={`linear-gradient(135deg, ${GOLD} 0%, #e0a52a 100%)`}
-              fg="#3d2c00"
-            />
+
+          {/* rebookings-per-day chart — real data */}
+          <RebookingsPerDay />
+
+          {/* KPI strip — white, with Conversion as the single highlight */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 14 }}>
+            <Kpi label="Rebooked" value={loading ? '—' : num(t?.caughtThisMonth?.count ?? 0)} sub="bookings moved to a lower rate" />
+            <Kpi label="Revenue" value={loading ? '—' : usd(t?.caughtThisMonth?.savedUsd ?? 0)} sub="extra margin generated" />
+            <Kpi label="Rebooked GMV" value={loading ? '—' : usdShort(0)} sub={`of ${loading ? '—' : usdShort(t?.liveRebookable?.valueUsd)} rebookable`} progress={0} />
+            <Kpi label="Conversion" value={loading ? '—' : '0%'} sub="rebooked ÷ opportunity" hot />
           </div>
         </div>
 
@@ -185,12 +166,17 @@ export default function DashboardPage() {
   );
 }
 
-function ScoreBlock({ label, value, sub, bg, fg }: any) {
+function Kpi({ label, value, sub, hot, progress }: any) {
   return (
-    <div style={{ background: bg, borderRadius: 14, padding: '18px 20px', color: fg }}>
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.85 }}>{label}</div>
-      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 30, fontWeight: 800, marginTop: 8 }}>{value}</div>
-      <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>{sub}</div>
+    <div style={{ background: hot ? GOLD : '#fff', border: `1px solid ${hot ? '#E0A52A' : LINE}`, borderRadius: 14, padding: '18px 20px' }}>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: hot ? '#7A5A00' : SLATE }}>{label}</div>
+      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 30, fontWeight: 800, marginTop: 8, color: hot ? '#3D2C00' : NAVY }}>{value}</div>
+      <div style={{ fontSize: 12, color: hot ? '#7A5A00' : SLATE, marginTop: 4 }}>{sub}</div>
+      {progress !== undefined && (
+        <div style={{ height: 6, borderRadius: 99, background: '#EDF1F7', marginTop: 12, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${progress}%`, background: BLUE, borderRadius: 99 }} />
+        </div>
+      )}
     </div>
   );
 }
