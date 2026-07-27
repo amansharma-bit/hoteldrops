@@ -1,15 +1,20 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>rebuq — coming soon</title>
-<meta name="description" content="Something worth waiting for is on the way." />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root{
+export const metadata = {
+  title: 'rebuq — coming soon',
+  description: 'Something worth waiting for is on the way.',
+};
+
+// Fonts are loaded with a plain <link> inside the component to keep this page
+// fully self-contained and independent of the rest of the app's setup.
+export default function ComingSoon() {
+  return (
+    <>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Archivo:wght@400;500;600&display=swap"
+        rel="stylesheet"
+      />
+      <style dangerouslySetInnerHTML={{ __html: `:root{
     --bg:#0A1B3D;          /* deep sapphire navy */
     --bg2:#0F275A;
     --blue:#0F52BA;        /* rebuq sapphire */
@@ -145,11 +150,8 @@
   @media (prefers-reduced-motion:reduce){
     .orb{animation:none}
     .eyebrow,h1,.sub,.rule{animation:none; opacity:1; transform:none}
-  }
-</style>
-</head>
-<body>
-  <div class="wash"></div>
+  }` }} />
+      <div dangerouslySetInnerHTML={{ __html: `<div class="wash"></div>
   <div class="orbs" aria-hidden="true">
     <div class="orb o1"></div>
     <div class="orb o2"></div>
@@ -171,6 +173,7 @@
     <div class="rule" aria-hidden="true"></div>
   </main>
 
-  <footer>© rebuq</footer>
-</body>
-</html>
+  <footer>© rebuq</footer>` }} />
+    </>
+  );
+}
