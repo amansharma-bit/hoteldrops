@@ -10,8 +10,12 @@ const BLUE = '#0093FF';
 const NAVY = '#0F172A';
 const GOLD = '#F5B833';
 const SLATE = '#64748B';
+const FAINT = '#94A3B8';
 const LINE = '#E7ECF3';
 const BG = '#F6F8FB';
+
+const DISPLAY = "'Archivo','Plus Jakarta Sans',sans-serif";
+const BODY = "'Plus Jakarta Sans',sans-serif";
 
 function usd(n: number | null | undefined) {
   if (n == null) return '—';
@@ -54,79 +58,85 @@ export default function DashboardPage() {
     : null;
   const maxCityVal = Math.max(1, ...(data?.topCities || []).map((x: any) => x.valueUsd || x.count));
 
+  const allVal = c?.all?.valueUsd || 0;
+  const pct = (v: number | undefined) => (allVal ? Math.min(100, Math.round(((v || 0) / allVal) * 100)) : 0);
+
   return (
     <BusinessSidebarWrapper>
-      <div style={{ minHeight: '100vh', background: BG, fontFamily: "'Inter',sans-serif", padding: '22px 30px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      <div style={{ minHeight: '100vh', background: BG, fontFamily: BODY, padding: '30px 40px 56px', display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 1520 }}>
+        <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div>
-            <h1 style={{ fontFamily: "'Sora',sans-serif", fontSize: 23, fontWeight: 800, color: NAVY, margin: 0 }}>Dashboard</h1>
-            <p style={{ fontSize: 13, color: SLATE, marginTop: 3 }}>Every live booking still open to a better rate — and what&apos;s closing before you can act.</p>
+            <h1 style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 800, letterSpacing: '-0.8px', color: NAVY, margin: 0 }}>Dashboard</h1>
+            <p style={{ fontSize: 15, color: SLATE, marginTop: 4 }}>Every live booking still open to a better rate — and what&apos;s closing before you can act.</p>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
             <button
               onClick={() => load(`${API_BASE}/api/live-search/dashboard-refresh`, true)}
               disabled={refreshing || loading}
               style={{
-                display: 'flex', alignItems: 'center', gap: 7, border: `1px solid ${LINE}`, borderRadius: 8,
-                padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: refreshing ? 'wait' : 'pointer',
-                background: refreshing ? '#EDF1F7' : '#fff', color: refreshing ? SLATE : NAVY,
+                display: 'flex', alignItems: 'center', gap: 8, border: `1px solid ${LINE}`, borderRadius: 12,
+                padding: '11px 16px', fontSize: 14, fontWeight: 600, cursor: refreshing ? 'wait' : 'pointer',
+                background: refreshing ? '#EDF1F7' : '#fff', color: refreshing ? SLATE : NAVY, boxShadow: '0 1px 2px rgba(16,24,40,.04)',
               }}
             >
-              <span style={{ fontSize: 13 }}>{refreshing ? '↻' : '⟳'}</span>
+              <span style={{ fontSize: 14 }}>{refreshing ? '↻' : '⟳'}</span>
               {refreshing ? 'Refreshing…' : 'Refresh data'}
             </button>
-            {fresh && <span style={{ fontSize: 11, color: SLATE }}>Updated {fresh}{data?.snapshot?.stale ? ' · refreshing' : ''}</span>}
+            {fresh && <span style={{ fontSize: 13, color: FAINT }}>Updated {fresh}{data?.snapshot?.stale ? ' · refreshing' : ''}</span>}
           </div>
         </div>
 
         {error && (
-          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#DC2626' }}>{error}</div>
+          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#DC2626' }}>{error}</div>
         )}
 
         {/* HERO — total live rebookable value */}
-        <div style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #1E293B 100%)`, borderRadius: 16, padding: '22px 28px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
+        <div style={{ background: 'linear-gradient(120deg,#0D1526,#16223B)', borderRadius: 20, padding: '30px 34px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 22, boxShadow: '0 18px 40px -22px rgba(13,21,38,.5)' }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#94A3B8' }}>Total rebookable value · live</div>
-            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 40, fontWeight: 800, lineHeight: 1.1, marginTop: 6 }}>
-              {loading ? '—' : usd(t?.liveRebookable?.valueUsd)}
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#94A3B8', marginLeft: 10 }}>USD · {loading ? '—' : num(t?.liveRebookable?.count)} bookings</span>
+            <div style={{ fontSize: 12.5, fontWeight: 700, letterSpacing: '1.4px', textTransform: 'uppercase', color: 'rgba(255,255,255,.62)' }}>Total rebookable value · live</div>
+            <div style={{ fontFamily: DISPLAY, fontSize: 58, fontWeight: 900, letterSpacing: '-2px', lineHeight: 1, margin: '12px 0 10px' }}>
+              {t?.liveRebookable?.valueUsd == null
+                ? '—'
+                : <><span style={{ fontSize: '0.62em', fontWeight: 800, color: 'rgba(255,255,255,.85)', marginRight: 2 }}>$</span>{Math.round(t.liveRebookable.valueUsd).toLocaleString('en-US')}</>}
             </div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,.72)' }}>USD · <b style={{ color: '#fff', fontWeight: 700 }}>{loading ? '—' : num(t?.liveRebookable?.count)}</b> bookings</div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 30, fontWeight: 800, color: GOLD }}>{loading ? '—' : num(t?.expiringSoon?.count)}</div>
-            <div style={{ fontSize: 12, color: '#94A3B8' }}>expiring within 3 days</div>
-          </div>
+          <a href="/business/bookings" style={{ textDecoration: 'none', textAlign: 'right', background: 'rgba(245,184,51,.1)', border: '1px solid rgba(245,184,51,.32)', borderRadius: 16, padding: '20px 26px', display: 'block' }}>
+            <div style={{ fontFamily: DISPLAY, fontWeight: 900, fontSize: 48, color: GOLD, lineHeight: 1 }}>{loading ? '—' : num(t?.expiringSoon?.count)}</div>
+            <div style={{ color: 'rgba(255,255,255,.72)', fontSize: 13.5, marginTop: 6 }}>expiring within 3 days</div>
+            <div style={{ color: GOLD, fontSize: 12.5, fontWeight: 700, marginTop: 10, letterSpacing: '.3px' }}>Open worklist →</div>
+          </a>
         </div>
 
         {/* CLOSING SOON — the wedge */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY }}>Closing soon</span>
-            <span style={{ fontSize: 12, color: SLATE }}>Rebookable value grouped by how soon its free-cancellation window closes. Once that window passes, the rate is locked and the saving is gone.</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 15, flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 800, letterSpacing: '-0.4px', color: NAVY }}>Closing soon</span>
+            <span style={{ fontSize: 14, color: SLATE }}>Rebookable value grouped by how soon its free-cancellation window closes. Once that window passes, the rate is locked and the saving is gone.</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-            <ClosingCard label="Next 7 days" win={c?.d7} loading={loading} accent={GOLD} />
-            <ClosingCard label="Next 30 days" win={c?.d30} loading={loading} accent={BLUE} />
-            <ClosingCard label="Next 90 days" win={c?.d90} loading={loading} accent={BLUE} />
-            <ClosingCard label="All open" win={c?.all} loading={loading} accent={NAVY} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+            <ClosingCard label="Next 7 days" win={c?.d7} loading={loading} fill={GOLD} pct={pct(c?.d7?.valueUsd)} />
+            <ClosingCard label="Next 30 days" win={c?.d30} loading={loading} fill={BLUE} pct={pct(c?.d30?.valueUsd)} />
+            <ClosingCard label="Next 90 days" win={c?.d90} loading={loading} fill={BLUE} pct={pct(c?.d90?.valueUsd)} />
+            <ClosingCard label="All open" win={c?.all} loading={loading} fill="#334155" pct={100} />
           </div>
         </div>
 
         {/* REBOOKINGS — the achievement story (fills once live) */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
-            <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY }}>Rebookings</span>
-            <span style={{ fontSize: 12, color: SLATE }}>How much of the value above you&apos;ve actually moved to a lower rate.</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 15 }}>
+            <span style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 800, letterSpacing: '-0.4px', color: NAVY }}>Rebookings</span>
+            <span style={{ fontSize: 14, color: SLATE }}>How much of the value above you&apos;ve actually moved to a lower rate.</span>
           </div>
 
           {/* rebookings-per-day chart — real data */}
           <RebookingsPerDay />
 
           {/* KPI strip — white, with Conversion as the single highlight */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginTop: 16 }}>
             <Kpi label="Rebooked" value={loading ? '—' : num(t?.caughtThisMonth?.count ?? 0)} sub="bookings moved to a lower rate" />
             <Kpi label="Revenue" value={loading ? '—' : usd(t?.caughtThisMonth?.savedUsd ?? 0)} sub="extra margin generated" />
             <Kpi label="Rebooked GMV" value={loading ? '—' : usdShort(0)} sub={`of ${loading ? '—' : usdShort(t?.liveRebookable?.valueUsd)} rebookable`} progress={0} />
@@ -135,25 +145,25 @@ export default function DashboardPage() {
         </div>
 
         {/* Top cities — full width */}
-        <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '18px 20px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 15, fontWeight: 700, color: NAVY }}>Top cities by rebookable value</span>
-            <span style={{ fontSize: 11, color: SLATE }}>value · bookings</span>
+        <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 18, padding: '26px 28px', boxShadow: '0 1px 2px rgba(16,24,40,.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
+            <span style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 800, letterSpacing: '-0.4px', color: NAVY }}>Top cities by rebookable value</span>
+            <span style={{ fontSize: 13, color: FAINT, fontWeight: 600 }}>value · bookings</span>
           </div>
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <div>
             {(!data?.topCities || data.topCities.length === 0) ? (
-              <div style={{ padding: '30px 0', textAlign: 'center', color: '#94A3B8', fontSize: 13 }}>No city data yet.</div>
+              <div style={{ padding: '30px 0', textAlign: 'center', color: FAINT, fontSize: 13 }}>No city data yet.</div>
             ) : (
               data.topCities.slice(0, 10).map((city: any, i: number) => (
-                <div key={city.city} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 9 }}>
-                  <div style={{ width: 20, flexShrink: 0, fontFamily: "'Sora',sans-serif", fontSize: 12, fontWeight: 700, color: '#94A3B8', textAlign: 'right' }}>{i + 1}</div>
-                  <div style={{ width: 150, flexShrink: 0, fontSize: 13, color: NAVY, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{city.city}</div>
-                  <div style={{ flex: 1, minWidth: 60, background: '#EDF1F7', borderRadius: 6, height: 9 }}>
-                    <div style={{ width: `${((city.valueUsd || city.count) / maxCityVal) * 100}%`, background: GOLD, height: '100%', borderRadius: 6 }} />
+                <div key={city.city} style={{ display: 'grid', gridTemplateColumns: '26px 175px 1fr auto', alignItems: 'center', gap: 16, padding: '9px 0' }}>
+                  <div style={{ fontFamily: DISPLAY, fontSize: 14, fontWeight: 700, color: FAINT, textAlign: 'right' }}>{i + 1}</div>
+                  <div style={{ fontSize: 15, color: NAVY, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{city.city}</div>
+                  <div style={{ background: '#F1F3F8', borderRadius: 99, height: 9, overflow: 'hidden' }}>
+                    <div style={{ width: `${((city.valueUsd || city.count) / maxCityVal) * 100}%`, background: GOLD, height: '100%', borderRadius: 99 }} />
                   </div>
-                  <div style={{ width: 110, flexShrink: 0, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                    <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 14, color: NAVY, fontWeight: 700 }}>{usdShort(city.valueUsd)}</span>
-                    <span style={{ fontSize: 12, color: SLATE, marginLeft: 8 }}>{num(city.count)}</span>
+                  <div style={{ textAlign: 'right', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ fontFamily: DISPLAY, fontSize: 16, color: NAVY, fontWeight: 800, letterSpacing: '-0.3px' }}>{usdShort(city.valueUsd)}</span>
+                    <span style={{ fontSize: 13, color: FAINT, fontWeight: 600, marginLeft: 8 }}>{num(city.count)}</span>
                   </div>
                 </div>
               ))
@@ -189,8 +199,8 @@ function RebookingsPerDay() {
   }, [rows]);
 
   const chartCard: React.CSSProperties = {
-    background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14,
-    padding: '20px 22px 16px', boxShadow: '0 1px 2px rgba(16,24,40,.03)',
+    background: '#fff', border: `1px solid ${LINE}`, borderRadius: 18,
+    padding: '24px 26px 18px', boxShadow: '0 1px 2px rgba(16,24,40,.03)',
   };
 
   if (rows === null) {
@@ -217,20 +227,20 @@ function RebookingsPerDay() {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h3 style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 15, color: NAVY, margin: 0 }}>Rebookings per day</h3>
-          <p style={{ color: SLATE, fontSize: 12, marginTop: 3 }}>bookings moved to a lower rate · last {DAYS} days</p>
+          <h3 style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 17, letterSpacing: '-0.3px', color: NAVY, margin: 0 }}>Rebookings per day</h3>
+          <p style={{ color: SLATE, fontSize: 13.5, marginTop: 3 }}>bookings moved to a lower rate · last {DAYS} days</p>
         </div>
         <span style={{ fontSize: 12, fontWeight: 700, color: NAVY }}>
-          {totalRebooked} <span style={{ color: '#94A3B8', fontWeight: 600 }}>rebooked</span>
+          {totalRebooked} <span style={{ color: FAINT, fontWeight: 600 }}>rebooked</span>
           <span style={{ color: '#CBD5E1', margin: '0 7px' }}>·</span>
-          ${Math.round(totalSaved).toLocaleString('en-US')} <span style={{ color: '#94A3B8', fontWeight: 600 }}>saved</span>
+          ${Math.round(totalSaved).toLocaleString('en-US')} <span style={{ color: FAINT, fontWeight: 600 }}>saved</span>
         </span>
       </div>
 
-      <div style={{ position: 'relative', height: 200, marginTop: 20, paddingLeft: 34 }}>
+      <div style={{ position: 'relative', height: 210, marginTop: 22, paddingLeft: 34 }}>
         <div style={{ position: 'absolute', left: 0, top: 0, bottom: 26, width: 30, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           {ticks.map((tk, i) => (
-            <span key={i} style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600, textAlign: 'right', transform: 'translateY(-6px)' }}>{Math.round(tk)}</span>
+            <span key={i} style={{ fontSize: 11, color: FAINT, fontWeight: 600, textAlign: 'right', transform: 'translateY(-6px)' }}>{Math.round(tk)}</span>
           ))}
         </div>
 
@@ -265,12 +275,12 @@ function RebookingsPerDay() {
 
         <div style={{ position: 'absolute', left: 34, right: 0, bottom: 0, height: 22, display: 'flex', gap: 9 }}>
           {rows.map((r) => (
-            <div key={r.day} style={{ flex: 1, textAlign: 'center', fontSize: 10.5, color: '#94A3B8', fontWeight: 600 }}>{new Date(r.day).getUTCDate()}</div>
+            <div key={r.day} style={{ flex: 1, textAlign: 'center', fontSize: 10.5, color: FAINT, fontWeight: 600 }}>{new Date(r.day).getUTCDate()}</div>
           ))}
         </div>
       </div>
 
-      <div style={{ color: SLATE, fontSize: 12.5, marginTop: 14, paddingTop: 14, borderTop: '1px solid #F1F3F8' }}>
+      <div style={{ color: SLATE, fontSize: 13, marginTop: 14, paddingTop: 14, borderTop: '1px solid #F1F3F8' }}>
         {err ? (
           <span style={{ color: '#B91C1C' }}>Couldn&apos;t load rebookings ({err}).</span>
         ) : isEmpty ? (
@@ -285,12 +295,12 @@ function RebookingsPerDay() {
 
 function Kpi({ label, value, sub, hot, progress }: any) {
   return (
-    <div style={{ background: hot ? GOLD : '#fff', border: `1px solid ${hot ? '#E0A52A' : LINE}`, borderRadius: 14, padding: '18px 20px' }}>
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: hot ? '#7A5A00' : SLATE }}>{label}</div>
-      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 30, fontWeight: 800, marginTop: 8, color: hot ? '#3D2C00' : NAVY }}>{value}</div>
-      <div style={{ fontSize: 12, color: hot ? '#7A5A00' : SLATE, marginTop: 4 }}>{sub}</div>
+    <div style={{ background: hot ? GOLD : '#fff', border: `1px solid ${hot ? '#E0A52A' : LINE}`, borderRadius: 16, padding: '20px 22px', boxShadow: '0 1px 2px rgba(16,24,40,.03)' }}>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: hot ? '#7A5A00' : SLATE }}>{label}</div>
+      <div style={{ fontFamily: DISPLAY, fontSize: 38, fontWeight: 900, letterSpacing: '-1.5px', marginTop: 8, color: hot ? '#231600' : NAVY }}>{value}</div>
+      <div style={{ fontSize: 13, color: hot ? '#7A5A00' : FAINT, fontWeight: 500, marginTop: 4 }}>{sub}</div>
       {progress !== undefined && (
-        <div style={{ height: 6, borderRadius: 99, background: '#EDF1F7', marginTop: 12, overflow: 'hidden' }}>
+        <div style={{ height: 7, borderRadius: 99, background: '#F1F3F8', marginTop: 12, overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${progress}%`, background: BLUE, borderRadius: 99 }} />
         </div>
       )}
@@ -298,14 +308,17 @@ function Kpi({ label, value, sub, hot, progress }: any) {
   );
 }
 
-function ClosingCard({ label, win, loading, accent }: any) {
+function ClosingCard({ label, win, loading, fill, pct }: any) {
   return (
-    <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '16px 18px', borderTop: `3px solid ${accent}` }}>
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.03em', textTransform: 'uppercase', color: SLATE }}>{label}</div>
-      <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 26, fontWeight: 800, color: NAVY, marginTop: 8 }}>
+    <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 16, padding: '20px 22px', boxShadow: '0 1px 2px rgba(16,24,40,.03)' }}>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: SLATE }}>{label}</div>
+      <div style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 800, letterSpacing: '-1px', color: NAVY, margin: '8px 0 4px' }}>
         {loading ? '—' : usdShort(win?.valueUsd)}
       </div>
-      <div style={{ fontSize: 12, color: SLATE, marginTop: 3 }}>{loading ? '' : `${num(win?.count)} bookings`}</div>
+      <div style={{ fontSize: 13, color: FAINT, fontWeight: 500 }}>{loading ? '' : `${num(win?.count)} bookings`}</div>
+      <div style={{ height: 6, borderRadius: 99, background: '#F1F3F8', marginTop: 14, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${loading ? 0 : pct}%`, background: fill, borderRadius: 99, transition: 'width 1s cubic-bezier(.2,.7,.3,1)' }} />
+      </div>
     </div>
   );
 }
