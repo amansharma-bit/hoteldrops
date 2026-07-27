@@ -54,8 +54,8 @@ function Spinner({ color = '#3D2C00', size = 15 }: { color?: string; size?: numb
 }
 
 const DEADLINE_LABELS: Record<string, string> = {
-  '3d': 'Closing ≤ 3 days', '1w': 'Closing ≤ 1 week', '1m': 'Closing ≤ 1 month',
-  '1y': 'Closing ≤ 1 year', 'any': 'Any deadline', 'custom': 'Custom range',
+  '3d': 'Closing under 3 days', '1w': 'Closing under 1 week', '1m': 'Closing under 1 month',
+  '1y': 'Closing under 1 year', 'any': 'Any deadline', 'custom': 'Custom range',
 };
 
 function DeadlineDropdown({ deadline, open, setOpen, customFrom, customTo, onPreset, onCustom }: any) {
@@ -66,20 +66,20 @@ function DeadlineDropdown({ deadline, open, setOpen, customFrom, customTo, onPre
     ? ((customFrom || customTo) ? `${customFrom || '…'} → ${customTo || '…'}` : 'Custom range')
     : (DEADLINE_LABELS[deadline] || DEADLINE_LABELS['3d']);
   const presets: [string, string][] = [
-    ['3d', 'Closing ≤ 3 days'], ['1w', 'Closing ≤ 1 week'],
-    ['1m', 'Closing ≤ 1 month'], ['1y', 'Closing ≤ 1 year'], ['any', 'Any deadline'],
+    ['3d', 'Closing under 3 days'], ['1w', 'Closing under 1 week'],
+    ['1m', 'Closing under 1 month'], ['1y', 'Closing under 1 year'], ['any', 'Any deadline'],
   ];
   return (
     <div style={{ position: 'relative' }}>
       <button onClick={() => { setOpen(!open); setShowCustom(deadline === 'custom'); }}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: `1px solid ${LINE}`, borderRadius: 11, padding: '9px 14px', fontSize: 13, fontWeight: 600, background: '#fff', color: NAVY, cursor: 'pointer', fontFamily: 'inherit' }}>
-        {label}
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" /></svg>
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 180, border: `1px solid ${LINE}`, borderRadius: 11, padding: '10px 16px', fontSize: 13.5, fontWeight: 600, background: '#fff', color: '#0F172A', cursor: 'pointer', fontFamily: 'inherit' }}>
+        <span>{label}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth={2.4}><path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" /></svg>
       </button>
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
-          <div style={{ position: 'absolute', top: '112%', left: 0, zIndex: 31, background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, boxShadow: '0 12px 30px -12px rgba(16,24,40,.25)', padding: 6, minWidth: 214 }}>
+          <div style={{ position: 'absolute', top: '112%', left: 0, zIndex: 31, background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, boxShadow: '0 12px 30px -12px rgba(16,24,40,.25)', padding: 6, minWidth: 232 }}>
             {presets.map(([v, l]) => (
               <button key={v} onClick={() => onPreset(v)}
                 style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: deadline === v ? '#EAF6FF' : 'transparent', color: deadline === v ? BLUE : NAVY, fontSize: 13.5, fontWeight: 600, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -123,7 +123,6 @@ export default function RepricingPage() {
   const [viewCounts, setViewCounts] = useState<any>({});
   const [citySearch, setCitySearch] = useState('');
   const [cityQuery, setCityQuery] = useState('');
-  const [totalRepricable, setTotalRepricable] = useState<number | null>(null);
   const [deadline, setDeadline] = useState('3d');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
@@ -161,7 +160,6 @@ export default function RepricingPage() {
         if (d.error) { setError(d.error); return; }
         setRows(d.rows || []); setHasMore(d.hasMore); setTotal(d.total || 0);
         setViewCounts(d.viewCounts || {});
-        if (d.totalRepricable != null) setTotalRepricable(d.totalRepricable);
       })
       .catch((e: any) => { if (!cancelled) setError('Could not load bookings: ' + e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -292,10 +290,7 @@ export default function RepricingPage() {
 
         {/* Header */}
         <div style={{ padding: '30px 40px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 800, letterSpacing: '-0.8px', color: NAVY, margin: 0 }}>Repricing</h1>
-            <span style={{ fontSize: 12, fontWeight: 700, color: BLUE, background: '#EAF6FF', border: `1px solid #CDE9FF`, borderRadius: 20, padding: '4px 12px' }}>{totalRepricable != null ? `${totalRepricable.toLocaleString()} repricable` : '…'}</span>
-          </div>
+          <h1 style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 800, letterSpacing: '-0.8px', color: NAVY, margin: 0 }}>Repricing</h1>
           <p style={{ fontSize: 15, color: SLATE, marginTop: 4 }}>Check a booking&apos;s live price, pick a rate, book the replacement, then cancel the original.</p>
         </div>
 
@@ -303,7 +298,9 @@ export default function RepricingPage() {
         <div style={{ padding: '22px 40px 0', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           {/* Universal search */}
           <div style={{ position: 'relative', flex: '0 1 340px', minWidth: 220 }}>
-            <input value={citySearch} onChange={(e) => setCitySearch(e.target.value)} placeholder="Search city, hotel, booking ID or guest…"
+            <input value={citySearch} onChange={(e) => setCitySearch(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { setCityQuery(citySearch.trim()); setPage(1); } }}
+              placeholder="Search city, hotel, booking ID or guest…"
               style={{ width: '100%', border: `1px solid ${LINE}`, borderRadius: 11, padding: '10px 14px 10px 34px', fontSize: 14, color: NAVY, background: '#fff', outline: 'none', fontFamily: 'inherit' }} />
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={SLATE} strokeWidth={2} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
           </div>
@@ -376,7 +373,6 @@ export default function RepricingPage() {
                     borderBottom: `1px solid ${LINE}`,
                     background: atRisk ? '#FEF2F2' : needsReview ? '#FFFBEB' : isChecked ? '#F7FBFF' : '#fff',
                     borderLeft: atRisk ? `3px solid ${RED}` : needsReview ? `3px solid ${AMBER}` : isChecked ? `3px solid rgba(0,147,255,.55)` : '3px solid transparent',
-                    cursor: 'pointer',
                   }}>
                     {/* At-risk strip: replacement confirmed, original still live */}
                     {atRisk && (
@@ -398,7 +394,7 @@ export default function RepricingPage() {
                       </div>
                     )}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 14, padding: '16px 22px', alignItems: 'center' }} onClick={() => openDrawer(r.bookingId)}>
+                    <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 14, padding: '16px 22px', alignItems: 'center' }}>
                       {/* Booking */}
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 700, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.hotel}</div>
@@ -428,16 +424,16 @@ export default function RepricingPage() {
                         ) : (checkedAt && !unavailable) ? <span style={{ fontSize: 12, color: MUTED }}>No drop</span>
                           : <span style={{ fontSize: 12, color: MUTED }}>—</span>}
                       </div>
-                      {/* Status */}
+                      {/* Status — the only thing that opens the drawer, so row text stays copyable */}
                       <div style={{ textAlign: 'left' }}>
                         {done ? (
-                          <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: '#DCFCE7', color: GREEN }}>✓ Rebooked</span>
+                          <button onClick={() => openDrawer(r.bookingId)} style={{ fontFamily: 'inherit', fontSize: 11.5, fontWeight: 700, padding: '6px 12px', borderRadius: 20, border: 'none', background: '#DCFCE7', color: GREEN, cursor: 'pointer' }}>✓ Rebooked</button>
                         ) : atRisk ? (
-                          <span style={{ fontSize: 11.5, fontWeight: 700, padding: '6px 13px', borderRadius: 20, background: RED, color: '#fff' }}>Cancel original</span>
+                          <button onClick={() => openDrawer(r.bookingId)} style={{ fontFamily: 'inherit', fontSize: 11.5, fontWeight: 700, padding: '7px 13px', borderRadius: 20, border: 'none', background: RED, color: '#fff', cursor: 'pointer' }}>Cancel original</button>
                         ) : isChecked ? (
-                          <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: '#fff', border: `1.5px solid ${BLUE}`, color: BLUE }}>Re-check</span>
+                          <button onClick={() => openDrawer(r.bookingId)} style={{ fontFamily: 'inherit', fontSize: 11.5, fontWeight: 700, padding: '6px 12px', borderRadius: 20, background: '#fff', border: `1.5px solid ${BLUE}`, color: BLUE, cursor: 'pointer' }}>Re-check</button>
                         ) : (
-                          <span style={{ fontSize: 11.5, fontWeight: 700, padding: '6px 13px', borderRadius: 20, background: BLUE, color: '#fff' }}>Reprice</span>
+                          <button onClick={() => openDrawer(r.bookingId)} style={{ fontFamily: 'inherit', fontSize: 11.5, fontWeight: 700, padding: '7px 14px', borderRadius: 20, border: 'none', background: BLUE, color: '#fff', cursor: 'pointer' }}>Reprice</button>
                         )}
                       </div>
                     </div>
