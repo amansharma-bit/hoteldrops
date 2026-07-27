@@ -115,7 +115,7 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
     <div className="flex min-h-screen bg-slate-50 text-[#0F172A]">
       <aside
         className="w-52 flex flex-col justify-between fixed inset-y-0 left-0"
-        style={{ background: 'linear-gradient(180deg, #1560c9 0%, #0F52BA 55%, #0c449c 100%)' }}
+        style={{ background: '#0093FF' }}
       >
         <div>
           <div className="px-6 py-6">
