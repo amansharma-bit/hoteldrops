@@ -6,10 +6,6 @@ import { authenticatedFetch } from '../../../lib/supabase-client';
 
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
-// Bump on every deploy of this file. Renders next to the page title so
-// "did my deploy land?" is answered by looking, not guessing.
-const BUILD = 'v14 · reprice drawer';
-
 const BLUE = '#0093FF';
 const NAVY = '#0F172A';
 const SLATE = '#64748B';
@@ -57,6 +53,66 @@ function Spinner({ color = '#3D2C00', size = 15 }: { color?: string; size?: numb
   return <span style={{ width: size, height: size, border: `2px solid ${color}33`, borderTopColor: color, borderRadius: '50%', display: 'inline-block', animation: 'spin .7s linear infinite' }} />;
 }
 
+const DEADLINE_LABELS: Record<string, string> = {
+  '3d': 'Closing ≤ 3 days', '1w': 'Closing ≤ 1 week', '1m': 'Closing ≤ 1 month',
+  '1y': 'Closing ≤ 1 year', 'any': 'Any deadline', 'custom': 'Custom range',
+};
+
+function DeadlineDropdown({ deadline, open, setOpen, customFrom, customTo, onPreset, onCustom }: any) {
+  const [showCustom, setShowCustom] = useState(deadline === 'custom');
+  const [f, setF] = useState(customFrom || '');
+  const [t, setT] = useState(customTo || '');
+  const label = deadline === 'custom'
+    ? ((customFrom || customTo) ? `${customFrom || '…'} → ${customTo || '…'}` : 'Custom range')
+    : (DEADLINE_LABELS[deadline] || DEADLINE_LABELS['3d']);
+  const presets: [string, string][] = [
+    ['3d', 'Closing ≤ 3 days'], ['1w', 'Closing ≤ 1 week'],
+    ['1m', 'Closing ≤ 1 month'], ['1y', 'Closing ≤ 1 year'], ['any', 'Any deadline'],
+  ];
+  return (
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => { setOpen(!open); setShowCustom(deadline === 'custom'); }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: `1px solid ${LINE}`, borderRadius: 11, padding: '9px 14px', fontSize: 13, fontWeight: 600, background: '#fff', color: NAVY, cursor: 'pointer', fontFamily: 'inherit' }}>
+        {label}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}><path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
+          <div style={{ position: 'absolute', top: '112%', left: 0, zIndex: 31, background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, boxShadow: '0 12px 30px -12px rgba(16,24,40,.25)', padding: 6, minWidth: 214 }}>
+            {presets.map(([v, l]) => (
+              <button key={v} onClick={() => onPreset(v)}
+                style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: deadline === v ? '#EAF6FF' : 'transparent', color: deadline === v ? BLUE : NAVY, fontSize: 13.5, fontWeight: 600, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                {l}
+              </button>
+            ))}
+            <div style={{ borderTop: `1px solid ${LINE}`, margin: '6px 4px' }} />
+            {!showCustom ? (
+              <button onClick={() => setShowCustom(true)}
+                style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: deadline === 'custom' ? '#EAF6FF' : 'transparent', color: deadline === 'custom' ? BLUE : NAVY, fontSize: 13.5, fontWeight: 600, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Custom range…
+              </button>
+            ) : (
+              <div style={{ padding: '8px 10px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: SLATE, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Deadline between</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="date" value={f} onChange={(e) => setF(e.target.value)} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '7px 9px', fontSize: 13, color: NAVY, fontFamily: 'inherit' }} />
+                  <span style={{ color: SLATE }}>→</span>
+                  <input type="date" value={t} onChange={(e) => setT(e.target.value)} style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '7px 9px', fontSize: 13, color: NAVY, fontFamily: 'inherit' }} />
+                </div>
+                <button onClick={() => onCustom(f, t)} disabled={!f && !t}
+                  style={{ marginTop: 10, width: '100%', border: 'none', borderRadius: 8, padding: '9px', fontSize: 13, fontWeight: 700, background: (!f && !t) ? '#E2E8F0' : BLUE, color: (!f && !t) ? MUTED : '#fff', cursor: (!f && !t) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                  Apply range
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function RepricingPage() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,8 +123,11 @@ export default function RepricingPage() {
   const [viewCounts, setViewCounts] = useState<any>({});
   const [citySearch, setCitySearch] = useState('');
   const [cityQuery, setCityQuery] = useState('');
-  const [minDays, setMinDays] = useState(7);
-  const [sortMode, setSortMode] = useState<'runway' | 'deadline'>('deadline');
+  const [totalRepricable, setTotalRepricable] = useState<number | null>(null);
+  const [deadline, setDeadline] = useState('3d');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [ddOpen, setDdOpen] = useState(false);
   const [view, setView] = useState('all');
   const [checking, setChecking] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -91,19 +150,23 @@ export default function RepricingPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    const cityParam = cityQuery ? `&city=${encodeURIComponent(cityQuery)}` : '';
-    authenticatedFetch(`${API_BASE}/api/live-search/repricing/candidates?page=${page}${cityParam}&min_days=${minDays}&sort=${sortMode}&view=${view}&_t=${Date.now()}`)
+    const qParam = cityQuery ? `&q=${encodeURIComponent(cityQuery)}` : '';
+    const customParam = deadline === 'custom'
+      ? `${customFrom ? `&from=${customFrom}` : ''}${customTo ? `&to=${customTo}` : ''}`
+      : '';
+    authenticatedFetch(`${API_BASE}/api/live-search/repricing/candidates?page=${page}${qParam}&deadline=${deadline}${customParam}&view=${view}&_t=${Date.now()}`)
       .then((r: Response) => r.json())
       .then((d: any) => {
         if (cancelled) return;
         if (d.error) { setError(d.error); return; }
         setRows(d.rows || []); setHasMore(d.hasMore); setTotal(d.total || 0);
         setViewCounts(d.viewCounts || {});
+        if (d.totalRepricable != null) setTotalRepricable(d.totalRepricable);
       })
       .catch((e: any) => { if (!cancelled) setError('Could not load bookings: ' + e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [page, cityQuery, minDays, sortMode, view, reloadKey]);
+  }, [page, cityQuery, deadline, customFrom, customTo, view, reloadKey]);
 
   async function checkPrice(bookingId: string) {
     setChecking(bookingId);
@@ -231,20 +294,29 @@ export default function RepricingPage() {
         <div style={{ padding: '30px 40px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={{ fontFamily: DISPLAY, fontSize: 34, fontWeight: 800, letterSpacing: '-0.8px', color: NAVY, margin: 0 }}>Repricing</h1>
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', color: MUTED, background: '#EEF2F7', border: `1px solid ${LINE}`, borderRadius: 20, padding: '3px 9px' }}>{BUILD}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: BLUE, background: '#EAF6FF', border: `1px solid #CDE9FF`, borderRadius: 20, padding: '4px 12px' }}>{totalRepricable != null ? `${totalRepricable.toLocaleString()} repricable` : '…'}</span>
           </div>
           <p style={{ fontSize: 15, color: SLATE, marginTop: 4 }}>Check a booking&apos;s live price, pick a rate, book the replacement, then cancel the original.</p>
         </div>
 
         {/* Controls */}
         <div style={{ padding: '22px 40px 0', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: '0 1 220px' }}>
-            <input value={citySearch} onChange={(e) => setCitySearch(e.target.value)} placeholder="Search city…"
+          {/* Universal search */}
+          <div style={{ position: 'relative', flex: '0 1 340px', minWidth: 220 }}>
+            <input value={citySearch} onChange={(e) => setCitySearch(e.target.value)} placeholder="Search city, hotel, booking ID or guest…"
               style={{ width: '100%', border: `1px solid ${LINE}`, borderRadius: 11, padding: '10px 14px 10px 34px', fontSize: 14, color: NAVY, background: '#fff', outline: 'none', fontFamily: 'inherit' }} />
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={SLATE} strokeWidth={2} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
           </div>
 
-          {/* View — the one control that must never hide a live double-booking */}
+          {/* Deadline window */}
+          <DeadlineDropdown
+            deadline={deadline} open={ddOpen} setOpen={setDdOpen}
+            customFrom={customFrom} customTo={customTo}
+            onPreset={(v: string) => { setDeadline(v); setPage(1); setDdOpen(false); closeDrawer(); }}
+            onCustom={(f: string, t: string) => { setCustomFrom(f); setCustomTo(t); setDeadline('custom'); setPage(1); setDdOpen(false); closeDrawer(); }}
+          />
+
+          {/* View */}
           <select value={view} onChange={(e) => { setView(e.target.value); setPage(1); closeDrawer(); }}
             style={{ border: `1px solid ${view === 'pending_cancel' ? RED : LINE}`, borderRadius: 11, padding: '9px 12px', fontSize: 13, fontWeight: 600, background: '#fff', color: view === 'pending_cancel' ? RED : NAVY, cursor: 'pointer', fontFamily: 'inherit' }}>
             <option value="all">All bookings</option>
@@ -253,22 +325,12 @@ export default function RepricingPage() {
             <option value="rebooked">Rebooked{viewCounts.rebooked ? ` (${viewCounts.rebooked})` : ''}</option>
           </select>
 
-          {view === 'all' && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ fontSize: 13, color: SLATE }}>Runway</span>
-                {[0, 3, 7, 14, 30].map((d) => (
-                  <button key={d} onClick={() => { setMinDays(d); setPage(1); closeDrawer(); }}
-                    style={{ border: `1px solid ${minDays === d ? BLUE : LINE}`, borderRadius: 9, padding: '7px 11px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', background: minDays === d ? BLUE : '#fff', color: minDays === d ? '#fff' : NAVY }}>
-                    {d === 0 ? 'Any' : `${d}d+`}
-                  </button>
-                ))}
-              </div>
-              <button onClick={() => { setSortMode((s) => (s === 'deadline' ? 'runway' : 'deadline')); setPage(1); closeDrawer(); }}
-                style={{ border: `1px solid ${LINE}`, borderRadius: 9, padding: '7px 12px', fontSize: 12.5, fontWeight: 600, background: '#fff', color: NAVY, cursor: 'pointer' }}>
-                {sortMode === 'deadline' ? 'Deadline soonest' : 'Furthest out'}
-              </button>
-            </>
+          {/* Clear — only when a filter is active */}
+          {(citySearch || deadline !== '3d' || view !== 'all') && (
+            <button onClick={() => { setCitySearch(''); setCityQuery(''); setDeadline('3d'); setCustomFrom(''); setCustomTo(''); setView('all'); setPage(1); closeDrawer(); }}
+              style={{ border: 'none', background: 'transparent', color: SLATE, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+              Clear
+            </button>
           )}
 
           <div style={{ flex: 1 }} />
@@ -367,7 +429,7 @@ export default function RepricingPage() {
                           : <span style={{ fontSize: 12, color: MUTED }}>—</span>}
                       </div>
                       {/* Status */}
-                      <div style={{ textAlign: 'right' }}>
+                      <div style={{ textAlign: 'left' }}>
                         {done ? (
                           <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: '#DCFCE7', color: GREEN }}>✓ Rebooked</span>
                         ) : atRisk ? (
