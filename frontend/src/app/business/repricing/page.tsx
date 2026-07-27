@@ -372,10 +372,10 @@ export default function RepricingPage() {
                           <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: '#DCFCE7', color: GREEN }}>✓ Rebooked</span>
                         ) : atRisk ? (
                           <span style={{ fontSize: 11.5, fontWeight: 700, padding: '6px 13px', borderRadius: 20, background: RED, color: '#fff' }}>Cancel original</span>
+                        ) : isChecked ? (
+                          <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: '#fff', border: `1.5px solid ${BLUE}`, color: BLUE }}>Re-check</span>
                         ) : (
-                          {isChecked
-                          ? <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: '#fff', border: `1.5px solid ${BLUE}`, color: BLUE }}>Re-check</span>
-                          : <span style={{ fontSize: 11.5, fontWeight: 700, padding: '6px 13px', borderRadius: 20, background: BLUE, color: '#fff' }}>Reprice</span>}
+                          <span style={{ fontSize: 11.5, fontWeight: 700, padding: '6px 13px', borderRadius: 20, background: BLUE, color: '#fff' }}>Reprice</span>
                         )}
                       </div>
                     </div>
