@@ -1542,8 +1542,17 @@ router.get('/repricing/candidates', async (req, res) => {
   const offset = (page - 1) * perPage;
   const nowIso = new Date().toISOString();
   const todayIso = nowIso.slice(0, 10);
-  const cityQuery = (req.query.city || '').trim();
-  const cityWhere = cityQuery ? `&city_name=ilike.*${encodeURIComponent(cityQuery)}*` : '';
+  // The frontend's universal search box (placeholder: "Search city, hotel,
+  // booking ID or guest…") sends the term as `q`. This handler was only ever
+  // reading `city`, and only ever filtering city_name — so `q=` never reached
+  // here, and even a matching param wouldn't have found a booking ID, hotel
+  // name, or guest name. Read `q` (fall back to `city` for any old caller)
+  // and match it against every field the placeholder promises.
+  const searchQuery = (req.query.q || req.query.city || '').trim();
+  const searchTerm = searchQuery ? `*${searchQuery}*` : '';
+  const cityWhere = searchQuery
+    ? `&or=(city_name.ilike.${encodeURIComponent(searchTerm)},hotel_name.ilike.${encodeURIComponent(searchTerm)},guest_name.ilike.${encodeURIComponent(searchTerm)},booking_id.ilike.${encodeURIComponent(searchTerm)},booking_reference.ilike.${encodeURIComponent(searchTerm)})`
+    : '';
 
   // Minimum days of cancellation runway left.
   //
