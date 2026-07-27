@@ -214,6 +214,8 @@ export default function RepricingPage() {
     setExpanded(bookingId);
     if (!history[bookingId]) loadHistory(bookingId);
     if (!logs[bookingId]) loadLog(bookingId);
+    // Auto-run the live check — opening the drawer *is* the intent to reprice.
+    if (!results[bookingId] && checking !== bookingId) checkPrice(bookingId);
   }
   function closeDrawer() { setExpanded(null); }
 
@@ -369,9 +371,11 @@ export default function RepricingPage() {
                         {done ? (
                           <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: '#DCFCE7', color: GREEN }}>✓ Rebooked</span>
                         ) : atRisk ? (
-                          <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: '#FEE2E2', color: RED }}>Cancel original</span>
+                          <span style={{ fontSize: 11.5, fontWeight: 700, padding: '6px 13px', borderRadius: 20, background: RED, color: '#fff' }}>Cancel original</span>
                         ) : (
-                          <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: GOLD_SOFT, color: GOLD_DEEP }}>{isChecked ? 'Re-check' : 'Reprice'}</span>
+                          {isChecked
+                          ? <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: '#fff', border: `1.5px solid ${BLUE}`, color: BLUE }}>Re-check</span>
+                          : <span style={{ fontSize: 11.5, fontWeight: 700, padding: '6px 13px', borderRadius: 20, background: BLUE, color: '#fff' }}>Reprice</span>}
                         )}
                       </div>
                     </div>
@@ -410,7 +414,7 @@ export default function RepricingPage() {
 
         return (
           <>
-            <style>{`@keyframes drawerIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            <style>{`@keyframes drawerIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}`}</style>
             <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 264, background: BG, zIndex: 40, display: 'flex', flexDirection: 'column', animation: 'drawerIn .3s ease', boxShadow: '-30px 0 60px -30px rgba(16,24,40,.35)', fontFamily: BODY }}>
               {/* header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 34px', borderBottom: `1px solid ${LINE}`, background: '#fff' }}>
@@ -430,30 +434,53 @@ export default function RepricingPage() {
                 {act && <ActionOutcome act={act} onCancel={() => cancelOriginal(r.bookingId, act.rebookingId)} cancelling={cancelling === r.bookingId} onAck={() => bookReplacement(r.bookingId, true)} />}
 
                 {/* Old (left) vs New (right) */}
-                <OfferCards r={r} result={result} />
+                <OfferCards r={r} result={result} checking={isChecking} />
 
                 {/* Replacement action area */}
                 {!atRisk && !done && (
-                  !result ? (
+                  isChecking && !result ? (
+                    <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '22px 24px', marginBottom: 20 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Spinner color={BLUE} />
+                        <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 15, color: NAVY }}>Checking live rates…</div>
+                      </div>
+                      <div style={{ fontSize: 13, color: SLATE, marginTop: 4 }}>Pulling GRN&apos;s live availability for this stay.</div>
+                      <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {[0, 1, 2].map((k) => (
+                          <div key={k} style={{ height: 46, borderRadius: 10, background: 'linear-gradient(90deg,#F1F3F8 25%,#E7ECF3 37%,#F1F3F8 63%)', backgroundSize: '800px 100%', animation: 'shimmer 1.4s ease infinite' }} />
+                        ))}
+                      </div>
+                    </div>
+                  ) : !result ? (
                     <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '22px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
                       <div>
                         <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 15, color: NAVY }}>Find a lower rate</div>
                         <div style={{ fontSize: 13, color: SLATE, marginTop: 3 }}>Pulls GRN&apos;s live rates for this hotel and stay, then compares.</div>
                       </div>
                       <button onClick={() => checkPrice(r.bookingId)} disabled={isChecking}
-                        style={{ border: 'none', borderRadius: 12, padding: '13px 22px', fontFamily: BODY, fontSize: 15, fontWeight: 700, background: isChecking ? '#EAD08A' : GOLD, color: '#3D2C00', cursor: isChecking ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                        {isChecking ? <><Spinner color="#3D2C00" /> Checking live rates…</> : 'Check live price'}
+                        style={{ border: 'none', borderRadius: 12, padding: '13px 22px', fontFamily: BODY, fontSize: 15, fontWeight: 700, background: BLUE, color: '#fff', cursor: isChecking ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        {isChecking ? <><Spinner color="#fff" /> Checking live rates…</> : 'Check live price'}
                       </button>
                     </div>
                   ) : result.error ? (
-                    <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '14px 18px', fontSize: 13, color: RED, marginBottom: 20 }}>{result.error}</div>
+                    <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '14px 18px', fontSize: 13, color: RED, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <span>{result.error}</span>
+                      <button onClick={() => checkPrice(r.bookingId)} disabled={isChecking}
+                        style={{ border: `1px solid #FECACA`, borderRadius: 8, padding: '7px 14px', fontSize: 12.5, fontWeight: 700, background: '#fff', color: RED, cursor: 'pointer' }}>Try again</button>
+                    </div>
                   ) : null
                 )}
 
                 {/* Match detail + rate chooser */}
                 {result?.live && (
                   <div style={{ marginBottom: 20 }}>
-                    <MatchBadge basis={result.matchBasis} eligible={result.rebookEligible} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+                      <MatchBadge basis={result.matchBasis} eligible={result.rebookEligible} />
+                      <button onClick={() => checkPrice(r.bookingId)} disabled={isChecking}
+                        style={{ border: `1px solid ${LINE}`, borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, background: '#fff', color: isChecking ? MUTED : BLUE, cursor: isChecking ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+                        {isChecking ? <><Spinner color={BLUE} size={12} /> Re-checking…</> : 'Re-check'}
+                      </button>
+                    </div>
                     <Compare original={result.original} live={result.live} match={result.match} />
                     <Blockers items={result.blockers} eligible={result.rebookEligible} count={result.eligibleRateCount} warnings={result.warnings} />
                   </div>
@@ -512,7 +539,7 @@ export default function RepricingPage() {
 // Original vs Replacement, side by side. Both white cards now — old on the
 // left, new on the right.
 // ---------------------------------------------------------------------------
-function OfferCards({ r, result }: { r: any; result: any }) {
+function OfferCards({ r, result, checking }: { r: any; result: any; checking?: boolean }) {
   const live = result?.live;
   const at = r.attempt;
   const statusChip = at?.status === 'confirmed' ? { t: 'Rebooked', bg: '#DCFCE7', fg: GREEN }
@@ -561,7 +588,7 @@ function OfferCards({ r, result }: { r: any; result: any }) {
             </div>
           </>
         ) : (
-          <div style={{ fontSize: 12.5, color: MUTED, fontStyle: 'italic', paddingTop: 6 }}>No live rate yet — run a check to compare.</div>
+          <div style={{ fontSize: 12.5, color: MUTED, fontStyle: 'italic', paddingTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>{checking ? <><Spinner color={BLUE} size={13} /> Fetching live rate…</> : 'No live rate yet.'}</div>
         )}
       </div>
     </div>
@@ -667,11 +694,11 @@ function RateChooser({ rates, selected, onSelect, onBook, booking, origUsd }: an
                   </div>
                   <button onClick={onBook} disabled={!chosen || booking}
                     style={{
-                      border: saves ? 'none' : `1.5px solid ${GOLD_DEEP}`, borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 700, fontFamily: BODY,
-                      background: !chosen ? '#E2E8F0' : saves ? GOLD : '#fff', color: !chosen ? MUTED : saves ? '#3D2C00' : GOLD_DEEP,
+                      border: saves ? 'none' : `1.5px solid ${BLUE}`, borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 700, fontFamily: BODY,
+                      background: !chosen ? '#E2E8F0' : saves ? BLUE : '#fff', color: !chosen ? MUTED : saves ? '#fff' : BLUE,
                       cursor: !chosen || booking ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
                     }}>
-                    {booking ? <><Spinner color={saves ? '#3D2C00' : GOLD_DEEP} /> Rebooking…</> : saves ? 'Rebook' : 'Rebook anyway'}
+                    {booking ? <><Spinner color={saves ? '#fff' : BLUE} /> Rebooking…</> : saves ? 'Rebook' : 'Rebook anyway'}
                   </button>
                 </div>
                 <div style={{ fontSize: 11.5, color: MUTED, marginTop: 8 }}>
