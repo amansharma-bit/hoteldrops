@@ -243,6 +243,57 @@ async function mapWithConcurrency(items, limit, deadlineTs, fn) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ===========================================================================
+// CURRENCY
+//
+// One table, used everywhere. There were previously four: one comprehensive
+// list used by the dashboard, and three copies of a nine-currency list used by
+// the bookings list, the repricing candidates and the price check.
+//
+// Anything outside those nine converted to zero, which rendered as a blank
+// price — a MXN 9,385 booking in Costa Rica showed no price at all. Worse, in
+// the price check a missing rate meant the gap could not be computed, so those
+// bookings could never show a saving even when one existed.
+//
+// Currencies below are the ones actually appearing in GRN booking data plus
+// the common remainder. Rates are indicative and only used for display and
+// comparison — never for anything transactional, which stays in the booking's
+// own currency throughout.
+// ===========================================================================
+const USD_RATES = {
+  USD: 1.0,      EUR: 1.1446,   GBP: 1.3401,   CHF: 1.1200,   CAD: 0.7300,
+  AUD: 0.6960,   NZD: 0.6000,   JPY: 0.0067,   CNY: 0.1400,   HKD: 0.1280,
+  SGD: 0.7770,   MYR: 0.2360,   THB: 0.0301,   IDR: 0.0000553, PHP: 0.0170,
+  VND: 0.00004,  KRW: 0.00072,  TWD: 0.0310,   INR: 0.011765, LKR: 0.0033,
+  NPR: 0.007353, PKR: 0.0036,   BDT: 0.0084,   AED: 0.27225,  SAR: 0.2666,
+  QAR: 0.2747,   KWD: 3.2600,   BHD: 2.6500,   OMR: 2.6000,   JOD: 1.4100,
+  ILS: 0.2700,   TRY: 0.0290,   EGP: 0.0203,   MAD: 0.1000,   ZAR: 0.0550,
+  KES: 0.0077,   NGN: 0.00065,  MUR: 0.0220,   NOK: 0.1016,   SEK: 0.0950,
+  DKK: 0.1530,   PLN: 0.2500,   CZK: 0.0430,   HUF: 0.0028,   RON: 0.2300,
+  BGN: 0.5850,   HRK: 0.1520,   RSD: 0.0098,   ISK: 0.0073,   RUB: 0.0125,
+  UAH: 0.0240,   KZT: 0.0019,   GEL: 0.3700,   MXN: 0.0575,   BRL: 0.1800,
+  ARS: 0.00095,  CLP: 0.00105,  COP: 0.00025,  PEN: 0.2700,   UYU: 0.0250,
+  CRC: 0.0020,   DOP: 0.0165,   JMD: 0.0064,   MVR: 0.0649,   FJD: 0.4400,
+  XOF: 0.00175,  XAF: 0.00175,  TND: 0.3200,   DZD: 0.0075,   AZN: 0.5900,
+  BND: 0.7770,   MOP: 0.1244,   KHR: 0.00025,  LAK: 0.000046, MMK: 0.00048,
+};
+
+// Returns null rather than 0 when a currency is unknown, so callers can tell
+// "no rate available" apart from "genuinely zero" and show a dash instead of a
+// misleading $0.
+function usdRateFor(currency) {
+  if (!currency) return null;
+  const r = USD_RATES[String(currency).trim().toUpperCase()];
+  return r == null ? null : r;
+}
+function toUsdOrNull(amount, currency) {
+  if (amount == null) return null;
+  const rate = usdRateFor(currency);
+  if (rate == null) return null;
+  const n = Number(amount);
+  return isNaN(n) ? null : n * rate;
+}
+
+// ===========================================================================
 // GRN CALL WRAPPER + LOGGING
 //
 // Every GRN call in the rebooking chain goes through grnCall(). It records the
@@ -1195,8 +1246,8 @@ router.get('/bookings-list', async (req, res) => {
         const adults = paxes.filter((p) => p.type === 'AD').length || null;
         const children = paxes.filter((p) => p.type === 'CH');
         const guests = paxes.map((p) => `${p.name || ''} ${p.surname || ''}`.trim()).filter(Boolean);
-        const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 }[r.currency];
-        const priceUsd = (r.price_total != null && usdRate) ? Math.round(Number(r.price_total) * usdRate) : null;
+        const priceUsdRaw = toUsdOrNull(r.price_total, r.currency);
+        const priceUsd = priceUsdRaw == null ? null : Math.round(priceUsdRaw);
         return {
           bookingId: r.booking_id,
           bookingReference: r.booking_reference || raw.booking_reference || null,
@@ -1251,19 +1302,13 @@ router.get('/bookings-list', async (req, res) => {
 // ===========================================================================
 // DASHBOARD DATA — all tiles, real, USD-converted
 // ===========================================================================
-const USD_RATES = {
-  USD: 1.0, EUR: 1.1446, GBP: 1.3401, INR: 0.011765, AED: 0.27225,
-  AUD: 0.6960, THB: 0.0301, NOK: 0.1016, IDR: 0.0000553, NPR: 0.007353,
-  SGD: 0.7770, MYR: 0.2360, JPY: 0.0067, CNY: 0.1400, HKD: 0.1280,
-  SAR: 0.2666, QAR: 0.2747, KWD: 3.26, BHD: 2.65, OMR: 2.60,
-  LKR: 0.0033, ZAR: 0.0550, TRY: 0.029, EGP: 0.0203, MXN: 0.0575,
-};
 
+// Dashboard totals sum across bookings, so an unknown currency contributes 0
+// rather than breaking the sum. Row-level display uses toUsdOrNull instead, so
+// a missing rate shows a dash rather than a wrong number.
 function toUsd(amount, currency) {
-  if (amount == null) return 0;
-  const rate = USD_RATES[currency];
-  if (!rate) return 0;
-  return parseFloat(amount) * rate;
+  const v = toUsdOrNull(amount, currency);
+  return v == null ? 0 : v;
 }
 
 const SNAPSHOT_STALE_MS = 4 * 60 * 60 * 1000; // 4 hours
@@ -1599,8 +1644,8 @@ router.get('/repricing/candidates', async (req, res) => {
       minDays, view, viewCounts, sort: sortRunway ? 'runway' : 'deadline',
       hasMore: offset + perPage < (total ?? 0),
       rows: rows.map((r) => {
-        const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 }[r.currency];
-        const origUsd = (r.price_total != null && usdRate) ? Math.round(Number(r.price_total) * usdRate) : null;
+        const origUsdRaw = toUsdOrNull(r.price_total, r.currency);
+        const origUsd = origUsdRaw == null ? null : Math.round(origUsdRaw);
         const last = lastChecks[r.booking_id] || null;
         const raw = r.raw || {};
         const hotel = raw.hotel || {};
@@ -1817,12 +1862,7 @@ router.post('/repricing/check', async (req, res) => {
       else if (hotel.min_rate) allRates = [hotel.min_rate];
     }
 
-    const usdRate = { USD:1, EUR:1.1446, GBP:1.3401, INR:0.011765, AED:0.27225, AUD:0.696, THB:0.0301, SGD:0.777, JPY:0.0067 };
-    const priceUsdOf = (rt) => {
-      const local = rt?.price != null ? Number(rt.price) : null;
-      const cur = rt?.currency || b.currency || 'USD';
-      return (local != null && usdRate[cur]) ? local * usdRate[cur] : null;
-    };
+    const priceUsdOf = (rt) => toUsdOrNull(rt?.price, rt?.currency || b.currency || 'USD');
 
     // ---- Evaluate every rate, then choose ----
     const evaluated = allRates.map((rt) => ({ rate: rt, verdict: evaluateRate(rt, orig), usd: priceUsdOf(rt) }));
@@ -1846,7 +1886,7 @@ router.post('/repricing/check', async (req, res) => {
 
     const origLocal = b.price_total != null ? Number(b.price_total) : null;
     const origCur = b.currency || 'USD';
-    const origUsd = (origLocal != null && usdRate[origCur]) ? origLocal * usdRate[origCur] : null;
+    const origUsd = toUsdOrNull(origLocal, origCur);
 
     const liveLocal = minRate?.price != null ? Number(minRate.price) : null;
     const liveCur = minRate?.currency || origCur;
@@ -1894,7 +1934,7 @@ router.post('/repricing/check', async (req, res) => {
       source: 'manual',
     }], 'id');
 
-    const usdOf = (amt, cur) => (amt != null && usdRate[cur]) ? Math.round(Number(amt) * usdRate[cur]) : null;
+    const usdOf = (amt, cur) => { const v = toUsdOrNull(amt, cur); return v == null ? null : Math.round(v); };
     const allRatesOut = evaluated.map(({ rate: rt, verdict: v, usd }) => {
       const rm = rt?.rooms?.[0] || {};
       const local = rt?.price != null ? Number(rt.price) : null;
