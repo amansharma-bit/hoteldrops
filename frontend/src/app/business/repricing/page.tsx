@@ -19,6 +19,9 @@ const BG = '#F6F8FB';
 const GREEN = '#16A34A';
 const RED = '#DC2626';
 const AMBER = '#D97706';
+const GOLD = '#F5B833';
+const GOLD_DEEP = '#B8860B';
+const GOLD_SOFT = '#FDF4E1';
 
 const DISPLAY = "'Archivo','Plus Jakarta Sans',sans-serif";
 const BODY = "'Plus Jakarta Sans',sans-serif";
@@ -48,6 +51,10 @@ function policyLabel(nonRef: boolean | null | undefined, cancelBy?: string | nul
   if (nonRef === true) return 'Non-refundable';
   if (nonRef === false) return cancelBy ? `Refundable until ${fmtDate(cancelBy)}` : 'Refundable';
   return 'Not stated';
+}
+
+function Spinner({ color = '#3D2C00', size = 15 }: { color?: string; size?: number }) {
+  return <span style={{ width: size, height: size, border: `2px solid ${color}33`, borderTopColor: color, borderRadius: '50%', display: 'inline-block', animation: 'spin .7s linear infinite' }} />;
 }
 
 export default function RepricingPage() {
@@ -210,7 +217,7 @@ export default function RepricingPage() {
   }
   function closeDrawer() { setExpanded(null); }
 
-  const GRID = 'minmax(0,1.6fr) 90px 116px 116px 128px 120px 28px';
+  const GRID = 'minmax(0,1.6fr) 90px 116px 116px 128px 132px';
   const openRow = rows.find((r) => r.bookingId === expanded) || null;
 
   return (
@@ -274,7 +281,7 @@ export default function RepricingPage() {
         <div style={{ padding: '18px 40px 40px' }}>
           <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 2px rgba(16,24,40,.03)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 14, padding: '13px 22px', borderBottom: `1px solid ${LINE}`, background: '#FBFCFE' }}>
-              {['Booking', 'Rebook by', 'Original', 'Live price', 'Gap', 'Status', ''].map((h, i) => (
+              {['Booking', 'Rebook by', 'Original', 'Live price', 'Gap', 'Status'].map((h, i) => (
                 <div key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: MUTED, textAlign: (i === 2 || i === 3 || i === 4) ? 'right' : 'left' }}>{h}</div>
               ))}
             </div>
@@ -295,6 +302,7 @@ export default function RepricingPage() {
                 const gapPct = result ? result.gapPct : r.lastCheck?.gapPct ?? null;
                 const dropped = result ? result.dropped : r.lastCheck?.dropped ?? false;
                 const checkedAt = result?.checkedAt ?? r.lastCheck?.checkedAt ?? null;
+                const isChecked = Boolean(checkedAt);
                 const unavailable = result && result.available === false;
                 const dLeft = daysUntil(r.cancelBy);
                 const deadlineColor = dLeft == null ? SLATE : dLeft <= 3 ? RED : dLeft <= 7 ? AMBER : SLATE;
@@ -302,8 +310,8 @@ export default function RepricingPage() {
                 return (
                   <div key={r.bookingId} style={{
                     borderBottom: `1px solid ${LINE}`,
-                    background: atRisk ? '#FEF2F2' : needsReview ? '#FFFBEB' : '#fff',
-                    borderLeft: atRisk ? `3px solid ${RED}` : needsReview ? `3px solid ${AMBER}` : '3px solid transparent',
+                    background: atRisk ? '#FEF2F2' : needsReview ? '#FFFBEB' : isChecked ? '#F7FBFF' : '#fff',
+                    borderLeft: atRisk ? `3px solid ${RED}` : needsReview ? `3px solid ${AMBER}` : isChecked ? `3px solid rgba(0,147,255,.55)` : '3px solid transparent',
                     cursor: 'pointer',
                   }}>
                     {/* At-risk strip: replacement confirmed, original still live */}
@@ -330,7 +338,7 @@ export default function RepricingPage() {
                       {/* Booking */}
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 700, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.hotel}</div>
-                        <div style={{ fontSize: 13, color: SLATE, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[r.city, r.roomDescription || r.room, `${fmtDate(r.checkin)}→${fmtDate(r.checkout)}`].filter(Boolean).join(' · ')}</div>
+                        <div style={{ fontSize: 13, color: SLATE, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[r.city, `${fmtDate(r.checkin)}→${fmtDate(r.checkout)}`].filter(Boolean).join(' · ')}</div>
                         <div style={{ fontSize: 10.5, color: MUTED, marginTop: 2, fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {r.bookingId}{r.supplier ? ` · ${r.supplier}` : ''}
                         </div>
@@ -359,16 +367,12 @@ export default function RepricingPage() {
                       {/* Status */}
                       <div style={{ textAlign: 'right' }}>
                         {done ? (
-                          <span style={{ fontSize: 12, fontWeight: 700, color: GREEN }}>✓ Rebooked</span>
+                          <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: '#DCFCE7', color: GREEN }}>✓ Rebooked</span>
                         ) : atRisk ? (
-                          <span style={{ fontSize: 11.5, fontWeight: 700, color: RED }}>Cancel original ↑</span>
+                          <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: '#FEE2E2', color: RED }}>Cancel original</span>
                         ) : (
-                          <span style={{ fontSize: 12.5, fontWeight: 700, color: BLUE }}>Reprice →</span>
+                          <span style={{ fontSize: 11.5, fontWeight: 700, padding: '5px 11px', borderRadius: 20, background: GOLD_SOFT, color: GOLD_DEEP }}>{isChecked ? 'Re-check' : 'Reprice'}</span>
                         )}
-                      </div>
-                      {/* Chevron */}
-                      <div style={{ textAlign: 'center', color: MUTED }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                       </div>
                     </div>
                   </div>
@@ -406,7 +410,7 @@ export default function RepricingPage() {
 
         return (
           <>
-            <style>{`@keyframes drawerIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}`}</style>
+            <style>{`@keyframes drawerIn{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
             <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 264, background: BG, zIndex: 40, display: 'flex', flexDirection: 'column', animation: 'drawerIn .3s ease', boxShadow: '-30px 0 60px -30px rgba(16,24,40,.35)', fontFamily: BODY }}>
               {/* header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 34px', borderBottom: `1px solid ${LINE}`, background: '#fff' }}>
@@ -437,8 +441,8 @@ export default function RepricingPage() {
                         <div style={{ fontSize: 13, color: SLATE, marginTop: 3 }}>Pulls GRN&apos;s live rates for this hotel and stay, then compares.</div>
                       </div>
                       <button onClick={() => checkPrice(r.bookingId)} disabled={isChecking}
-                        style={{ border: 'none', borderRadius: 12, padding: '13px 22px', fontFamily: BODY, fontSize: 15, fontWeight: 700, background: isChecking ? MUTED : BLUE, color: '#fff', cursor: isChecking ? 'wait' : 'pointer' }}>
-                        {isChecking ? 'Checking…' : 'Check live price'}
+                        style={{ border: 'none', borderRadius: 12, padding: '13px 22px', fontFamily: BODY, fontSize: 15, fontWeight: 700, background: isChecking ? '#EAD08A' : GOLD, color: '#3D2C00', cursor: isChecking ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        {isChecking ? <><Spinner color="#3D2C00" /> Checking live rates…</> : 'Check live price'}
                       </button>
                     </div>
                   ) : result.error ? (
@@ -495,16 +499,6 @@ export default function RepricingPage() {
                   onRefresh={() => loadLog(r.bookingId, at?.id)}
                 />
 
-                {/* Standalone cancel */}
-                {!atRisk && !done && (
-                  <div style={{ marginTop: 18, paddingTop: 14, borderTop: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <button onClick={() => cancelOriginal(r.bookingId, null, true)} disabled={cancelling === r.bookingId}
-                      style={{ border: `1px solid #FECACA`, borderRadius: 10, padding: '8px 14px', fontSize: 12.5, fontWeight: 600, background: '#fff', color: RED, cursor: 'pointer' }}>
-                      {cancelling === r.bookingId ? 'Cancelling…' : 'Cancel this booking'}
-                    </button>
-                    <span style={{ fontSize: 12, color: MUTED }}>No replacement. Cancels the reservation outright.</span>
-                  </div>
-                )}
               </div>
             </div>
           </>
@@ -649,40 +643,43 @@ function RateChooser({ rates, selected, onSelect, onBook, booking, origUsd }: an
             </div>
           </div>
 
-          {/* One button. Books whichever row is selected.
-              Green only when the choice actually saves money — a green button
-              on a rate that costs more reads as "go" when it should read as
-              "are you sure?". */}
           {(() => {
             const saves = chosen && chosen.vsOriginalUsd > 0;
-            const bg = !chosen ? '#E2E8F0' : booking ? MUTED : saves ? GREEN : AMBER;
+            const diffs = chosen?.blockers?.length || 0;
             return (
-              <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <button onClick={onBook} disabled={!chosen || booking}
-                  style={{
-                    border: 'none', borderRadius: 12, padding: '13px 24px', fontSize: 15, fontWeight: 700, fontFamily: BODY,
-                    background: bg, color: !chosen ? MUTED : '#fff',
-                    cursor: !chosen || booking ? 'not-allowed' : 'pointer',
-                  }}>
-                  {booking ? 'Booking…' : saves ? 'Book replacement' : 'Book anyway'}
-                </button>
-                {chosen ? (
-                  <span style={{ fontSize: 12.5, color: SLATE }}>
-                    {chosen.roomDescription || chosen.roomType} · {chosen.board} · ${chosen.usd}
-                    {saves
-                      ? <strong style={{ color: GREEN }}> · saves ${chosen.vsOriginalUsd}</strong>
-                      : <strong style={{ color: RED }}> · costs ${Math.abs(chosen.vsOriginalUsd || 0)} more</strong>}
-                    {chosen.blockers?.length ? <span style={{ color: AMBER }}> · {chosen.blockers.length} difference{chosen.blockers.length > 1 ? 's' : ''} accepted</span> : null}
-                  </span>
-                ) : (
-                  <span style={{ fontSize: 12.5, color: MUTED }}>Select a rate above.</span>
-                )}
-              </div>
+              <>
+                <div style={{ marginTop: 14, background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                  <div style={{ minWidth: 0 }}>
+                    {chosen ? (
+                      <>
+                        <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 14.5, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 560 }}>{chosen.roomDescription || chosen.roomType}</div>
+                        <div style={{ fontSize: 13, color: SLATE, marginTop: 5, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                          <span>{chosen.board} · <strong style={{ color: NAVY }}>${chosen.usd}</strong></span>
+                          {saves
+                            ? <strong style={{ color: GREEN }}>saves ${chosen.vsOriginalUsd}</strong>
+                            : <strong style={{ color: RED }}>costs ${Math.abs(chosen.vsOriginalUsd || 0)} more</strong>}
+                          {diffs > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: AMBER, background: '#FEF3C7', padding: '3px 9px', borderRadius: 20 }}>{diffs} difference{diffs > 1 ? 's' : ''} accepted</span>}
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 13.5, color: MUTED }}>Select a room above to rebook.</div>
+                    )}
+                  </div>
+                  <button onClick={onBook} disabled={!chosen || booking}
+                    style={{
+                      border: saves ? 'none' : `1.5px solid ${GOLD_DEEP}`, borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 700, fontFamily: BODY,
+                      background: !chosen ? '#E2E8F0' : saves ? GOLD : '#fff', color: !chosen ? MUTED : saves ? '#3D2C00' : GOLD_DEEP,
+                      cursor: !chosen || booking ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
+                    }}>
+                    {booking ? <><Spinner color={saves ? '#3D2C00' : GOLD_DEEP} /> Rebooking…</> : saves ? 'Rebook' : 'Rebook anyway'}
+                  </button>
+                </div>
+                <div style={{ fontSize: 11.5, color: MUTED, marginTop: 8 }}>
+                  Books the replacement only. The original stays live until you cancel it.
+                </div>
+              </>
             );
           })()}
-          <div style={{ fontSize: 11.5, color: MUTED, marginTop: 6 }}>
-            Books the replacement only. The original stays live until you cancel it.
-          </div>
         </>
       )}
     </div>
