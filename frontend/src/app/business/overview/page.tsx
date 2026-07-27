@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
-import { authenticatedFetch } from '../../../lib/supabase-client';
-import RebookingsPerDay from './RebookingsPerDay';
+import { authenticatedFetch, supabase } from '../../../lib/supabase-client';
 
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
@@ -163,6 +162,124 @@ export default function DashboardPage() {
         </div>
       </div>
     </BusinessSidebarWrapper>
+  );
+}
+
+/* ---------- Rebookings per day (real data, same file) ---------- */
+
+type RbRow = { day: string; rebooked: number; saved_usd: number };
+
+function RebookingsPerDay() {
+  const DAYS = 14;
+  const [rows, setRows] = useState<RbRow[] | null>(null);
+  const [err, setErr] = useState<string>('');
+  const [grow, setGrow] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .rpc('rebookings_daily', { days: DAYS })
+      .then(({ data, error }: { data: RbRow[] | null; error: any }) => {
+        if (error) { setErr(error.message); setRows([]); return; }
+        setRows(data ?? []);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (rows) { const tm = setTimeout(() => setGrow(true), 60); return () => clearTimeout(tm); }
+  }, [rows]);
+
+  const chartCard: React.CSSProperties = {
+    background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14,
+    padding: '20px 22px 16px', boxShadow: '0 1px 2px rgba(16,24,40,.03)',
+  };
+
+  if (rows === null) {
+    return <div style={chartCard}><p style={{ fontSize: 13, color: SLATE }}>Loading rebookings…</p></div>;
+  }
+
+  const counts = rows.map((r) => r.rebooked);
+  const maxVal = Math.max(0, ...counts);
+  const axisMax = Math.max(6, Math.ceil(maxVal / 6) * 6);
+  const totalRebooked = counts.reduce((a, b) => a + b, 0);
+  const totalSaved = rows.reduce((a, b) => a + Number(b.saved_usd || 0), 0);
+  const avg = rows.length ? totalRebooked / rows.length : 0;
+  const isEmpty = maxVal === 0;
+  const ticks = [axisMax, (axisMax * 3) / 4, axisMax / 2, axisMax / 4, 0];
+
+  return (
+    <div style={chartCard}>
+      <style>{`
+        .rb-col { transition: height .8s cubic-bezier(.2,.7,.3,1); }
+        .rb-col:hover { filter: brightness(1.08); }
+        .rb-col:hover .rb-tip { opacity:1; }
+        @media (prefers-reduced-motion: reduce){ .rb-col{ transition:none } }
+      `}</style>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h3 style={{ fontFamily: "'Sora',sans-serif", fontWeight: 800, fontSize: 15, color: NAVY, margin: 0 }}>Rebookings per day</h3>
+          <p style={{ color: SLATE, fontSize: 12, marginTop: 3 }}>bookings moved to a lower rate · last {DAYS} days</p>
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 700, color: NAVY }}>
+          {totalRebooked} <span style={{ color: '#94A3B8', fontWeight: 600 }}>rebooked</span>
+          <span style={{ color: '#CBD5E1', margin: '0 7px' }}>·</span>
+          ${Math.round(totalSaved).toLocaleString('en-US')} <span style={{ color: '#94A3B8', fontWeight: 600 }}>saved</span>
+        </span>
+      </div>
+
+      <div style={{ position: 'relative', height: 200, marginTop: 20, paddingLeft: 34 }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 26, width: 30, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          {ticks.map((tk, i) => (
+            <span key={i} style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600, textAlign: 'right', transform: 'translateY(-6px)' }}>{Math.round(tk)}</span>
+          ))}
+        </div>
+
+        <div style={{ position: 'absolute', left: 34, right: 0, top: 0, bottom: 26 }}>
+          {[0, 25, 50, 75, 100].map((p) => (
+            <i key={p} style={{ position: 'absolute', left: 0, right: 0, top: `${p}%`, height: 1, background: '#F1F3F8', display: 'block' }} />
+          ))}
+        </div>
+
+        {!isEmpty && (
+          <div style={{ position: 'absolute', left: 34, right: 0, top: `${(1 - avg / axisMax) * 100}%`, borderTop: '1.5px dashed #C3CCDB' }}>
+            <span style={{ position: 'absolute', right: 0, top: -9, fontSize: 11, fontWeight: 700, color: SLATE, background: '#fff', padding: '0 6px' }}>
+              avg {avg.toFixed(avg < 10 ? 1 : 0)}/day
+            </span>
+          </div>
+        )}
+
+        <div style={{ position: 'absolute', left: 34, right: 0, top: 0, bottom: 26, display: 'flex', alignItems: 'flex-end', gap: 9 }}>
+          {rows.map((r, i) => {
+            const h = grow ? (r.rebooked / axisMax) * 100 : 0;
+            return (
+              <div key={r.day} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-end', height: '100%' }}>
+                <div className="rb-col" style={{ width: '100%', maxWidth: 34, borderRadius: '6px 6px 0 0', background: BLUE, height: `${h}%`, position: 'relative', transitionDelay: `${i * 45}ms` }}>
+                  <span className="rb-tip" style={{ position: 'absolute', top: -24, left: '50%', transform: 'translateX(-50%)', background: NAVY, color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 7px', borderRadius: 6, opacity: 0, whiteSpace: 'nowrap', transition: 'opacity .15s' }}>
+                    {r.rebooked} rebooked
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ position: 'absolute', left: 34, right: 0, bottom: 0, height: 22, display: 'flex', gap: 9 }}>
+          {rows.map((r) => (
+            <div key={r.day} style={{ flex: 1, textAlign: 'center', fontSize: 10.5, color: '#94A3B8', fontWeight: 600 }}>{new Date(r.day).getUTCDate()}</div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ color: SLATE, fontSize: 12.5, marginTop: 14, paddingTop: 14, borderTop: '1px solid #F1F3F8' }}>
+        {err ? (
+          <span style={{ color: '#B91C1C' }}>Couldn&apos;t load rebookings ({err}).</span>
+        ) : isEmpty ? (
+          <><b style={{ color: NAVY }}>No rebookings in the last {DAYS} days yet.</b> Each bar fills the day the engine confirms a replacement booking.</>
+        ) : (
+          <>Live data · updates as the engine confirms replacement bookings.</>
+        )}
+      </div>
+    </div>
   );
 }
 
