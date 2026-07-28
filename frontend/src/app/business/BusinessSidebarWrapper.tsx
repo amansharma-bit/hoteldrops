@@ -17,17 +17,6 @@ const navItems = [
     ),
   },
   {
-    href: '/business/bookings',
-    label: 'Bookings',
-    icon: (
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3m9-14h1m-1 4h1m-5-4h1m-1 4h1"
-      />
-    ),
-  },
-  {
     href: '/business/rebookings',
     label: 'Rebookings',
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />,
@@ -72,9 +61,6 @@ const navItems = [
   },
 ];
 
-// This is a plain component, NOT a Next.js layout.tsx — it doesn't wrap
-// anything automatically based on folder location. Each dashboard page
-// imports this directly and wraps its own content with it.
 export default function BusinessSidebarWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -92,7 +78,6 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
         const u = data.session.user;
         const email = u?.email || '';
         setUserEmail(email);
-        // Prefer a name from user metadata; else derive from the email handle.
         const metaName = u?.user_metadata?.name || u?.user_metadata?.full_name;
         setUserName(metaName || (email ? email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : 'Account'));
       }
@@ -109,7 +94,7 @@ export default function BusinessSidebarWrapper({ children }: { children: React.R
       </div>
     );
   }
-  if (!authed) return null; // redirecting to login
+  if (!authed) return null;
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-[#0F172A]">
