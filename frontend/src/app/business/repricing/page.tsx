@@ -280,6 +280,18 @@ const DEADLINE_LABELS: Record<string, string> = {
   '1y': 'Closing under 1 year', 'any': 'Any deadline', 'custom': 'Custom range',
 };
 
+// Flat calendar SVG — matches the chevron weight used everywhere else
+function CalendarIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
 function DeadlineDropdown({ deadline, open, setOpen, customFrom, customTo, onPreset, onCustom }: any) {
   const [showCal, setShowCal] = useState(false);
   const presets: [string, string][] = [
@@ -293,16 +305,16 @@ function DeadlineDropdown({ deadline, open, setOpen, customFrom, customTo, onPre
   return (
     <div style={{ position: 'relative' }}>
       <button onClick={() => { setOpen(!open); setShowCal(false); }}
-        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 188, border: `1px solid ${LINE}`, borderRadius: 11, padding: '10px 16px', fontSize: 13.5, fontWeight: 600, background: '#fff', color: NAVY, cursor: 'pointer', fontFamily: 'inherit' }}>
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, minWidth: 188, border: `1px solid ${LINE}`, borderRadius: 11, padding: '10px 16px', fontSize: 13.5, fontWeight: 600, background: '#fff', color: deadline === 'custom' && (customFrom || customTo) ? BLUE : NAVY, cursor: 'pointer', fontFamily: 'inherit' }}>
         <span>{label}</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth={2.4}><path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" /></svg>
       </button>
       {open && (
         <>
           <div onClick={() => { setOpen(false); setShowCal(false); }} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
-          <div style={{ position: 'absolute', top: '112%', left: 0, zIndex: 31 }} onClick={e => e.stopPropagation()}>
+          <div style={{ position: 'absolute', top: '112%', left: 0, zIndex: 31 }} onClick={(e) => e.stopPropagation()}>
             {!showCal ? (
-              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, boxShadow: '0 12px 30px -12px rgba(16,24,40,.25)', padding: 6, minWidth: 232 }}>
+              <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, boxShadow: '0 12px 30px -12px rgba(16,24,40,.25)', padding: 6, minWidth: 220 }}>
                 {presets.map(([v, l]) => (
                   <button key={v} onClick={() => onPreset(v)}
                     style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: deadline === v ? '#EAF6FF' : 'transparent', color: deadline === v ? BLUE : NAVY, fontSize: 13.5, fontWeight: 600, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -311,18 +323,63 @@ function DeadlineDropdown({ deadline, open, setOpen, customFrom, customTo, onPre
                 ))}
                 <div style={{ borderTop: `1px solid ${LINE}`, margin: '6px 4px' }} />
                 <button onClick={() => setShowCal(true)}
-                  style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: deadline === 'custom' ? '#EAF6FF' : 'transparent', color: deadline === 'custom' ? BLUE : NAVY, fontSize: 13.5, fontWeight: 600, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  📅 Custom range…
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', border: 'none', background: deadline === 'custom' ? '#EAF6FF' : 'transparent', color: deadline === 'custom' ? BLUE : NAVY, fontSize: 13.5, fontWeight: 600, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <CalendarIcon />
+                  Custom range…
                 </button>
               </div>
             ) : (
               <CalendarPicker
                 from={customFrom}
                 to={customTo}
-                onApply={(f, t) => { onCustom(f, t); setShowCal(false); }}
+                onApply={(f: string, t: string) => { onCustom(f, t); setShowCal(false); }}
                 onClose={() => { setShowCal(false); setOpen(false); }}
               />
             )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── STAGE DROPDOWN ──────────────────────────────────────────────────────────
+function StageDropdown({ view, viewCounts, onChange }: { view: string; viewCounts: any; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const STAGES = [
+    { value: 'all', label: 'All bookings' },
+    { value: 'pending_cancel', label: `Pending cancellation${viewCounts.pendingCancel ? ` (${viewCounts.pendingCancel})` : ''}` },
+    { value: 'needs_review', label: `Needs review${viewCounts.needsReview ? ` (${viewCounts.needsReview})` : ''}` },
+    { value: 'rebooked', label: `Rebooked${viewCounts.rebooked ? ` (${viewCounts.rebooked})` : ''}` },
+  ];
+  const currentLabel = STAGES.find((s) => s.value === view)?.label || 'All bookings';
+  const isFiltered = view !== 'all';
+  const dotColor = view === 'pending_cancel' ? RED : view === 'needs_review' ? AMBER : view === 'rebooked' ? GREEN : null;
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(!open)}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, minWidth: 168, border: `1px solid ${isFiltered ? (dotColor || LINE) : LINE}`, borderRadius: 11, padding: '10px 16px', fontSize: 13.5, fontWeight: 600, background: '#fff', color: isFiltered ? (dotColor || NAVY) : NAVY, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+          {dotColor && <span style={{ width: 7, height: 7, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />}
+          {currentLabel}
+        </span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth={2.4}><path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
+          <div style={{ position: 'absolute', top: '112%', left: 0, zIndex: 31, background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12, boxShadow: '0 12px 30px -12px rgba(16,24,40,.25)', padding: 6, minWidth: 230 }}>
+            {STAGES.map(({ value: v, label: l }) => {
+              const dot = v === 'pending_cancel' ? RED : v === 'needs_review' ? AMBER : v === 'rebooked' ? GREEN : null;
+              return (
+                <button key={v} onClick={() => { onChange(v); setOpen(false); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', border: 'none', background: view === v ? '#EAF6FF' : 'transparent', color: view === v ? BLUE : NAVY, fontSize: 13.5, fontWeight: 600, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  {dot ? <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, flexShrink: 0 }} /> : <span style={{ width: 7 }} />}
+                  {l}
+                </button>
+              );
+            })}
           </div>
         </>
       )}
@@ -369,8 +426,10 @@ export default function RepricingPage() {
     setLoading(true);
     setError(null);
     const qParam = cityQuery ? `&q=${encodeURIComponent(cityQuery)}` : '';
-    const customParam = deadline === 'custom'
-      ? `${customFrom ? `&from=${customFrom}` : ''}${customTo ? `&to=${customTo}` : ''}`
+    // When deadline=custom, send from= and to= as separate params.
+    // Backend reads req.query.from and req.query.to to build the cancel_by_date range.
+    const customParam = (deadline === 'custom' && (customFrom || customTo))
+      ? `${customFrom ? `&from=${encodeURIComponent(customFrom)}` : ''}${customTo ? `&to=${encodeURIComponent(customTo)}` : ''}`
       : '';
     const priceParam = priceRange !== 'any' ? `&price=${encodeURIComponent(priceRange)}` : '';
     authenticatedFetch(`${API_BASE}/api/live-search/repricing/candidates?page=${page}${qParam}&deadline=${deadline}${customParam}${priceParam}&view=${view}&_t=${Date.now()}`)
@@ -488,7 +547,7 @@ export default function RepricingPage() {
   const hasActiveFilter = citySearch || deadline !== '3d' || view !== 'all' || priceRange !== 'any';
 
   // Updated grid: wider gap + status columns
-  const GRID = 'minmax(0,1.6fr) 90px 120px 120px 110px 90px 140px';
+  const GRID = 'minmax(0,1.6fr) 88px 116px 116px 120px 110px 120px';
   const openRow = rows.find((r) => r.bookingId === expanded) || null;
 
   return (
@@ -531,14 +590,12 @@ export default function RepricingPage() {
           {/* Price range */}
           <PriceDropdown value={priceRange} onChange={(v) => { setPriceRange(v); setPage(1); closeDrawer(); }} />
 
-          {/* View */}
-          <select value={view} onChange={(e) => { setView(e.target.value); setPage(1); closeDrawer(); }}
-            style={{ border: `1px solid ${view === 'pending_cancel' ? RED : LINE}`, borderRadius: 11, padding: '10px 14px', fontSize: 13.5, fontWeight: 600, background: '#fff', color: view === 'pending_cancel' ? RED : NAVY, cursor: 'pointer', fontFamily: 'inherit' }}>
-            <option value="all">All bookings</option>
-            <option value="pending_cancel">Pending cancellation{viewCounts.pendingCancel ? ` (${viewCounts.pendingCancel})` : ''}</option>
-            <option value="needs_review">Needs review{viewCounts.needsReview ? ` (${viewCounts.needsReview})` : ''}</option>
-            <option value="rebooked">Rebooked{viewCounts.rebooked ? ` (${viewCounts.rebooked})` : ''}</option>
-          </select>
+          {/* Stage filter — styled to match PriceDropdown and DeadlineDropdown */}
+          <StageDropdown
+            view={view}
+            viewCounts={viewCounts}
+            onChange={(v: string) => { setView(v); setPage(1); closeDrawer(); }}
+          />
 
           {/* Clear */}
           {hasActiveFilter && (
@@ -563,8 +620,8 @@ export default function RepricingPage() {
           <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 18, overflow: 'hidden', boxShadow: '0 1px 3px rgba(16,24,40,.05)' }}>
             {/* Column headers */}
             <div style={{ display: 'grid', gridTemplateColumns: GRID, gap: 14, padding: '14px 24px', borderBottom: `1px solid ${LINE}`, background: '#FAFBFD' }}>
-              {['Booking', 'Rebook by', 'Original', 'Live price', 'Gap', 'Status', ''].map((h, i) => (
-                <div key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: MUTED, textAlign: (i === 2 || i === 3 || i === 4) ? 'right' : 'left' }}>{h}</div>
+              {['Booking', 'Rebook by', 'Original', 'Live price', 'Gap', 'Stage', 'Action'].map((h, i) => (
+                <div key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: MUTED, textAlign: (i === 2 || i === 3 || i === 4 || i === 6) ? 'right' : 'left' }}>{h}</div>
               ))}
             </div>
 
@@ -951,8 +1008,22 @@ function RateChooser({ rates, selected, onSelect, onBook, booking, origUsd }: an
           </div>
 
           {(() => {
-            const saves = chosen && chosen.vsOriginalUsd > 0;
+            const vs = chosen?.vsOriginalUsd ?? null;
+            const saves = vs != null && vs > 0;           // cheaper — blue Rebook
+            const same = vs != null && vs === 0;           // same price — amber warning, still bookable
+            const costMore = vs != null && vs < 0;         // higher — disabled, red message
+            const noChoice = !chosen;
             const diffs = chosen?.blockers?.length || 0;
+
+            // Button state
+            const btnDisabled = noChoice || costMore || booking;
+            const btnBg = noChoice || costMore ? '#E2E8F0' : saves ? BLUE : '#fff';
+            const btnColor = noChoice || costMore ? MUTED : saves ? '#fff' : BLUE;
+            const btnBorder = saves || noChoice || costMore ? 'none' : `1.5px solid ${BLUE}`;
+            const btnLabel = booking
+              ? <><Spinner color={saves ? '#fff' : BLUE} /> Rebooking…</>
+              : saves ? 'Rebook' : same ? 'Rebook (same price)' : noChoice ? 'Rebook' : 'Rebook';
+
             return (
               <>
                 <div style={{ marginTop: 14, background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -962,17 +1033,32 @@ function RateChooser({ rates, selected, onSelect, onBook, booking, origUsd }: an
                         <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 14.5, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 560 }}>{chosen.roomDescription || chosen.roomType}</div>
                         <div style={{ fontSize: 13, color: SLATE, marginTop: 5, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                           <span>{chosen.board} · <strong style={{ color: NAVY }}>${chosen.usd}</strong></span>
-                          {saves ? <strong style={{ color: GREEN }}>saves ${chosen.vsOriginalUsd}</strong> : <strong style={{ color: RED }}>costs ${Math.abs(chosen.vsOriginalUsd || 0)} more</strong>}
+                          {saves && <strong style={{ color: GREEN }}>saves ${vs}</strong>}
+                          {same && <span style={{ fontSize: 12, fontWeight: 600, color: AMBER }}>Same price as original</span>}
+                          {costMore && <strong style={{ color: RED }}>↑ ${Math.abs(vs!)} more than original</strong>}
                           {diffs > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: AMBER, background: '#FEF3C7', padding: '3px 9px', borderRadius: 20 }}>{diffs} difference{diffs > 1 ? 's' : ''} accepted</span>}
                         </div>
+                        {/* Inline message below the row — always visible, no hover needed */}
+                        {costMore && (
+                          <div style={{ marginTop: 8, fontSize: 12, color: RED, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={RED} strokeWidth={2.5}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            This rate costs more — select a cheaper rate to rebook
+                          </div>
+                        )}
+                        {same && (
+                          <div style={{ marginTop: 8, fontSize: 12, color: AMBER, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={AMBER} strokeWidth={2.5}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            No price saving — only rebook if cancellation terms are better
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div style={{ fontSize: 13.5, color: MUTED }}>Select a room above to rebook.</div>
                     )}
                   </div>
-                  <button onClick={onBook} disabled={!chosen || booking}
-                    style={{ border: saves ? 'none' : `1.5px solid ${BLUE}`, borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 700, fontFamily: BODY, background: !chosen ? '#E2E8F0' : saves ? BLUE : '#fff', color: !chosen ? MUTED : saves ? '#fff' : BLUE, cursor: !chosen || booking ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
-                    {booking ? <><Spinner color={saves ? '#fff' : BLUE} /> Rebooking…</> : saves ? 'Rebook' : 'Rebook anyway'}
+                  <button onClick={!btnDisabled ? onBook : undefined} disabled={btnDisabled}
+                    style={{ border: btnBorder, borderRadius: 12, padding: '13px 28px', fontSize: 15, fontWeight: 700, fontFamily: BODY, background: btnBg, color: btnColor, cursor: btnDisabled ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', opacity: costMore ? 0.55 : 1 }}>
+                    {btnLabel}
                   </button>
                 </div>
                 <div style={{ fontSize: 11.5, color: MUTED, marginTop: 8 }}>Books the replacement only. The original stays live until you cancel it.</div>
