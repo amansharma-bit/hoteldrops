@@ -680,8 +680,16 @@ router.get('/dashboard-refresh', async (req, res) => {
 });
 
 async function attemptCounts() {
-  const out = { pendingCancel: 0, needsReview: 0, rebooked: 0 };
-  try { out.pendingCancel = await sbCount('grn_rebooking_attempts', 'status=in.(awaiting_cancel,booked)'); out.needsReview = await sbCount('grn_rebooking_attempts', 'status=in.(needs_review,error)'); out.rebooked = await sbCount('grn_rebooking_attempts', 'status=eq.confirmed'); } catch { }
+  const out = { pendingCancel: 0, needsReview: 0, rebooked: 0, checked: 0, dropped: 0 };
+  try {
+    out.pendingCancel = await sbCount('grn_rebooking_attempts', 'status=in.(awaiting_cancel,booked)');
+    out.needsReview   = await sbCount('grn_rebooking_attempts', 'status=in.(needs_review,error)');
+    out.rebooked      = await sbCount('grn_rebooking_attempts', 'status=eq.confirmed');
+    // Distinct bookings that have had at least one price check
+    out.checked = await sbCount('grn_price_checks', 'id=not.is.null');
+    // Checks that found a cheaper rate
+    out.dropped = await sbCount('grn_price_checks', 'dropped=eq.true');
+  } catch { }
   return out;
 }
 
