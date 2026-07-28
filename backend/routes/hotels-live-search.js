@@ -1269,31 +1269,231 @@ router.get('/repricing/attempt-log', async (req, res) => {
 
 router.get('/repricing/searches', async (req, res) => {
   if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
-  const page = parseInt(req.query.page, 10) || 1; const perPage = 25; const offset = (page - 1) * perPage;
+  const page = parseInt(req.query.page, 10) || 1;
+  const perPage = 25;
+  const offset = (page - 1) * perPage;
+
+  // ── Filters ────────────────────────────────────────────────────────────────
+
+  // 1. Universal search — hotel name, city, booking ID (matched post-join)
+  const searchQ = (req.query.q || '').trim();
+
+  // 2. Result filter — 'drop' | 'no_drop' | 'sold_out' | 'all'
+  const resultFilter = (req.query.result || 'all').trim();
+
+  // 3. Date range — from/to are YYYY-MM-DD strings
+  const fromDate = req.query.from ? `${req.query.from}T00:00:00+05:30` : null;
+  const toDate   = req.query.to   ? `${req.query.to}T23:59:59+05:30`   : null;
+
+  // 4. Gap size — 'any' | '0-50' | '50-100' | '100-500' | '500+'
+  const gapParam = (req.query.gap || 'any').trim();
+  let gapMinUsd = null;
+  let gapMaxUsd = null;
+  if (gapParam !== 'any') {
+    if (gapParam === '500+') { gapMinUsd = 500; }
+    else { const [mn, mx] = gapParam.split('-').map(Number); gapMinUsd = mn || null; gapMaxUsd = mx || null; }
+  }
+
   try {
-    const { rows: checks, total } = await sbSelect('grn_price_checks', `select=id,booking_id,checked_at,original_price,original_currency,original_usd,live_price,live_currency,live_usd,dropped,gap_usd,gap_pct,room_match,board_match,dates_match,policy_match,match_basis,original_non_refundable,live_non_refundable,raw&order=checked_at.desc&offset=${offset}&limit=${perPage}`, { 'Prefer': 'count=exact' });
-    const ids = [...new Set(checks.map((c) => c.booking_id))];
+    // Build WHERE clause for grn_price_checks
+    let where = 'select=id,booking_id,checked_at,original_price,original_currency,original_usd,live_price,live_currency,live_usd,dropped,gap_usd,gap_pct,room_match,board_match,dates_match,policy_match,match_basis,original_non_refundable,live_non_refundable,raw';
+
+    const filters = [];
+
+    // Date range on checked_at
+    if (fromDate) filters.push(`checked_at=gte.${encodeURIComponent(new Date(fromDate).toISOString())}`);
+    if (toDate)   filters.push(`checked_at=lte.${encodeURIComponent(new Date(toDate).toISOString())}`);
+
+    // Result filter maps to column conditions on grn_price_checks
+    if (resultFilter === 'drop')    filters.push('dropped=eq.true');
+    if (resultFilter === 'no_drop') filters.push('dropped=eq.false');
+    if (resultFilter === 'sold_out') filters.push('live_usd=is.null');
+
+    // Gap filter — only meaningful when dropped=true
+    if (gapMinUsd !== null) filters.push(`gap_usd=gte.${gapMinUsd}`);
+    if (gapMaxUsd !== null) filters.push(`gap_usd=lte.${gapMaxUsd}`);
+
+    const filterStr = filters.length ? '&' + filters.join('&') : '';
+
+    const { rows: checks, total } = await sbSelect(
+      'grn_price_checks',
+      `${where}${filterStr}&order=checked_at.desc&offset=${offset}&limit=${perPage}`,
+      { 'Prefer': 'count=exact' }
+    );
+
+    // Join booking info for hotel/city/room names
+    const ids = [...new Set(checks.map(c => c.booking_id))];
     const info = {};
-    if (ids.length) { const inList = ids.map((i) => `"${i}"`).join(','); const { rows: bk } = await sbSelect('grn_bookings', `booking_id=in.(${encodeURIComponent(inList)})&select=booking_id,hotel_name,city_name,room_type,currency`); for (const b of bk) info[b.booking_id] = b; }
-    const summaryRows = await sbSelect('grn_price_check_summary', 'select=*').then((r) => r.rows).catch(() => []);
+    if (ids.length) {
+      const inList = ids.map(i => `"${i}"`).join(',');
+      const { rows: bk } = await sbSelect('grn_bookings',
+        `booking_id=in.(${encodeURIComponent(inList)})&select=booking_id,hotel_name,city_name,room_type,currency`);
+      for (const b of bk) info[b.booking_id] = b;
+    }
+
+    // Map rows — apply search filter post-join (hotel name, city, booking ID)
+    let rows = checks.map(c => {
+      const b = info[c.booking_id] || {};
+      const matchedRate = c.raw || {};
+      const actionable = Boolean(
+        c.dropped && c.room_match === true && c.board_match === true &&
+        c.policy_match === true && c.dates_match === true &&
+        (c.match_basis === 'room_code' || c.match_basis === 'room_name_exact')
+      );
+      const result = c.live_usd == null ? 'sold_out'
+        : c.dropped ? (actionable ? 'drop_actionable' : 'drop_blocked')
+        : (c.gap_usd != null && c.gap_usd < 0 ? 'higher' : 'no_drop');
+      return {
+        id: c.id, bookingId: c.booking_id,
+        hotel: b.hotel_name || c.booking_id, city: b.city_name || null, room: b.room_type || null,
+        checkedAt: c.checked_at,
+        originalLocal: c.original_price != null ? Number(c.original_price) : null,
+        originalCurrency: c.original_currency || null, originalUsd: c.original_usd,
+        liveLocal: c.live_price != null ? Number(c.live_price) : null,
+        liveCurrency: c.live_currency || null, liveUsd: c.live_usd,
+        liveRoom: matchedRate?.rooms?.[0]?.room_type || matchedRate?.rooms?.[0]?.description || null,
+        liveBoard: matchedRate?.boarding_details ? matchedRate.boarding_details.join(', ') : null,
+        dropped: c.dropped, gapUsd: c.gap_usd, gapPct: c.gap_pct,
+        roomMatch: c.room_match, boardMatch: c.board_match,
+        datesMatch: c.dates_match, policyMatch: c.policy_match,
+        originalNonRefundable: c.original_non_refundable,
+        liveNonRefundable: c.live_non_refundable,
+        matchBasis: c.match_basis || matchedRate?._match_basis || null,
+        blockers: matchedRate?._blockers || [],
+        actionable, result,
+      };
+    });
+
+    // Apply search filter post-join
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      rows = rows.filter(r =>
+        (r.hotel && r.hotel.toLowerCase().includes(q)) ||
+        (r.city && r.city.toLowerCase().includes(q)) ||
+        (r.bookingId && r.bookingId.toLowerCase().includes(q))
+      );
+    }
+
+    // Funnel counts (always unfiltered for the stat cards)
+    const summaryRows = await sbSelect('grn_price_check_summary', 'select=*').then(r => r.rows).catch(() => []);
     const summary = summaryRows[0] || {};
-    const { total: actionableDrops } = await sbSelect('grn_price_checks', `dropped=eq.true&room_match=eq.true&board_match=eq.true&policy_match=eq.true&dates_match=eq.true&match_basis=in.(room_code,room_name_exact)&select=id`, { 'Prefer': 'count=exact' });
-    res.json({ page, perPage, total: total ?? 0, hasMore: offset + perPage < (total ?? 0), funnel: { totalChecks: Number(summary.total_checks || 0), bookingsChecked: Number(summary.bookings_checked || 0), dropsFound: Number(summary.drops_found || 0), actionableDrops: actionableDrops ?? 0, totalGapUsd: Math.round(Number(summary.total_gap_usd || 0)) }, rows: checks.map((c) => { const b = info[c.booking_id] || {}; const matchedRate = c.raw || {}; const actionable = Boolean(c.dropped && c.room_match === true && c.board_match === true && c.policy_match === true && c.dates_match === true && (c.match_basis === 'room_code' || c.match_basis === 'room_name_exact')); return { id: c.id, bookingId: c.booking_id, hotel: b.hotel_name || c.booking_id, city: b.city_name || null, room: b.room_type || null, checkedAt: c.checked_at, originalLocal: c.original_price != null ? Number(c.original_price) : null, originalCurrency: c.original_currency || null, originalUsd: c.original_usd, liveLocal: c.live_price != null ? Number(c.live_price) : null, liveCurrency: c.live_currency || null, liveUsd: c.live_usd, liveRoom: matchedRate?.rooms?.[0]?.room_type || matchedRate?.rooms?.[0]?.description || null, liveBoard: matchedRate?.boarding_details ? matchedRate.boarding_details.join(', ') : null, dropped: c.dropped, gapUsd: c.gap_usd, gapPct: c.gap_pct, roomMatch: c.room_match, boardMatch: c.board_match, datesMatch: c.dates_match, policyMatch: c.policy_match, originalNonRefundable: c.original_non_refundable, liveNonRefundable: c.live_non_refundable, matchBasis: c.match_basis || matchedRate?._match_basis || null, blockers: matchedRate?._blockers || [], actionable, result: c.live_usd == null ? 'sold_out' : c.dropped ? (actionable ? 'drop_actionable' : 'drop_blocked') : (c.gap_usd != null && c.gap_usd < 0 ? 'higher' : 'no_drop') }; }) });
+    const { total: actionableDrops } = await sbSelect('grn_price_checks',
+      `dropped=eq.true&room_match=eq.true&board_match=eq.true&policy_match=eq.true&dates_match=eq.true&match_basis=in.(room_code,room_name_exact)&select=id`,
+      { 'Prefer': 'count=exact' });
+
+    res.json({
+      page, perPage,
+      total: searchQ ? rows.length : (total ?? 0),
+      hasMore: searchQ ? false : offset + perPage < (total ?? 0),
+      filters: { q: searchQ, result: resultFilter, from: req.query.from || null, to: req.query.to || null, gap: gapParam },
+      funnel: {
+        totalChecks: Number(summary.total_checks || 0),
+        bookingsChecked: Number(summary.bookings_checked || 0),
+        dropsFound: Number(summary.drops_found || 0),
+        actionableDrops: actionableDrops ?? 0,
+        totalGapUsd: Math.round(Number(summary.total_gap_usd || 0)),
+      },
+      rows,
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.get('/repricing/rebookings', async (req, res) => {
   if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
-  const page = parseInt(req.query.page, 10) || 1; const perPage = 25; const offset = (page - 1) * perPage; const status = (req.query.status || 'all').toLowerCase();
+  const page = parseInt(req.query.page, 10) || 1;
+  const perPage = 25;
+  const offset = (page - 1) * perPage;
+
+  // ── Filters ────────────────────────────────────────────────────────────────
+  const status    = (req.query.status || 'all').toLowerCase();
+  const searchQ   = (req.query.q || '').trim();
+  const fromDate  = req.query.from ? `${req.query.from}T00:00:00+05:30` : null;
+  const toDate    = req.query.to   ? `${req.query.to}T23:59:59+05:30`   : null;
+  const savingParam = (req.query.saving || 'any').trim();
+  let savingMin = null, savingMax = null;
+  if (savingParam !== 'any') {
+    if (savingParam === '500+') { savingMin = 500; }
+    else { const [mn, mx] = savingParam.split('-').map(Number); savingMin = mn || null; savingMax = mx || null; }
+  }
+
   try {
-    let where = '';
-    if (status === 'successful') where = 'status=in.(confirmed,success)';
-    else if (status === 'errors') where = 'status=in.(error,failed)';
+    // Build WHERE
+    const filters = [];
+    if (status === 'successful') filters.push('status=in.(confirmed,success)');
+    else if (status === 'errors') filters.push('status=in.(error,failed,needs_review)');
+    if (fromDate) filters.push(`created_at=gte.${encodeURIComponent(new Date(fromDate).toISOString())}`);
+    if (toDate)   filters.push(`created_at=lte.${encodeURIComponent(new Date(toDate).toISOString())}`);
+    if (savingMin !== null) filters.push(`saved_usd=gte.${savingMin}`);
+    if (savingMax !== null) filters.push(`saved_usd=lte.${savingMax}`);
+
+    const filterStr = filters.length ? filters.join('&') + '&' : '';
+    const q = `${filterStr}select=*&order=created_at.desc&offset=${offset}&limit=${perPage}`;
+
     let rows = [], total = 0;
-    try { const q = (where ? where + '&' : '') + `select=*&order=created_at.desc&offset=${offset}&limit=${perPage}`; const r = await sbSelect('grn_rebooking_attempts', q, { 'Prefer': 'count=exact' }); rows = r.rows; total = r.total ?? 0; } catch { rows = []; total = 0; }
+    try {
+      const r = await sbSelect('grn_rebooking_attempts', q, { 'Prefer': 'count=exact' });
+      rows = r.rows; total = r.total ?? 0;
+    } catch { rows = []; total = 0; }
+
+    // Apply search filter post-fetch (hotel_name, city_name, booking_id)
+    if (searchQ) {
+      const sq = searchQ.toLowerCase();
+      rows = rows.filter(r =>
+        (r.hotel_name && r.hotel_name.toLowerCase().includes(sq)) ||
+        (r.city_name  && r.city_name.toLowerCase().includes(sq))  ||
+        (r.booking_id && r.booking_id.toLowerCase().includes(sq))
+      );
+      total = rows.length;
+    }
+
+    // Counts (always unfiltered for stat cards)
     let counts = { successful: 0, errors: 0, all: 0 };
-    try { counts.all = await sbCount('grn_rebooking_attempts', ''); counts.successful = await sbCount('grn_rebooking_attempts', 'status=in.(confirmed,success)'); counts.errors = await sbCount('grn_rebooking_attempts', 'status=in.(error,failed)'); } catch { }
-    res.json({ page, perPage, total, hasMore: offset + perPage < total, counts, rows: rows.map((r) => ({ id: r.id, bookingId: r.booking_id, hotel: r.hotel_name, city: r.city_name || r.city, room: r.room_type, checkin: r.checkin_date || r.checkin, originalUsd: r.original_usd, rebookedUsd: r.rebooked_usd, savedUsd: r.saved_usd, supplier: r.supplier_code || r.supplier, status: r.status, failureStage: r.failure_stage || null, failureReason: r.failure_reason || null, createdAt: r.created_at })) });
+    try {
+      counts.all        = await sbCount('grn_rebooking_attempts', '');
+      counts.successful = await sbCount('grn_rebooking_attempts', 'status=in.(confirmed,success)');
+      counts.errors     = await sbCount('grn_rebooking_attempts', 'status=in.(error,failed,needs_review)');
+    } catch { }
+
+    // Stat aggregates — total saved, avg saving (successful only)
+    let totalSavedUsd = 0, avgSavingUsd = 0;
+    try {
+      const { rows: agg } = await sbSelect('grn_rebooking_attempts',
+        'status=in.(confirmed,success)&select=saved_usd&limit=5000');
+      const vals = agg.map(r => Number(r.saved_usd || 0)).filter(v => v > 0);
+      totalSavedUsd = Math.round(vals.reduce((a, b) => a + b, 0));
+      avgSavingUsd  = vals.length ? Math.round(totalSavedUsd / vals.length) : 0;
+    } catch { }
+
+    // Total checks (for conversion = successful ÷ total checks run)
+    let totalChecks = 0;
+    try {
+      totalChecks = await sbCount('grn_price_checks', '');
+    } catch { }
+
+    res.json({
+      page, perPage, total,
+      hasMore: searchQ ? false : offset + perPage < total,
+      counts,
+      stats: {
+        totalSavedUsd,
+        avgSavingUsd,
+        successfulCount: counts.successful,
+        errorCount: counts.errors,
+        totalChecks,
+        conversionPct: totalChecks > 0 ? Math.round((counts.successful / totalChecks) * 100) : 0,
+      },
+      rows: rows.map(r => ({
+        id: r.id, bookingId: r.booking_id,
+        hotel: r.hotel_name, city: r.city_name || r.city, room: r.room_type,
+        checkin: r.checkin_date || r.checkin,
+        originalUsd: r.original_usd, rebookedUsd: r.rebooked_usd, savedUsd: r.saved_usd,
+        supplier: r.supplier_code || r.supplier,
+        status: r.status,
+        failureStage: r.failure_stage || null,
+        failureReason: r.failure_reason || null,
+        createdAt: r.created_at,
+      })),
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
