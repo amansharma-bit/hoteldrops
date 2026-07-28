@@ -362,6 +362,15 @@ export default function RepricingPage() {
   const [logs, setLogs] = useState<Record<string, any[]>>({});
   const [logTab, setLogTab] = useState<Record<string, number>>({});
   const [reloadKey, setReloadKey] = useState(0);
+  const [dashStats, setDashStats] = useState<any>(null);
+
+  // Fetch dashboard totals once for the stat cards — independent of the table filters
+  useEffect(() => {
+    authenticatedFetch(`${API_BASE}/api/live-search/dashboard?_t=${Date.now()}`)
+      .then((r: Response) => r.json())
+      .then((d: any) => { if (!d.error) setDashStats(d); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const id = setTimeout(() => { setCityQuery(citySearch.trim()); setPage(1); }, 350);
@@ -486,6 +495,37 @@ export default function RepricingPage() {
         <div style={{ padding: '32px 40px 0' }}>
           <h1 style={{ fontFamily: DISPLAY, fontSize: 32, fontWeight: 800, letterSpacing: '-0.7px', color: NAVY, margin: 0 }}>Repricing</h1>
           <p style={{ fontSize: 14.5, color: SLATE, marginTop: 4, marginBottom: 0 }}>Check a booking&apos;s live price, pick a rate, book the replacement, then cancel the original.</p>
+        </div>
+
+        {/* ── Stat cards ── */}
+        <div style={{ padding: '20px 40px 0', display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 16 }}>
+          {(() => {
+            const t = dashStats?.tiles;
+            const statsLoading = !dashStats;
+            const usdShort = (n: number | null | undefined) => {
+              if (n == null) return '—';
+              if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(1) + 'M';
+              if (n >= 1_000) return '$' + Math.round(n / 1_000) + 'K';
+              return '$' + Math.round(n);
+            };
+            const cards = [
+              { label: 'Rebookable value', value: statsLoading ? '—' : usdShort(t?.liveRebookable?.valueUsd), sub: statsLoading ? '' : `${(t?.liveRebookable?.count || 0).toLocaleString()} live bookings`, fill: BLUE, pct: 100 },
+              { label: 'Closing in 3 days', value: statsLoading ? '—' : (t?.expiringSoon?.count ?? 0).toLocaleString(), sub: 'cancel window closing', fill: RED, pct: 100 },
+              { label: 'Checked', value: statsLoading ? '—' : (viewCounts.checked ?? 0).toLocaleString(), sub: 'live checks run', fill: BLUE, pct: 0 },
+              { label: 'Drops found', value: statsLoading ? '—' : (viewCounts.dropped ?? 0).toLocaleString(), sub: 'cheaper rates found', fill: '#16A34A', pct: 0 },
+              { label: 'Rebooked', value: statsLoading ? '—' : (viewCounts.rebooked ?? 0).toLocaleString(), sub: 'completed rebookings', fill: '#16A34A', pct: viewCounts.rebooked && t?.liveRebookable?.count ? Math.round((viewCounts.rebooked / t.liveRebookable.count) * 100) : 0 },
+            ];
+            return cards.map(card => (
+              <div key={card.label} style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 16, padding: '18px 20px', boxShadow: '0 1px 2px rgba(16,24,40,.03)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: SLATE }}>{card.label}</div>
+                <div style={{ fontFamily: DISPLAY, fontSize: 30, fontWeight: 800, letterSpacing: '-0.8px', color: NAVY, margin: '7px 0 3px' }}>{card.value}</div>
+                <div style={{ fontSize: 12, color: MUTED }}>{card.sub}</div>
+                <div style={{ height: 5, borderRadius: 99, background: '#F1F3F8', marginTop: 12, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(100, card.pct)}%`, background: card.fill, borderRadius: 99, transition: 'width 1s cubic-bezier(.2,.7,.3,1)' }}/>
+                </div>
+              </div>
+            ));
+          })()}
         </div>
 
         {/* ── Filter bar ── */}
