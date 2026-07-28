@@ -715,6 +715,26 @@ router.get('/repricing/candidates', async (req, res) => {
   const minDays = Math.max(0, parseInt(req.query.min_days, 10) || 0);
   const minCancelBy = new Date(Date.now() + minDays * 86400000).toISOString();
 
+  // Deadline filter — frontend sends deadline= as a preset key or 'custom'.
+  // Presets map to a cancel_by_date upper bound from now.
+  // custom sends from= and to= as explicit YYYY-MM-DD strings.
+  const deadlineParam = (req.query.deadline || '3d').trim();
+  const DEADLINE_MS = { '3d': 3, '1w': 7, '1m': 30, '1y': 365 };
+  let deadlineLower = nowIso;   // cancel_by_date must be after this
+  let deadlineUpper = null;     // cancel_by_date must be before this (null = no upper bound)
+
+  if (deadlineParam === 'custom') {
+    const fromDate = req.query.from ? `${req.query.from}T00:00:00+05:30` : null;
+    const toDate   = req.query.to   ? `${req.query.to}T23:59:59+05:30`   : null;
+    if (fromDate) deadlineLower = new Date(fromDate).toISOString();
+    if (toDate)   deadlineUpper = new Date(toDate).toISOString();
+  } else if (deadlineParam === 'any') {
+    // no upper bound, lower is just now
+  } else {
+    const days = DEADLINE_MS[deadlineParam] || 3;
+    deadlineUpper = new Date(Date.now() + days * 86400000).toISOString();
+  }
+
   // ── PRICE RANGE FILTER (USD, applied post-fetch) ──────────────────────────
   // Frontend sends e.g. "251-500" or "2001-999999". We parse min/max USD and
   // filter rows after converting price_total to USD — correct for all currencies.
@@ -752,9 +772,12 @@ router.get('/repricing/candidates', async (req, res) => {
   const sortRunway = req.query.sort === 'runway';
   const order = sortRunway ? 'cancel_by_date.desc' : 'cancel_by_date.asc';
   const inList = viewIds ? `&booking_id=in.(${encodeURIComponent(viewIds.map((i) => `"${i}"`).join(','))})` : '';
+  const deadlineWhere = `cancel_by_date=gt.${encodeURIComponent(deadlineLower)}`
+    + (deadlineUpper ? `&cancel_by_date=lte.${encodeURIComponent(deadlineUpper)}` : '');
+
   const where = viewIds
     ? `booking_id=not.is.null${inList}${cityWhere}`
-    : `cancel_by_date=gt.${encodeURIComponent(minDays > 0 ? minCancelBy : nowIso)}`
+    : deadlineWhere
       + `&checkin_date=gte.${todayIso}`
       + `&raw_booking_status=not.ilike.cancel*`
       + cityWhere;
