@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import BusinessSidebarWrapper from '../BusinessSidebarWrapper';
 import { authenticatedFetch, supabase } from '../../../lib/supabase-client';
 
@@ -36,19 +36,110 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
-  const [refreshing, setRefreshing] = useState(false);
+
+  // Refresh state: idle | syncing | recomputing
+  const [refreshPhase, setRefreshPhase] = useState<'idle' | 'syncing' | 'recomputing'>('idle');
+  const [refreshNote, setRefreshNote] = useState<string>('');
+  const pollRef = useRef<any>(null);
+
+  const refreshing = refreshPhase !== 'idle';
 
   function load(url: string, isRefresh = false) {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
+    if (!isRefresh) setLoading(true);
     setError(null);
-    authenticatedFetch(`${url}${url.includes('?') ? '&' : '?'}_t=${Date.now()}`)
+    return authenticatedFetch(`${url}${url.includes('?') ? '&' : '?'}_t=${Date.now()}`)
       .then((r: Response) => r.json())
-      .then((d: any) => { d.error ? setError(d.error) : setData(d); })
-      .catch((e: any) => setError('Could not load dashboard: ' + e.message))
-      .finally(() => { setLoading(false); setRefreshing(false); });
+      .then((d: any) => { d.error ? setError(d.error) : setData(d); return d; })
+      .catch((e: any) => { setError('Could not load dashboard: ' + e.message); throw e; })
+      .finally(() => { setLoading(false); });
   }
 
-  useEffect(() => { load(`${API_BASE}/api/live-search/dashboard`); }, []);
+  useEffect(() => {
+    load(`${API_BASE}/api/live-search/dashboard`);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  // ── Refresh: pull fresh bookings from GRN, then recompute the numbers ──────
+  // Manual only. Nothing here runs on a schedule. GRN is called once, paced,
+  // when the operator clicks — never in the background.
+  //
+  // Flow:
+  //   1. Kick off /sync-run (pulls new/updated bookings from GRN into Supabase)
+  //   2. Poll /sync-status until the sync finishes
+  //   3. Call /dashboard-refresh to recompute the snapshot on the fresh data
+  //   4. Reload the dashboard so the true numbers show
+  async function handleRefresh() {
+    if (refreshing) return;
+    setError(null);
+    setRefreshPhase('syncing');
+    setRefreshNote('Fetching latest bookings from GRN…');
+
+    try {
+      // 1. Start the sync. Range mode with a wide window so cancellations and
+      //    new bookings are both reflected — pulls everything from 1 Jan 2026
+      //    through today. This is the "give me the true current picture" pull.
+      const from = '2026-01-01';
+      const to = new Date().toISOString().slice(0, 10);
+      const startResp = await authenticatedFetch(
+        `${API_BASE}/api/live-search/sync-run?mode=range&from=${from}&to=${to}&_t=${Date.now()}`
+      ).then((r: Response) => r.json());
+
+      // If a sync is already running, we just wait for it rather than erroring.
+      if (startResp?.started === false && !/already running/i.test(startResp?.message || '')) {
+        throw new Error(startResp?.error || startResp?.message || 'Could not start the sync.');
+      }
+
+      // 2. Poll sync-status until it stops running. Show progress as it goes.
+      await new Promise<void>((resolve, reject) => {
+        let waited = 0;
+        const MAX_WAIT_MS = 6 * 60 * 1000; // 6 minutes safety cap
+        pollRef.current = setInterval(async () => {
+          waited += 3000;
+          try {
+            const s = await authenticatedFetch(
+              `${API_BASE}/api/live-search/sync-status?_t=${Date.now()}`
+            ).then((r: Response) => r.json());
+
+            const progress = s?.state?.progress;
+            if (progress) setRefreshNote(progress);
+
+            if (!s?.running) {
+              clearInterval(pollRef.current);
+              pollRef.current = null;
+              resolve();
+            } else if (waited >= MAX_WAIT_MS) {
+              clearInterval(pollRef.current);
+              pollRef.current = null;
+              // Don't hard-fail — the sync may still be finishing server-side.
+              // We proceed to recompute with whatever landed.
+              resolve();
+            }
+          } catch {
+            // A transient status-check failure shouldn't abort the whole thing.
+            if (waited >= MAX_WAIT_MS) {
+              clearInterval(pollRef.current);
+              pollRef.current = null;
+              resolve();
+            }
+          }
+        }, 3000);
+      });
+
+      // 3. Recompute the snapshot on the freshly-synced data.
+      setRefreshPhase('recomputing');
+      setRefreshNote('Recalculating rebookable value…');
+      await load(`${API_BASE}/api/live-search/dashboard-refresh`, true);
+
+      // 4. Done.
+      setRefreshPhase('idle');
+      setRefreshNote('');
+    } catch (e: any) {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      setError('Refresh failed: ' + (e?.message || 'unknown error') + '. Your existing data is unchanged.');
+      setRefreshPhase('idle');
+      setRefreshNote('');
+    }
+  }
 
   const t = data?.tiles;
   const c = data?.closing;
@@ -60,6 +151,11 @@ export default function DashboardPage() {
 
   const allVal = c?.all?.valueUsd || 0;
   const pct = (v: number | undefined) => (allVal ? Math.min(100, Math.round(((v || 0) / allVal) * 100)) : 0);
+
+  const refreshLabel =
+    refreshPhase === 'syncing' ? 'Syncing…'
+    : refreshPhase === 'recomputing' ? 'Recalculating…'
+    : 'Refresh data';
 
   return (
     <BusinessSidebarWrapper>
@@ -74,7 +170,7 @@ export default function DashboardPage() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
             <button
-              onClick={() => load(`${API_BASE}/api/live-search/dashboard-refresh`, true)}
+              onClick={handleRefresh}
               disabled={refreshing || loading}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8, border: `1px solid ${LINE}`, borderRadius: 12,
@@ -82,12 +178,16 @@ export default function DashboardPage() {
                 background: refreshing ? '#EDF1F7' : '#fff', color: refreshing ? SLATE : NAVY, boxShadow: '0 1px 2px rgba(16,24,40,.04)',
               }}
             >
-              <span style={{ fontSize: 14 }}>{refreshing ? '↻' : '⟳'}</span>
-              {refreshing ? 'Refreshing…' : 'Refresh data'}
+              <span style={{ fontSize: 14, display: 'inline-block', animation: refreshing ? 'rb-spin 1s linear infinite' : 'none' }}>↻</span>
+              {refreshLabel}
             </button>
-            {fresh && <span style={{ fontSize: 13, color: FAINT }}>Updated {fresh}{data?.snapshot?.stale ? ' · refreshing' : ''}</span>}
+            {refreshing && refreshNote
+              ? <span style={{ fontSize: 13, color: BLUE, fontWeight: 600, maxWidth: 320, textAlign: 'right' }}>{refreshNote}</span>
+              : fresh && <span style={{ fontSize: 13, color: FAINT }}>Updated {fresh}{data?.snapshot?.stale ? ' · stale' : ''}</span>}
           </div>
         </div>
+
+        <style>{`@keyframes rb-spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
 
         {error && (
           <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#DC2626' }}>{error}</div>
