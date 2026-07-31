@@ -7,9 +7,11 @@ import { authenticatedFetch } from '../../../lib/supabase-client';
 const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 
 const BLUE = '#0093FF';
+const BLUESOFT = '#E8F1FE';
 const NAVY = '#0F172A';
-const GOLD = '#F5B833';
-const GOLDSOFT = '#FBF3DF';
+const ORANGE = '#F97316';
+const ORANGESOFT = '#FFF1E6';
+const ORANGETEXT = '#C2410C';
 const GREEN = '#16A34A';
 const GREENSOFT = '#E7F7ED';
 const RED = '#DC2626';
@@ -29,30 +31,24 @@ function money(native: number | null | undefined, currency: string | null | unde
 function num(n: number | null | undefined) { if (n == null) return '—'; return Number(n).toLocaleString('en-US'); }
 function fmtDate(s: string | null | undefined) {
   if (!s) return '—';
-  const d = new Date(s);
-  if (isNaN(d.getTime())) return '—';
+  const d = new Date(s); if (isNaN(d.getTime())) return '—';
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 function fmtShort(s: string | null | undefined) {
   if (!s) return '—';
-  const d = new Date(s);
-  if (isNaN(d.getTime())) return '—';
+  const d = new Date(s); if (isNaN(d.getTime())) return '—';
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
-// Title Case for board casing normalization
-function titleCase(s: string | null | undefined) {
-  if (!s) return '';
-  return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-}
-function truncate(s: string, n: number) { return s && s.length > n ? s.slice(0, n - 1) + '…' : s; }
+function titleCase(s: string | null | undefined) { if (!s) return ''; return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()); }
+function nameNoTitle(s: string) { return (s || '').replace(/^(Mr\.|Mrs\.|Ms\.|Mstr\.|Dr\.)\s*/i, ''); }
 
-function Dropdown({ value, onChange, options, width }: { value: string; onChange: (v: string) => void; options: { v: string; label: string }[]; width: number }) {
+function Dropdown({ value, onChange, options, width, grow }: { value: string; onChange: (v: string) => void; options: { v: string; label: string }[]; width?: number; grow?: boolean }) {
   const [open, setOpen] = useState(false);
   const cur = options.find((o) => o.v === value);
   return (
-    <div style={{ position: 'relative', width }}>
+    <div style={{ position: 'relative', width: grow ? undefined : width, flex: grow ? '1 1 0' : '0 0 auto' }}>
       <button type="button" onClick={() => setOpen((o) => !o)} onBlur={() => setTimeout(() => setOpen(false), 150)}
-        style={{ width: '100%', border: `1px solid ${LINE}`, borderRadius: 11, padding: '9px 14px', fontSize: 13.5, background: '#fff', color: NAVY, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontFamily: 'inherit' }}>
+        style={{ width: '100%', border: `1px solid ${LINE}`, borderRadius: 11, padding: '10px 14px', fontSize: 13.5, background: '#fff', color: NAVY, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontFamily: 'inherit' }}>
         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cur ? cur.label : ''}</span>
         <span style={{ color: SLATE, fontSize: 11 }}>▾</span>
       </button>
@@ -81,6 +77,7 @@ export default function RepricingPage() {
   const [viewCounts, setViewCounts] = useState<any>(null);
   const [dashStats, setDashStats] = useState<any>(null);
   const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [q, setQ] = useState('');
   const [deadline, setDeadline] = useState('any');
@@ -89,11 +86,11 @@ export default function RepricingPage() {
   const [viewed, setViewed] = useState('any');
   const [drawer, setDrawer] = useState<any>(null);
 
-  function load(reset = true) {
-    setLoading(true); setError(null);
-    const p = reset ? 1 : page;
+  function fetchPage(pageNum: number, append: boolean) {
+    if (append) setLoadingMore(true); else setLoading(true);
+    setError(null);
     const params = new URLSearchParams();
-    params.set('page', String(p));
+    params.set('page', String(pageNum));
     if (q.trim()) params.set('q', q.trim());
     if (deadline !== 'any') params.set('deadline', deadline);
     if (price) params.set('price', price);
@@ -103,31 +100,32 @@ export default function RepricingPage() {
       .then((r: Response) => r.json())
       .then((d: any) => {
         if (d.error) { setError(d.error); return; }
-        setRows(d.rows || []); setTotal(d.total || 0); setHasMore(Boolean(d.hasMore));
+        setRows((prev) => append ? [...prev, ...(d.rows || [])] : (d.rows || []));
+        setTotal(d.total || 0); setHasMore(Boolean(d.hasMore));
         setViewCounts(d.viewCounts || null);
-        if (reset) setPage(1);
+        setPage(pageNum);
       })
       .catch((e: any) => setError('Could not load candidates: ' + e.message))
-      .finally(() => setLoading(false));
+      .finally(() => { setLoading(false); setLoadingMore(false); });
   }
 
   useEffect(() => {
     authenticatedFetch(`${API_BASE}/api/live-search/dashboard?_t=${Date.now()}`)
       .then((r: Response) => r.json()).then((d: any) => { if (!d.error) setDashStats(d.tiles || null); }).catch(() => {});
   }, []);
-  useEffect(() => { load(true); /* eslint-disable-next-line */ }, [deadline, board, viewed]);
+  useEffect(() => { fetchPage(1, false); /* eslint-disable-next-line */ }, [deadline, board, viewed]);
 
   const statsLoading = !dashStats;
   const cards = [
     { label: 'Live rebookable', value: statsLoading ? '—' : usd(dashStats?.liveRebookable?.valueUsd), accent: GREEN },
-    { label: 'Expiring soon', value: statsLoading ? '—' : num(dashStats?.expiringSoon?.count), accent: GOLD },
+    { label: 'Expiring soon', value: statsLoading ? '—' : num(dashStats?.expiringSoon?.count), accent: ORANGE },
     { label: 'Checked', value: num(viewCounts?.checked), accent: BLUE },
     { label: 'Drops found', value: num(viewCounts?.dropped), accent: NAVY },
     { label: 'Rebooked', value: num(viewCounts?.rebooked), accent: GREEN },
   ];
 
-  const GRID = 'minmax(0,1.5fr) 110px 70px 130px 128px 116px 100px';
-  const DDW = 160;
+  // rebalanced: hotel column has hard max, data columns wider
+  const GRID = 'minmax(0,1fr) 118px 84px 150px 148px 128px 104px';
 
   return (
     <BusinessSidebarWrapper>
@@ -136,15 +134,19 @@ export default function RepricingPage() {
           @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
           @keyframes rpshimmer { 0% { background-position:-400px 0 } 100% { background-position:400px 0 } }
           @keyframes rppulse { 0%,100% { opacity:1; transform:scale(1) } 50% { opacity:.35; transform:scale(.8) } }
+          @keyframes rppop { 0% { transform:scale(.8); opacity:0 } 60% { transform:scale(1.05) } 100% { transform:scale(1); opacity:1 } }
+          @keyframes rprise { 0% { opacity:0; transform:translateY(8px) } 100% { opacity:1; transform:translateY(0) } }
           .rp-sk { background:linear-gradient(90deg,#EEF2F7 25%,#F5F8FC 50%,#EEF2F7 75%); background-size:800px 100%; animation:rpshimmer 1.4s infinite linear; border-radius:8px; }
           .rp-dot { width:8px; height:8px; border-radius:50%; background:${GREEN}; display:inline-block; animation:rppulse 1.1s infinite ease-in-out; }
-          .rp-in { border:1px solid ${LINE}; border-radius:11px; padding:9px 14px; font-size:13.5px; font-family:inherit; color:${NAVY}; background:#fff; outline:none; }
+          .rp-pop { animation:rppop .4s ease-out; }
+          .rp-band { animation:rprise .35s ease-out; }
+          .rp-in { border:1px solid ${LINE}; border-radius:11px; padding:10px 14px; font-size:13.5px; font-family:inherit; color:${NAVY}; background:#fff; outline:none; }
           .rp-in:focus { border-color:${BLUE}; }
-          .rp-btn { border:1px solid ${LINE}; border-radius:11px; padding:9px 14px; font-size:13.5px; background:#fff; color:${NAVY}; cursor:pointer; font-family:inherit; }
+          .rp-btn { border:1px solid ${LINE}; border-radius:11px; padding:10px 14px; font-size:13.5px; background:#fff; color:${NAVY}; cursor:pointer; font-family:inherit; }
           .rp-btn:hover { border-color:${BLUE}; }
           .rp-primary { background:${BLUE}; color:#fff; border:none; border-radius:10px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
           .rp-primary:disabled { background:#B9D9F5; cursor:not-allowed; }
-          .rp-viewed { background:${GOLDSOFT}; color:#8A6D1F; border:1px solid #EBD9A6; border-radius:10px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
+          .rp-reopen { background:${BLUESOFT}; color:${BLUE}; border:1px solid #CBE3FB; border-radius:10px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
           .rp-chip { border:1px solid ${LINE}; border-radius:999px; padding:6px 13px; font-size:12.5px; background:#fff; color:${NAVY}; cursor:pointer; font-family:inherit; font-weight:600; }
           .rp-chip.on { background:${BLUE}; color:#fff; border-color:${BLUE}; }
           .rp-recheck { border:1px solid ${BLUE}; color:${BLUE}; background:#F0F7FF; border-radius:999px; padding:6px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
@@ -153,11 +155,12 @@ export default function RepricingPage() {
           .rp-radio.on { border-color:${BLUE}; }
           .rp-radio.on::after { content:''; width:9px; height:9px; border-radius:50%; background:${BLUE}; }
           .rp-expand { color:${BLUE}; font-size:12.5px; cursor:pointer; font-weight:600; }
+          .rp-match { background:${ORANGESOFT}; color:${ORANGETEXT}; font-size:10px; font-weight:800; padding:2px 9px; border-radius:999px; letter-spacing:.4px; }
         `}} />
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
           <h1 style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800, fontSize: 26, color: NAVY, margin: 0 }}>Repricing</h1>
-          <span style={{ color: SLATE, fontSize: 13 }}>{num(total)} refundable bookings in window</span>
+          <span style={{ color: SLATE, fontSize: 13 }}>{num(total)} refundable bookings</span>
         </div>
         <p style={{ color: SLATE, fontSize: 13.5, margin: '0 0 20px' }}>Refundable bookings still inside their free-cancel window — check live rates and capture drops.</p>
 
@@ -171,21 +174,22 @@ export default function RepricingPage() {
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* filter row — full width, aligned, dropdowns wide enough (no truncation) */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', width: '100%' }}>
           <input className="rp-in" placeholder="Search booking ID, city, guest…" value={q}
-            onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') load(true); }}
-            style={{ width: 230 }} />
-          <button className="rp-primary" onClick={() => load(true)} style={{ padding: '9px 18px' }}>Search</button>
-          <Dropdown value={deadline} onChange={setDeadline} width={DDW} options={[
+            onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') fetchPage(1, false); }}
+            style={{ flex: '1 1 0', minWidth: 200 }} />
+          <button className="rp-primary" onClick={() => fetchPage(1, false)} style={{ padding: '10px 20px', flex: '0 0 auto' }}>Search</button>
+          <Dropdown value={deadline} onChange={setDeadline} grow options={[
             { v: 'any', label: 'Cancellation deadline' }, { v: '3d', label: 'Next 3 days' }, { v: '1w', label: 'Next week' }, { v: '1m', label: 'Next month' }, { v: '1y', label: 'Next year' },
           ]} />
-          <Dropdown value={viewed} onChange={setViewed} width={DDW} options={[
+          <Dropdown value={viewed} onChange={setViewed} grow options={[
             { v: 'any', label: 'All bookings' }, { v: 'not', label: 'Not viewed' }, { v: 'viewed', label: 'Viewed' },
           ]} />
-          <Dropdown value={board} onChange={setBoard} width={DDW} options={[
+          <Dropdown value={board} onChange={setBoard} grow options={[
             { v: 'any', label: 'Any board' }, { v: 'bb', label: 'Breakfast' }, { v: 'hb', label: 'Half board' }, { v: 'fb', label: 'Full board' }, { v: 'ai', label: 'All inclusive' }, { v: 'ro', label: 'Room only' },
           ]} />
-          <Dropdown value={price} onChange={setPrice} width={DDW} options={[
+          <Dropdown value={price} onChange={setPrice} grow options={[
             { v: '', label: 'Any price' }, { v: '0-250', label: 'Under $250' }, { v: '250-1000', label: '$250–$1,000' }, { v: '1000-5000', label: '$1,000–$5,000' }, { v: '5000-999999', label: 'Above $5,000' },
           ]} />
         </div>
@@ -206,11 +210,11 @@ export default function RepricingPage() {
           ) : rows.length === 0 ? (
             <div style={{ padding: 32, color: SLATE, fontSize: 14, textAlign: 'center' }}>No bookings match these filters.</div>
           ) : (
-            rows.map((r) => (
-              <div key={r.bookingId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 18px', borderBottom: `1px solid ${LINE}`, alignItems: 'center', fontSize: 13.5 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.hotel || r.bookingId}>{truncate(r.hotel || r.bookingId, 42)}</div>
-                  <div style={{ color: SLATE, fontSize: 12, marginTop: 2 }}>{[r.city, r.bookingId].filter(Boolean).join(' · ')}</div>
+            rows.map((r, idx) => (
+              <div key={r.bookingId + '_' + idx} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 18px', borderBottom: `1px solid ${LINE}`, alignItems: 'center', fontSize: 13.5 }}>
+                <div style={{ minWidth: 0, maxWidth: '100%' }}>
+                  <div style={{ fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.hotel || r.bookingId}>{r.hotel || r.bookingId}</div>
+                  <div style={{ color: SLATE, fontSize: 12, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[r.city, r.bookingId].filter(Boolean).join(' · ')}</div>
                 </div>
                 <div style={{ color: NAVY }}>{fmtShort(r.checkin)}</div>
                 <div style={{ color: NAVY }}>{r.nights ?? '—'}</div>
@@ -231,7 +235,7 @@ export default function RepricingPage() {
                   <div style={{ color: SLATE, fontSize: 11.5 }}>{fmtShort(r.cancelByDate)}</div>
                 </div>
                 <div>
-                  <button className={r.viewed ? 'rp-viewed' : 'rp-primary'} onClick={() => setDrawer(r)}>{r.viewed ? 'Viewed' : 'View'}</button>
+                  <button className={r.viewed ? 'rp-reopen' : 'rp-primary'} onClick={() => setDrawer(r)}>{r.viewed ? 'Reopen' : 'View'}</button>
                 </div>
               </div>
             ))
@@ -240,7 +244,7 @@ export default function RepricingPage() {
 
         {hasMore && !loading && (
           <div style={{ textAlign: 'center', marginTop: 16 }}>
-            <button className="rp-btn" onClick={() => { setPage((p) => p + 1); setTimeout(() => load(false), 0); }}>Load more</button>
+            <button className="rp-btn" disabled={loadingMore} onClick={() => fetchPage(page + 1, true)}>{loadingMore ? 'Loading…' : 'Load more'}</button>
           </div>
         )}
       </div>
@@ -260,17 +264,26 @@ function Cell({ label, value }: { label: string; value: any }) {
 }
 
 function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
-  const [checking, setChecking] = useState(true);
+  const [detail, setDetail] = useState<any>(null);       // booking detail (cheap, on open)
+  const [checking, setChecking] = useState(false);        // rates fetch state (Reprice)
+  const [rated, setRated] = useState(false);              // have rates been fetched?
   const [err, setErr] = useState<string | null>(null);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<any>(null);        // rates result
   const [selected, setSelected] = useState<string | null>(null);
   const [refOnly, setRefOnly] = useState(false);
   const [boardFilter, setBoardFilter] = useState<string>('any');
   const [showCxl, setShowCxl] = useState(false);
   const [showPolicies, setShowPolicies] = useState(false);
 
-  function runCheck() {
-    setChecking(true); setErr(null); setResult(null);
+  // On open: fetch DETAIL only (fast) — no rates.
+  useEffect(() => {
+    authenticatedFetch(`${API_BASE}/api/live-search/repricing/detail`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: row.bookingId }),
+    }).then((r: Response) => r.json()).then((d: any) => { if (!d.error) setDetail(d.original); }).catch(() => {});
+  }, [row.bookingId]);
+
+  function runReprice() {
+    setChecking(true); setErr(null); setResult(null); setRated(true);
     authenticatedFetch(`${API_BASE}/api/live-search/repricing/check`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: row.bookingId }),
     })
@@ -278,15 +291,15 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
       .then((d: any) => {
         if (d.error) { setErr(d.error); return; }
         setResult(d);
+        if (d.original) setDetail(d.original);   // enrich
         const best = (d.allRates || []).find((x: any) => x.eligible && x.vsOriginalNative > 0);
         setSelected(best ? best.rateKey : null);
       })
       .catch((e: any) => setErr('Live check failed: ' + e.message))
       .finally(() => setChecking(false));
   }
-  useEffect(() => { runCheck(); /* eslint-disable-next-line */ }, []);
 
-  const orig = result?.original || {};
+  const orig = detail || {};
   const oRoom = orig.room || row.roomType;
   const oBoard = titleCase(orig.board || row.board);
   const oRooms = orig.roomCount != null ? orig.roomCount : row.roomCount;
@@ -298,8 +311,9 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
   const oPaidNative = orig.price?.native != null ? orig.price.native : row.origNative;
   const oPaidCur = orig.price?.currency || row.currency;
   const oPaidUsd = orig.price?.usd != null ? orig.price.usd : row.origUsd;
-  const adults = orig.adults || [];
+  const adultsCount = orig.adultsCount != null ? orig.adultsCount : (orig.adults ? orig.adults.length : null);
   const children = orig.children || [];
+  const guestNames = (orig.guests || []).map((g: any) => nameNoTitle(g.name) + (g.age != null ? ` (${g.age}y)` : '')).join(', ');
   const cxlDetails = orig.cancellationDetails || [];
 
   const allRates: any[] = result?.allRates || [];
@@ -322,19 +336,19 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
         <button className="rp-btn" onClick={onClose} style={{ padding: '7px 16px', flex: '0 0 auto' }}>Close</button>
       </div>
 
-      <div style={{ padding: '22px 32px' }}>
-        {/* BAND 1 — CURRENT BOOKING (horizontal) */}
-        <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '18px 22px', marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 14 }}>Current booking</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px 20px' }}>
+      <div style={{ padding: '20px 32px' }}>
+        {/* BAND 1 — CURRENT BOOKING */}
+        <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '16px 22px', marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 12 }}>Current booking</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '13px 20px' }}>
             <Cell label="Date of booking" value={fmtDate(orig.bookingDate)} />
             <Cell label="Check-in" value={fmtDate(oCheckin)} />
             <Cell label="Check-out" value={fmtDate(oCheckout)} />
             <Cell label="Rooms" value={oRooms != null ? String(oRooms) : '—'} />
             <Cell label="Room type" value={oRoom} />
             <Cell label="Board basis" value={oBoard} />
-            <Cell label="Adults" value={adults.length ? String(adults.length) : '—'} />
-            <Cell label="Children" value={children.length ? children.map((c: any) => c.name.replace(/^(Mr\.|Mrs\.|Ms\.)\s*/, '') + (c.age != null ? ` (${c.age}y)` : '')).join(', ') : '0'} />
+            <Cell label="Adults" value={adultsCount != null ? String(adultsCount) : '—'} />
+            <Cell label="Children" value={children.length ? children.map((c: any) => (c.name ? nameNoTitle(c.name) : 'Child') + (c.age != null ? ` (${c.age}y)` : '')).join(', ') : '0'} />
             <Cell label="Supplier" value={oSupplier} />
             <Cell label="Supplier ref" value={orig.supplierRef} />
             <Cell label="GRN reference" value={row.bookingId} />
@@ -342,13 +356,20 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
               <div style={{ color: SLATE, fontSize: 11.5, marginBottom: 3 }}>Cancellation</div>
               <div style={{ color: NAVY, fontWeight: 500, fontSize: 13.5 }}>
                 {oNonRef == null ? '—' : (oNonRef ? 'Non-refundable' : 'Refundable')}
-                {cxlDetails.length > 0 && <> · <span className="rp-expand" onClick={() => setShowCxl((v) => !v)}>{showCxl ? 'Hide' : 'Details'} ▾</span></>}
+                {cxlDetails.length > 0 && <> · <span className="rp-expand" onClick={() => setShowCxl((v) => !v)}>Details ▾</span></>}
               </div>
             </div>
           </div>
 
+          {guestNames && (
+            <div style={{ marginTop: 13 }}>
+              <div style={{ color: SLATE, fontSize: 11.5, marginBottom: 3 }}>Guests</div>
+              <div style={{ color: NAVY, fontWeight: 500, fontSize: 13.5 }}>{guestNames}</div>
+            </div>
+          )}
+
           {showCxl && cxlDetails.length > 0 && (
-            <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${LINE}`, fontSize: 12.5, color: NAVY }}>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${LINE}`, fontSize: 12.5 }}>
               <div style={{ color: SLATE, fontSize: 11.5, marginBottom: 6 }}>Cancellation fee schedule</div>
               <div style={{ color: GREEN, marginBottom: 4 }}>Free cancellation until {fmtDate(oCancelBy)}</div>
               {cxlDetails.map((d: any, i: number) => (
@@ -357,50 +378,53 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
             </div>
           )}
 
-          {/* paid + policies */}
-          <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${LINE}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${LINE}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: 12, color: SLATE }}>Paid</div>
-              <div style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800, fontSize: 24, color: NAVY }}>{money(oPaidNative, oPaidCur)}</div>
+              <div style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800, fontSize: 23, color: NAVY }}>{money(oPaidNative, oPaidCur)}</div>
               <div style={{ color: SLATE, fontSize: 12.5 }}>{usd(oPaidUsd)}</div>
             </div>
-            {orig.terms && <div className="rp-expand" onClick={() => setShowPolicies((v) => !v)} style={{ alignSelf: 'center' }}>{showPolicies ? 'Hide hotel policies' : 'Hotel policies'} ▾</div>}
+            {orig.terms && <div className="rp-expand" onClick={() => setShowPolicies((v) => !v)} style={{ alignSelf: 'center' }}>Hotel policies ▾</div>}
           </div>
           {showPolicies && orig.terms && (
-            <div style={{ marginTop: 12, fontSize: 11.5, color: SLATE, lineHeight: 1.6, maxHeight: 160, overflowY: 'auto', background: BG, borderRadius: 10, padding: '12px 14px' }}>{orig.terms}</div>
+            <div style={{ marginTop: 12, fontSize: 11.5, color: SLATE, lineHeight: 1.6, maxHeight: 150, overflowY: 'auto', background: BG, borderRadius: 10, padding: '12px 14px' }}>{orig.terms}</div>
           )}
         </div>
 
-        {/* BAND 2 — REPLACEMENT (horizontal) */}
-        <div style={{ background: '#fff', border: `1.5px solid ${pick ? (pick.eligible ? '#BDE5CC' : LINE) : LINE}`, borderRadius: 14, padding: '18px 22px', marginBottom: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: pick ? 14 : 0 }}>Replacement</div>
+        {/* BAND 2 — REPLACEMENT */}
+        <div className={pick ? 'rp-band' : ''} style={{ background: '#fff', border: `1.5px solid ${pick ? (pick.eligible ? '#BDE5CC' : LINE) : LINE}`, borderRadius: 14, padding: '16px 22px', marginBottom: 18 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: pick ? 12 : 0 }}>Replacement</div>
           {pick ? (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, auto)', gap: '14px 28px', flex: 1, minWidth: 300 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, auto)', gap: '12px 28px', flex: 1, minWidth: 300 }}>
                 <Cell label="Room type" value={pick.roomDescription} />
                 <Cell label="Board basis" value={titleCase(pick.board)} />
                 <Cell label="Cancellation" value={pick.refundable ? 'Refundable' : 'Non-refundable'} />
                 <Cell label="Free cancel until" value={fmtDate(pick.cancelBy)} />
               </div>
-              <div style={{ textAlign: 'right', minWidth: 200 }}>
-                <div style={{ fontSize: 12, color: SLATE }}>New price</div>
-                <div style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800, fontSize: 24, color: NAVY }}>{money(pick.native, pick.currency)}</div>
-                <div style={{ color: SLATE, fontSize: 12.5 }}>{usd(pick.usd)}</div>
-                {pick.vsOriginalNative != null && (
-                  <div style={{ display: 'inline-block', marginTop: 8, background: pick.vsOriginalNative > 0 ? GREENSOFT : '#FDEBEC', color: pick.vsOriginalNative > 0 ? GREEN : RED, fontWeight: 800, fontSize: 15, padding: '6px 14px', borderRadius: 999 }}>
-                    {pick.vsOriginalNative > 0 ? 'Save ' : 'Costs '}{money(Math.abs(pick.vsOriginalNative), pick.currency)}
-                  </div>
-                )}
-                <button className="rp-primary" disabled={!pick.selectable} style={{ display: 'block', marginTop: 12, width: '100%', padding: '11px' }}
-                  onClick={() => alert('Rebook runs the money-path (search → recheck → rebook → confirm → cancel). Wire to /repricing/book-replacement when ready.')}>
-                  Rebook this rate
-                </button>
-                {!pick.eligible && pick.selectable && <div style={{ marginTop: 8, fontSize: 12, color: AMBER }}>Not an exact refundable match — review notes.</div>}
-                {pick.blockers && pick.blockers.length > 0 && <div style={{ marginTop: 6, fontSize: 11.5, color: AMBER }}>{pick.blockers.join(' · ')}</div>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 12, color: SLATE }}>New price</div>
+                  <div style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800, fontSize: 23, color: NAVY }}>{money(pick.native, pick.currency)}</div>
+                  <div style={{ color: SLATE, fontSize: 12.5 }}>{usd(pick.usd)}</div>
+                  {pick.vsOriginalNative != null && (
+                    <div className="rp-pop" style={{ display: 'inline-block', marginTop: 6, background: pick.vsOriginalNative > 0 ? GREENSOFT : '#FDEBEC', color: pick.vsOriginalNative > 0 ? GREEN : RED, fontWeight: 800, fontSize: 14, padding: '5px 13px', borderRadius: 999 }}>
+                      {pick.vsOriginalNative > 0 ? 'Save ' : 'Costs '}{money(Math.abs(pick.vsOriginalNative), pick.currency)}
+                    </div>
+                  )}
+                </div>
+                <div style={{ minWidth: 170 }}>
+                  <button className="rp-primary" disabled={!pick.selectable} style={{ width: '100%', padding: '11px' }}
+                    onClick={() => alert('Rebook runs the money-path (search → recheck → rebook → confirm → cancel). Wire to /repricing/book-replacement when ready.')}>
+                    Rebook this rate
+                  </button>
+                  {!pick.eligible && pick.selectable && <div style={{ marginTop: 6, fontSize: 11.5, color: AMBER, textAlign: 'center' }}>Not an exact match — review notes.</div>}
+                  {pick.blockers && pick.blockers.length > 0 && <div style={{ marginTop: 6, fontSize: 11.5, color: AMBER, textAlign: 'center' }}>{pick.blockers.join(' · ')}</div>}
+                </div>
               </div>
             </div>
           ) : (
-            <div style={{ color: SLATE, fontSize: 13.5, padding: '14px 0', textAlign: 'center' }}>{checking ? 'Checking live rates…' : 'Select a room below to see the replacement details.'}</div>
+            <div style={{ color: SLATE, fontSize: 13.5, padding: '12px 0', textAlign: 'center' }}>{checking ? 'Checking live rates…' : (rated ? 'Select a room below to see the replacement details.' : 'Press Reprice to fetch live rates.')}</div>
           )}
         </div>
 
@@ -411,7 +435,7 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
             {checking && <span className="rp-dot" />}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            {!checking && allRates.length > 0 && (
+            {rated && !checking && allRates.length > 0 && (
               <>
                 <button className={'rp-chip' + (refOnly ? ' on' : '')} onClick={() => setRefOnly((v) => !v)}>Refundable only</button>
                 <span style={{ width: 1, height: 20, background: LINE, margin: '0 2px' }} />
@@ -422,11 +446,15 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
                 <span style={{ width: 1, height: 20, background: LINE, margin: '0 2px' }} />
               </>
             )}
-            <button className="rp-recheck" onClick={runCheck} disabled={checking}>{checking ? 'Checking…' : 'Re-check'}</button>
+            <button className="rp-recheck" onClick={runReprice} disabled={checking}>{checking ? 'Checking…' : (rated ? 'Re-check' : 'Reprice')}</button>
           </div>
         </div>
 
-        {checking ? (
+        {!rated ? (
+          <div style={{ padding: 28, color: SLATE, fontSize: 13.5, textAlign: 'center', background: '#fff', border: `1px dashed ${LINE}`, borderRadius: 12 }}>
+            Press <b style={{ color: BLUE }}>Reprice</b> to fetch live rates for this booking.
+          </div>
+        ) : checking ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {[...Array(6)].map((_, i) => <div key={i} className="rp-sk" style={{ height: 74 }} />)}
           </div>
@@ -444,13 +472,16 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
               const costMore = rt.vsOriginalNative != null && rt.vsOriginalNative < 0;
               return (
                 <div key={rt.rateKey || i} onClick={() => { if (!disabled) setSelected(rt.rateKey); }}
-                  style={{ background: '#fff', border: `1.5px solid ${isSel ? BLUE : (rt.eligible ? '#BDE5CC' : LINE)}`, borderRadius: 10, padding: '12px 14px', opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer', position: 'relative', display: 'flex', gap: 12 }}>
+                  style={{ background: '#fff', border: `1.5px solid ${isSel ? BLUE : (rt.eligible ? '#BDE5CC' : LINE)}`, borderRadius: 10, padding: '12px 14px', opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer', display: 'flex', gap: 12 }}>
                   <div className={'rp-radio' + (isSel ? ' on' : '')} style={{ marginTop: 2 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                      {rt.eligible && <span className="rp-match">MATCH</span>}
+                      <div style={{ fontWeight: 600, color: NAVY, fontSize: 13.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minWidth: 0 }}>{titleCase(rt.roomDescription)}</div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 10 }}>
                       <div style={{ minWidth: 0, paddingRight: 6 }}>
-                        <div style={{ fontWeight: 600, color: NAVY, fontSize: 13.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{titleCase(rt.roomDescription)}</div>
-                        <div style={{ color: SLATE, fontSize: 12, marginTop: 3 }}>{[titleCase(rt.board), rt.refundable ? 'Refundable' : 'Non-refundable'].filter(Boolean).join(' · ')}</div>
+                        <div style={{ color: SLATE, fontSize: 12 }}>{[titleCase(rt.board), rt.refundable ? 'Refundable' : 'Non-refundable'].filter(Boolean).join(' · ')}</div>
                         {rt.cancelBy && <div style={{ color: SLATE, fontSize: 11.5, marginTop: 2 }}>Free cancel until {fmtShort(rt.cancelBy)}</div>}
                         {rt.blockers && rt.blockers.length > 0 && <div style={{ color: costMore ? RED : AMBER, fontSize: 11.5, marginTop: 4 }}>{rt.blockers.join(' · ')}</div>}
                       </div>
@@ -461,7 +492,6 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
                       </div>
                     </div>
                   </div>
-                  {rt.eligible && <div style={{ position: 'absolute', top: 0, right: 0, background: GREEN, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: '0 9px 0 8px' }}>MATCH</div>}
                 </div>
               );
             })}
