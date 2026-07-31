@@ -9,6 +9,7 @@ const API_BASE = 'https://hoteldrops-production-7e5a.up.railway.app';
 const BLUE = '#0093FF';
 const NAVY = '#0F172A';
 const GOLD = '#F5B833';
+const GOLDSOFT = '#FBF3DF';
 const GREEN = '#16A34A';
 const RED = '#DC2626';
 const AMBER = '#B45309';
@@ -72,6 +73,7 @@ export default function RepricingPage() {
   const [deadline, setDeadline] = useState('any');
   const [price, setPrice] = useState('');
   const [board, setBoard] = useState('any');
+  const [viewed, setViewed] = useState('any');
   const [drawer, setDrawer] = useState<any>(null);
 
   function load(reset = true) {
@@ -83,6 +85,7 @@ export default function RepricingPage() {
     if (deadline !== 'any') params.set('deadline', deadline);
     if (price) params.set('price', price);
     if (board !== 'any') params.set('board', board);
+    if (viewed !== 'any') params.set('viewed', viewed);
     authenticatedFetch(`${API_BASE}/api/live-search/repricing/candidates?${params.toString()}&_t=${Date.now()}`)
       .then((r: Response) => r.json())
       .then((d: any) => {
@@ -99,7 +102,7 @@ export default function RepricingPage() {
     authenticatedFetch(`${API_BASE}/api/live-search/dashboard?_t=${Date.now()}`)
       .then((r: Response) => r.json()).then((d: any) => { if (!d.error) setDashStats(d.tiles || null); }).catch(() => {});
   }, []);
-  useEffect(() => { load(true); /* eslint-disable-next-line */ }, [deadline, board]);
+  useEffect(() => { load(true); /* eslint-disable-next-line */ }, [deadline, board, viewed]);
 
   const statsLoading = !dashStats;
   const cards = [
@@ -109,6 +112,8 @@ export default function RepricingPage() {
     { label: 'Drops found', value: num(viewCounts?.dropped), accent: NAVY },
     { label: 'Rebooked', value: num(viewCounts?.rebooked), accent: GREEN },
   ];
+
+  const GRID = 'minmax(0,1.5fr) 96px 70px 128px 128px 116px 100px';
 
   return (
     <BusinessSidebarWrapper>
@@ -121,6 +126,7 @@ export default function RepricingPage() {
           .rp-btn:hover { border-color:${BLUE}; }
           .rp-primary { background:${BLUE}; color:#fff; border:none; border-radius:10px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
           .rp-primary:disabled { background:#B9D9F5; cursor:not-allowed; }
+          .rp-viewed { background:${GOLDSOFT}; color:#8A6D1F; border:1px solid #EBD9A6; border-radius:10px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; }
           .rp-chip { border:1px solid ${LINE}; border-radius:999px; padding:6px 13px; font-size:12.5px; background:#fff; color:${NAVY}; cursor:pointer; font-family:inherit; font-weight:600; }
           .rp-chip.on { background:${BLUE}; color:#fff; border-color:${BLUE}; }
         `}} />
@@ -144,28 +150,31 @@ export default function RepricingPage() {
         <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
           <input className="rp-in" placeholder="Search booking ID, city, guest…" value={q}
             onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') load(true); }}
-            style={{ width: 240 }} />
+            style={{ width: 230 }} />
           <button className="rp-primary" onClick={() => load(true)} style={{ padding: '9px 18px' }}>Search</button>
-          <Dropdown value={deadline} onChange={setDeadline} width={186} options={[
+          <Dropdown value={deadline} onChange={setDeadline} width={182} options={[
             { v: 'any', label: 'Cancellation deadline' }, { v: '3d', label: 'Next 3 days' }, { v: '1w', label: 'Next week' }, { v: '1m', label: 'Next month' }, { v: '1y', label: 'Next year' },
           ]} />
-          <Dropdown value={board} onChange={setBoard} width={150} options={[
+          <Dropdown value={viewed} onChange={setViewed} width={150} options={[
+            { v: 'any', label: 'All bookings' }, { v: 'not', label: 'Not viewed' }, { v: 'viewed', label: 'Viewed' },
+          ]} />
+          <Dropdown value={board} onChange={setBoard} width={140} options={[
             { v: 'any', label: 'Any board' }, { v: 'bb', label: 'Breakfast' }, { v: 'hb', label: 'Half board' }, { v: 'fb', label: 'Full board' }, { v: 'ai', label: 'All inclusive' }, { v: 'ro', label: 'Room only' },
           ]} />
-          <Dropdown value={price} onChange={setPrice} width={150} options={[
+          <Dropdown value={price} onChange={setPrice} width={140} options={[
             { v: '', label: 'Any price' }, { v: '0-250', label: 'Under $250' }, { v: '250-1000', label: '$250–$1,000' }, { v: '1000-5000', label: '$1,000–$5,000' }, { v: '5000-999999', label: 'Above $5,000' },
           ]} />
         </div>
 
         <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) 80px 130px 130px 118px 104px', padding: '12px 18px', borderBottom: `1px solid ${LINE}`, color: SLATE, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.3 }}>
-            <div>Hotel / Booking</div><div>Nights</div><div>Paid</div><div>Last check</div><div>Rebook by</div><div></div>
+          <div style={{ display: 'grid', gridTemplateColumns: GRID, padding: '12px 18px', borderBottom: `1px solid ${LINE}`, color: SLATE, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.3 }}>
+            <div>Hotel / Booking</div><div>Check-in</div><div>Nights</div><div>Paid</div><div>Last check</div><div>Rebook by</div><div></div>
           </div>
 
           {loading ? (
             [...Array(8)].map((_, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) 80px 130px 130px 118px 104px', padding: '14px 18px', borderBottom: `1px solid ${LINE}` }}>
-                {[...Array(6)].map((__, j) => <div key={j} style={{ height: 14, background: '#EEF2F7', borderRadius: 6, marginRight: 12 }} />)}
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 18px', borderBottom: `1px solid ${LINE}` }}>
+                {[...Array(7)].map((__, j) => <div key={j} style={{ height: 14, background: '#EEF2F7', borderRadius: 6, marginRight: 12 }} />)}
               </div>
             ))
           ) : error ? (
@@ -174,11 +183,12 @@ export default function RepricingPage() {
             <div style={{ padding: 32, color: SLATE, fontSize: 14, textAlign: 'center' }}>No bookings match these filters.</div>
           ) : (
             rows.map((r) => (
-              <div key={r.bookingId} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) 80px 130px 130px 118px 104px', padding: '14px 18px', borderBottom: `1px solid ${LINE}`, alignItems: 'center', fontSize: 13.5 }}>
+              <div key={r.bookingId} style={{ display: 'grid', gridTemplateColumns: GRID, padding: '14px 18px', borderBottom: `1px solid ${LINE}`, alignItems: 'center', fontSize: 13.5 }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, color: NAVY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.hotel || r.bookingId}</div>
                   <div style={{ color: SLATE, fontSize: 12, marginTop: 2 }}>{[r.city, r.bookingId].filter(Boolean).join(' · ')}</div>
                 </div>
+                <div style={{ color: NAVY }}>{fmtDate(r.checkin)}</div>
                 <div style={{ color: NAVY }}>{r.nights ?? '—'}</div>
                 <div style={{ color: NAVY }}>
                   <div>{money(r.origNative, r.currency)}</div>
@@ -196,7 +206,9 @@ export default function RepricingPage() {
                   <div style={{ color: r.daysToCancel != null && r.daysToCancel <= 3 ? RED : NAVY, fontWeight: r.daysToCancel != null && r.daysToCancel <= 3 ? 700 : 400 }}>{r.daysToCancel != null ? `${r.daysToCancel}d left` : '—'}</div>
                   <div style={{ color: SLATE, fontSize: 11.5 }}>{fmtDate(r.cancelByDate)}</div>
                 </div>
-                <div><button className="rp-primary" onClick={() => setDrawer(r)}>View</button></div>
+                <div>
+                  <button className={r.viewed ? 'rp-viewed' : 'rp-primary'} onClick={() => setDrawer(r)}>{r.viewed ? 'Viewed' : 'View'}</button>
+                </div>
               </div>
             ))
           )}
@@ -239,13 +251,28 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
   }
   useEffect(() => { runCheck(); /* eslint-disable-next-line */ }, []);
 
-  const orig = result?.original;
+  // INSTANT original from ROW; enrich from GRN detail when it arrives.
+  const orig = result?.original || {};
+  const oRoom = orig.room || row.roomType;
+  const oBoard = orig.board || row.board;
+  const oRooms = orig.roomCount != null ? orig.roomCount : row.roomCount;
+  const oCheckin = orig.checkin || row.checkin;
+  const oCheckout = orig.checkout || row.checkout;
+  const oCancelBy = orig.cancelBy || row.cancelByDate;
+  const oNonRef = orig.nonRefundable != null ? orig.nonRefundable : (row.status && String(row.status).toLowerCase() === 'refundable' ? false : null);
+  const oSupplier = orig.supplier || row.supplier;
+  const oSupplierRef = orig.supplierRef;
+  const oPaidNative = orig.price?.native != null ? orig.price.native : row.origNative;
+  const oPaidCur = orig.price?.currency || row.currency;
+  const oPaidUsd = orig.price?.usd != null ? orig.price.usd : row.origUsd;
+  const oGuests = orig.guests || [];
+  const guestCount = oGuests.length || null;
+  const guestNames = oGuests.length ? oGuests.map((g: any) => g.name + (g.age != null ? ` (age ${g.age})` : '')).join(', ') : (row.guestName || null);
+
   const allRates: any[] = result?.allRates || [];
   const pick = allRates.find((r) => r.rateKey === selected) || null;
-
   const buckets = Array.from(new Set(allRates.map((r) => r.boardBucket).filter(Boolean)));
   const orderedBuckets = BOARD_ORDER.filter((b) => buckets.includes(b));
-
   const shown = allRates.filter((r) => {
     if (refOnly && !r.refundable) return false;
     if (boardFilter !== 'any' && r.boardBucket !== boardFilter) return false;
@@ -253,118 +280,121 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
   });
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.30)', zIndex: 50, display: 'flex', justifyContent: 'flex-end' }} onClick={onClose}>
-      <div style={{ width: '78vw', maxWidth: 1180, background: BG, height: '100%', overflowY: 'auto', boxShadow: '-8px 0 30px rgba(0,0,0,0.14)', fontFamily: "'Plus Jakarta Sans', sans-serif" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ padding: '20px 28px', borderBottom: `1px solid ${LINE}`, background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'sticky', top: 0, zIndex: 5 }}>
-          <div>
-            <div style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800, fontSize: 20, color: NAVY }}>{orig?.hotel || row.hotel || row.bookingId}</div>
-            <div style={{ color: SLATE, fontSize: 13, marginTop: 3 }}>{[orig?.address || row.city, row.bookingId].filter(Boolean).join(' · ')}</div>
+    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 264, background: BG, zIndex: 50, overflowY: 'auto', fontFamily: "'Plus Jakarta Sans', sans-serif", boxShadow: '-8px 0 30px rgba(0,0,0,0.10)' }}>
+      {/* header */}
+      <div style={{ padding: '20px 32px', borderBottom: `1px solid ${LINE}`, background: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'sticky', top: 0, zIndex: 5 }}>
+        <div>
+          <div style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800, fontSize: 21, color: NAVY }}>{orig.hotel || row.hotel || row.bookingId}</div>
+          <div style={{ color: SLATE, fontSize: 13, marginTop: 3 }}>{orig.address || row.city || ''}</div>
+        </div>
+        <button className="rp-btn" onClick={onClose} style={{ padding: '7px 16px' }}>Close</button>
+      </div>
+
+      {/* two columns */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, padding: '22px 32px' }}>
+        {/* LEFT — original (instant from row) */}
+        <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '20px 22px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 16 }}>Current booking</div>
+          <DetailGrid items={[
+            ['Room type', oRoom],
+            ['Board basis', oBoard],
+            ['Rooms', oRooms != null ? String(oRooms) : '—'],
+            ['Guests', guestCount ? `${guestCount} pax${guestNames ? ' — ' + guestNames : ''}` : (guestNames || '—')],
+            ['Check-in', fmtDate(oCheckin)],
+            ['Check-out', fmtDate(oCheckout)],
+            ['Free cancel until', fmtDate(oCancelBy)],
+            ['Cancellation', oNonRef == null ? '—' : (oNonRef ? 'Non-refundable' : 'Refundable')],
+            ['Supplier', oSupplier],
+            ['Supplier ref', oSupplierRef],
+            ['GRN reference', row.bookingId],
+          ]} />
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${LINE}` }}>
+            <div style={{ fontSize: 12, color: SLATE }}>Paid</div>
+            <div style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800, fontSize: 25, color: NAVY }}>{money(oPaidNative, oPaidCur)}</div>
+            <div style={{ color: SLATE, fontSize: 12.5 }}>{usd(oPaidUsd)}</div>
           </div>
-          <button className="rp-btn" onClick={onClose} style={{ padding: '7px 16px' }}>Close</button>
+          {orig.terms && <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${LINE}` }}>
+            <div style={{ color: SLATE, fontSize: 11.5, marginBottom: 4 }}>Terms &amp; conditions</div>
+            <div style={{ fontSize: 11.5, color: SLATE, lineHeight: 1.55, maxHeight: 120, overflowY: 'auto' }}>{orig.terms}</div>
+          </div>}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, padding: '20px 28px' }}>
-          {/* LEFT — original */}
-          <div style={{ background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '18px 20px' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 14 }}>Current booking</div>
-            <DetailGrid items={[
-              ['Room type', orig?.room],
-              ['Board basis', orig?.board],
-              ['Rooms', orig?.roomCount != null ? String(orig.roomCount) : '—'],
-              ['Guests', orig?.guests && orig.guests.length ? orig.guests.map((g: any) => g.name + (g.age != null ? ` (age ${g.age})` : '')).join(', ') : '—'],
-              ['Check-in', fmtDate(orig?.checkin)],
-              ['Check-out', fmtDate(orig?.checkout)],
-              ['Free cancel until', fmtDate(orig?.cancelBy)],
-              ['Cancellation', orig?.nonRefundable ? 'Non-refundable' : 'Refundable'],
-              ['Supplier', orig?.supplier],
-              ['GRN reference', row.bookingId],
-              ['Supplier ref', orig?.supplierRef],
-            ]} />
-            <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${LINE}` }}>
-              <div style={{ fontSize: 12, color: SLATE }}>Paid</div>
-              <div style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800, fontSize: 24, color: NAVY }}>{orig ? money(orig.price?.native, orig.price?.currency) : money(row.origNative, row.currency)}</div>
-              <div style={{ color: SLATE, fontSize: 12.5 }}>{orig ? usd(orig.price?.usd) : usd(row.origUsd)}</div>
-            </div>
-            {orig?.terms && <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${LINE}` }}>
-              <div style={{ color: SLATE, fontSize: 11.5, marginBottom: 4 }}>Terms &amp; conditions</div>
-              <div style={{ fontSize: 11.5, color: SLATE, lineHeight: 1.55, maxHeight: 110, overflowY: 'auto' }}>{orig.terms}</div>
-            </div>}
-          </div>
-
-          {/* RIGHT — replacement */}
-          <div style={{ background: '#fff', border: `1.5px solid ${pick ? (pick.eligible ? '#BDE5CC' : LINE) : LINE}`, borderRadius: 14, padding: '18px 20px' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 14 }}>Replacement</div>
-            {pick ? (
-              <>
-                <DetailGrid items={[
-                  ['Room type', pick.roomDescription],
-                  ['Board basis', pick.board],
-                  ['Cancellation', pick.refundable ? 'Refundable' : 'Non-refundable'],
-                  ['Free cancel until', fmtDate(pick.cancelBy)],
-                ]} />
-                <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${LINE}` }}>
-                  <div style={{ fontSize: 12, color: SLATE }}>New price</div>
-                  <div style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800, fontSize: 24, color: NAVY }}>{money(pick.native, pick.currency)}</div>
-                  <div style={{ color: SLATE, fontSize: 12.5 }}>{usd(pick.usd)}</div>
-                  {pick.vsOriginalNative != null && (
-                    <div style={{ fontSize: 14, fontWeight: 800, color: pick.vsOriginalNative > 0 ? GREEN : RED, marginTop: 6 }}>
-                      {pick.vsOriginalNative > 0 ? 'Save ' : 'Costs '}{money(Math.abs(pick.vsOriginalNative), pick.currency)}
-                    </div>
-                  )}
-                </div>
-                {pick.blockers && pick.blockers.length > 0 && (
-                  <div style={{ marginTop: 12, fontSize: 12, color: AMBER, lineHeight: 1.5 }}>{pick.blockers.join(' · ')}</div>
+        {/* RIGHT — replacement */}
+        <div style={{ background: '#fff', border: `1.5px solid ${pick ? (pick.eligible ? '#BDE5CC' : LINE) : LINE}`, borderRadius: 14, padding: '20px 22px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 16 }}>Replacement</div>
+          {pick ? (
+            <>
+              <DetailGrid items={[
+                ['Room type', pick.roomDescription],
+                ['Board basis', pick.board],
+                ['Cancellation', pick.refundable ? 'Refundable' : 'Non-refundable'],
+                ['Free cancel until', fmtDate(pick.cancelBy)],
+              ]} />
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${LINE}` }}>
+                <div style={{ fontSize: 12, color: SLATE }}>New price</div>
+                <div style={{ fontFamily: "'Archivo', sans-serif", fontWeight: 800, fontSize: 25, color: NAVY }}>{money(pick.native, pick.currency)}</div>
+                <div style={{ color: SLATE, fontSize: 12.5 }}>{usd(pick.usd)}</div>
+                {pick.vsOriginalNative != null && (
+                  <div style={{ fontSize: 15, fontWeight: 800, color: pick.vsOriginalNative > 0 ? GREEN : RED, marginTop: 6 }}>
+                    {pick.vsOriginalNative > 0 ? 'Save ' : 'Costs '}{money(Math.abs(pick.vsOriginalNative), pick.currency)}
+                  </div>
                 )}
-                <button className="rp-primary" disabled={!pick.selectable} style={{ marginTop: 16, width: '100%', padding: '11px' }}
-                  onClick={() => alert('Rebook runs the money-path (search → recheck → rebook → confirm → cancel). Wire to /repricing/book-replacement when ready.')}>
-                  Rebook this rate
-                </button>
-                {!pick.eligible && pick.selectable && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: AMBER, textAlign: 'center' }}>Not an exact refundable match — review notes above.</div>
-                )}
-              </>
-            ) : (
-              <div style={{ color: SLATE, fontSize: 13.5, padding: '30px 0', textAlign: 'center' }}>Pick a rate below to see the replacement details.</div>
-            )}
-          </div>
-        </div>
-
-        <div style={{ padding: '0 28px 28px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, textTransform: 'uppercase', letterSpacing: 0.3 }}>All rooms {allRates.length ? `(${shown.length}/${allRates.length})` : ''}</div>
-            <button className="rp-btn" onClick={runCheck} disabled={checking} style={{ padding: '6px 14px' }}>{checking ? 'Checking…' : 'Re-check'}</button>
-          </div>
-
-          {!checking && allRates.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button className={'rp-chip' + (refOnly ? ' on' : '')} onClick={() => setRefOnly((v) => !v)}>Refundable only</button>
-              <span style={{ width: 1, height: 20, background: LINE, margin: '0 4px' }} />
-              <button className={'rp-chip' + (boardFilter === 'any' ? ' on' : '')} onClick={() => setBoardFilter('any')}>All boards</button>
-              {orderedBuckets.map((b) => (
-                <button key={b} className={'rp-chip' + (boardFilter === b ? ' on' : '')} onClick={() => setBoardFilter(b)}>{BOARD_LABELS[b]}</button>
-              ))}
-            </div>
-          )}
-
-          {checking ? (
-            <div>
-              <div style={{ color: SLATE, fontSize: 13, marginBottom: 12 }}>Checking live rates in {row.currency || 'booking currency'}…</div>
-              {[...Array(5)].map((_, i) => <div key={i} style={{ height: 60, background: '#EEF2F7', borderRadius: 10, marginBottom: 10 }} />)}
-            </div>
-          ) : err ? (
-            <div style={{ padding: 16, background: '#FDEBEC', color: RED, borderRadius: 10, fontSize: 13.5 }}>{err}</div>
-          ) : allRates.length === 0 ? (
-            <div style={{ padding: 20, color: SLATE, fontSize: 13.5, textAlign: 'center', background: '#fff', border: `1px solid ${LINE}`, borderRadius: 10 }}>No live rates for these dates and occupancy.</div>
-          ) : shown.length === 0 ? (
-            <div style={{ padding: 20, color: SLATE, fontSize: 13.5, textAlign: 'center', background: '#fff', border: `1px solid ${LINE}`, borderRadius: 10 }}>No rooms match these filters.</div>
+              </div>
+              {pick.blockers && pick.blockers.length > 0 && (
+                <div style={{ marginTop: 12, fontSize: 12, color: AMBER, lineHeight: 1.5 }}>{pick.blockers.join(' · ')}</div>
+              )}
+              <button className="rp-primary" disabled={!pick.selectable} style={{ marginTop: 18, width: '100%', padding: '12px' }}
+                onClick={() => alert('Rebook runs the money-path (search → recheck → rebook → confirm → cancel). Wire to /repricing/book-replacement when ready.')}>
+                Rebook this rate
+              </button>
+              {!pick.eligible && pick.selectable && (
+                <div style={{ marginTop: 8, fontSize: 12, color: AMBER, textAlign: 'center' }}>Not an exact refundable match — review notes above.</div>
+              )}
+            </>
           ) : (
-            shown.map((rt: any, i: number) => {
+            <div style={{ color: SLATE, fontSize: 13.5, padding: '40px 0', textAlign: 'center' }}>{checking ? 'Checking live rates…' : 'Pick a rate below to see the replacement details.'}</div>
+          )}
+        </div>
+      </div>
+
+      {/* room list */}
+      <div style={{ padding: '0 32px 32px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: SLATE, textTransform: 'uppercase', letterSpacing: 0.3 }}>All rooms {allRates.length ? `(${shown.length}/${allRates.length})` : ''}</div>
+          <button className="rp-btn" onClick={runCheck} disabled={checking} style={{ padding: '6px 14px' }}>{checking ? 'Checking…' : 'Re-check'}</button>
+        </div>
+
+        {!checking && allRates.length > 0 && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button className={'rp-chip' + (refOnly ? ' on' : '')} onClick={() => setRefOnly((v) => !v)}>Refundable only</button>
+            <span style={{ width: 1, height: 20, background: LINE, margin: '0 4px' }} />
+            <button className={'rp-chip' + (boardFilter === 'any' ? ' on' : '')} onClick={() => setBoardFilter('any')}>All boards</button>
+            {orderedBuckets.map((b) => (
+              <button key={b} className={'rp-chip' + (boardFilter === b ? ' on' : '')} onClick={() => setBoardFilter(b)}>{BOARD_LABELS[b]}</button>
+            ))}
+          </div>
+        )}
+
+        {checking ? (
+          <div>
+            <div style={{ color: SLATE, fontSize: 13, marginBottom: 12 }}>Checking live rates in {row.currency || 'booking currency'}…</div>
+            {[...Array(6)].map((_, i) => <div key={i} style={{ height: 60, background: '#EEF2F7', borderRadius: 10, marginBottom: 10 }} />)}
+          </div>
+        ) : err ? (
+          <div style={{ padding: 16, background: '#FDEBEC', color: RED, borderRadius: 10, fontSize: 13.5 }}>{err}</div>
+        ) : allRates.length === 0 ? (
+          <div style={{ padding: 20, color: SLATE, fontSize: 13.5, textAlign: 'center', background: '#fff', border: `1px solid ${LINE}`, borderRadius: 10 }}>No live rates for these dates and occupancy.</div>
+        ) : shown.length === 0 ? (
+          <div style={{ padding: 20, color: SLATE, fontSize: 13.5, textAlign: 'center', background: '#fff', border: `1px solid ${LINE}`, borderRadius: 10 }}>No rooms match these filters.</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {shown.map((rt: any, i: number) => {
               const disabled = !rt.selectable;
               const isSel = selected === rt.rateKey;
               const costMore = rt.vsOriginalNative != null && rt.vsOriginalNative < 0;
               return (
                 <div key={rt.rateKey || i} onClick={() => { if (!disabled) setSelected(rt.rateKey); }}
-                  style={{ background: '#fff', border: `1.5px solid ${isSel ? BLUE : (rt.eligible ? '#BDE5CC' : LINE)}`, borderRadius: 10, padding: '12px 16px', marginBottom: 10, opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer', position: 'relative' }}>
+                  style={{ background: '#fff', border: `1.5px solid ${isSel ? BLUE : (rt.eligible ? '#BDE5CC' : LINE)}`, borderRadius: 10, padding: '12px 16px', opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer', position: 'relative' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                     <div style={{ minWidth: 0, paddingRight: 8 }}>
                       <div style={{ fontWeight: 600, color: NAVY, fontSize: 13.5 }}>{rt.roomDescription}</div>
@@ -381,9 +411,9 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
                   {rt.eligible && <div style={{ position: 'absolute', top: 0, right: 0, background: GREEN, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: '0 9px 0 8px' }}>MATCH</div>}
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -391,7 +421,7 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
 
 function DetailGrid({ items }: { items: [string, any][] }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px', fontSize: 13.5 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 16px', fontSize: 13.5 }}>
       {items.map(([label, value], i) => (
         <div key={i}>
           <div style={{ color: SLATE, fontSize: 11.5 }}>{label}</div>
