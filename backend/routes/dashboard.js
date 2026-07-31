@@ -131,11 +131,22 @@ async function rebookingKpis() {
 }
 
 // ---- Assemble the full dashboard payload -----------------------------------
+// GRN sync status — the Analytics page reads data.sync.{lastStatus, syncedThrough}.
+async function getSyncInfo() {
+  try {
+    const { rows } = await sbSelect('grn_sync_state', 'id=eq.1&select=last_run_status,last_run_at,watermark,bookings_synced');
+    const s = rows[0];
+    if (!s) return null;
+    return { lastStatus: s.last_run_status || null, lastRunAt: s.last_run_at || null, syncedThrough: s.watermark || null, bookingsSynced: s.bookings_synced ?? null };
+  } catch { return null; }
+}
+
 async function buildDashboard() {
   const bookings = await fetchAllBookings();
   const payload = computeDashboard(bookings);
   const kpis = await rebookingKpis();
   payload.tiles.caughtThisMonth = { count: kpis.rebooked, savedUsd: kpis.savedUsd };
+  payload.sync = await getSyncInfo();
   return payload;
 }
 
