@@ -113,6 +113,7 @@ async function attachLastChecks(rows) {
   for (const r of rows) {
     const c = latest.get(r.bookingId);
     if (c) {
+      r.viewed = true;
       const gapNative = (c.paid_price != null && c.new_price != null)
         ? Number(c.paid_price) - Number(c.new_price) : (c.gap != null ? Number(c.gap) : null);
       r.lastCheck = {
@@ -150,6 +151,7 @@ router.get('/repricing/candidates', async (req, res) => {
     const deadline = (req.query.deadline || 'any').trim();
     const price = (req.query.price || '').trim();
     const boardWanted = (req.query.board || 'any').trim().toLowerCase();
+    const viewedWanted = (req.query.viewed || 'any').trim().toLowerCase();
 
     const nowIso = new Date().toISOString();
     let filter = `status=in.(Refundable,Partial)&cancel_by_date=gte.${nowIso}`;
@@ -185,6 +187,8 @@ router.get('/repricing/candidates', async (req, res) => {
       checkout: b.checkout,
       nights: nightsBetween(b.checkin, b.checkout),
       roomType: b.room_type,
+      roomCount: b.room_count != null ? Number(b.room_count) : null,
+      guestName: b.guest_name || null,
       board: b.board_basis || null,
       supplier: b.supplier_code || null,
       guests: [],
@@ -195,6 +199,7 @@ router.get('/repricing/candidates', async (req, res) => {
       cancelByDate: b.cancel_by_date,
       daysToCancel: daysUntil(b.cancel_by_date),   // ← fixes "REBOOK BY — left"
       status: b.status,
+      viewed: false,        // set by attachLastChecks if a check exists
       lastCheck: null,
     }));
 
@@ -209,6 +214,8 @@ router.get('/repricing/candidates', async (req, res) => {
     }
 
     await attachLastChecks(rows);
+    if (viewedWanted === 'viewed') rows = rows.filter((r) => r.viewed);
+    else if (viewedWanted === 'not') rows = rows.filter((r) => !r.viewed);
     const viewCounts = await computeViewCounts();
 
     res.json({
