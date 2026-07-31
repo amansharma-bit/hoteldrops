@@ -1,9 +1,17 @@
 // ============================================================================
-// repricing.js  —  REPRICING  (candidate list + live price check + searches)
+// repricing.js  —  REPRICING  (candidates + live price check + searches)
 // ----------------------------------------------------------------------------
-// Response field names are matched EXACTLY to what the frontend pages read
-// (repricing/page.tsx and searches-made/page.tsx), so tables and stat cards
-// populate with no mapping layer.
+// Built against the REAL GRN availability structure confirmed from Mize logs
+// + GRN API docs (see findings/GRN_REAL_STRUCTURE.md). Key truths:
+//   • availability.hotels[0].rates[] is a FLAT array of rate objects.
+//   • room name = rate.rooms[0].description ; price = rate.price (number)
+//   • board = rate.rate_comments.mealplan (fallback boarding_details[0])
+//   • refundable = rate.non_refundable === false
+//   • cancelBy = rate.cancellation_policy.cancel_by_date
+//   • search request must use the booking's REAL occupancy (adults + child ages
+//     per room) and the booking's OWN currency + nationality.
+//   • COMPARE in native currency (exact). USD is DISPLAY/reporting only —
+//     every price is shown in both native and USD.
 // ============================================================================
 
 'use strict';
@@ -16,6 +24,7 @@ const {
   sbSelect, sbCount, sbInsertReturning, toUsdOrNull, norm,
 } = require('./lib-grn');
 
+// ─── helpers ────────────────────────────────────────────────────────────────
 function nightsBetween(checkin, checkout) {
   const a = checkin ? new Date(checkin) : null;
   const b = checkout ? new Date(checkout) : null;
@@ -23,6 +32,66 @@ function nightsBetween(checkin, checkout) {
   return Math.max(0, Math.round((b - a) / 86400000));
 }
 
+// Days from now until a cancel_by_date (IST-agnostic; GRN gives ISO local).
+function daysUntil(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  return Math.ceil((d - Date.now()) / 86400000);
+}
+
+// ── Fuzzy room/board matching (the real GRN room-mapping problem) ────────────
+// Same physical room appears as "STANDARD SUITE DOUBLE", "STANDARD SUITE DOUBLE (STDD)",
+// "Standard Suite Double (Stdd)", "Standard suite double - STDD", etc. Strip the
+// parenthetical/appended supplier code and compare the core name.
+function roomKey(name) {
+  if (!name) return '';
+  let s = String(name).toLowerCase();
+  s = s.replace(/\([^)]*\)/g, ' ');          // drop "(stdd)" etc.
+  s = s.replace(/\s-\s[a-z0-9]{2,6}\b/g, ' '); // drop " - STDD" trailing codes
+  s = s.replace(/\b(stdd|stdk|stsk|famd|famk|clbk|clbd|stfk)\b/g, ' '); // known codes
+  s = s.replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+  return s;
+}
+function roomMatch(a, b) {
+  const ka = roomKey(a), kb = roomKey(b);
+  if (!ka || !kb) return false;
+  if (ka === kb) return true;
+  // one being a prefix of the other covers "double" vs "double 2 double beds" variants
+  return ka.startsWith(kb) || kb.startsWith(ka);
+}
+
+// Board: "All Inclusion", "All Inclusive", "All-inclusive (food/beverages/snacks)",
+// "ALL INCLUSIVE" → all the same basis. Normalize to a canonical token.
+function boardKey(board) {
+  if (!board) return '';
+  const s = String(board).toLowerCase().replace(/[^a-z]+/g, ' ').trim();
+  if (/all\s*inclusi|all\s*meal/.test(s)) return 'ai';
+  if (/full\s*board/.test(s)) return 'fb';
+  if (/half\s*board/.test(s)) return 'hb';
+  if (/breakfast|bed\s*and\s*breakfast|\bbb\b/.test(s)) return 'bb';
+  if (/room\s*only|\bro\b|no\s*meal/.test(s)) return 'ro';
+  return s;
+}
+function boardMatch(a, b) {
+  const ka = boardKey(a), kb = boardKey(b);
+  if (!ka || !kb) return true;   // unknown board on either side → don't block
+  return ka === kb;
+}
+
+function moneyPair(nativeAmount, currency) {
+  // Returns { native, currency, usd } — native truth + USD for display.
+  if (nativeAmount == null) return { native: null, currency: currency || null, usd: null };
+  return {
+    native: Number(nativeAmount),
+    currency: currency || null,
+    usd: toUsdOrNull(nativeAmount, currency),
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// 1) CANDIDATES  — bookings worth checking (feeds the Repricing table + cards)
+// ════════════════════════════════════════════════════════════════════════════
 async function attachLastChecks(rows) {
   if (!rows.length) return rows;
   const ids = rows.map((r) => r.bookingId).filter(Boolean);
@@ -41,12 +110,17 @@ async function attachLastChecks(rows) {
   for (const r of rows) {
     const c = latest.get(r.bookingId);
     if (c) {
+      const gapNative = (c.paid_price != null && c.new_price != null)
+        ? Number(c.paid_price) - Number(c.new_price) : (c.gap != null ? Number(c.gap) : null);
       r.lastCheck = {
         liveUsd: toUsdOrNull(c.new_price, c.currency),
-        gapUsd: c.gap_usd != null ? Number(c.gap_usd) : (c.gap != null ? toUsdOrNull(c.gap, c.currency) : null),
-        gapPct: (c.paid_price && c.gap != null) ? Math.round((Number(c.gap) / Number(c.paid_price)) * 100) : null,
+        liveNative: c.new_price != null ? Number(c.new_price) : null,
+        gapUsd: c.gap_usd != null ? Number(c.gap_usd) : toUsdOrNull(gapNative, c.currency),
+        gapNative,
+        gapPct: (c.paid_price && gapNative != null) ? Math.round((gapNative / Number(c.paid_price)) * 100) : null,
         dropped: c.dropped === true,
         checkedAt: c.checked_at,
+        currency: c.currency || null,
       };
     }
   }
@@ -63,7 +137,6 @@ async function computeViewCounts() {
   return out;
 }
 
-// ---- 1) CANDIDATES ---------------------------------------------------------
 router.get('/repricing/candidates', async (req, res) => {
   if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
   try {
@@ -90,7 +163,7 @@ router.get('/repricing/candidates', async (req, res) => {
       filter += `&or=(hotel_name.ilike.${s},city_name.ilike.${s},guest_name.ilike.${s},booking_id.ilike.${s})`;
     }
 
-    const cols = 'booking_id,booking_reference,hotel_name,hotel_code,city_name,country_code,checkin,checkout,room_type,room_count,guest_name,price_total,currency,cancel_by_date,status';
+    const cols = 'booking_id,booking_reference,hotel_name,hotel_code,city_name,country_code,checkin,checkout,room_type,room_count,guest_name,board_basis,price_total,currency,supplier_code,cancel_by_date,status';
     const { rows: raw, total } = await sbSelect(
       'grn_bookings',
       `${filter}&select=${cols}&order=cancel_by_date.asc&limit=${perPage}&offset=${offset}`,
@@ -108,15 +181,21 @@ router.get('/repricing/candidates', async (req, res) => {
       checkout: b.checkout,
       nights: nightsBetween(b.checkin, b.checkout),
       roomType: b.room_type,
+      board: b.board_basis || null,
+      supplier: b.supplier_code || null,
       guests: [],
+      // native truth + USD display
+      origNative: b.price_total != null ? Number(b.price_total) : null,
       origUsd: toUsdOrNull(b.price_total, b.currency),
       currency: b.currency,
       cancelByDate: b.cancel_by_date,
+      daysToCancel: daysUntil(b.cancel_by_date),   // ← fixes "REBOOK BY — left"
       status: b.status,
       lastCheck: null,
     }));
 
     if (price && price.includes('-')) {
+      // price filter is on USD (dashboard reference scale)
       const [lo, hi] = price.split('-').map(Number);
       rows = rows.filter((r) => r.origUsd != null && r.origUsd >= (lo || 0) && r.origUsd <= (hi || Infinity));
     }
@@ -134,7 +213,9 @@ router.get('/repricing/candidates', async (req, res) => {
   }
 });
 
-// ---- 2) PRICE CHECK --------------------------------------------------------
+// ════════════════════════════════════════════════════════════════════════════
+// 2) PRICE CHECK  — live GRN availability for one booking
+// ════════════════════════════════════════════════════════════════════════════
 async function pullBookingDetail(bookingId, ctx) {
   const url = `${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${encodeURIComponent(bookingId)}`;
   const r = await grnCall({ step: 'bookingdetail', method: 'GET', url, ctx });
@@ -144,87 +225,129 @@ async function pullBookingDetail(bookingId, ctx) {
   return r.body.booking;
 }
 
-function buildSearchBody(booking) {
-  const item0 = booking.hotel?.booking_items?.[0];
-  const rooms = (booking.hotel?.booking_items || []).map((it) => {
-    const room = it.rooms?.[0] || {};
-    const adults = Number(room.adults ?? room.no_of_adults ?? 2) || 2;
-    const childrenAges = Array.isArray(room.children_ages) ? room.children_ages
-      : (Array.isArray(room.child_ages) ? room.child_ages : []);
-    return { adults, children_ages: childrenAges };
-  });
+// Reconstruct the ORIGINAL occupancy (adults + child ages per room) + currency
+// + nationality + room/board/supplier/guests from the booking detail.
+function parseOriginalBooking(booking) {
+  const items = booking.hotel?.booking_items || [];
+  const paxes = booking.hotel?.paxes || booking.paxes || [];
+
+  // Build child ages lookup from paxes (type CH carry an age).
+  const childAgeByPax = {};
+  for (const p of paxes) {
+    if ((p.type === 'CH' || p.type === 'CHILD') && p.age != null) childAgeByPax[p.pax_id] = Number(p.age);
+  }
+
+  // One "room" object per booking room, with adults + children_ages.
+  const rooms = [];
+  for (const it of items) {
+    for (const rm of (it.rooms || [])) {
+      const adults = Number(rm.no_of_adults ?? 2) || 2;
+      let childAges = [];
+      if (Array.isArray(rm.children_ages) && rm.children_ages.length) {
+        childAges = rm.children_ages.map(Number).filter((n) => !isNaN(n));
+      } else if (Array.isArray(rm.pax_ids)) {
+        childAges = rm.pax_ids.map((pid) => childAgeByPax[pid]).filter((a) => a != null);
+      }
+      rooms.push({ adults, children_ages: childAges });
+    }
+  }
+  if (!rooms.length) rooms.push({ adults: 2, children_ages: [] });
+
+  const item0 = items[0] || {};
+  const room0 = item0.rooms?.[0] || {};
+  const cp = item0.cancellation_policy || {};
+  const currency = item0.currency || booking.currency || null;
+  const nationality = booking.nationality || booking.holder?.client_nationality || item0.client_nationality || 'AE';
+  const paidNative = items.reduce((s, it) => s + (parseFloat(it.price) || 0), 0)
+    || parseFloat(booking.price?.total) || null;
+
+  // Guest list for the drawer.
+  const guests = paxes.map((p) => ({
+    name: [p.title, p.name, p.surname].filter(Boolean).join(' ').trim(),
+    type: p.type,
+  })).filter((g) => g.name);
+
   return {
-    version: '2.0',
-    checkin: String(booking.checkin).slice(0, 10),
-    checkout: String(booking.checkout).slice(0, 10),
-    client_nationality: booking.holder?.client_nationality || booking.client_nationality || item0?.client_nationality || 'AE',
-    currency: booking.currency || 'USD',
-    cutoff_time: GRN_CUTOFF_TIME,
-    hotel_codes: [String(booking.hotel?.hotel_code)],
-    hotel_info: false,
-    rates: 'comprehensive',
-    rooms: rooms.length ? rooms : [{ adults: 2, children_ages: [] }],
+    rooms,                       // → search request occupancy
+    currency, nationality,       // → search request
+    paidNative,
+    roomName: room0.description || room0.room_type || null,
+    board: (item0.boarding_details || []).join(', ') || item0.rate_comments?.mealplan || null,
+    nonRefundable: typeof item0.non_refundable === 'boolean' ? item0.non_refundable : null,
+    cancelBy: cp.cancel_by_date || null,
+    supplier: booking.supplier_code || item0.supplier_code || null,
+    guests,
+    checkin: booking.checkin || null,
+    checkout: booking.checkout || null,
+    hotelCode: booking.hotel?.hotel_code || null,
+    cityCode: booking.hotel?.city_code || null,
   };
 }
 
-function extractAllRates(availability, currency) {
-  const hotels = availability?.hotels || availability?.results || [];
+function buildSearchBody(orig) {
+  return {
+    version: '2.0',
+    checkin: String(orig.checkin).slice(0, 10),
+    checkout: String(orig.checkout).slice(0, 10),
+    client_nationality: orig.nationality || 'AE',
+    currency: orig.currency || 'USD',          // ← search in ORIGINAL currency
+    cutoff_time: GRN_CUTOFF_TIME,
+    hotel_codes: [String(orig.hotelCode)],
+    hotel_info: false,
+    rates: 'comprehensive',
+    rooms: orig.rooms,                          // ← EXACT occupancy (adults + child ages per room)
+    options: { rate_comments: true },
+  };
+}
+
+// Flatten every rate from the REAL GRN availability structure.
+function extractAllRates(availability, searchCurrency) {
+  const hotels = availability?.hotels || [];
   const hotel = hotels[0];
   const out = [];
   if (!hotel) return out;
-  const rooms = hotel.rooms || hotel.rates || [];
-  for (const r of rooms) {
-    const list = r.rates || [r];
-    for (const rate of list) {
-      const price = parseFloat(rate.price ?? rate.total ?? rate.net);
-      if (isNaN(price)) continue;
-      out.push({
-        rateKey: rate.rate_key || null,
-        groupCode: rate.group_code || r.group_code || null,
-        roomCode: rate.room_code || r.room_code || null,
-        roomName: rate.description || rate.room_type || r.description || r.room_type || '',
-        price,
-        priceUsd: toUsdOrNull(price, rate.currency || currency),
-        currency: rate.currency || currency,
-        nonRefundable: rate.non_refundable === true,
-        board: (rate.boarding_details || r.boarding_details || []).join(', ') || null,
-        cancellationPolicy: rate.cancellation_policy || null,
-      });
-    }
+  const rates = hotel.rates || [];      // ← FLAT array (the real structure)
+  for (const rate of rates) {
+    const priceNative = parseFloat(rate.price);
+    if (isNaN(priceNative)) continue;
+    const room0 = (rate.rooms && rate.rooms[0]) || {};
+    const board = rate.rate_comments?.mealplan
+      || (Array.isArray(rate.boarding_details) ? rate.boarding_details[0] : null)
+      || null;
+    const cur = rate.currency || searchCurrency;
+    out.push({
+      rateKey: rate.rate_key || null,
+      groupCode: rate.group_code || null,
+      roomCode: rate.room_code || null,
+      roomReference: room0.room_reference || null,
+      roomName: room0.description || room0.room_type || '',
+      roomTypeRaw: room0.room_type || '',
+      board,
+      priceNative,
+      currency: cur,
+      priceUsd: toUsdOrNull(priceNative, cur),
+      nonRefundable: rate.non_refundable === true,
+      cancelBy: rate.cancellation_policy?.cancel_by_date || null,
+      rateType: rate.rate_type || null,
+      remarks: rate.rate_comments?.remarks || null,
+    });
   }
   return out;
 }
 
-function pickBestRefundable(allRates, originalRoomName) {
-  const refundable = allRates.filter((r) => !r.nonRefundable);
-  if (!refundable.length) return null;
-  const wn = norm(originalRoomName);
-  const matching = wn ? refundable.filter((r) => norm(r.roomName) === wn) : [];
-  const pool = matching.length ? matching : refundable;
-  return pool.slice().sort((a, b) => a.price - b.price)[0];
+// Same-or-better cancellation: replacement cancel_by_date >= original's (more/equal time),
+// and never non-refundable replacing a refundable original.
+function cancelSameOrBetter(origCancelBy, origNonRef, rate) {
+  if (rate.nonRefundable) return false;                 // never non-ref replacing ref
+  if (origNonRef === true) return true;                 // original non-ref → any refundable is better
+  if (!origCancelBy || !rate.cancelBy) return true;     // unknown → don't block on this leg
+  const o = new Date(origCancelBy), n = new Date(rate.cancelBy);
+  if (isNaN(o) || isNaN(n)) return true;
+  return n >= o;                                        // later or equal free-cancel deadline = same/better
 }
 
 async function savePriceCheck(row) {
   try { await sbInsertReturning('grn_price_checks', row); } catch { /* non-fatal */ }
-}
-
-// Build the ORIGINAL booking summary the drawer's Compare/Current-booking reads.
-function buildOriginalSummary(booking, paidUsd, currency) {
-  const item0 = booking.hotel?.booking_items?.[0];
-  const room0 = item0?.rooms?.[0];
-  const cp = item0?.cancellation_policy || {};
-  return {
-    usd: paidUsd,
-    room: room0?.room_type || room0?.description || null,
-    roomDescriptionRaw: room0?.description || null,
-    roomTypeRaw: room0?.room_type || null,
-    board: (item0?.boarding_details || []).join(', ') || null,
-    nonRefundable: typeof item0?.non_refundable === 'boolean' ? item0.non_refundable : null,
-    cancelBy: cp.cancel_by_date || null,
-    checkin: booking.checkin || null,
-    checkout: booking.checkout || null,
-    currency,
-  };
 }
 
 router.post('/repricing/check', async (req, res) => {
@@ -235,123 +358,160 @@ router.post('/repricing/check', async (req, res) => {
 
   try {
     const booking = await pullBookingDetail(bookingId, ctx);
-    const paidPrice = (booking.hotel?.booking_items || []).reduce((s, it) => s + (parseFloat(it.price) || 0), 0)
-      || parseFloat(booking.price?.total) || null;
-    const currency = booking.currency || booking.hotel?.booking_items?.[0]?.currency || null;
-    const paidUsd = toUsdOrNull(paidPrice, currency);
-    const originalRoomName = booking.hotel?.booking_items?.[0]?.rooms?.[0]?.room_type
-      || booking.hotel?.booking_items?.[0]?.rooms?.[0]?.description || '';
-    const originalBoard = (booking.hotel?.booking_items?.[0]?.boarding_details || []).join(', ');
-    const original = buildOriginalSummary(booking, paidUsd, currency);
+    const orig = parseOriginalBooking(booking);
+    const nativeCur = orig.currency;
+    const paidNative = orig.paidNative;
+    const wantRoom = orig.roomName || '';
+    const wantBoard = orig.board || '';
 
-    const searchBody = buildSearchBody(booking);
+    // ── ORIGINAL summary (dual currency) for the drawer's Current-booking card.
+    const original = {
+      price: moneyPair(paidNative, nativeCur),
+      usd: toUsdOrNull(paidNative, nativeCur),          // convenience (drawer reads .usd too)
+      room: orig.roomName,
+      roomDescriptionRaw: orig.roomName,
+      roomTypeRaw: orig.roomName,
+      board: orig.board,
+      nonRefundable: orig.nonRefundable,
+      cancelBy: orig.cancelBy,
+      supplier: orig.supplier,
+      guests: orig.guests,
+      checkin: orig.checkin,
+      checkout: orig.checkout,
+      currency: nativeCur,
+    };
+
+    // ── Live search in the ORIGINAL currency.
+    const searchBody = buildSearchBody(orig);
     const searchResp = await grnCall({ step: 'availability', method: 'POST', url: `${GRN_API_BASE_URL}/hotels/availability`, body: searchBody, ctx });
     if (searchResp.outcome !== GRN_OUTCOME.OK) {
       return res.status(502).json({ error: `Live search failed: ${describeGrnError(searchResp.errorCode, searchResp.body, searchResp.text)}` });
     }
-
     const searchId = searchResp.body?.search_id || null;
-    const rawRates = extractAllRates(searchResp.body, currency);
-    const wantRoom = norm(originalRoomName);
-    const wantBoard = norm(originalBoard);
+    const rawRates = extractAllRates(searchResp.body, nativeCur);
 
-    // Map every rate to the EXACT shape the drawer's RateChooser reads, with an
-    // eligibility gate: same room name + same board + refundable + cheaper.
+    // ── Map every rate to the drawer contract. COMPARE IN NATIVE CURRENCY.
     const allRates = rawRates.map((rt) => {
-      const usd = rt.priceUsd;
-      const vsOriginalUsd = (paidUsd != null && usd != null) ? Math.round(paidUsd - usd) : null;
-      const roomMatches = wantRoom ? norm(rt.roomName) === wantRoom : true;
-      const boardMatches = wantBoard ? norm(rt.board || '') === wantBoard : true;
+      // vsOriginal in NATIVE (exact) — positive = cheaper (saving).
+      const sameCurrency = !nativeCur || !rt.currency || norm(rt.currency) === norm(nativeCur);
+      const vsOriginalNative = (paidNative != null && rt.priceNative != null && sameCurrency)
+        ? Math.round((paidNative - rt.priceNative) * 100) / 100 : null;
+      const vsOriginalUsd = (original.usd != null && rt.priceUsd != null)
+        ? Math.round(original.usd - rt.priceUsd) : null;
+
+      const roomMatches = wantRoom ? roomMatch(rt.roomName, wantRoom) : true;
+      const boardMatches = wantBoard ? boardMatch(rt.board, wantBoard) : true;
       const refundable = !rt.nonRefundable;
-      const cheaper = vsOriginalUsd != null && vsOriginalUsd > 0;
+      const cheaper = vsOriginalNative != null && vsOriginalNative > 0;   // ← native compare
+      const cxlOk = cancelSameOrBetter(orig.cancelBy, orig.nonRefundable, rt);
+
       const blockers = [];
-      if (!roomMatches) blockers.push('Different room');
-      if (!boardMatches) blockers.push('Different board');
+      if (!roomMatches) blockers.push('Different room type');
+      if (!boardMatches) blockers.push(rt.board ? `Board: ${rt.board}` : 'Different board');
       if (!refundable) blockers.push('Non-refundable');
-      if (!cheaper) blockers.push('Not cheaper');
-      const isMatch = roomMatches && boardMatches;
-      const eligible = roomMatches && boardMatches && refundable && cheaper;
+      if (!cxlOk) blockers.push('Worse cancellation terms');
+      if (!cheaper) blockers.push('Not cheaper than original');
+      if (!sameCurrency) blockers.push(`Currency ${rt.currency} ≠ ${nativeCur}`);
+
+      const isMatch = roomMatches && boardMatches;                 // exact room+board (for amber "match" badge)
+      const eligible = roomMatches && boardMatches && refundable && cxlOk && cheaper && sameCurrency;
+      const selectable = refundable && cheaper && sameCurrency;    // clickable only if refundable AND cheaper
+                                                                    // (pricier or non-ref → greyed/unclickable)
       return {
         rateKey: rt.rateKey,
         groupCode: rt.groupCode,
         roomCode: rt.roomCode,
+        roomReference: rt.roomReference,
         roomDescription: rt.roomName,
         roomDescriptionRaw: rt.roomName,
-        roomType: rt.roomName,
+        roomType: rt.roomTypeRaw,
         board: rt.board,
-        usd,
-        local: rt.price,
+        // dual currency on every rate
+        native: rt.priceNative,
+        local: rt.priceNative,          // alias the page reads
+        usd: rt.priceUsd,
         currency: rt.currency,
+        vsOriginalNative,
         vsOriginalUsd,
         refundable,
-        cancelBy: rt.cancellationPolicy?.cancel_by_date || null,
+        cancelBy: rt.cancelBy,
+        rateType: rt.rateType,
         isMatch,
         eligible,
+        selectable,
         blockers,
       };
     }).sort((a, b) => {
-      // eligible first, then cheapest.
-      if (a.eligible !== b.eligible) return a.eligible ? -1 : 1;
-      return (a.usd ?? Infinity) - (b.usd ?? Infinity);
+      if (a.eligible !== b.eligible) return a.eligible ? -1 : 1;         // eligible first
+      if (a.selectable !== b.selectable) return a.selectable ? -1 : 1;   // then selectable
+      return (a.native ?? Infinity) - (b.native ?? Infinity);           // then cheapest
     });
 
     const bestEligible = allRates.find((r) => r.eligible) || null;
     const dropped = Boolean(bestEligible);
+    const gapNative = bestEligible ? bestEligible.vsOriginalNative : null;
     const gapUsd = bestEligible ? bestEligible.vsOriginalUsd : null;
-    const gapPct = (bestEligible && paidUsd) ? Math.round((bestEligible.vsOriginalUsd / paidUsd) * 100) : null;
+    const gapPct = (bestEligible && paidNative) ? Math.round((bestEligible.vsOriginalNative / paidNative) * 100) : null;
 
-    const live = bestEligible ? {
-      usd: bestEligible.usd,
-      room: bestEligible.roomDescription,
-      roomDescriptionRaw: bestEligible.roomDescription,
-      board: bestEligible.board,
-      nonRefundable: !bestEligible.refundable,
-      cancelBy: bestEligible.cancelBy,
-    } : (allRates[0] ? {
-      usd: allRates[0].usd,
-      room: allRates[0].roomDescription,
-      roomDescriptionRaw: allRates[0].roomDescription,
-      board: allRates[0].board,
-      nonRefundable: !allRates[0].refundable,
-      cancelBy: allRates[0].cancelBy,
-    } : null);
+    // ── LIVE (replacement) summary — the eligible pick if any, else cheapest rate (for display).
+    const shownRate = bestEligible || allRates[0] || null;
+    const live = shownRate ? {
+      price: moneyPair(shownRate.native, shownRate.currency),
+      usd: shownRate.usd,
+      room: shownRate.roomDescription,
+      roomDescriptionRaw: shownRate.roomDescription,
+      board: shownRate.board,
+      nonRefundable: !shownRate.refundable,
+      cancelBy: shownRate.cancelBy,
+      currency: shownRate.currency,
+    } : null;
 
-    const matchRate = bestEligible || allRates[0] || null;
-    const match = matchRate ? {
-      room: wantRoom ? norm(matchRate.roomDescription) === wantRoom : null,
-      board: wantBoard ? norm(matchRate.board || '') === wantBoard : null,
-      terms: matchRate.refundable === true,
+    const match = shownRate ? {
+      room: wantRoom ? roomMatch(shownRate.roomDescription, wantRoom) : null,
+      board: wantBoard ? boardMatch(shownRate.board, wantBoard) : null,
+      terms: cancelSameOrBetter(orig.cancelBy, orig.nonRefundable, {
+        nonRefundable: !shownRate.refundable, cancelBy: shownRate.cancelBy,
+      }),
       dates: true,
     } : null;
 
-    const matchBasis = bestEligible ? 'exact_room_board' : (matchRate && matchRate.isMatch ? 'room_name' : 'different_room');
+    const matchBasis = bestEligible ? 'exact_room_board'
+      : (shownRate && shownRate.isMatch ? 'room_name' : 'different_room');
 
     const checkedAt = new Date().toISOString();
+    // Persist in native (paid_price/new_price native; gap_usd for dashboard).
     await savePriceCheck({
       booking_id: bookingId, checked_at: checkedAt,
-      paid_price: paidPrice, new_price: bestEligible ? bestEligible.local : null, currency,
-      gap: (paidPrice != null && bestEligible) ? (paidPrice - bestEligible.local) : null,
-      gap_usd: gapUsd, dropped,
+      paid_price: paidNative, new_price: bestEligible ? bestEligible.native : null, currency: nativeCur,
+      gap: gapNative, gap_usd: gapUsd, dropped,
     });
 
     res.json({
       bookingId, checkedAt,
-      origUsd: paidUsd,
+      origUsd: original.usd, origNative: paidNative, currency: nativeCur,
       original, live, match, matchBasis,
       rebookEligible: Boolean(bestEligible),
-      gapUsd, gapPct, dropped,
+      gapUsd, gapNative, gapPct, dropped,
       allRates,
       _search_id: searchId,
-      group_code: bestEligible?.groupCode || null, rate_key: bestEligible?.rateKey || null, room_code: bestEligible?.roomCode || null,
-      message: bestEligible ? 'Cheaper matching refundable rate found.'
-        : (allRates.length ? 'Live rates found, but none is a cheaper same-room refundable match.' : 'No live rates available.'),
+      group_code: bestEligible?.groupCode || null,
+      rate_key: bestEligible?.rateKey || null,
+      room_code: bestEligible?.roomCode || null,
+      room_reference: bestEligible?.roomReference || null,
+      message: bestEligible
+        ? 'Cheaper matching refundable rate found.'
+        : (allRates.length
+            ? 'Live rates found — none is a cheaper same-room refundable match. Operator can still pick a rate.'
+            : 'No live rates available for these dates/occupancy.'),
     });
   } catch (err) {
     res.status(500).json({ error: String(err.message || err) });
   }
 });
 
-// ---- 3) SEARCHES (Searches Made page) --------------------------------------
+// ════════════════════════════════════════════════════════════════════════════
+// 3) SEARCHES  — every price check run, with funnel stats (Searches Made page)
+// ════════════════════════════════════════════════════════════════════════════
 router.get('/repricing/searches', async (req, res) => {
   if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
   try {
@@ -369,9 +529,7 @@ router.get('/repricing/searches', async (req, res) => {
       const [lo, hi] = gap.split('-').map(Number);
       if (!isNaN(lo)) filter += `&gap_usd=gte.${lo}`;
       if (!isNaN(hi)) filter += `&gap_usd=lte.${hi}`;
-    } else if (gap === '500+') {
-      filter += '&gap_usd=gte.500';
-    }
+    } else if (gap === '500+') filter += '&gap_usd=gte.500';
     if (req.query.from) filter += `&checked_at=gte.${new Date(req.query.from + 'T00:00:00Z').toISOString()}`;
     if (req.query.to) filter += `&checked_at=lte.${new Date(req.query.to + 'T23:59:59Z').toISOString()}`;
     if (search) filter += `&booking_id=ilike.${encodeURIComponent(`*${search}*`)}`;
