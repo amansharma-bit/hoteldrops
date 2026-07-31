@@ -283,13 +283,24 @@ function parseOriginalBooking(booking) {
     age: (p.type === 'CH' || p.type === 'CHILD') && p.age != null ? Number(p.age) : null,
   })).filter((g) => g.name);
 
+  const adults = guests.filter((g) => g.type === 'AD' || g.type === 'ADULT');
+  const children = guests.filter((g) => g.type === 'CH' || g.type === 'CHILD');
+
   const roomCount = items.reduce((s, it) => s + (it.rooms ? it.rooms.length : 0), 0) || rooms.length;
   const terms = item0.rate_comments?.remarks || item0.rate_comments?.comments || null;
+
+  // Detailed cancellation fee schedule (tiers).
+  const cancellationDetails = (cp.details || []).map((d) => ({
+    from: d.from || null,
+    flatFee: d.flat_fee != null ? Number(d.flat_fee) : null,
+    currency: d.currency || currency,
+  }));
 
   return {
     rooms,                       // → search request occupancy
     currency, nationality,       // → search request
     paidNative,
+    bookingDate: booking.booking_date || booking.created_at || null,
     hotelName: booking.hotel?.name || null,
     address: booking.hotel?.address || null,
     roomCount,
@@ -297,10 +308,11 @@ function parseOriginalBooking(booking) {
     board: (item0.boarding_details || []).join(', ') || item0.rate_comments?.mealplan || null,
     nonRefundable: typeof item0.non_refundable === 'boolean' ? item0.non_refundable : null,
     cancelBy: cp.cancel_by_date || null,
+    cancellationDetails,
     supplier: booking.supplier_code || item0.supplier_code || null,
     supplierRef: booking.supplier_reference || item0.supplier_reference || null,
     terms,
-    guests,
+    guests, adults, children,
     checkin: booking.checkin || null,
     checkout: booking.checkout || null,
     hotelCode: booking.hotel?.hotel_code || null,
@@ -391,7 +403,8 @@ router.post('/repricing/check', async (req, res) => {
     // ── ORIGINAL summary (dual currency) for the drawer's Current-booking card.
     const original = {
       price: moneyPair(paidNative, nativeCur),
-      usd: toUsdOrNull(paidNative, nativeCur),          // convenience (drawer reads .usd too)
+      usd: toUsdOrNull(paidNative, nativeCur),
+      bookingDate: orig.bookingDate,
       hotel: orig.hotelName,
       address: orig.address,
       room: orig.roomName,
@@ -401,10 +414,13 @@ router.post('/repricing/check', async (req, res) => {
       board: orig.board,
       nonRefundable: orig.nonRefundable,
       cancelBy: orig.cancelBy,
+      cancellationDetails: orig.cancellationDetails,
       supplier: orig.supplier,
       supplierRef: orig.supplierRef,
       terms: orig.terms,
       guests: orig.guests,
+      adults: orig.adults,
+      children: orig.children,
       checkin: orig.checkin,
       checkout: orig.checkout,
       currency: nativeCur,
