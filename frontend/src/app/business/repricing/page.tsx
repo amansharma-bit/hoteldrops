@@ -424,7 +424,7 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
               </div>
             </div>
           ) : (
-            <div style={{ color: SLATE, fontSize: 13.5, padding: '12px 0', textAlign: 'center' }}>{checking ? 'Checking live rates…' : (rated ? 'Select a room below to see the replacement details.' : 'Press Reprice to fetch live rates.')}</div>
+            <div style={{ color: SLATE, fontSize: 13.5, padding: '12px 0', textAlign: 'center' }}>{checking ? 'Checking live rates…' : (rated ? 'Select a room below to see the replacement details.' : 'No replacement selected yet.')}</div>
           )}
         </div>
 
@@ -446,13 +446,14 @@ function RepriceDrawer({ row, onClose }: { row: any; onClose: () => void }) {
                 <span style={{ width: 1, height: 20, background: LINE, margin: '0 2px' }} />
               </>
             )}
-            <button className="rp-recheck" onClick={runReprice} disabled={checking}>{checking ? 'Checking…' : (rated ? 'Re-check' : 'Reprice')}</button>
+            <button className="rp-recheck" onClick={runReprice} disabled={checking} style={{ display: rated || checking ? 'inline-block' : 'none' }}>{checking ? 'Checking…' : 'Re-check'}</button>
           </div>
         </div>
 
         {!rated ? (
-          <div style={{ padding: 28, color: SLATE, fontSize: 13.5, textAlign: 'center', background: '#fff', border: `1px dashed ${LINE}`, borderRadius: 12 }}>
-            Press <b style={{ color: BLUE }}>Reprice</b> to fetch live rates for this booking.
+          <div style={{ padding: '40px 20px', textAlign: 'center', background: '#fff', border: `1px solid ${LINE}`, borderRadius: 12 }}>
+            <button className="rp-primary" onClick={runReprice} style={{ padding: '12px 32px', fontSize: 14 }}>Reprice</button>
+            <div style={{ color: SLATE, fontSize: 13, marginTop: 12 }}>Fetch live rates to compare against this booking.</div>
           </div>
         ) : checking ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
