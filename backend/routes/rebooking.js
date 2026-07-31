@@ -326,4 +326,151 @@ router.get('/repricing/attempt-log', async (req, res) => {
   }
 });
 
+// ============================================================================
+// REBOOKINGS LIST  (Rebookings page)  — stats + counts + rows
+// Field names matched exactly to rebookings/page.tsx.
+// ============================================================================
+router.get('/repricing/rebookings', async (req, res) => {
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const perPage = Math.min(100, Math.max(1, parseInt(req.query.perPage, 10) || 25));
+    const offset = (page - 1) * perPage;
+    const status = (req.query.status || 'all').toLowerCase();
+    const search = (req.query.q || '').trim();
+    const gap = (req.query.saving || req.query.gap || 'any').trim();
+
+    let filter = 'id=not.is.null';
+    if (status === 'successful') filter += '&status=eq.confirmed';
+    else if (status === 'errors') filter += '&status=in.(error,failed,needs_review,confirm_failed,aborted)';
+    if (gap && gap.includes('-')) {
+      const [lo, hi] = gap.split('-').map(Number);
+      if (!isNaN(lo)) filter += `&saved_usd=gte.${lo}`;
+      if (!isNaN(hi)) filter += `&saved_usd=lte.${hi}`;
+    } else if (gap === '500+') filter += '&saved_usd=gte.500';
+    if (req.query.from) filter += `&created_at=gte.${new Date(req.query.from + 'T00:00:00Z').toISOString()}`;
+    if (req.query.to) filter += `&created_at=lte.${new Date(req.query.to + 'T23:59:59Z').toISOString()}`;
+    if (search) filter += `&booking_id=ilike.${encodeURIComponent(`*${search}*`)}`;
+
+    const { rows: attempts, total } = await sbSelect(
+      'grn_rebooking_attempts',
+      `${filter}&select=*&order=created_at.desc&limit=${perPage}&offset=${offset}`,
+      { 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': `${offset}-${offset + perPage - 1}` }
+    );
+
+    // Enrich with hotel/city/room/checkin from grn_bookings.
+    const ids = [...new Set(attempts.map((a) => a.booking_id).filter(Boolean))];
+    const info = new Map();
+    if (ids.length) {
+      const inList = ids.map((i) => encodeURIComponent(i)).join(',');
+      try {
+        const { rows: br } = await sbSelect('grn_bookings', `booking_id=in.(${inList})&select=booking_id,hotel_name,city_name,room_type,checkin`);
+        for (const b of br) info.set(b.booking_id, b);
+      } catch {}
+    }
+
+    const SUCCESS = new Set(['confirmed', 'success']);
+    const ERROR = new Set(['error', 'failed', 'needs_review', 'confirm_failed', 'aborted']);
+    const rows = attempts.map((a) => {
+      const b = info.get(a.booking_id) || {};
+      return {
+        id: a.id,
+        bookingId: a.booking_id,
+        hotel: b.hotel_name || a.booking_id,
+        city: b.city_name || null,
+        room: b.room_type || null,
+        checkin: b.checkin || null,
+        originalUsd: toUsdOrNull(a.paid_price, a.currency),
+        rebookedUsd: toUsdOrNull(a.new_price, a.currency),
+        savedUsd: a.saved_usd != null ? Number(a.saved_usd) : null,
+        status: SUCCESS.has(a.status) ? 'success' : (ERROR.has(a.status) ? 'error' : a.status),
+        failureStage: a.error || null,
+        createdAt: a.created_at,
+      };
+    });
+
+    // Counts + stats.
+    let successful = 0, errors = 0, all = 0, totalSavedUsd = 0;
+    try { successful = await sbCount('grn_rebooking_attempts', 'status=eq.confirmed'); } catch {}
+    try { errors = await sbCount('grn_rebooking_attempts', 'status=in.(error,failed,needs_review,confirm_failed,aborted)'); } catch {}
+    try { all = await sbCount('grn_rebooking_attempts', 'id=not.is.null'); } catch {}
+    try {
+      const { rows: sr } = await sbSelect('grn_rebooking_attempts', 'status=eq.confirmed&select=saved_usd');
+      totalSavedUsd = sr.reduce((s, r) => s + (Number(r.saved_usd) || 0), 0);
+    } catch {}
+
+    let checksRun = 0;
+    try { checksRun = await sbCount('grn_price_checks', 'id=not.is.null'); } catch {}
+    const conversionPct = checksRun ? Math.round((successful / checksRun) * 100) : 0;
+    const avgSavingUsd = successful ? Math.round(totalSavedUsd / successful) : 0;
+
+    res.json({
+      page, perPage, total: total ?? rows.length,
+      hasMore: (offset + rows.length) < (total ?? 0),
+      counts: { successful, errors, all },
+      stats: { totalSavedUsd, avgSavingUsd, conversionPct },
+      rows,
+    });
+  } catch (err) {
+    res.status(500).json({ error: String(err.message || err) });
+  }
+});
+
+// ============================================================================
+// HISTORY  — all price checks for one booking (Repricing drawer)
+// ============================================================================
+router.get('/repricing/history', async (req, res) => {
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  const bookingId = req.query.booking_id;
+  if (!bookingId) return res.status(400).json({ error: 'booking_id required' });
+  try {
+    const { rows } = await sbSelect(
+      'grn_price_checks',
+      `booking_id=eq.${encodeURIComponent(bookingId)}&select=id,checked_at,paid_price,new_price,gap_usd,dropped,currency&order=checked_at.desc`
+    );
+    const history = rows.map((c) => ({
+      checked_at: c.checked_at,
+      liveUsd: toUsdOrNull(c.new_price, c.currency),
+      gapUsd: c.gap_usd != null ? Number(c.gap_usd) : null,
+      dropped: c.dropped === true,
+    }));
+    res.json({ booking_id: bookingId, history });
+  } catch (err) {
+    res.status(500).json({ error: String(err.message || err) });
+  }
+});
+
+// ============================================================================
+// CANCEL ORIGINAL  — standalone cancel of an original booking (post-rebook)
+// Honours DRY_RUN: simulates unless DRY_RUN=false.
+// ============================================================================
+router.post('/repricing/cancel-original', async (req, res) => {
+  if (!grnConfigured()) return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  const bookingId = (req.body && req.body.booking_id) || req.query.booking_id;
+  const bookingRef = (req.body && req.body.booking_reference) || req.query.booking_reference;
+  if (!bookingId && !bookingRef) return res.status(400).json({ error: 'booking_id or booking_reference required' });
+  const ctx = { bookingId: bookingId || null, actorEmail: (req.body && req.body.actor_email) || null };
+
+  try {
+    let ref = bookingRef;
+    if (!ref && bookingId) {
+      const d = await grnCall({ step: 'bookingdetail', method: 'GET', url: `${GRN_API_BASE_URL}/hotels/bookingdetail?booking_id=${encodeURIComponent(bookingId)}`, ctx });
+      ref = d.body?.booking?.booking_reference;
+    }
+    if (!ref) return res.status(422).json({ ok: false, message: 'Could not resolve booking_reference to cancel.' });
+
+    if (DRY_RUN) {
+      return res.json({ ok: true, dryRun: true, message: `DRY RUN: would cancel original ${ref}. No live cancellation made.` });
+    }
+
+    const cancelResp = await grnCall({ step: 'cancel', method: 'DELETE', url: `${GRN_API_BASE_URL}/hotels/rebookings/${encodeURIComponent(ref)}`, ctx });
+    if (cancelResp.outcome !== GRN_OUTCOME.OK) {
+      return res.status(409).json({ ok: false, message: `Cancel failed: ${describeGrnError(cancelResp.errorCode, cancelResp.body, cancelResp.text)}` });
+    }
+    res.json({ ok: true, message: `Original ${ref} cancelled.`, charges: cancelResp.body?.cancellation_charges || null });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: String(err.message || err) });
+  }
+});
+
 module.exports = router;
