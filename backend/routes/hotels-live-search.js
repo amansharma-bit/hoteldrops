@@ -493,4 +493,63 @@ async function syncWindow(windowStart, windowEnd, callBudget, onProgress) {
   return { rows: rowsLanded, calls: callsUsed };
 }
 
+// ---------------------------------------------------------------------------
+// EMERGENCY MINIMAL ENDING (2026-07-31)
+// The full file was truncated mid-runSync by a paste, which crashed the server
+// with "SyntaxError: Unexpected end of input". This restores a VALID, bootable
+// file: the sync engine works; the repricing/rebooking routes are being
+// restored separately from the last good GitHub commit. Nothing here is
+// destructive — it only brings the server back online.
+// ---------------------------------------------------------------------------
+
 async function runSync({ fromISO, toISO, mode }) {
+  syncRunning = true;
+  let total = 0, callsUsed = 0;
+  try {
+    let windowFrom, windowTo;
+    if (mode === 'range' && fromISO) { windowFrom = new Date(fromISO); windowTo = toISO ? new Date(toISO) : new Date(); }
+    else { windowTo = new Date(); windowFrom = new Date(windowTo); windowFrom.setDate(windowFrom.getDate() - DEFAULT_INCREMENTAL_DAYS); }
+    await setSyncState({ last_run_status: 'running', last_run_at: new Date().toISOString(), last_run_error: null, progress: `Starting ${mode || 'incremental'} sync from ${fmtDay(windowFrom)}` });
+    let cursor = new Date(windowFrom);
+    while (cursor < windowTo) {
+      if (callsUsed >= MAX_CALLS_PER_RUN) { await setSyncState({ progress: `Paused at call budget (${MAX_CALLS_PER_RUN}). ${total} synced.`, watermark: cursor.toISOString(), bookings_synced: total }); break; }
+      const winEnd = new Date(cursor); winEnd.setDate(winEnd.getDate() + GRN_WINDOW_DAYS);
+      const cappedEnd = winEnd > windowTo ? windowTo : winEnd;
+      const remainingBudget = MAX_CALLS_PER_RUN - callsUsed;
+      const result = await syncWindow(cursor, cappedEnd, remainingBudget, async (n) => { await setSyncState({ progress: `Syncing ${fmtDay(cursor)}-${fmtDay(cappedEnd)} · ${total + n} bookings so far`, bookings_synced: total + n }); });
+      total += result.rows; callsUsed += result.calls; cursor = cappedEnd;
+      await setSyncState({ watermark: cursor.toISOString(), bookings_synced: total });
+      await sleep(PAUSE_BETWEEN_CALLS_MS);
+    }
+    await setSyncState({ last_run_status: 'idle', progress: `Done - ${total} bookings synced through ${fmtDay(windowTo)} (${callsUsed} GRN calls)`, bookings_synced: total, watermark: windowTo.toISOString() });
+  } catch (err) {
+    await setSyncState({ last_run_status: 'error', last_run_error: String(err.message || err), progress: `Failed after ${total} bookings (${callsUsed} GRN calls)` });
+  } finally { syncRunning = false; }
+}
+
+function checkSecret(req, res) {
+  if (!SYNC_SECRET) return true;
+  if (req.query.secret !== SYNC_SECRET) { res.status(401).json({ error: 'Wrong or missing ?secret=' }); return false; }
+  return true;
+}
+
+router.get('/sync-run', async (req, res) => {
+  if (!checkSecret(req, res)) return;
+  if (!GRN_API_KEY) return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  if (syncRunning) return res.json({ started: false, message: 'A sync is already running.' });
+  const mode = req.query.mode === 'range' ? 'range' : 'incremental';
+  const fromISO = req.query.from ? `${req.query.from}T00:00:00Z` : null;
+  const toISO = req.query.to ? `${req.query.to}T23:59:59Z` : null;
+  runSync({ fromISO, toISO, mode });
+  res.json({ started: true, mode, message: 'Sync started. Poll /sync-status to watch it.' });
+});
+
+router.get('/sync-status', async (req, res) => {
+  if (!checkSecret(req, res)) return;
+  if (!sbConfigured()) return res.status(500).json({ error: 'Supabase not configured' });
+  try { const state = await getSyncState(); const rowsInTable = await sbCount('grn_bookings', 'booking_id=not.is.null'); res.json({ running: syncRunning, rowsInTable, state }); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+module.exports = router;
