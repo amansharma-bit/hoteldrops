@@ -79,6 +79,9 @@ function boardMatch(a, b) {
   return ka === kb;
 }
 
+// Canonical board bucket for UI filtering (ai/fb/hb/bb/ro or '' unknown).
+function boardBucket(board) { return boardKey(board); }
+
 function moneyPair(nativeAmount, currency) {
   // Returns { native, currency, usd } — native truth + USD for display.
   if (nativeAmount == null) return { native: null, currency: currency || null, usd: null };
@@ -146,6 +149,7 @@ router.get('/repricing/candidates', async (req, res) => {
     const search = (req.query.q || req.query.search || '').trim();
     const deadline = (req.query.deadline || 'any').trim();
     const price = (req.query.price || '').trim();
+    const boardWanted = (req.query.board || 'any').trim().toLowerCase();
 
     const nowIso = new Date().toISOString();
     let filter = `status=in.(Refundable,Partial)&cancel_by_date=gte.${nowIso}`;
@@ -198,6 +202,10 @@ router.get('/repricing/candidates', async (req, res) => {
       // price filter is on USD (dashboard reference scale)
       const [lo, hi] = price.split('-').map(Number);
       rows = rows.filter((r) => r.origUsd != null && r.origUsd >= (lo || 0) && r.origUsd <= (hi || Infinity));
+    }
+
+    if (boardWanted && boardWanted !== 'any') {
+      rows = rows.filter((r) => boardKey(r.board) === boardWanted);
     }
 
     await attachLastChecks(rows);
@@ -261,21 +269,30 @@ function parseOriginalBooking(booking) {
   const paidNative = items.reduce((s, it) => s + (parseFloat(it.price) || 0), 0)
     || parseFloat(booking.price?.total) || null;
 
-  // Guest list for the drawer.
+  // Guest list for the drawer (include child age where applicable).
   const guests = paxes.map((p) => ({
     name: [p.title, p.name, p.surname].filter(Boolean).join(' ').trim(),
     type: p.type,
+    age: (p.type === 'CH' || p.type === 'CHILD') && p.age != null ? Number(p.age) : null,
   })).filter((g) => g.name);
+
+  const roomCount = items.reduce((s, it) => s + (it.rooms ? it.rooms.length : 0), 0) || rooms.length;
+  const terms = item0.rate_comments?.remarks || item0.rate_comments?.comments || null;
 
   return {
     rooms,                       // → search request occupancy
     currency, nationality,       // → search request
     paidNative,
+    hotelName: booking.hotel?.name || null,
+    address: booking.hotel?.address || null,
+    roomCount,
     roomName: room0.description || room0.room_type || null,
     board: (item0.boarding_details || []).join(', ') || item0.rate_comments?.mealplan || null,
     nonRefundable: typeof item0.non_refundable === 'boolean' ? item0.non_refundable : null,
     cancelBy: cp.cancel_by_date || null,
     supplier: booking.supplier_code || item0.supplier_code || null,
+    supplierRef: booking.supplier_reference || item0.supplier_reference || null,
+    terms,
     guests,
     checkin: booking.checkin || null,
     checkout: booking.checkout || null,
@@ -368,13 +385,18 @@ router.post('/repricing/check', async (req, res) => {
     const original = {
       price: moneyPair(paidNative, nativeCur),
       usd: toUsdOrNull(paidNative, nativeCur),          // convenience (drawer reads .usd too)
+      hotel: orig.hotelName,
+      address: orig.address,
       room: orig.roomName,
+      roomCount: orig.roomCount,
       roomDescriptionRaw: orig.roomName,
       roomTypeRaw: orig.roomName,
       board: orig.board,
       nonRefundable: orig.nonRefundable,
       cancelBy: orig.cancelBy,
       supplier: orig.supplier,
+      supplierRef: orig.supplierRef,
+      terms: orig.terms,
       guests: orig.guests,
       checkin: orig.checkin,
       checkout: orig.checkout,
@@ -426,6 +448,7 @@ router.post('/repricing/check', async (req, res) => {
         roomDescriptionRaw: rt.roomName,
         roomType: rt.roomTypeRaw,
         board: rt.board,
+        boardBucket: boardBucket(rt.board),
         // dual currency on every rate
         native: rt.priceNative,
         local: rt.priceNative,          // alias the page reads
@@ -441,11 +464,7 @@ router.post('/repricing/check', async (req, res) => {
         selectable,
         blockers,
       };
-    }).sort((a, b) => {
-      if (a.eligible !== b.eligible) return a.eligible ? -1 : 1;         // eligible first
-      if (a.selectable !== b.selectable) return a.selectable ? -1 : 1;   // then selectable
-      return (a.native ?? Infinity) - (b.native ?? Infinity);           // then cheapest
-    });
+    });   // ← keep GRN's original order (search-result order)
 
     const bestEligible = allRates.find((r) => r.eligible) || null;
     const dropped = Boolean(bestEligible);
