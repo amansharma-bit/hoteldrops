@@ -253,16 +253,21 @@ function parseOriginalBooking(booking) {
   }
 
   // One "room" object per booking room, with adults + children_ages.
+  // GRN room objects use `adults` and `children_ages` (NOT no_of_adults).
   const rooms = [];
+  let totalAdults = 0;
+  const allChildAges = [];
   for (const it of items) {
     for (const rm of (it.rooms || [])) {
-      const adults = Number(rm.no_of_adults ?? 2) || 2;
+      const adults = Number(rm.adults ?? rm.no_of_adults ?? 2) || 2;
       let childAges = [];
       if (Array.isArray(rm.children_ages) && rm.children_ages.length) {
         childAges = rm.children_ages.map(Number).filter((n) => !isNaN(n));
       } else if (Array.isArray(rm.pax_ids)) {
         childAges = rm.pax_ids.map((pid) => childAgeByPax[pid]).filter((a) => a != null);
       }
+      totalAdults += adults;
+      allChildAges.push(...childAges);
       rooms.push({ adults, children_ages: childAges });
     }
   }
@@ -283,8 +288,15 @@ function parseOriginalBooking(booking) {
     age: (p.type === 'CH' || p.type === 'CHILD') && p.age != null ? Number(p.age) : null,
   })).filter((g) => g.name);
 
-  const adults = guests.filter((g) => g.type === 'AD' || g.type === 'ADULT');
-  const children = guests.filter((g) => g.type === 'CH' || g.type === 'CHILD');
+  const adultsFromPax = guests.filter((g) => g.type === 'AD' || g.type === 'ADULT');
+  const childrenFromPax = guests.filter((g) => g.type === 'CH' || g.type === 'CHILD');
+
+  // Prefer occupancy counts (always present from rooms[]); use pax list for names.
+  const adultsCount = totalAdults || adultsFromPax.length || null;
+  const childrenAges = allChildAges.length ? allChildAges : childrenFromPax.map((c) => c.age).filter((a) => a != null);
+  // children objects: pair ages with names where we have them
+  const children = childrenAges.map((age, i) => ({ age, name: childrenFromPax[i]?.name || null }));
+  const adults = adultsFromPax.length ? adultsFromPax : Array.from({ length: adultsCount || 0 }, () => ({ name: null }));
 
   const roomCount = items.reduce((s, it) => s + (it.rooms ? it.rooms.length : 0), 0) || rooms.length;
   const terms = item0.rate_comments?.remarks || item0.rate_comments?.comments || null;
@@ -313,6 +325,8 @@ function parseOriginalBooking(booking) {
     supplierRef: booking.supplier_reference || item0.supplier_reference || null,
     terms,
     guests, adults, children,
+    adultsCount: adultsCount,
+    childrenCount: childrenAges.length,
     checkin: booking.checkin || null,
     checkout: booking.checkout || null,
     hotelCode: booking.hotel?.hotel_code || null,
@@ -386,6 +400,51 @@ async function savePriceCheck(row) {
   try { await sbInsertReturning('grn_price_checks', row); } catch { /* non-fatal */ }
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// 2b) DETAIL ONLY — pull the booking detail (cheap) WITHOUT the rates search.
+//     Drawer calls this on open so date/adults/supplierRef/cancellation/terms fill
+//     instantly; the expensive availability search is gated behind /check (Reprice).
+// ════════════════════════════════════════════════════════════════════════════
+router.post('/repricing/detail', async (req, res) => {
+  if (!grnConfigured()) return res.status(500).json({ error: 'GRN_API_KEY not set' });
+  const bookingId = (req.body && req.body.booking_id) || req.query.booking_id;
+  if (!bookingId) return res.status(400).json({ error: 'booking_id required' });
+  const ctx = { bookingId, actorEmail: (req.body && req.body.actor_email) || null };
+  try {
+    const booking = await pullBookingDetail(bookingId, ctx);
+    const orig = parseOriginalBooking(booking);
+    const nativeCur = orig.currency;
+    const paidNative = orig.paidNative;
+    const original = {
+      price: moneyPair(paidNative, nativeCur),
+      usd: toUsdOrNull(paidNative, nativeCur),
+      bookingDate: orig.bookingDate,
+      hotel: orig.hotelName,
+      address: orig.address,
+      room: orig.roomName,
+      roomCount: orig.roomCount,
+      board: orig.board,
+      nonRefundable: orig.nonRefundable,
+      cancelBy: orig.cancelBy,
+      cancellationDetails: orig.cancellationDetails,
+      supplier: orig.supplier,
+      supplierRef: orig.supplierRef,
+      terms: orig.terms,
+      guests: orig.guests,
+      adults: orig.adults,
+      children: orig.children,
+      adultsCount: orig.adultsCount,
+      childrenCount: orig.childrenCount,
+      checkin: orig.checkin,
+      checkout: orig.checkout,
+      currency: nativeCur,
+    };
+    res.json({ bookingId, original });
+  } catch (err) {
+    res.status(500).json({ error: String(err.message || err) });
+  }
+});
+
 router.post('/repricing/check', async (req, res) => {
   if (!grnConfigured()) return res.status(500).json({ error: 'GRN_API_KEY not set' });
   const bookingId = (req.body && req.body.booking_id) || req.query.booking_id;
@@ -421,6 +480,8 @@ router.post('/repricing/check', async (req, res) => {
       guests: orig.guests,
       adults: orig.adults,
       children: orig.children,
+      adultsCount: orig.adultsCount,
+      childrenCount: orig.childrenCount,
       checkin: orig.checkin,
       checkout: orig.checkout,
       currency: nativeCur,
